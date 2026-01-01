@@ -1,0 +1,1906 @@
+
+/* --- Host topbar integration (embed) --------------------------------- */
+html.embed-seamless{
+  --host-top-h: 64px; /* set to your real top header height if different */
+}
+
+
+html,body{height:100%}body{margin:0;background:#0f1219;color:#e8f0ff;font:14px/1.5 Inter,system-ui}
+.app{--nav-w:420px;display:grid;grid-template-columns:var(--nav-w) 1fr;gap:10px;height:100vh;box-sizing:border-box;padding:10px;transition:grid-template-columns .25s ease}
+.panel{border:1px solid rgba(255,255,255,.08);border-radius:14px;display:flex;flex-direction:column;min-height:0;background:rgba(255,255,255,.02)}
+.hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.hdr h3{margin:0;font-size:14px}
+.body{padding:10px;overflow:auto;min-height:0}
+.row>*{margin-bottom:8px}
+.sep{height:1px;background:rgba(255,255,255,.08);margin:8px 0}
+.help{color:#9fb1c9;font-size:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px}
+label{display:block;font-size:12px;color:#9fb1c9}
+input,select{width:100%;height:34px;border:1px solid rgba(255,255,255,.12);background:#0c1320;color:#d8e6ff;border-radius:8px;padding:0 10px}
+.btn{height:34px;border:1px solid rgba(255,255,255,.12);background:#121a2a;color:#d8e6ff;border-radius:8px;padding:0 10px;cursor:pointer}
+.btn.good{background:#2c7b4c;border-color:#2c7b4c}
+.btn.primary{background:#7C5CFF;border-color:#7C5CFF}
+.btn.danger{background:#7b2c2c;border-color:#7b2c2c}
+.inline{display:flex;gap:6px;align-items:center}
+.mut{color:#9fb1c9}
+.badge{display:inline-block;padding:2px 6px;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#9fb1c9}
+.list{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.03)}
+.smallbtn{height:28px}
+.acc{border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden}
+.acc-h{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,.02);cursor:pointer}
+.acc-b{padding:8px 10px;background:rgba(255,255,255,.015);display:none}
+.acc.open .acc-b{display:block}
+.centerWrap{position:relative}
+.app:not(.nav-collapsed) .centerWrap{margin-left:var(--ctor-w);width:calc(100% - var(--ctor-w));}
+.app.nav-collapsed .centerWrap{margin-left:0;width:100%;}
+
+.phoneArea{display:flex;justify-content:center;align-items:flex-start;padding:12px 16px 40px;overflow:auto;min-height:0}
+.phoneDock{transform-origin:top center;flex:1;display:flex;justify-content:center;align-items:flex-start;min-height:0}
+.phone{width:390px;height:780px;border:1px solid rgba(255,255,255,.1);border-radius:32px;background:#000;box-shadow:0 10px 30px rgba(0,0,0,.4);overflow:hidden}
+.notch{height:24px;background:#000;border-bottom:1px solid rgba(255,255,255,.1)}
+.screen{position:relative;width:100%;height:calc(100% - 24px)}
+.screen iframe{width:100%;height:100%;border:0;background:#0f1219}
+.slider{width:120px}
+.edit{margin-top:6px;border:1px dashed #2a3346;padding:8px;border-radius:8px;background:#0e1526}
+.edit label{display:block;font-size:12px;color:#9fb1c9;margin:6px 0 2px}
+.edit input[type="text"]{width:100%;height:32px;border:1px solid #2a3346;background:#0c1320;border-radius:8px;padding:0 8px}
+.edit .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+
+
+.panel-left{
+  overflow:hidden;
+}
+
+.app.nav-collapsed{
+  --nav-w:64px;
+}
+
+.app.nav-collapsed .panel-left .body{display:block; padding:10px 6px; overflow:auto;}
+
+.onlyMobile{
+  display:none;
+}
+
+.app.nav-collapsed .panel-left .hdr h3{
+  display:none;
+}
+.app.nav-collapsed .panel-left .hdr{
+  justify-content:center;
+  padding-left:6px;
+  padding-right:6px;
+}
+
+/* --- Left panel polish --- */
+.list{display:flex;flex-direction:column;gap:10px;}
+.item{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(12,19,32,.9);
+}
+.item > div:first-child{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.item .actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.btn.smallbtn{
+  height:26px;
+  padding:0 8px;
+  font-size:11px;
+}
+
+/* =====================================================
+   Seamless embed mode (Work Panel -> Constructor iframe)
+   Trigger: <html class="embed-seamless">
+   Goal: remove outer paddings/frames so the constructor looks "native" inside the Work Panel
+   ===================================================== */
+html.embed-seamless, html.embed-seamless body{height:100%;}
+html.embed-seamless body{background:transparent;}
+html.embed-seamless .app{
+  padding:0;
+  gap:0;
+  height:100vh;
+  /* keep constructor layout, just remove extra outer spacing.
+     IMPORTANT: do NOT override --nav-w here, otherwise .app.nav-collapsed won't be able to shrink */
+}
+
+/* In embedded mode we still allow the constructor's own collapse/expand,
+   because users may want to hide the left editor panel for more preview space. */
+html.embed-seamless .panel{
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+}
+/* In seamless mode we KEEP the constructor left panel, but remove its outer chrome
+   so it visually merges with the outer Work Panel sidebar. */
+/* Embedded mode: the studio left panel slides UNDER the host main menu.
+   - the host passes --host-side-w via query param
+   - when .app.nav-collapsed is on, the panel is hidden (only the "ear" remains)
+*/
+html.embed-seamless .app{
+  /* we run the studio inside an iframe that lives under the host fixed sidebar.
+     The studio panel must NOT overlay the preview; it should PUSH it. */
+  display:block;
+  --ctor-w:380px;
+  /* ear geometry (matches Visme-like tab) */
+  --ear-w:28px;
+  --ear-over:14px; /* how much the ear overlaps into the preview area */
+}
+
+/* Left editor panel in embedded mode:
+   - The host has a fixed main menu on the left (width --host-side-w)
+   - The editor panel starts from x=0 but its visible content begins after --host-side-w
+   - When collapsed, ONLY the ear is visible next to the host main menu
+*/
+html.embed-seamless .panel-left{
+  height:calc(100vh - var(--host-top-h));
+  position:fixed !important;
+  /* IMPORTANT: iframe often sits UNDER the host left menu.
+     So we anchor panel to the RIGHT edge of host sidebar. */
+  left:var(--host-side-w, 96px);
+  top:var(--host-top-h);
+  bottom:0;
+  width:var(--ctor-w);
+  z-index:9000;
+  display:flex !important;
+  transform:translateX(0);
+  transition:transform .25s ease;
+  padding-left:0;
+  overflow:visible !important;
+  background:rgba(12,19,32,.92) !important;
+  border-right:1px solid rgba(255,255,255,.10) !important;
+  border-radius:0 !important;
+  box-shadow:0 18px 44px rgba(0,0,0,.35) !important;
+}
+
+/* The constructor preview (including its header/buttons) is pushed to the right
+   when the left editor panel is OPEN (Visme-like). */
+html.embed-seamless .centerWrap{
+  position:fixed;
+  top:var(--host-top-h);
+  bottom:0;
+  left:0;
+  right:0;
+  /* push whole studio area right to clear host sidebar + open drawer */
+  margin-left:0;
+  width:100%;
+  padding-left:calc(var(--host-side-w, 96px) + var(--ctor-w));
+  padding-right:0;
+  transition:padding-left .25s ease;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  z-index:1;
+}
+
+/* Phone area should NOT add its own horizontal shift */
+html.embed-seamless .phoneArea{
+  padding:0;
+  margin-left:0;
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  align-items:flex-start;
+  justify-content:center;
+  padding-bottom:120px;
+}
+
+/* Collapse (embed): slide editor out, leaving only the ear visible */
+html.embed-seamless .app.nav-collapsed .panel-left{
+  /* slide drawer fully left, leaving only the ear at the host sidebar edge */
+  transform:translateX(calc(-1 * var(--ctor-w)));
+}
+
+html.embed-seamless .app.nav-collapsed .centerWrap{
+  padding-left:var(--host-side-w, 96px);
+}
+
+html.embed-seamless .app.nav-collapsed .phoneArea{ margin-left:0; }
+html.embed-seamless .app.nav-collapsed .panel-left .hdr,
+html.embed-seamless .app.nav-collapsed .panel-left .body{
+  opacity:0;
+  pointer-events:none;
+}
+/* light theme: keep same borders */
+html.embed-seamless[data-theme="light"] .hdr{border-bottom:1px solid #d9e2ef;background:#fff;}
+.acc{
+  margin-bottom:10px;
+}
+.acc-h{
+  padding:8px 10px;
+}
+
+.app-id-row{display:none}
+
+
+/* только шапка левой панели студии */
+.panel-left > .hdr{
+  padding-bottom: 23px; /* подними/опусти числом */
+}
+
+/* ---------- Nav icons (collapsed sidebar) ---------- */
+.nav-ico{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:0px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color:#d8e6ff;
+  font-size:14px;
+  line-height:1;
+  flex:0 0 auto;
+}
+.nav-ico img{
+  width:18px;
+  height:18px;
+  object-fit:contain;
+  display:block;
+}
+
+/* Collapsed: show only icons list */
+.app.nav-collapsed .panel-left .acc-b{ display:none !important; }
+.app.nav-collapsed .panel-left .acc{ border:0; background:transparent; margin-bottom:8px; }
+.app.nav-collapsed .panel-left .acc-h{
+  padding:6px;
+  justify-content:center;
+  background:transparent;
+  border:0;
+}
+.app.nav-collapsed .panel-left .acc-h > .inline:first-child{
+  justify-content:center;
+}
+.app.nav-collapsed .panel-left .acc-h b,
+.app.nav-collapsed .panel-left .acc-h .mut,
+.app.nav-collapsed .panel-left .acc-h .badge,
+.app.nav-collapsed .panel-left .acc-h button,
+.app.nav-collapsed .panel-left .acc-h .inline:last-child{
+  display:none !important;
+}
+.app.nav-collapsed .panel-left .acc-h .nav-ico{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+}
+.app.nav-collapsed .panel-left .acc-h:hover .nav-ico{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.16);
+}
+
+/* collapsed: убрать верхнюю подсказку */
+.app.nav-collapsed .panel-left .help{ display:none !important; }
+
+/* collapsed: убрать нижнюю строку " /  + Добавить страницу" */
+.app.nav-collapsed .panel-left .addrow,
+.app.nav-collapsed .panel-left .add-page,
+.app.nav-collapsed .panel-left .addPage,
+.app.nav-collapsed .panel-left .newpage,
+.app.nav-collapsed .panel-left .new-page{
+  display:none !important;
+}
+
+
+/* ===== Collapsed: убрать хелпер, разделители и добавление страницы ===== */
+.app.nav-collapsed .panel-left .help,
+.app.nav-collapsed .panel-left .sep{
+  display:none !important;
+}
+
+/* убрать разделительные линии/границы в левом сайдбаре */
+.app.nav-collapsed .panel-left{
+  border-right: none !important;
+  box-shadow: none !important;
+}
+.app.nav-collapsed .panel-left .hdr{
+  border-bottom: none !important;
+}
+
+/* Collapsed: скрыть добавление страницы (input + button) */
+.app.nav-collapsed #route_add,
+.app.nav-collapsed #route_new,
+.app.nav-collapsed .panel-left .grid2{
+  display:none !important;
+}
+
+/* Collapsed: убрать разделители */
+.app.nav-collapsed .panel-left .sep{
+  display:none !important;
+}
+
+
+
+
+
+/* --- Blocks library: categories + thumbs --- */
+.chips{ display:flex; flex-wrap:wrap; gap:8px; padding:10px 0 4px; }
+.chip{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); color:var(--fg);
+  border-radius:999px; padding:6px 10px; font-size:12px; cursor:pointer; }
+.chip.active{ border-color:rgba(124,92,255,.9); box-shadow:0 0 0 1px rgba(124,92,255,.35) inset; }
+.chip-sep{ width:1px; height:20px; background:rgba(255,255,255,.10); align-self:center; margin:0 6px; border-radius:999px; }
+.kcat{ margin:10px 0 6px; font-weight:700; color:var(--fg); opacity:.9; font-size:12px; letter-spacing:.02em; }
+.kthumb{ width:120px; height:70px; border-radius:14px; overflow:hidden; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);}
+.kthumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+
+/* ---- Block library thumbs + category folders ---- */
+.ksec{ border:1px solid rgba(255,255,255,.08); border-radius:14px; margin:10px 0; overflow:hidden; }
+.kcatbtn{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 12px; background:rgba(255,255,255,.03); border:0; color:inherit; cursor:pointer; font-weight:700; }
+.kcatbtn .chev{ opacity:.8; font-weight:800; }
+.kcatbody{ display:none; padding:10px; }
+.kcatbody.open{ display:block; }
+
+.kitem{ display:flex; align-items:stretch; gap:12px; padding:10px; border:1px solid rgba(255,255,255,.06); border-radius:14px; margin:10px 0; background:rgba(0,0,0,.12); }
+.kitem .pv{ width:120px; flex:0 0 120px; border-radius:12px; overflow:hidden; background:rgba(255,255,255,.03); }
+.live-thumb{ width:120px; height:76px; overflow:hidden; position:relative; }
+.live-thumb > *{ transform:scale(.28); transform-origin:top left; width:420px; } /* approx; keeps most blocks visible */
+.live-thumb img{ max-width:100%; height:auto; display:block; }
+
+
+/* ==== Block Library layout upgrades (4 columns) ==== */
+.klist{
+  /* IMPORTANT: category sections must span full dialog width.
+     The base inline CSS defines .klist as a multi-column grid which makes
+     category sections occupy only one grid column and leaves a big empty area.
+  */
+  display:block !important;
+  width:100% !important;
+}
+
+.ksec{ width:100% !important; }
+
+.kcatbody{ width:100% !important; display:none !important; }
+.kcatbody.open{ display:grid !important; }
+
+.kitem{
+  /* Make each block card compact and consistent in a 4-col grid */
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  gap:10px !important;
+  margin:0 !important;
+  padding:10px !important;
+}
+.kitem .pv{ width:100% !important; flex:0 0 auto !important; }
+.kitem .meta{ display:flex; flex-direction:column; gap:2px; }
+.kitem .act{ display:flex; }
+.kitem .act .btn{ width:100%; }
+
+.live-thumb{ width:100% !important; height:96px !important; border-radius:14px; }
+.live-thumb > *{ transform:scale(.32); transform-origin:top left; width:520px; }
+.kcatbody.open{
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch;
+  justify-items: stretch;
+}
+@media (max-width: 1200px){
+  .kcatbody.open{ grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+}
+@media (max-width: 900px){
+  .kcatbody.open{ grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+}
+@media (max-width: 520px){
+  .kcatbody.open{ grid-template-columns: 1fr !important; }
+}
+
+
+
+
+/* ===== Blocks Library "Top constructors" layout ===== */
+.klist { padding:0 !important; } /* legacy container */
+
+.lib-wrap{
+  display:grid;
+  grid-template-columns: 240px 1fr;
+  gap:12px;
+  height: calc(78vh - 86px);
+  min-height: 420px;
+}
+.lib-side{
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.lib-side-title{
+  font-weight:700;
+  opacity:.9;
+  padding:6px 8px 10px;
+}
+.lib-side-item{
+  width:100%;
+  text-align:left;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: inherit;
+  padding:10px 10px;
+  border-radius: 12px;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  cursor:pointer;
+}
+.lib-side-item .car{
+  width:18px;
+  height:18px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-right:6px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.7);
+  flex:0 0 auto;
+  transform: rotate(0deg);
+}
+.lib-side-item .car.open{ transform: rotate(90deg); }
+.lib-side-item .car.ph{ opacity:0; border-color: transparent; background: transparent; }
+.lib-side-item:hover{ background: rgba(255,255,255,0.04); }
+.lib-side-item.on{
+  border-color: rgba(124,92,255,0.7);
+  box-shadow: 0 0 0 1px rgba(124,92,255,0.35) inset;
+}
+.lib-side-item .cnt{ opacity:.7; font-size:12px; }
+.lib-side-sep{ height:1px; background: rgba(255,255,255,0.08); margin:6px 0 10px; }
+.lib-side-scroll{ overflow:auto; padding-right:2px; }
+
+.lib-main{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.lib-main-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 4px 10px;
+}
+.lib-main-title{ font-weight:800; font-size:16px; }
+.lib-hint{ opacity:.65; font-size:12px; }
+
+.lib-grid{
+  overflow:auto;
+  padding:4px;
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+@media (max-width: 1180px){
+  .lib-wrap{ grid-template-columns: 220px 1fr; }
+  .lib-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 980px){
+  .lib-wrap{ grid-template-columns: 1fr; height:auto; }
+  .lib-side{ flex-direction:row; overflow:auto; gap:8px; }
+  .lib-side-title, .lib-side-sep, .lib-side-scroll{ display:none; }
+  .lib-side-item{ margin:0; white-space:nowrap; }
+  .lib-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px){
+  .lib-grid{ grid-template-columns: 1fr; }
+}
+
+.lib-card{
+  border:1px dashed rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.10);
+  border-radius: 16px;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-height: 220px;
+}
+.lib-card:hover{
+  border-color: rgba(255,255,255,0.22);
+  background: rgba(0,0,0,0.14);
+}
+.lib-thumb{
+  border-radius: 12px;
+  overflow:hidden;
+  background: rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);
+  height: 128px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.lib-thumb > *{ width:100%; height:100%; }
+.lib-thumb img{ max-width:100%; max-height:100%; object-fit:cover; display:block; }
+.lib-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.lib-title{
+  font-weight:700;
+  font-size:13px;
+  line-height:1.2;
+  opacity:.95;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.lib-fav{
+  width:32px; height:28px;
+  border-radius: 10px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.65);
+  cursor:pointer;
+}
+.lib-fav.on{ color: rgba(255,214,93,0.95); border-color: rgba(255,214,93,0.35); }
+.lib-add{ width:100%; }
+
+/* drag/drop overlay above iframe */
+.lib-drop-overlay{
+  position:absolute;
+  inset:0;
+  z-index: 50;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  pointer-events:auto;
+  background: rgba(124,92,255,0.10);
+  border:2px dashed rgba(124,92,255,0.55);
+  border-radius: 18px;
+  backdrop-filter: blur(4px);
+}
+.lib-drop-overlay.ready{ display:flex; }
+.lib-drop-overlay.on{ background: rgba(124,92,255,0.14); }
+.lib-drop-hint{
+  padding:12px 14px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.35);
+  border:1px solid rgba(255,255,255,0.12);
+  font-weight:800;
+}
+
+
+
+/* --- Layers panel --------------------------------------------------- */
+.layers-list{display:grid;gap:6px;margin-top:8px}
+.layer-item{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;
+  padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;
+  background:rgba(255,255,255,.02)
+}
+.layer-item.on{border-color:rgba(124,92,255,.65); box-shadow:0 0 0 2px rgba(124,92,255,.18) inset}
+.layer-meta{display:flex;gap:8px;align-items:center;min-width:0}
+.layer-dot{width:8px;height:8px;border-radius:99px;background:rgba(124,92,255,.8);flex:0 0 auto}
+.layer-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-sub{font-size:12px;color:#9fb1c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-actions{display:flex;gap:6px;align-items:center}
+
+/* In-page Layers (inside page accordion) */
+.layers-inpage{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.layer-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(0,0,0,.12)}
+.layer-row.is-sel{border-color:rgba(124,92,255,.55);box-shadow:0 0 0 2px rgba(124,92,255,.14) inset}
+.layer-main{min-width:0}
+.layer-title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-sub{font-size:12px;color:#9fb1c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-actions{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.btn.xs{padding:4px 6px;border-radius:10px;font-size:12px;line-height:1}
+.layer-row.is-section{background:rgba(124,92,255,.07)}
+.layer-fold{width:28px;height:28px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.18);color:inherit;cursor:pointer}
+.layer-row.is-section{grid-template-columns:auto 1fr auto}
+.iconbtn{height:28px;min-width:28px;padding:0 8px;border-radius:8px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);color:#d8e6ff;cursor:pointer
+}
+.iconbtn:hover{background:rgba(255,255,255,.06)}
+.iconbtn.danger:hover{border-color:rgba(255,100,100,.5)}
+
+
+/* --- Premium ctx menu + layers grouping --- */
+.btn.ghost{ background:transparent; border:1px solid rgba(255,255,255,.12); }
+.ctxmenu{
+  position:fixed; z-index:1000; min-width:220px;
+  background:#111827; border:1px solid rgba(255,255,255,.12);
+  border-radius:12px; padding:6px; box-shadow:0 20px 70px rgba(0,0,0,.55);
+}
+.ctxmenu .mi{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 10px; border-radius:10px; cursor:pointer; user-select:none;
+  font-size:13px; color:#e5e7eb;
+}
+.ctxmenu .mi:hover{ background:rgba(255,255,255,.08); }
+.ctxmenu .mi .k{ width:18px; opacity:.9; text-align:center; }
+.ctxmenu .sep{ height:1px; margin:6px 4px; background:rgba(255,255,255,.10); }
+.layer-sec{
+  margin:10px 0 6px; padding:8px 10px; border-radius:10px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+  display:flex; align-items:center; gap:8px;
+}
+.layer-sec .tw{ font-weight:700; font-size:13px; }
+.layer-sec .toggle{ width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; opacity:.85; }
+.layer-sec[data-collapsed="1"] + .layer-sec-items{ display:none; }
+.layer-sec-items{ display:block; margin-left:10px; border-left:1px dashed rgba(255,255,255,.10); padding-left:10px; }
+.layer-item{ position:relative; }
+.layer-item.is-dim{ opacity:.55; }
+.layer-item .badge-mini{
+  font-size:11px; opacity:.75; padding:2px 6px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+}
+
+/* Hide page-level up/down and duplicate buttons in page header (leave clean like on screenshot) */
+.acc-h [data-act="up"],
+.acc-h [data-act="down"],
+.acc-h [data-act="dupepage"]{
+  display:none !important;
+}
+
+/* === Nav ear (Visme-like tab) ===
+   Ear is a REAL button INSIDE .panel-left (part of the panel shape),
+   so it never "прыгает" and there is no extra gap. */
+.panel-left{position:relative;}
+
+/* Fused ear shape: drawn by the panel itself (Visme-like tab),
+   while the <button#navEar> is only responsible for clicks. */
+html.embed-seamless .panel-left::after{
+  /* Fused Visme-like tab: part of the panel contour (no separate block feel) */
+  content:"";
+  position:absolute;
+  top:50%;
+  left:100%;
+  margin-left:-1px; /* weld seam */
+  transform:translateY(-50%);
+  width:var(--ear-w, 28px);
+  height:84px;
+  border-radius:0 14px 14px 0;
+  border:1px solid rgba(255,255,255,.12);
+  border-left:0;
+  background:inherit;
+  box-shadow:0 10px 22px rgba(0,0,0,.25);
+  pointer-events:none;
+}
+
+.panel-left .nav-ear{
+  position:absolute;
+  top:50%;
+  left:100%;
+  margin-left:-1px; /* match fused tab seam */
+  transform:translateY(-50%);
+  width:var(--ear-w, 28px);
+  height:84px;
+  border-radius:0 14px 14px 0;
+  border:0;
+  background:transparent;
+  /* hide any fallback text inside the button; we draw the arrow with ::before */
+  color:transparent;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:9100;
+  user-select:none;
+  padding:0;
+  outline:none;
+  font-size:18px;
+  line-height:1;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.panel-left .nav-ear::before{
+  content:"›"; /* points to the right when collapsed */
+  color:#d8e6ff;
+  font-size:20px;
+  transition:transform .25s ease;
+  transform:rotate(0deg);
+}
+/* When panel is OPEN, arrow should point left */
+.app:not(.nav-collapsed) .panel-left .nav-ear::before{
+  transform:rotate(180deg);
+}
+.panel-left .nav-ear:hover{filter:brightness(1.08);}
+.panel-left .nav-ear:active{transform:translateY(-50%) scale(.98);}
+
+/* Hide internal constructor header (title + back arrow) in the left panel */
+html.embed-seamless .panel-left .hdr,
+html.embed-seamless .panel-left .panel-hdr,
+html.embed-seamless .panel-left .hdrRow{
+  display:none !important;
+}
+
+/* If the studio has its own topbar inside iframe, keep it full width and pinned */
+html.embed-seamless .topbar,
+html.embed-seamless .toolbar,
+html.embed-seamless .preview-topbar{
+  width:100%;
+  left:0;
+  right:0;
+  box-sizing:border-box;
+}
+
+
+
+/* --- Responsive topbar (devices + zoom + actions) --------------------- */
+/* Applies only if such topbar exists inside this document */
+.topbar, .toolbar, .preview-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  min-width:0;
+  box-sizing:border-box;
+}
+.topbar .left, .toolbar .left, .preview-topbar .left{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  flex:1 1 auto;
+  flex-wrap:wrap; /* allow wrap on narrow screens */
+}
+.topbar .right, .toolbar .right, .preview-topbar .right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.topbar button, .toolbar button, .preview-topbar button,
+.topbar .btn, .toolbar .btn, .preview-topbar .btn{
+  height:32px;
+  padding:0 10px;
+  border-radius:10px;
+  font-size:12px;
+}
+.topbar input[type="range"], .toolbar input[type="range"], .preview-topbar input[type="range"],
+.topbar .slider, .toolbar .slider, .preview-topbar .slider{
+  width:clamp(110px, 18vw, 220px);
+}
+@media (max-width: 980px){
+  .topbar, .toolbar, .preview-topbar{ gap:8px; padding:6px 8px; }
+  .topbar button, .toolbar button, .preview-topbar button,
+  .topbar .btn, .toolbar .btn, .preview-topbar .btn{
+    height:30px; padding:0 8px; font-size:12px;
+  }
+}
+@media (max-width: 720px){
+  .topbar, .toolbar, .preview-topbar{ position:sticky; top:0; z-index:200; backdrop-filter: blur(8px); }
+  .topbar .left, .toolbar .left, .preview-topbar .left{ gap:6px; }
+  .topbar .right, .toolbar .right, .preview-topbar .right{ gap:6px; }
+}
+/* Optional title slot: if you have an element with class .appTitle inside topbar */
+.topbar .appTitle, .toolbar .appTitle, .preview-topbar .appTitle{
+  font-weight:800;
+  letter-spacing:.02em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:280px;
+}
+
+
+
+/* Vertical zoom rail (right side of preview) */
+.phoneArea{position:relative}
+.zoomRail{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:10px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.10);
+  background:rgba(15,21,34,.55);backdrop-filter:saturate(140%) blur(10px);
+  z-index:40}
+.zr-label{font-size:12px;color:rgba(231,240,255,.85)}
+.zr-slider{width:140px;transform:rotate(-90deg)}
+.zr-val{font-size:12px}
+@media (max-width: 980px){.zoomRail{right:8px;}}
+/* Make the rotated range look consistent (avoid huge white default track) */
+.zr-slider{
+  -webkit-appearance:none;
+  appearance:none;
+  background:transparent;
+}
+.zr-slider::-webkit-slider-runnable-track{
+  height:6px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.10);
+}
+.zr-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:14px;
+  height:14px;
+  border-radius:999px;
+  background:rgba(231,240,255,.95);
+  border:1px solid rgba(0,0,0,.25);
+  margin-top:-5px;
+  box-shadow:0 6px 14px rgba(0,0,0,.35);
+}
+.zr-slider::-moz-range-track{
+  height:6px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.10);
+}
+.zr-slider::-moz-range-thumb{
+  width:14px;
+  height:14px;
+  border-radius:999px;
+  background:rgba(231,240,255,.95);
+  border:1px solid rgba(0,0,0,.25);
+  box-shadow:0 6px 14px rgba(0,0,0,.35);
+}
+
+
+/* --- Hide scrollbars but keep scrolling (constructor) --- */
+.phoneArea{scrollbar-width:none;-ms-overflow-style:none;}
+.phoneArea::-webkit-scrollbar{width:0;height:0}
+.panel-left .body{scrollbar-width:none;-ms-overflow-style:none;}
+.panel-left .body::-webkit-scrollbar{width:0;height:0}
+/* common scroll areas */
+.layers, .list, .acc-b{scrollbar-width:none;-ms-overflow-style:none;}
+.layers::-webkit-scrollbar, .list::-webkit-scrollbar, .acc-b::-webkit-scrollbar{width:0;height:0}
+
+/* =====================================================
+   FIX: embedded header (topbar) drifting/wrapping
+   Reason: base .centerWrap margin-left rules conflict with embed fixed layout
+   ===================================================== */
+
+/* neutralize base centerWrap push rules inside embed */
+html.embed-seamless .app:not(.nav-collapsed) .centerWrap{
+  margin-left:0 !important;
+  width:100% !important;
+}
+html.embed-seamless .app.nav-collapsed .centerWrap{
+  margin-left:0 !important;
+  width:100% !important;
+}
+
+/* keep constructor topbar in one line inside embed */
+html.embed-seamless .topbar,
+html.embed-seamless .toolbar,
+html.embed-seamless .preview-topbar{
+  flex-wrap:nowrap !important;
+}
+html.embed-seamless .topbar .left,
+html.embed-seamless .toolbar .left,
+html.embed-seamless .preview-topbar .left,
+html.embed-seamless .topbar .right,
+html.embed-seamless .toolbar .right,
+html.embed-seamless .preview-topbar .right{
+  flex-wrap:nowrap !important;
+  white-space:nowrap;
+}
+
+html.embed-seamless .topbar button,
+html.embed-seamless .toolbar button,
+html.embed-seamless .preview-topbar button,
+html.embed-seamless .topbar .btn,
+html.embed-seamless .toolbar .btn,
+html.embed-seamless .preview-topbar .btn{
+  white-space:nowrap;
+  line-height:1;
+}
+
+/* prevent narrow buttons from breaking words like "iPhone" */
+html.embed-seamless .topbar button *,
+html.embed-seamless .toolbar button *,
+html.embed-seamless .preview-topbar button *{
+  white-space:nowrap;
+}
+
+/* if the topbar still gets tight, allow horizontal scroll rather than wrap */
+html.embed-seamless .topbar,
+html.embed-seamless .toolbar,
+html.embed-seamless .preview-topbar{
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+html.embed-seamless .topbar::-webkit-scrollbar,
+html.embed-seamless .toolbar::-webkit-scrollbar,
+html.embed-seamless .preview-topbar::-webkit-scrollbar{
+  width:0;
+  height:0;
+}
+
+
+/* === FIX: lower constructor header height + seamless with drawer === */
+html.embed-seamless .centerWrap .hdr{
+  padding: 8px 12px !important;   /* было больше */
+  min-height: 56px !important;    /* зафиксируем нормальную высоту */
+  height: auto !important;
+  align-items: center !important;
+}
+
+/* чипсы устройств и правая группа кнопок — компактнее */
+html.embed-seamless .centerWrap .hdr .btn,
+html.embed-seamless .centerWrap .hdr button,
+html.embed-seamless .centerWrap .hdr .chip{
+  padding: 6px 10px !important;
+  height: 32px !important;
+  line-height: 20px !important;
+}
+
+/* чтобы между шапкой и телом не было “щели/рваности” */
+html.embed-seamless .centerWrap{
+  gap: 0 !important;
+}
+html.embed-seamless .phoneArea{
+  margin-top: 0 !important;
+}
+
+/* и шторка встык по верхнему краю */
+html.embed-seamless .panel-left{
+  top: 0 !important;
+}
+html.embed-seamless .panel-left .hdr{
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  min-height: 56px !important;    /* совпадает с шапкой */
+}
+
+
+/* === Harmonize: constructor header + drawer align under host header === */
+html.embed-seamless{
+  --host-top-h: 72px;   /* ПОДБЕРИ: 64/72/80 — это высота верхней шапки панели */
+  --ctor-hdr-h: 56px;   /* высота шапки конструктора */
+}
+
+/* и центр, и шторка стартуют строго под шапкой панели */
+html.embed-seamless .centerWrap,
+html.embed-seamless .panel-left{
+  top: var(--host-top-h) !important;
+}
+
+/* высота видимой области конструктора — вся высота минус host top */
+html.embed-seamless .centerWrap{
+  height: calc(100vh - var(--host-top-h)) !important;
+}
+
+/* шапка конструктора компактная и одинаковая по высоте со шторкой */
+html.embed-seamless .centerWrap .hdr{
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+  align-items: center !important;
+}
+
+/* чтобы левая панель стыковалась по верхней линии */
+html.embed-seamless .panel-left .hdr{
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+  align-items: center !important;
+}
+
+/* превью занимает всё оставшееся пространство */
+html.embed-seamless .phoneArea{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+html.embed-seamless .centerWrap .hdr{
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+html.embed-seamless .panel-left{
+  border-top-left-radius: 0 !important;
+}
+
+
+html.embed-seamless{
+  --host-top-h: 72px;   /* высота шапки ПАНЕЛИ (хост) */
+  --ctor-hdr-h: 56px;   /* высота шапки КОНСТРУКТОРА */
+}
+
+/* 1) НЕ опускаем весь центр — убираем фейковый зазор */
+html.embed-seamless .centerWrap{
+  top: 0 !important;
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+/* 2) Шапка конструктора должна начинаться сразу (без доп. воздуха) */
+html.embed-seamless .centerWrap .hdr{
+  flex: 0 0 auto !important;
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+}
+
+/* 3) Контент (превью) двигаем вниз на высоту ХОСТ-шапки */
+html.embed-seamless .phoneArea{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  /* вот тут компенсируем хостовую шапку */
+  padding-top: var(--host-top-h) !important;
+  padding-bottom: 120px !important;
+}
+
+/* 4) ШТОРКУ (левую панель) двигаем вниз на ту же высоту */
+html.embed-seamless .panel-left{
+  top: var(--host-top-h) !important;
+}
+
+
+html.embed-seamless{
+  --host-top-h: 72px;     /* высота шапки ПАНЕЛИ (хост) */
+  --ctor-hdr-h: 56px;     /* высота шапки конструктора */
+}
+
+/* 1) Убираем “воздух”: НЕ делаем padding-top у phoneArea */
+html.embed-seamless .phoneArea{
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+html.embed-seamless{
+  --host-top-h: 72px;     /* высота шапки ПАНЕЛИ (хост) */
+  --ctor-hdr-h: 56px;     /* высота шапки конструктора */
+}
+
+/* 1) Убираем “воздух”: НЕ делаем padding-top у phoneArea */
+html.embed-seamless .phoneArea{
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* 2) Центр конструктора и шторка начинаются сразу под хостовой шапкой */
+html.embed-seamless .centerWrap{
+  top: var(--host-top-h) !important;
+  height: calc(100vh - var(--host-top-h)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+/* 3) Шапка конструктора компактная и без разрывов */
+html.embed-seamless .centerWrap .hdr{
+  flex: 0 0 auto !important;
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+/* 4) Контент под шапкой занимает всё остальное */
+html.embed-seamless .phoneArea{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 120px !important;
+}
+
+/* 5) Шторка: верх ровно как у центра и hdr по высоте как у шапки конструктора */
+html.embed-seamless .panel-left{
+  top: var(--host-top-h) !important;
+  height: calc(100vh - var(--host-top-h)) !important;
+}
+
+html.embed-seamless .panel-left .hdr{
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+
+/* === FIX: drawer content not hidden under header + remove extra gap === */
+html.embed-seamless .panel-left{
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: visible !important;
+}
+
+/* шапка шторки фиксированная */
+html.embed-seamless .panel-left .hdr{
+  flex: 0 0 auto !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* тело шторки занимает остаток и скроллится */
+html.embed-seamless .panel-left .body{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  /* ВАЖНО: убираем любые отступы сверху, из-за которых “прячется” контент */
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* убираем margin у первого блока — он и делает “воздух” */
+html.embed-seamless .panel-left .body > :first-child{
+  margin-top: 0 !important;
+}
+
+/* иногда карточки внутри имеют свой внешний отступ */
+html.embed-seamless .panel-left .body .card:first-child,
+html.embed-seamless .panel-left .body .box:first-child{
+  margin-top: 0 !important;
+}
+
+/* ===== FINAL EMBED LAYOUT (single source of truth) ===== */
+html.embed-seamless{
+  --host-top-h: 72px;   /* подбери 64/72/80 под твою реальную шапку панели */
+  --ctor-hdr-h: 56px;   /* высота шапки конструктора и шторки */
+  --ctor-w: 380px;
+  --ear-w: 28px;
+}
+
+/* PANEL-LEFT (drawer) */
+html.embed-seamless .panel-left{
+  position: fixed !important;
+  left: var(--host-side-w, 96px);
+  top: var(--host-top-h) !important;
+  height: calc(100vh - var(--host-top-h)) !important;
+  width: var(--ctor-w);
+  z-index: 9000;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: visible !important;
+  background: rgba(12,19,32,.92) !important;
+  border-right: 1px solid rgba(255,255,255,.10) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.35) !important;
+  transform: translateX(0);
+  transition: transform .25s ease;
+}
+
+/* drawer header MUST exist */
+html.embed-seamless .panel-left > .hdr{
+  display: flex !important;
+  flex: 0 0 auto !important;
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+}
+
+/* drawer body */
+html.embed-seamless .panel-left > .body{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding-top: 10px !important;
+}
+
+/* collapse => slide left, ear stays via ::after + button */
+html.embed-seamless .app.nav-collapsed .panel-left{
+  transform: translateX(calc(-1 * var(--ctor-w))) !important;
+}
+
+/* CENTER (preview + constructor header) */
+html.embed-seamless .centerWrap{
+  position: fixed !important;
+  top: var(--host-top-h) !important;
+  left: 0;
+  right: 0;
+  height: calc(100vh - var(--host-top-h)) !important;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+
+  /* push right: host sidebar + open drawer */
+  padding-left: calc(var(--host-side-w, 96px) + var(--ctor-w)) !important;
+  transition: padding-left .25s ease;
+  z-index: 1;
+}
+
+html.embed-seamless .app.nav-collapsed .centerWrap{
+  padding-left: var(--host-side-w, 96px) !important;
+}
+
+/* constructor header */
+html.embed-seamless .centerWrap > .hdr{
+  flex: 0 0 auto !important;
+  min-height: var(--ctor-hdr-h) !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+}
+
+/* preview area — no fake padding-top! */
+html.embed-seamless .phoneArea{
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding: 0 16px 120px !important;
+  margin: 0 !important;
+}
+
+/* remove gap from first blocks */
+html.embed-seamless .panel-left .body > :first-child,
+html.embed-seamless .phoneArea > :first-child{
+  margin-top: 0 !important;
+}
+
+
+
+/* === remove extra air top/bottom in preview === */
+html.embed-seamless .phoneArea{
+  padding-top: 0 !important;      /* убираем воздух сверху */
+  padding-bottom: 24px !important; /* было 120 — даёт воздух снизу */
+  margin: 0 !important;
+  gap: 0 !important;
+}
+
+/* часто воздух даёт обёртка превью */
+html.embed-seamless .phoneDock,
+html.embed-seamless .phoneWrap,
+html.embed-seamless .phoneFrame{
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* если внутри превью стоит “центровщик” с паддингом */
+html.embed-seamless .phoneArea > .inner,
+html.embed-seamless .phoneArea > .wrap,
+html.embed-seamless .phoneArea > .container{
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+
+/* === PATCH 22.12: remove "air" above header and below preview (embed) === */
+html.embed-seamless{
+  --host-top-h: 72px;   /* подгони под свою верхнюю шапку */
+  --ctor-hdr-h: 56px;   /* шапка конструктора */
+}
+
+/* Center (preview + header) starts under host header */
+html.embed-seamless .centerWrap{
+  top: var(--host-top-h) !important;
+  height: calc(100vh - var(--host-top-h)) !important;
+}
+
+/* Drawer starts under host header too */
+html.embed-seamless .panel-left{
+  top: var(--host-top-h) !important;
+  height: calc(100vh - var(--host-top-h)) !important;
+}
+
+/* Remove extra padding that creates gaps */
+html.embed-seamless .phoneArea{
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  padding-bottom: 24px !important; /* было 120 */
+}
+
+/* Safety: first child margins */
+html.embed-seamless .phoneArea > :first-child,
+html.embed-seamless .panel-left .body > :first-child{
+  margin-top: 0 !important;
+}
+
+
+/* =====================================================================
+   SINGLE SOURCE OF TRUTH — AIR FIX (22.12)
+   Причина "воздуха": в файле много повторных embed-правил с разными top/height
+   и огромным padding-bottom у phoneArea. Этот блок стоит ПОСЛЕДНИМ и
+   перетирает всё выше.
+   ===================================================================== */
+html.embed-seamless{
+  /* ВАЖНО: в твоём хосте iframe уже расположен под верхней шапкой,
+     поэтому второй раз сдвигать контент внутри iframe НЕ НУЖНО. */
+  --host-top-h: 0px !important;
+  --ctor-hdr-h: 56px !important;
+}
+
+/* Центр и шторка без второго оффсета по Y */
+html.embed-seamless .centerWrap{
+  top: 0 !important;
+  height: 100vh !important;
+  bottom: auto !important;
+}
+html.embed-seamless .panel-left{
+  top: 0 !important;
+  height: 100vh !important;
+  bottom: auto !important;
+}
+
+/* Убираем “хвост” снизу и лишние отступы у превью */
+html.embed-seamless .phoneArea{
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  padding-bottom: 24px !important; /* было 120 — давало воздух снизу */
+}
+
+/* На всякий: первый элемент без внешних отступов */
+html.embed-seamless .phoneArea > :first-child,
+html.embed-seamless .panel-left .body > :first-child{
+  margin-top: 0 !important;
+}
+
+html.embed-seamless, html.embed-seamless body{ height:100%; }
+
+html.embed-seamless .centerWrap,
+html.embed-seamless .panel-left{
+  height: 100% !important;  /* вместо 100vh */
+}
+
+
+/* === GREEN EAR === */
+html.embed-seamless{
+  --ear-bg: rgba(19, 189, 227, 0.95);      /* зелёный фон */
+  --ear-br: rgba(34, 197, 94, .85);      /* зелёная обводка */
+  --ear-fg: #07220f;                     /* цвет стрелки */
+}
+
+/* сама “плашка-ухо” */
+html.embed-seamless .panel-left::after{
+  background: var(--ear-bg) !important;
+  border-color: var(--ear-br) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.35) !important;
+}
+
+/* стрелка */
+html.embed-seamless .panel-left .nav-ear::before{
+  color: var(--ear-fg) !important;
+  font-weight: 900;
+}
+
+
+/* === NO LINES (dark) === */
+html.embed-seamless[data-theme="dark"] .panel-left{
+  border-right: 0 !important;
+}
+
+html.embed-seamless[data-theme="dark"] .centerWrap > .hdr{
+  border-bottom: 0 !important;
+}
+
+/* если есть вертикальная линия по центру/разделитель */
+html.embed-seamless[data-theme="dark"] .centerWrap{
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+
+
+/* Canvas background: unify light & dark so it doesn't look like two products */
+html.embed-seamless .centerWrap{
+  background: radial-gradient(1200px 600px at 30% 10%, rgba(124,92,255,.10), transparent 60%),
+              radial-gradient(900px 500px at 80% 30%, rgba(34,197,94,.06), transparent 55%),
+              rgba(9, 14, 26, .98);
+}
+
+/* ===== Ear: per-theme colors ===== */
+
+/* DARK (по умолчанию или явно) */
+html.embed-seamless:not([data-theme="light"]),
+html.embed-seamless[data-theme="dark"]{
+  --ear-bg: rgb(9, 9, 9);
+  --ear-br: rgb(12, 12, 12);
+  --ear-fg: #ffffff;
+}
+
+/* LIGHT */
+html.embed-seamless[data-theme="light"]{
+  --ear-bg: rgba(15, 17, 57, 0.92);   /* твой голубой */
+  --ear-br: rgba(8, 8, 8, 0.7);
+  --ear-fg: #fff;                      /* можно #0f172a если хочешь тёмную стрелку */
+}
+
+/* применение (у тебя уже есть, оставь так) */
+html.embed-seamless .panel-left::after{
+  background: var(--ear-bg) !important;
+  border-color: var(--ear-br) !important;
+}
+html.embed-seamless .panel-left .nav-ear::before{
+  color: var(--ear-fg) !important;
+}
+
+
+
+
+
+
+/* =========================
+   LIGHT THEME — FIGMA DRAWER
+   ========================= */
+
+/* 1) Отменяем глобальную покраску hdr для левой панели (иначе шапка белая, тело другое) */
+html.embed-seamless[data-theme="light"] .panel-left > .hdr{
+  background:#F8FAFC !important;                 /* figma-like */
+  border-bottom:1px solid rgba(2,6,23,.08) !important;
+  color:#0F172A !important;
+}
+
+/* 2) В light теме сама шторка светлая (как Figma sidebar) */
+html.embed-seamless[data-theme="light"] .panel-left{
+  background:#FFFFFF !important;
+  border-right:1px solid rgba(2,6,23,.08) !important;
+  box-shadow: 14px 0 40px rgba(2,6,23,.10) !important;
+}
+
+/* 3) Тело — тот же стиль, без “тёмных карточек” */
+html.embed-seamless[data-theme="light"] .panel-left > .body{
+  background:#FFFFFF !important;
+  color:#0F172A !important;
+}
+
+/* 4) Карточки/аккордеоны внутри — светлые */
+html.embed-seamless[data-theme="light"] .panel-left .item,
+html.embed-seamless[data-theme="light"] .panel-left .acc,
+html.embed-seamless[data-theme="light"] .panel-left .help{
+  background:#F8FAFC !important;
+  border:1px solid rgba(2,6,23,.08) !important;
+  color:#0F172A !important;
+}
+
+/* 5) Инпуты/кнопки в шторке — светлые */
+html.embed-seamless[data-theme="light"] .panel-left input,
+html.embed-seamless[data-theme="light"] .panel-left select,
+html.embed-seamless[data-theme="light"] .panel-left .btn{
+  background:#FFFFFF !important;
+  color:#0F172A !important;
+  border-color: rgba(2,6,23,.10) !important;
+}
+
+/* 6) Убираем лишние “линии” в светлой теме (если режет глаз) */
+html.embed-seamless[data-theme="light"] .panel-left .sep{
+  background: rgba(2,6,23,.08) !important;
+}
+
+/* 7) ВАЖНО: гарантируем что hdr слева НЕ спрятан (у тебя есть display:none раньше) */
+html.embed-seamless .panel-left > .hdr{
+  display:flex !important;
+}
+
+/* remove dark plate behind zoom (keep only slider) */
+.zoomRail{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+
+/* FIX: zoom slider fixed + centered vertically */
+html.embed-seamless .zoomRail{
+  position: fixed !important;
+  right: 22px !important;
+
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+
+  z-index: 60 !important;
+  pointer-events: auto !important;
+}
+
+/* Light theme: NO plate behind zoom */
+html.embed-seamless[data-theme="light"] .zoomRail{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+/* track darker */
+html.embed-seamless[data-theme="light"] .zr-slider::-webkit-slider-runnable-track{
+  background: rgba(2,6,23,.28) !important;
+  border: 1px solid rgba(2,6,23,.20) !important;
+}
+html.embed-seamless[data-theme="light"] .zr-slider::-moz-range-track{
+  background: rgba(2,6,23,.28) !important;
+  border: 1px solid rgba(2,6,23,.20) !important;
+}
+
+/* thumb darker */
+html.embed-seamless[data-theme="light"] .zr-slider::-webkit-slider-thumb{
+  background: rgba(2,6,23,.90) !important;
+}
+html.embed-seamless[data-theme="light"] .zr-slider::-moz-range-thumb{
+  background: rgba(2,6,23,.90) !important;
+}
+
+
+
+/* zoom: hide caption + % value (leave only slider) */
+.zoomRail .zr-label,
+.zoomRail .zr-val{ display:none !important; }
+.zoomRail{ gap:0 !important; padding:10px 8px !important; }
+
+
+
+
+
+
+/* =========================
+   LIGHT THEME — CLEAN WHITE
+   ========================= */
+
+/* 1) Холст (где превью) — чисто белый */
+html.embed-seamless[data-theme="light"] .centerWrap{
+  background: #ffffff !important;
+}
+
+/* 2) Шапка сверху (где iPhone/кнопки) — тоже белая и без линии */
+html.embed-seamless[data-theme="light"] .centerWrap > .hdr{
+  background: #ffffff !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 3) Левая шторка — белая полностью (и шапка “Конструктор” белая) */
+html.embed-seamless[data-theme="light"] .panel-left{
+  background: #ffffff !important;
+  border-right: 0 !important;
+  box-shadow: 14px 0 40px rgba(2,6,23,.08) !important; /* мягко отделяем от холста */
+}
+
+/* гарантируем, что hdr слева не спрятан (у тебя раньше было display:none) */
+html.embed-seamless[data-theme="light"] .panel-left > .hdr{
+  display: flex !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-bottom: 0 !important;      /* убираем линию */
+  box-shadow: none !important;      /* убираем “шов” */
+}
+
+/* тело шторки */
+html.embed-seamless[data-theme="light"] .panel-left > .body{
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* 4) Убираем ЛЮБЫЕ линии/разделители внутри шторки */
+html.embed-seamless[data-theme="light"] .panel-left .sep,
+html.embed-seamless[data-theme="light"] .panel-left .divider,
+html.embed-seamless[data-theme="light"] .panel-left hr{
+  display:none !important;
+}
+
+/* 5) Убираем обводки у “карточек” в шторке (если именно они выглядят как линии) */
+html.embed-seamless[data-theme="light"] .panel-left .item,
+html.embed-seamless[data-theme="light"] .panel-left .acc,
+html.embed-seamless[data-theme="light"] .panel-left .help{
+  border: 0 !important;
+  box-shadow: 0 1px 0 rgba(2,6,23,.06) !important; /* очень мягкая “фигма-линиЯ” */
+  background: #ffffff !important;
+}
+
+/* 6) Если тебе вообще без “полосочек” — закомментируй строку box-shadow выше
+      и оставь карточки полностью плоскими */
+
+
+/* =========================
+   DARK THEME — KILL LINES
+   ========================= */
+
+/* 1) убить любые явные разделители */
+html.embed-seamless:not([data-theme="light"]) .panel-left .sep,
+html.embed-seamless:not([data-theme="light"]) .panel-left .divider,
+html.embed-seamless:not([data-theme="light"]) .panel-left hr{
+  display: none !important;
+}
+
+/* 2) убрать линии/обводки у карточек (и их inset-линии) */
+html.embed-seamless:not([data-theme="light"]) .panel-left .item,
+html.embed-seamless:not([data-theme="light"]) .panel-left .acc,
+html.embed-seamless:not([data-theme="light"]) .panel-left .help{
+  border: 0 !important;
+  box-shadow: none !important;               /* часто линия сидит тут */
+}
+
+/* 3) если линия сидит прямо на строках списка/элементах */
+html.embed-seamless:not([data-theme="light"]) .panel-left .row,
+html.embed-seamless:not([data-theme="light"]) .panel-left .line,
+html.embed-seamless:not([data-theme="light"]) .panel-left .layer-item,
+html.embed-seamless:not([data-theme="light"]) .panel-left .layer-sec{
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 4) на всякий: убрать шов под шапкой панели */
+html.embed-seamless:not([data-theme="light"]) .panel-left > .hdr{
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   LEFT HEADER = BUTTON BAR
+   ========================= */
+
+/* сама шапка левой панели */
+html.embed-seamless .panel-left > .hdr{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start;
+  gap:10px !important;
+  padding: 10px 12px !important;
+  min-height: 56px;                 /* как шапка справа */
+}
+
+/* если у тебя остался старый title — скрыть */
+html.embed-seamless .panel-left > .hdr .title{
+  display:none !important;
+}
+
+/* если стрелка (#panelHide) ещё есть в DOM — скрыть */
+html.embed-seamless #panelHide{
+  display:none !important;
+}
+
+/* контейнер твоих кнопок (если ты его сделал) */
+html.embed-seamless .panel-left > .hdr .ctor-hdr-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-left:auto;                 /* кнопки вправо */
+}
+
+/* сами кнопки в шапке слева — одинаковые */
+html.embed-seamless .panel-left > .hdr button,
+html.embed-seamless .panel-left > .hdr .btn{
+  height: 34px;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* иконко-кнопки (↶ ↷ ⋯) компактнее */
+html.embed-seamless .panel-left > .hdr button.is-icon,
+html.embed-seamless .panel-left > .hdr .btn.is-icon{
+  width: 34px;
+  padding: 0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Скрыть старое поле "Название или путь" под списком страниц */
+#route_new{
+  display:none;
+}
+
+
+
+
+/* =========================
+   MODALS / POPUPS — CLEAN UI
+   ========================= */
+:root{
+  --dlg-bg: rgba(15,21,34,.96);
+  --dlg-border: rgba(255,255,255,.14);
+  --dlg-sep: rgba(255,255,255,.10);
+  --dlg-text: rgba(231,240,255,.95);
+  --dlg-sub: rgba(231,240,255,.70);
+  --dlg-field: rgba(0,0,0,.12);
+  --dlg-field-border: rgba(255,255,255,.14);
+}
+html[data-theme="light"]{
+  --dlg-bg: #ffffff;
+  --dlg-border: rgba(2,6,23,.14);
+  --dlg-sep: rgba(2,6,23,.10);
+  --dlg-text: #0b1220;
+  --dlg-sub: rgba(2,6,23,.62);
+  --dlg-field: rgba(2,6,23,.04);
+  --dlg-field-border: rgba(2,6,23,.14);
+}
+
+/* force overrides over inline styles in index.html */
+.modal{ z-index: 20000 !important; background: rgba(0,0,0,.55) !important; }
+.dlg{
+  background: var(--dlg-bg) !important;
+  color: var(--dlg-text) !important;
+  border-color: var(--dlg-border) !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.45);
+}
+.dlg-h, .dlg-f{ border-color: var(--dlg-sep) !important; }
+.smallmut{ color: var(--dlg-sub) !important; }
+.search{
+  background: var(--dlg-field) !important;
+  border-color: var(--dlg-field-border) !important;
+  color: var(--dlg-text) !important;
+}
+.edit{
+  border: 1px solid var(--dlg-field-border) !important;
+  background: var(--dlg-field) !important;
+}
+.edit label{ color: var(--dlg-sub) !important; }
+.edit input[type="text"], .edit select, .edit textarea{
+  background: rgba(0,0,0,.10) !important;
+  border: 1px solid var(--dlg-field-border) !important;
+  color: var(--dlg-text) !important;
+}
+html[data-theme="light"] .edit input[type="text"],
+html[data-theme="light"] .edit select,
+html[data-theme="light"] .edit textarea{
+  background: #fff !important;
+}
+
+/* File input — make it look like a button */
+.edit input[type="file"]{
+  width: 100%;
+  color: var(--dlg-sub);
+}
+.edit input[type="file"]::file-selector-button{
+  height: 34px;
+  padding: 0 12px;
+  margin-right: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--dlg-field-border);
+  background: rgba(255,255,255,.06);
+  color: var(--dlg-text);
+  cursor: pointer;
+}
+html[data-theme="light"] .edit input[type="file"]::file-selector-button{
+  background: rgba(2,6,23,.04);
+}
+
+/* Library cards — less “dashed / outlined” */
+.lib-card{
+  border-style: solid !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+html[data-theme="light"] .lib-card{
+  border-color: rgba(2,6,23,0.12) !important;
+}
+.lib-thumb{
+  border-color: rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.02) !important;
+}
+html[data-theme="light"] .lib-thumb{
+  border-color: rgba(2,6,23,0.10) !important;
+  background: rgba(2,6,23,0.02) !important;
+}
+
+/* Clean thumb: icon / image cover */
+.thumb-ico{
+  width: 100%;
+  height: 100%;
+  display:grid;
+  place-items:center;
+  font-size: 28px;
+  opacity: .85;
+}
+.thumb-img{
+  width:100%;
+  height:100%;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Icon picker grid cards (remove hardcoded inline dark styles) */
+.kcard{
+  text-align:left;
+  padding:10px;
+  border:1px solid var(--dlg-field-border);
+  background: var(--dlg-field);
+  border-radius:12px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  cursor:pointer;
+  color: var(--dlg-text);
+}
+.kcard:hover{ filter: brightness(1.05); }
+.kcard span{
+  width:28px;height:28px;
+  display:grid;place-items:center;
+  border-radius:10px;
+  background: rgba(255,255,255,.06);
+}
+html[data-theme="light"] .kcard span{ background: rgba(2,6,23,.06); }
+
+
+/* ===== Modal polish & theming (v3 fixed) ===== */
+
+:root{
+  --dlg-bg:#0f1522;
+  --dlg-border:rgba(255,255,255,.10);
+  --dlg-text:#e8f0ff;
+  --dlg-sub:#97aac4;
+  --dlg-card:rgba(255,255,255,.03);
+}
+html[data-theme="light"]{
+  --dlg-bg:#ffffff;
+  --dlg-border:#d9e2ef;
+  --dlg-text:#0b1220;
+  --dlg-sub:#51627a;
+  --dlg-card:#f6f8fc;
+}
+
+.modal{ z-index:20000 !important; }
+.modal.modal-top{ z-index:21000 !important; }
+.dlg{ background:var(--dlg-bg) !important; color:var(--dlg-text) !important; border:1px solid var(--dlg-border) !important; }
+.dlg-h,.dlg-f{ border-color:var(--dlg-border) !important; }
+.smallmut{ color:var(--dlg-sub) !important; }
+
+body.modal-open .centerWrap{ pointer-events:none; filter: blur(1px) brightness(.88); }
+
+/* Reduce excessive outlines / dashed borders in editors */
+.edit{ border:1px solid var(--dlg-border) !important; background:var(--dlg-card) !important; }
+.edit input[type="text"], .edit textarea, .edit select{ border:1px solid var(--dlg-border) !important; background:transparent !important; color:inherit !important; }
+
+/* Pretty file input */
+input[type="file"]{ font-size:12px; }
+input[type="file"]::file-selector-button{
+  height:32px;
+  margin-right:10px;
+  padding:0 12px;
+  border-radius:10px;
+  border:1px solid var(--dlg-border);
+  background:rgba(124,92,255,.10);
+  color:inherit;
+  cursor:pointer;
+}
+html[data-theme="light"] input[type="file"]::file-selector-button{
+  background:#eef2ff;
+}
+.kcard{ border:1px solid var(--dlg-border) !important; background:var(--dlg-card) !important; border-radius:14px !important; padding:12px !important; display:flex; gap:10px; align-items:center; cursor:pointer; }
+.kcard[data-on="1"]{ outline:2px solid rgba(124,92,255,.75); }
+.kico{ width:34px; height:34px; border-radius:12px; display:grid; place-items:center; background:rgba(124,92,255,.12); }
+.kmeta{ display:grid; gap:2px; }
+.ktit{ font-weight:700; }
+
+
+
+/* ===== Block library layout fixes ===== */
+#mCats{ display:none !important; }
+#mSelectAll{ display:none !important; }
+
+/* 3 cards per row (responsive) */
+.lib-grid{
+  display:grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+@media (max-width: 1100px){
+  .lib-grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+}
+@media (max-width: 760px){
+  .lib-grid{ grid-template-columns: 1fr !important; }
+}
+
+/* Reduce “borders everywhere” inside library */
+.lib-side-item{ border: 1px solid rgba(2,6,23,0.08) !important; }
+html[data-theme="dark"] .lib-side-item{ border-color: rgba(255,255,255,0.08) !important; }
+
+.lib-thumb-fallback{width:100%;height:100%;display:grid;place-items:center;font-size:28px;opacity:.75}
+
+.nav-title{
+  font-weight:600;
+  margin:0 4px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+
+

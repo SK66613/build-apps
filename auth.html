@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ru" data-auth-off>
+<head>
+  <script>window.API_BASE='https://build-apps.cyberian13.workers.dev';</script>
+  <meta charset="UTF-8" />
+  <title>Вход в кабинет mini-apps</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    :root{
+      --bg:#020617;
+      --card:#020617;
+      --accent:#3b82f6;
+      --accent-soft:rgba(59,130,246,.14);
+      --danger:#ef4444;
+      --text:#e5e7eb;
+      --text-soft:#9ca3af;
+      --border:rgba(148,163,184,.4);
+      --radius-xl:18px;
+      --radius-lg:14px;
+      --shadow-soft:0 18px 45px rgba(15,23,42,.65);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{
+      height:100%;
+      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at top,#1e293b 0,#020617 45%,#000 100%);
+      color:var(--text);
+    }
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .auth-shell{
+      width:100%;
+      max-width:420px;
+      border-radius:var(--radius-xl);
+      background:rgba(15,23,42,.96);
+      backdrop-filter:blur(22px);
+      box-shadow:var(--shadow-soft);
+      border:1px solid rgba(148,163,184,.35);
+      padding:20px 20px 18px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    .auth-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .auth-logo{
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+    .auth-sub{
+      font-size:12px;
+      color:var(--text-soft);
+    }
+
+    .auth-tabs{
+      display:flex;
+      gap:6px;
+      padding:4px;
+      border-radius:999px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(55,65,81,.9);
+    }
+    .auth-tab{
+      flex:1;
+      border:0;
+      background:transparent;
+      color:var(--text-soft);
+      font-size:13px;
+      padding:7px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:500;
+    }
+    .auth-tab--active{
+      background:var(--accent-soft);
+      color:var(--accent);
+    }
+
+    .auth-form{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-top:4px;
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--text-soft);
+    }
+    .field input{
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:rgba(15,23,42,.9);
+      color:var(--text);
+      padding:8px 10px;
+      font-size:13px;
+      outline:none;
+    }
+    .field input:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 1px rgba(59,130,246,.5);
+    }
+
+    .auth-actions{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-top:6px;
+    }
+    .btn-primary{
+      border:0;
+      width:100%;
+      border-radius:999px;
+      padding:9px 12px;
+      font-size:14px;
+      font-weight:600;
+      cursor:pointer;
+      background:linear-gradient(135deg,#2563eb,#4f46e5);
+      color:#f9fafb;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .btn-primary[disabled]{
+      opacity:.6;
+      cursor:default;
+    }
+    .btn-secondary{
+      border:0;
+      width:100%;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      cursor:pointer;
+      background:rgba(15,23,42,1);
+      border:1px dashed rgba(148,163,184,.6);
+      color:var(--text-soft);
+    }
+
+    .auth-message{
+      min-height:18px;
+      font-size:12px;
+      color:var(--text-soft);
+      margin-top:4px;
+    }
+    .auth-message[data-type="error"]{color:#fecaca;}
+    .auth-message[data-type="success"]{color:#bbf7d0;}
+
+    .small-hint{
+      font-size:11px;
+      color:var(--text-soft);
+      margin-top:4px;
+      line-height:1.4;
+    }
+
+    @media (max-width:480px){
+      .auth-shell{
+        padding:16px 14px 14px;
+        border-radius:16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-header">
+      <div>
+        <div class="auth-logo">MiniApps Studio</div>
+        <div class="auth-sub">Вход в кабинет конструктора</div>
+      </div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab auth-tab--active" data-auth-tab="login">Вход</button>
+      <button class="auth-tab" data-auth-tab="register">Регистрация</button>
+    </div>
+
+    <!-- Форма входа -->
+    <form id="loginForm" class="auth-form" autocomplete="on">
+      <div class="field">
+        <label for="loginEmail">E-mail</label>
+        <input id="loginEmail" type="email" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="loginPassword">Пароль</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required />
+      </div>
+      <div class="auth-actions">
+        <button type="submit" class="btn-primary" id="loginSubmit">
+          Войти в кабинет
+        </button>
+      </div>
+    </form>
+
+    <!-- Форма регистрации -->
+    <form id="registerForm" class="auth-form" style="display:none" autocomplete="on">
+      <div class="field">
+        <label for="regName">Имя и фамилия</label>
+        <input id="regName" type="text" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="regEmail">E-mail</label>
+        <input id="regEmail" type="email" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="regPassword">Пароль</label>
+        <input id="regPassword" type="password" autocomplete="new-password" required />
+      </div>
+      <div class="auth-actions">
+        <button type="submit" class="btn-primary" id="regSubmit">
+          Создать аккаунт
+        </button>
+      </div>
+      <div class="small-hint">
+        После регистрации e-mail можно подтвердить по ссылке из письма, но
+        для начала работы это не обязательно — просто в кабинете будет плашка
+        «e-mail не подтверждён».
+      </div>
+    </form>
+
+    <div id="authMessage" class="auth-message"></div>
+  </div>
+
+  <script>
+    (function(){
+      const API_BASE = (window.AUTH_API_BASE || 'https://build-apps.cyberian13.workers.dev').replace(/\/$/,'');
+
+      const tabs = document.querySelectorAll('[data-auth-tab]');
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const msgEl = document.getElementById('authMessage');
+      const loginBtn = document.getElementById('loginSubmit');
+      const regBtn = document.getElementById('regSubmit');
+
+      function setMessage(text,type){
+        msgEl.textContent = text || '';
+        if (type) msgEl.dataset.type = type;
+        else delete msgEl.dataset.type;
+      }
+
+      function setMode(mode){
+        tabs.forEach(btn=>{
+          const m = btn.getAttribute('data-auth-tab');
+          btn.classList.toggle('auth-tab--active', m===mode);
+        });
+        loginForm.style.display = mode==='login' ? 'flex' : 'none';
+        registerForm.style.display = mode==='register' ? 'flex' : 'none';
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', mode);
+        window.history.replaceState(null,'',url.toString());
+      }
+
+      tabs.forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          setMode(btn.getAttribute('data-auth-tab'));
+          setMessage('');
+        });
+      });
+
+      async function apiPost(path, body){
+        const res = await fetch(API_BASE + path, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify(body || {})
+        });
+        let data = null;
+        let rawText = '';
+        try{ rawText = await res.clone().text(); }catch(_){}
+        try{ data = JSON.parse(rawText); }catch(_){}
+        return {res,data,rawText};
+      }
+
+      async function doLogin(email,password){
+        setMessage('Проверяем данные…','');
+        loginBtn.disabled = true;
+        try{
+          const {res,data,rawText} = await apiPost('/api/auth/login',{email,password});
+          if (!res.ok || !data || data.ok === false){
+            const err = (data && data.error) || (rawText && rawText.trim()) || ('HTTP '+res.status);
+            setMessage(mapError(err),'error');
+          }else{
+            // кука sg_session ставится воркером, просто идём в кабинет
+            try{ localStorage.setItem('sg_user_email', email); }catch(_){ }
+            setMessage('Готово, заходим в кабинет…','success');
+            setTimeout(()=>{ const next = new URLSearchParams(location.search).get('next');
+            window.location.href = next ? next : 'cab.html'; },400);
+          }
+        }catch(e){
+          console.error(e);
+          setMessage('Не удалось войти. Проверь интернет и попробуй ещё раз.','error');
+        }finally{
+          loginBtn.disabled = false;
+        }
+      }
+
+      async function doRegister(name,email,password){
+        setMessage('Создаём аккаунт…','');
+        regBtn.disabled = true;
+        try{
+          const {res,data,rawText} = await apiPost('/api/auth/register',{name,email,password});
+          if (!res.ok || !data || data.ok === false){
+            const err = (data && data.error) || (rawText && rawText.trim()) || ('HTTP '+res.status);
+            setMessage(mapError(err),'error');
+          }else{
+            // после успешной регистрации сразу логиним теми же данными
+            if (data.needVerify){
+              setMessage('Аккаунт создан. Заходим в кабинет…','success');
+            }
+            await doLogin(email,password);
+          }
+        }catch(e){
+          console.error(e);
+          setMessage('Не удалось создать аккаунт. Попробуй ещё раз.','error');
+        }finally{
+          regBtn.disabled = false;
+        }
+      }
+
+      function mapError(code){
+        switch(code){
+          case 'EMAIL_EXISTS': return 'Этот e-mail уже зарегистрирован. Попробуй войти.';
+          case 'BAD_EMAIL': return 'Некорректный e-mail.';
+          case 'WEAK_PASSWORD': return 'Пароль слишком короткий.';
+          case 'INVALID_CREDENTIALS':
+          case 'BAD_CREDENTIALS': return 'Неверный e-mail или пароль.';
+          case 'EMAIL_OR_PASSWORD_MISSING': return 'Заполни e-mail и пароль.';
+          case 'BAD_INPUT': return 'Проверь e-mail и пароль (пароль минимум 6 символов).';
+          // EMAIL_NOT_VERIFIED пока не используем, но оставлю:
+          case 'EMAIL_NOT_VERIFIED': return 'E-mail ещё не подтверждён. Смотри письмо или зайди в кабинет и запроси повторную ссылку.';
+          default: return 'Ошибка: ' + code;
+        }
+      }
+
+      loginForm.addEventListener('submit', e=>{
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        if (!email || !password){
+          setMessage('Заполни e-mail и пароль.','error');
+          return;
+        }
+        doLogin(email,password);
+      });
+
+      registerForm.addEventListener('submit', e=>{
+        e.preventDefault();
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        if (!email || !password){
+          setMessage('Заполни e-mail и пароль.','error');
+          return;
+        }
+        doRegister(name,email,password);
+      });
+
+      // Если уже есть действующая сессия — сразу ведём в кабинет
+      (async function autoRedirectIfLoggedIn(){
+        try{
+          const res = await fetch(API_BASE + '/api/auth/me', {
+            method:'GET',
+            credentials:'include'
+          });
+          if(!res.ok) return;
+          const data = await res.json().catch(()=>null);
+          if (data && data.ok && data.authenticated){
+            const next = new URLSearchParams(location.search).get('next');
+            window.location.href = next ? next : 'cab.html';
+          }
+        }catch(_){}
+      })();
+
+      // начальный таб по query ?mode=register
+      const initMode = new URL(window.location.href).searchParams.get('mode') || 'login';
+      setMode(initMode === 'register' ? 'register' : 'login');
+    })();
+  </script>
+</body>
+</html>

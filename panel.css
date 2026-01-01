@@ -1,0 +1,446 @@
+:root{
+  --bg:#f2f5fb;--card:#fff;--text:#0f172a;--muted:#6b7a94;--line:#e5eaf3;
+  --side:#1e293b;--side2:#0f172a;--sideText:rgba(255,255,255,.86);--primary:#2563eb;
+  --danger:#ef4444;--shadow:0 10px 25px rgba(15,23,42,.08);--radius:16px;--pad:18px;
+  --font:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  --side-w:96px;
+}
+html[data-theme="dark"]{
+  --bg:#0b1220;--card:#0f1522;--text:#e6f0ff;--muted:#92a6c4;--line:#1b2433;
+  --side:#0c1320;--side2:#0a0f1a;--sideText:rgba(231,240,255,.92);--primary:#7c5cff;
+  --danger:#ff4d6d;--shadow:0 14px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box} body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg)}
+/* Layout: sidebar is fixed; main content can extend beneath it when needed (constructor). */
+.app{min-height:100vh; padding-left:var(--side-w);}
+.side{
+  background:linear-gradient(180deg,var(--side),var(--side2));
+  color:var(--sideText);
+  display:flex;flex-direction:column;
+  border-right:1px solid rgba(255,255,255,.08);
+  width:var(--side-w);
+  position:fixed;left:0;top:0;bottom:0;z-index:80;
+  transition:width .22s ease, transform .22s ease;
+}
+.side__top{padding:12px 8px;display:flex;justify-content:center}
+.side__logo,.side__collapse,.side__theme{width:44px;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:var(--sideText);cursor:pointer}
+.logoMark{font-weight:900}
+.side__nav{padding:8px 6px 10px;display:grid;gap:8px;flex:1;overflow:auto;min-height:0;}
+.side__item{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 6px;
+  height:70px;
+  border-radius:16px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--sideText);
+  cursor:pointer;
+  text-align:center;
+}
+.side__item:hover{background:rgba(255,255,255,.06)}
+.side__item.is-active{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.12)}
+.side__item .ico{width:auto;text-align:center;opacity:.95;font-size:18px;line-height:1}
+.side__item .txt{font-size:11px;font-weight:700;line-height:1.1;letter-spacing:.01em}
+.side__sep{height:10px}
+.side__bottom{margin-top:auto;padding:10px;display:flex;gap:8px;justify-content:center}
+.side.is-mini .side__item{justify-content:center}
+.side.is-mini .side__item .txt{display:none}
+
+.main{min-width:0;position:relative;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 var(--pad);border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.55);backdrop-filter:saturate(140%) blur(10px)}
+html[data-theme="dark"] .topbar{background:rgba(15,21,34,.65)}
+.crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:800}
+.crumb__name{letter-spacing:.04em;font-size:13px}
+.page{padding:18px var(--pad) 28px}
+.page__hdr{padding:8px 2px 14px}
+h1{margin:0 0 6px;font-size:28px;letter-spacing:-.02em}
+.page__sub{color:var(--muted);font-size:13px;max-width:820px}
+
+.btn{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer;font-weight:800}
+.btn--primary{background:var(--primary);border-color:transparent;color:#fff}
+.btn--danger{background:var(--danger);border-color:transparent;color:#fff}
+
+.tabs{display:flex;gap:18px;padding:0 2px 12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{background:transparent;border:none;padding:10px 4px;cursor:pointer;color:var(--muted);font-weight:900}
+.tab.is-active{color:var(--text);position:relative}
+.tab.is-active::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:3px;border-radius:999px;background:var(--primary)}
+
+.view{display:none} .view.is-show{display:block}
+
+/* Constructor embed */
+.ctorWrap{height:100%; border-radius:0; overflow:hidden; border:1px solid var(--line);
+  box-shadow:var(--shadow); background:var(--card);
+}
+.ctorFrame{width:100%;height:100%;border:0;background:transparent}
+
+/* In constructor mode, let the iframe go UNDER the fixed sidebar so the studio panel can hide behind it */
+body.is-ctor .ctorWrap{
+  margin-left:calc(-1 * var(--side-w));
+  width:calc(100% + var(--side-w));
+}
+
+/* when constructor is open, we want more space */
+body.is-ctor .page{padding:10px var(--pad) 14px}
+body.is-ctor .page__hdr{display:none}
+body.is-ctor .tabs{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.stack{display:grid;gap:14px}
+.card__hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.card__title{font-weight:900;letter-spacing:-.01em}
+.card__sub{color:var(--muted);font-size:12px;margin-top:4px}
+.tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}
+.table{width:100%;border-collapse:collapse;min-width:560px;background:var(--card)}
+.table th,.table td{padding:12px;border-bottom:1px solid var(--line);font-size:13px}
+.table th{color:var(--muted);text-align:left;font-weight:900}
+.tr{text-align:right}
+.pill{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-weight:900;font-size:12px;background:rgba(0,0,0,.02)}
+.pill--ok{color:#0ea5e9;border-color:rgba(14,165,233,.25);background:rgba(14,165,233,.08)}
+html[data-theme="dark"] .pill{background:rgba(255,255,255,.03)}
+.empty,.ph{padding:14px;border-radius:14px;border:1px dashed var(--line);color:var(--muted);background:rgba(0,0,0,.02)}
+html[data-theme="dark"] .empty,html[data-theme="dark"] .ph{background:rgba(255,255,255,.02)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:980px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}h1{font-size:22px}}
+.miniCard,.kpi{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(0,0,0,.02)}
+html[data-theme="dark"] .miniCard,html[data-theme="dark"] .kpi{background:rgba(255,255,255,.02)}
+.miniCard__t{font-weight:900}.miniCard__s{color:var(--muted);font-size:12px;margin-top:4px}
+.kpi__l{color:var(--muted);font-size:12px;font-weight:900}.kpi__v{font-size:22px;font-weight:900;margin-top:6px}.kpi__d{color:#10b981;font-weight:900;font-size:12px;margin-top:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.chip{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.02);cursor:pointer;font-weight:900;color:var(--muted)}
+.chip.is-on{background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.25);color:var(--text)}
+html[data-theme="dark"] .chip.is-on{background:rgba(124,92,255,.16);border-color:rgba(124,92,255,.25)}
+.form{display:grid;gap:10px}
+.field span{display:block;font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px}
+.req{color:var(--danger)}
+.input{width:100%;height:44px;padding:0 12px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.02);color:var(--text);outline:none}
+html[data-theme="dark"] .input{background:rgba(255,255,255,.02)}
+.field__row{display:grid;grid-template-columns:1fr 40px;gap:8px;align-items:center}
+.iconBtn{width:40px;height:44px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.02);cursor:pointer;font-size:18px;color:var(--muted)}
+html[data-theme="dark"] .iconBtn{background:rgba(255,255,255,.02)}
+.actions{display:flex;gap:10px;align-items:center}
+.mut{color:var(--muted);font-size:12px}
+.info{width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);color:var(--muted);font-weight:900}
+.chatFab{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:999px;border:0;background:var(--primary);color:#fff;font-size:20px;box-shadow:var(--shadow);cursor:pointer}
+
+
+.side.is-mini{width:84px}
+
+@media (max-width: 900px){
+  .side{position:fixed;left:0;top:0;bottom:0;z-index:50;transform:translateX(0)}
+  .side.is-mini{transform:translateX(calc(-1 * 260px + 84px))} /* оставляем узкий рейл */
+  .main{margin-left:84px}
+}
+
+
+/* === Constructor view tweaks (standard header, tight) === */
+body.mode-constructor .page{padding:12px 12px 14px;}
+body.mode-constructor .page__hdr{padding:6px 2px 10px;}
+body.mode-constructor .ctorWrap{border-radius:0;}
+
+/* Ensure constructor iframe fills available height (fix blank area) */
+body.mode-constructor .page{display:flex;flex-direction:column;min-height:0;flex:1;}
+body.mode-constructor .views{flex:1;min-height:0;display:flex;}
+body.mode-constructor .view[data-view="constructor"]{display:flex;flex:1;min-height:0;}
+body.mode-constructor .ctorWrap{flex:1;min-height:0;height:auto;}
+body.mode-constructor .ctorFrame{height:100%;}
+
+
+
+/* --- Hide scrollbars but keep scrolling (host panel) --- */
+.side__nav{scrollbar-width:none;-ms-overflow-style:none;}
+.side__nav::-webkit-scrollbar{width:0;height:0}
+.main, .content, .page{scrollbar-width:none;-ms-overflow-style:none;}
+.main::-webkit-scrollbar, .content::-webkit-scrollbar, .page::-webkit-scrollbar{width:0;height:0}
+
+
+
+
+
+
+
+
+/* === FIX: constructor iframe fills full area, no top/bottom gaps === */
+body.is-ctor .page{
+  padding: 0 !important;          /* убираем “воздух” вокруг */
+  height: calc(100vh - 64px);     /* 64px = .topbar height */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body.is-ctor .view.is-show{
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+body.is-ctor .ctorWrap{
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto !important;        /* не 100% */
+  border: 0 !important;           /* если хочешь вообще без рамки */
+  box-shadow: none !important;    /* и без тени */
+  background: transparent !important;
+}
+
+body.is-ctor .ctorFrame{
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+
+/* Active state only on icon (not on text) */
+.side__item.is-active{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* make the icon be the “pill/outline” */
+.side__item .ico{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  transition: 180ms ease;
+}
+
+/* active: outline only around icon */
+.side__item.is-active .ico{
+  outline: 2px solid rgba(124,92,255,.55);
+  outline-offset: 0;
+  background: rgba(124,92,255,.10);
+  box-shadow: 0 10px 24px rgba(124,92,255,.18);
+}
+
+/* optional: hover to feel clickable, but still only icon */
+.side__item:hover{ background: transparent !important; }
+.side__item:hover .ico{
+  background: rgba(255,255,255,.06);
+}
+
+/* LIGHT theme tweak (if you use html[data-theme="light"]) */
+html[data-theme="light"] .side__item.is-active .ico{
+  outline-color: rgba(124,92,255,.45);
+  background: rgba(124,92,255,.12);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+
+
+
+
+/* ===============================
+   Custom: logo image from root
+   =============================== */
+.sideLogoImg{
+  width: 28px;
+  height: 28px;
+  display:block;
+  object-fit: contain;
+}
+
+/* ===============================
+   Sidebar always expanded
+   =============================== */
+.side__collapse, .side__theme{ display:none !important; }
+.side.is-mini{
+  width: var(--side-w) !important;
+  transform: translateX(0) !important;
+}
+.side.is-mini .side__item .txt{ display:block !important; }
+
+/* on small screens: do NOT shift/rail-hide */
+@media (max-width: 900px){
+  .side.is-mini{ transform: translateX(0) !important; }
+  .main{ margin-left: var(--side-w) !important; }
+}
+
+/* ===============================
+   Figma-like theme switch (−30%)
+   =============================== */
+.themeSwitch{
+  width: 50px;         /* 72 * 0.7 = 50.4 */
+  height: 24px;        /* 34 * 0.7 = 23.8 */
+  border-radius: 999px;
+  position: relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 0 7px;      /* 10 * 0.7 = 7 */
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: var(--sideText);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* icons: center perfectly + make yellow */
+.themeSwitch .ts-ico{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width: 16px;          /* фикс ширины чтобы не прыгали */
+  height: 100%;
+  color: #facc15;       /* жёлтый */
+  opacity: .95;
+}
+
+/* неактивная сторона слабее */
+.themeSwitch .ts-sun,
+.themeSwitch .ts-moon{ opacity: .95; }
+
+html[data-theme="light"] .themeSwitch .ts-sun{ opacity: .95; }
+html[data-theme="dark"]  .themeSwitch .ts-moon{ opacity: .95; }
+
+/* ===== bubble (knob) ===== */
+.themeSwitch .ts-knob{
+  position:absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #60a5fa;                 /* blue bubble */
+  box-shadow: 0 8px 16px rgba(0,0,0,.28);
+  transition: 180ms ease;
+}
+
+
+/* light -> knob right, dark -> knob left */
+html[data-theme="light"] .themeSwitch .ts-knob{
+  left: calc(100% - 21px); /* 3 (отступ) + 18 (knob) = 21 */
+}
+html[data-theme="dark"] .themeSwitch .ts-knob{
+  left: 3px;
+}
+
+/* in light theme sidebar is still dark, but switch should be slightly clearer */
+html[data-theme="light"] .themeSwitch{
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.07);
+}
+
+
+/* Logo: no border, no dark bg, no dimming */
+.side__logo{
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+.side__logo img,
+.side__logo svg{
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Increase logo hitbox */
+.side__logo{
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 16px !important; /* можно 18-20 если хочешь мягче */
+  padding: 0 !important;
+}
+
+/* Increase logo image */
+.side__logo img,
+.side__logo svg{
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.side__logo{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+
+
+
+
+
+
+.settings-bot-form{
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.settings-bot-form .row{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-bot-form label{
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-strong);
+}
+
+.settings-bot-form input{
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,.6);
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--text-main);
+  background: rgba(15,23,42,.7);
+}
+
+.settings-bot-form-small{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-bot-form .actions{
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-bot-form .actions .btn{
+  width: auto;            /* не на всю ширину */
+  padding: 0 24px;
+}
+
+.settings-bot-status{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-bot-status--ok{
+  color: #16a34a;
+}
+
+.settings-bot-status--err{
+  color: #b91c1c;
+}
+
+
+/* SaaS: app switcher */
+.appSwitch{
+  margin-left:12px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(148,163,184,.22);
+  background: rgba(255,255,255,.06);
+  color: inherit;
+  outline: none;
+  font-weight: 800;
+  max-width: 320px;
+}

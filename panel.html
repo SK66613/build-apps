@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+  <script>window.API_BASE='https://build-apps.cyberian13.workers.dev';</script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Панель управления · Mini‑App</title>
+  <link rel="stylesheet" href="panel.css"/>
+</head>
+<body>
+  <div class="app">
+    <aside class="side" id="side">
+      <div class="side__top">
+        <button class="side__logo" id="homeBtn" title="Проекты"><img class="sideLogoImg" src="./logo.png" alt="" onerror="this.style.display='none'; this.parentNode.querySelector('.logoMarkFallback').style.display='block';"><span class="logoMark logoMarkFallback" style="display:none">◆</span></button>
+      </div>
+
+      <nav class="side__nav" id="sideNav">
+        <button class="side__item" data-view="constructor" title="Конструктор"><span class="ico">🛠</span><span class="txt">Конструктор</span></button>
+        <button class="side__item is-active" data-view="entities" title="Сущности"><span class="ico">◻</span><span class="txt">Сущности</span></button>
+        <button class="side__item" data-view="faq" title="Вопрос‑ответ"><span class="ico">?</span><span class="txt">Вопрос‑ответ</span></button>
+        <button class="side__item" data-view="broadcasts" title="Рассылки"><span class="ico">➤</span><span class="txt">Рассылки</span></button>
+        <button class="side__item" data-view="channels" title="Подключения"><span class="ico">⌁</span><span class="txt">Подключения</span></button>
+        <button class="side__item" data-view="stats" title="Статистика"><span class="ico">▦</span><span class="txt">Статистика</span></button>
+        <button class="side__item" data-view="dialogs" title="Диалоги"><span class="ico">💬</span><span class="txt">Диалоги</span></button>
+        <div class="side__sep"></div>
+        <button class="side__item" data-view="settings" title="Настройки"><span class="ico">⚙</span><span class="txt">Настройки</span></button>
+        <button class="side__item" data-view="support" title="Поддержка"><span class="ico">☻</span><span class="txt">Поддержка</span></button>
+        <button class="side__item" data-view="help" title="Справочный центр"><span class="ico">ⓘ</span><span class="txt">Справочный</span></button>
+        <button class="side__item" data-view="profile" title="Профиль"><span class="ico">☺</span><span class="txt">Профиль</span></button>
+      </nav>
+
+      <div class="side__bottom">
+        <button class="themeSwitch" id="themeSwitch" type="button" title="Тема">
+          <span class="ts-ico ts-moon">☾</span>
+          <span class="ts-ico ts-sun">☀</span>
+          <span class="ts-knob" aria-hidden="true"></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb"><span class="crumb__chev">›</span><span class="crumb__name" id="projectName">БИЗНЕС КВЕСТ</span>
+          <select id="appSwitchGlobal" class="appSwitch" aria-label="Переключение проекта"></select></div>
+        <div class="topbar__right"><button class="btn" id="logoutGlobalBtn">Выйти</button><button class="btn btn--danger" id="deleteBtn">Удалить бота</button></div>
+      </header>
+
+      <section class="page">
+        <div class="page__hdr" id="pageHdr">
+          <h1 id="pageTitle">Настройки бота</h1>
+          <div class="page__sub" id="pageSub">Управление основными параметрами, интеграциями и безопасностью.</div>
+        </div>
+
+        <div class="tabs" id="settingsTabs" hidden>
+          <button class="tab is-active" data-tab="base">Базовые настройки</button>
+          <button class="tab" data-tab="fallbacks">Ответы при форс‑мажорах</button>
+          <button class="tab" data-tab="integrations">Интеграции</button>
+        </div>
+
+        <div class="views">
+          <section class="view" data-view="constructor">
+            <div class="ctorWrap">
+              <!-- embed=1: seamless mode inside work panel
+                   host_side_w: fixed main menu width (see --side-w in panel.css) -->
+              <iframe class="ctorFrame" id="ctorFrame" title="Конструктор mini-app" src="miniapp_sections_fixed2/app/index.html?embed=1&host_side_w=96px"></iframe>
+            </div>
+          </section>
+
+          <section class="view is-show" data-view="entities">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Сущности</div>
+                  <div class="card__sub">Настройка сущностей mini‑app: товары, услуги, игры, страницы.</div>
+                </div>
+                <button class="btn">Добавить</button>
+              </div>
+              <div class="tableWrap">
+                <table class="table">
+                  <thead><tr><th>Тип</th><th>Название</th><th>Статус</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td>Страница</td><td>Главная</td><td><span class="pill pill--ok">активна</span></td><td class="tr">⋯</td></tr>
+                    <tr><td>Игра</td><td>Колесо</td><td><span class="pill">черновик</span></td><td class="tr">⋯</td></tr>
+                    <tr><td>Промо</td><td>Скидка 10%</td><td><span class="pill pill--ok">активна</span></td><td class="tr">⋯</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" data-view="faq">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">FAQ</div>
+                  <div class="card__sub">Ответы на частые вопросы клиентов в боте.</div>
+                </div>
+                <button class="btn">Добавить вопрос</button>
+              </div>
+              <div class="empty">Пока пусто. Добавь первый вопрос‑ответ.</div>
+            </div>
+          </section>
+
+          <section class="view" data-view="broadcasts">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Рассылки</div>
+                  <div class="card__sub">Создание кампаний, сегменты, расписания.</div>
+                </div>
+                <button class="btn">Новая рассылка</button>
+              </div>
+              <div class="empty">Здесь будет список кампаний.</div>
+            </div>
+          </section>
+
+          <section class="view" data-view="channels">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Подключения каналов</div>
+                  <div class="card__sub">Telegram, Webhook, CRM, касса, Google Sheets.</div>
+                </div>
+                <button class="btn">Подключить</button>
+              </div>
+              <div class="grid2">
+                <div class="miniCard"><div class="miniCard__t">Telegram Bot API</div><div class="miniCard__s">Токен, WebApp, команды</div></div>
+                <div class="miniCard"><div class="miniCard__t">Webhook</div><div class="miniCard__s">URL и тестовый URL</div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" data-view="stats">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Статистика</div>
+                  <div class="card__sub">Активность пользователей и выручка.</div>
+                </div>
+                <div class="chips">
+                  <button class="chip is-on">30 дней</button>
+                  <button class="chip">7 дней</button>
+                  <button class="chip">Сегодня</button>
+                </div>
+              </div>
+              <div class="grid3">
+                <div class="kpi"><div class="kpi__l">Пользователи</div><div class="kpi__v">1 284</div><div class="kpi__d">+6%</div></div>
+                <div class="kpi"><div class="kpi__l">Чеки</div><div class="kpi__v">312</div><div class="kpi__d">+12%</div></div>
+                <div class="kpi"><div class="kpi__l">Выручка</div><div class="kpi__v">124 500 ₽</div><div class="kpi__d">+18%</div></div>
+              </div>
+              <div class="ph">Графики подключим позже (API).</div>
+            </div>
+          </section>
+
+          <section class="view" data-view="dialogs">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Диалоги</div>
+                  <div class="card__sub">История обращений, ответы оператора.</div>
+                </div>
+              </div>
+              <div class="empty">Диалогов пока нет.</div>
+            </div>
+          </section>
+
+          <section class="view" data-view="settings">
+            <div class="stack">
+              <div class="card">
+                <div class="card__hdr">
+                  <div>
+                    <div class="card__title">Базовые настройки</div>
+                    <div class="card__sub">Название, описание, публичные параметры.</div>
+                  </div>
+                </div>
+                <div class="form">
+                  <label class="field">
+                    <span>Название бота<span class="req">*</span></span>
+                    <div class="field__row">
+                      <input class="input" id="botTitle" placeholder="Бизнес квест" value="Бизнес квест"/>
+                      <button class="iconBtn" type="button" title="Очистить" id="clearTitle">×</button>
+                    </div>
+                  </label>
+
+                  <div class="actions">
+                    <button class="btn btn--primary" id="saveBase">Сохранить</button>
+                    <span class="mut" id="saveHint"></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card__hdr">
+                  <div>
+                    <div class="card__title">Настройки вебхука</div>
+                    <div class="card__sub">URL для боевого и тестового вебхука.</div>
+                  </div>
+                  <span class="info">?</span>
+                </div>
+                <div class="form">
+                  <label class="field"><span>URL вашего вебхука</span><input class="input" placeholder="https://..."/></label>
+                  <label class="field"><span>URL тестового вебхука</span><input class="input" placeholder="https://..."/></label>
+                  <div class="mut">Тестовый вебхук используется при проверке сценариев в тестовом виджете.</div>
+                  <div class="actions"><button class="btn btn--primary">Сохранить</button></div>
+                </div>
+              </div>
+
+              <div class="card" id="tab_integrations" hidden>
+                <div class="card__hdr card__hdr--split">
+                  <div>
+                    <div class="card__title">Интеграции</div>
+                    <div class="card__sub">
+                      Подключи Telegram-бота для начисления бонусов и кэшбэка.
+                    </div>
+                  </div>
+                  <span class="pill" id="botStatusBadge">Не подключён</span>
+                </div>
+
+                <div class="form">
+                  <label class="field">
+                    <span>Имя бота <span class="mut">(опционально)</span></span>
+                    <input class="input" id="botUsername" placeholder="@my_loyalty_bot">
+                  </label>
+
+                  <label class="field">
+                    <span>Токен бота</span>
+                    <input
+                      class="input"
+                      id="botToken"
+                      type="password"
+                      autocomplete="off"
+                      placeholder="123456:ABC-DEF..."
+                    >
+                    <div class="mut">
+                      Токен хранится зашифрованным в нашем хранилище и не показывается повторно.
+                    </div>
+                  </label>
+
+                  <div class="actions">
+                    <!-- Кнопка на всю ширину -->
+                    <button
+                      class="btn btn--primary"
+                      id="saveBotIntegration"
+                      style="width:100%;"
+                    >
+                      Сохранить интеграцию
+                    </button>
+                  </div>
+
+                  <div class="mut" id="botSaveHint"></div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          <section class="view" data-view="support">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Поддержка</div>
+                  <div class="card__sub">Связь с поддержкой и статусы заявок.</div>
+                </div>
+              </div>
+              <div class="empty">Напиши нам — отвечаем быстро.</div>
+            </div>
+          </section>
+
+          <section class="view" data-view="help">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Справочный центр</div>
+                  <div class="card__sub">Инструкции и гайды по настройке.</div>
+                </div>
+              </div>
+              <div class="empty">Раздел в разработке.</div>
+            </div>
+          </section>
+
+          <section class="view" data-view="profile">
+            <div class="card">
+              <div class="card__hdr">
+                <div>
+                  <div class="card__title">Профиль</div>
+                  <div class="card__sub">Аккаунт, доступы, уведомления.</div>
+                </div>
+              </div>
+              <div class="empty">Раздел в разработке.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <button class="chatFab" title="Чат поддержки">💬</button>
+    </main>
+  </div>
+
+  <script src="panel_shell.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>

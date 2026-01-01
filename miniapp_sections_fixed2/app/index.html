@@ -1,0 +1,354 @@
+
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+
+
+  <!-- ... твои мета, стили и т.п. ... -->
+
+  <!-- Настройки API для конструктора -->
+  <script>
+    // говорим студии, куда слать запросы
+    window.CTOR_API_BASE = 'https://build-apps.cyberian13.workers.dev';
+  </script>
+
+  <!-- studio.js подключается внизу после templates.js -->
+
+
+
+
+  
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mini‑App Constructor — Studio v1.9.1-stable</title>
+  <link rel="stylesheet" href="studio.css"/>
+  <style>
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal.on{display:flex}
+    .dlg{width:min(900px,92vw);max-height:84vh;background:#0f1522;border:1px solid #1b2433;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+    .dlg-h{padding:10px 12px;border-bottom:1px solid #1b2433;display:flex;gap:8px;align-items:center}
+    .dlg-b{padding:12px;min-height:0;overflow:auto;display:grid;gap:10px}
+    .dlg-f{padding:10px 12px;border-top:1px solid #1b2433;display:flex;gap:8px;justify-content:flex-end}
+    .grid2{display:grid;grid-template-columns:1fr auto;gap:8px}
+    .klist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+    .kitem{display:grid;gap:8px;padding:10px;border:1px dashed #2a3346;border-radius:12px;background:rgba(255,255,255,.03)}
+    .kitem .pv{border:1px solid #2a3346;border-radius:10px;padding:8px;background:#0c1320}
+    .search{height:36px;border:1px solid #1b2433;background:#0e1420;border-radius:10px;padding:0 10px;width:100%}
+    .smallmut{color:#92a6c4;font-size:12px}
+    .inline{display:flex;gap:6px;align-items:center}
+    .edit{margin-top:6px;border:1px dashed #2a3346;padding:8px;border-radius:8px;background:#0e1526}
+    .edit label{display:block;font-size:12px;color:#9fb1c9;margin:6px 0 2px}
+    .edit input[type="text"]{width:100%;height:32px;border:1px solid #2a3346;background:#0c1320;border-radius:8px;padding:0 8px}
+    .edit .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+
+
+    /* =========================
+   Global Thin Scrollbars
+   (stylish, dark UI)
+   ========================= */
+
+/* Firefox */
+*{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.18) transparent;
+}
+
+/* Chromium / Safari */
+*::-webkit-scrollbar{
+  width: 10px;      /* вертикальный */
+  height: 10px;     /* горизонтальный */
+}
+
+*::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.16);
+  border-radius: 999px;
+  border: 3px solid transparent;  /* делает thumb визуально тоньше */
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,.28);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner{
+  background: transparent;
+}
+
+/* =========================
+   App switcher in header
+   ========================= */
+.appSwitchBox{display:flex;align-items:center;min-width:220px;max-width:420px}
+.appSwitch{
+  width:100%;
+  height:38px;
+  border-radius:12px;
+  border:1px solid rgba(148,163,184,.22);
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  font-weight:900;
+  letter-spacing:.2px;
+  padding:0 10px;
+  outline:none;
+}
+.appSwitch:focus{border-color:rgba(99,102,241,.6)}
+.appSwitch option{background:#0f1522;color:#e5e7eb}
+
+</style>
+
+  <style id="studioThemeOverrides">
+    /* Light theme overrides for Studio embed */
+    html[data-theme="light"] body{background:#f4f6fb;color:#0b1220}
+    html[data-theme="light"] .panel{background:#ffffff;border-color:#d9e2ef}
+    html[data-theme="light"] .hdr{background:#ffffff;border-color:#d9e2ef}
+    html[data-theme="light"] .btn{background:#f2f5fb;border-color:#d9e2ef;color:#0b1220}
+    html[data-theme="light"] .btn.good{background:#e9f7ef;border-color:#b7e1c5;color:#0b1220}
+    html[data-theme="light"] .help, html[data-theme="light"] .mut{color:#51627a}
+    html[data-theme="light"] .acc-b{background:#ffffff;border-color:#d9e2ef}
+    html[data-theme="light"] input, html[data-theme="light"] select{background:#ffffff;color:#0b1220;border-color:#d9e2ef}
+    html[data-theme="light"] .list .item{background:#ffffff;border-color:#d9e2ef}
+    html[data-theme="light"] .ctxmenu{background:#ffffff;border-color:#d9e2ef;color:#0b1220}
+    /* keep preview phone area on light */
+    html[data-theme="light"] .phone{background:#0b0f16}
+  </style>
+  <script>
+    (function(){
+      function applyTheme(t){
+        document.documentElement.setAttribute('data-theme', (t==='light') ? 'light' : 'dark');
+      }
+
+      // Seamless embed mode (when constructor is mounted inside the Work Panel)
+      try{
+        const qs = new URLSearchParams(location.search);
+        if (qs.get('embed') === '1'){
+          document.documentElement.classList.add('embed-seamless');
+          // pass-through: host sidebar width (so the left studio panel can hide beneath it)
+          const hostW = qs.get('host_side_w');
+          if (hostW){
+            document.documentElement.style.setProperty('--host-side-w', hostW);
+          }
+        }
+      }catch(_){ }
+
+      window.addEventListener('message', function(e){
+        const d = e && e.data;
+        if (!d || d.type!=='theme') return;
+        applyTheme(d.theme);
+      });
+      // initial: try read parent saved theme key (if same-origin)
+      try{
+        const t = localStorage.getItem('panel_theme');
+        if (t) applyTheme(t);
+      }catch(_){}
+    })();
+  </script>
+
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT -->
+    <div class="panel panel-left">
+      <div class="hdr ctorHdr">
+  
+
+  <div class="ctorHdr-actions">
+    <button class="btn smallbtn ctorBtn" data-ctor-act="a">Дизайн</button>
+    <button class="btn smallbtn ctorBtn" data-ctor-act="b">Панель</button>
+
+  </div>
+
+  <!-- оставляем элемент, чтобы ничего не ломалось, но скрываем через CSS -->
+  <button id="panelHide" class="btn smallbtn" aria-hidden="true">⮜</button>
+</div>
+
+      <!-- nav ear moved outside .panel-left so it can stay visible when the panel slides under the host sidebar -->
+      <div class="body row">
+        
+<div class="help">Добавляй вкладки и страницы, редактируй блоки; превью обновляется сразу, сохраняется по кнопке.</div>
+        <div class="app-id-row">
+          <label>App ID <small>ключ</small><input id="app_id" value="my_app"/></label>
+        </div>
+
+        <div class="acc" id="themeAcc">
+          <div class="acc-h">
+            <b>Тема и цвета</b>
+          </div>
+          <div class="acc-b">
+            <label>
+              Цвет фона приложения
+              <input type="color" id="theme_bg" value="#0f1219">
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+              <label>
+                Акцентный цвет
+                <input type="color" id="theme_acc" value="#7C5CFF">
+              </label>
+              <label>
+                Фон нижнего меню
+                <input type="color" id="theme_tab" value="#0c0d12">
+              </label>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+              <label>
+                Цвет текста
+                <input type="color" id="theme_fg" value="#e8f0ff">
+              </label>
+              <label>
+                Шрифт
+                <select id="theme_font">
+                  <option value="Inter">Inter</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="system">System UI</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+        <div class="list" id="nav_list"></div>
+
+
+        <div class="sep"></div>
+
+        <!-- Слои теперь находятся внутри гармошки каждой страницы (acc-b),
+             чтобы логика была "как у топовых" и не дублировалась. -->
+
+        <div class="sep"></div>
+        <div class="grid2">
+          <input id="route_new" value="" placeholder="Название или путь"/>
+          <button id="route_add" class="btn">Добавить страницу</button>
+        </div>
+
+      </div><!-- /.body -->
+
+      <!-- Ушко как часть формы панели (не отдельный плавающий элемент) -->
+      <button class="nav-ear" id="navEar" type="button" aria-label="Свернуть/развернуть меню">⮞</button>
+    </div><!-- /.panel-left -->
+
+    <!-- CENTER -->
+    <div class="panel centerWrap">
+      <div class="hdr">
+        <div class="appSwitchBox" title="Переключить проект">
+          <select id="appSwitch" class="appSwitch" aria-label="Переключение проекта"></select>
+        </div>
+        <div style="flex:1"></div>
+        <div class="mut"></div>
+        <button class="btn" data-preset="iphone-13">iPhone 13</button>
+        <button class="btn" data-preset="iphone-se">iPhone SE</button>
+        <button class="btn" data-preset="pixel-7">Pixel 7</button>
+        <div style="width:10px"></div>
+        <div style="flex:1"></div>
+        <button id="undo" class="btn">↶ Отменить</button>
+        <button id="redo" class="btn">↷ Вернуть</button>
+        <button id="save" class="btn">Сохранить</button>
+        <button id="publish" class="btn good">Опубликовать</button>
+      </div>
+      <div class="phoneArea">
+<div class="zoomRail" aria-label="Масштаб">
+  <div class="zr-label">Масштаб</div>
+  <input id="zoom" class="zr-slider" type="range" min="30" max="130" value="100"/>
+  <div id="zoom_val" class="zr-val mut">100%</div>
+</div>
+
+        <div class="phoneDock" id="dock">
+          <div class="phone" id="phone">
+            <div class="notch"></div>
+            <div class="screen"><iframe id="frame" src="../preview/index.html?preview=draft&app_id=my_app"></iframe></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blocks Library Modal -->
+  <div class="modal" id="blocksModal">
+    <div class="dlg">
+      <div class="dlg-h"><b>Библиотека блоков</b><span id="modalRoute" class="badge">/</span><div style="flex:1"></div><button id="mClose" class="btn">Закрыть</button></div>
+      <div class="dlg-b">
+        <div class="grid2">
+          <input id="mSearch" class="search" placeholder="Поиск блока..."/>
+          <div id="mCats" class="chips"></div>
+          <button id="mSelectAll" class="btn">Выбрать всё</button>
+        </div>
+        <div id="mList" class="klist"></div>
+      </div>
+      <div class="dlg-f">
+        <button id="mApply" class="btn primary">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block Editor Modal -->
+  <div class="modal" id="blockEditor">
+    <div class="dlg">
+      <div class="dlg-h"><b>Редактор блока</b><span id="beTitle" class="badge"></span><div style="flex:1"></div><button id="beClose" class="btn">Закрыть</button></div>
+      <div class="dlg-b" id="beBody"></div>
+      <div class="dlg-f">
+        <button id="beDelete" class="btn danger">Удалить блок</button>
+        <div style="flex:1"></div>
+        <button id="beApply" class="btn primary">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Page Modal -->
+  <div class="modal" id="renameModal">
+    <div class="dlg">
+      <div class="dlg-h">
+        <b>Название страницы</b>
+        <span id="renamePath" class="badge"></span>
+        <div style="flex:1"></div>
+      </div>
+      <div class="dlg-b">
+        <label class="lbl">Новое название</label>
+        <input id="renameInput" class="search" placeholder="Например: Главная" />
+      </div>
+      <div class="dlg-f">
+        <button id="renameCancel" class="btn">Отмена</button>
+        <button id="renameSave" class="btn primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Icon Picker Modal -->
+  <div class="modal" id="iconPicker">
+    <div class="dlg">
+      <div class="dlg-h"><b>Иконка вкладки</b><div style="flex:1"></div><button class="btn" data-close>Закрыть</button></div>
+      <div class="dlg-b" id="iconGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:10px"></div>
+      <div class="dlg-f">
+        <label class="btn"><input type="file" id="iconUpload" accept="image/*" style="display:none">Загрузить свою</label>
+        <button class="btn primary" data-close>Готово</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- New Page Modal -->
+  <div class="modal" id="routeNameModal">
+    <div class="dlg">
+      <div class="dlg-h">
+        <b>Название страницы</b>
+      </div>
+      <div class="dlg-b edit">
+        <label>Новое название</label>
+        <input id="routeNameInput" type="text" placeholder="Например, Главная">
+      </div>
+      <div class="dlg-f">
+        <button class="btn" id="routeNameCancel">Отмена</button>
+        <button class="btn primary" id="routeNameSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="templates.js?v=step21"></script>
+  <script src="studio.js?v=step21"></script>
+  <div id="ctxMenu" class="ctxmenu" style="display:none"></div>
+  <script src="../../panel_shell.js"></script>
+</body>
+</html>
