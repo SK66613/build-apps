@@ -1,0 +1,609 @@
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Mini‑App Preview</title>
+  <link rel="stylesheet" href="app.css"/>
+  <link rel="stylesheet" href="beer/beer.css"/>
+  <script src="../app/templates.js"></script>
+  <script src="games/runtime.js"></script>
+  <script src="games/flappy/flappy.mount.js"></script>
+  <style id="theme"></style>
+  <style>
+    .blk{position:relative}
+    .blk:hover{outline:2px dashed rgba(124,92,255,.6); outline-offset:4px; cursor:pointer}
+    .blk.focus{outline:2px solid rgba(124,92,255,.9); outline-offset:4px}
+    .blk.dragging{opacity:.55}
+    .blk.drop-before{outline:2px solid rgba(124,92,255,.6); outline-offset:4px}
+    .blk.drop-after{outline:2px solid rgba(124,92,255,.6); outline-offset:4px}
+    body.reordering .blk:hover{cursor:grab}
+    /* prevent uploaded icons from stretching/squishing */
+    .tabbar img{display:block;object-fit:contain}
+  </style>
+</head>
+<body>
+  <div id="root">Загрузка…</div>
+  <div id="tabbar" class="tabbar"></div>
+  
+  <div id="intro" class="intro" aria-hidden="true">
+    <div class="intro__wrap">
+      <div id="intro-progress" class="intro__progress"></div>
+      <div class="intro__stage">
+        <div id="intro-slides" class="intro__slides">          <section class="intro__slide">
+            <h1 class="intro__h1">Как это работает</h1>
+            <p class="intro__p">Копите монеты, играя и делая покупки. Обменивайте их на призы в разделе «Бонусы».</p>
+          </section>
+          <section class="intro__slide">
+            <h1 class="intro__h1">Отлично! Погнали</h1>
+            <p class="intro__p">Первый спин — в подарок. В профиле видны баланс, призы и рефералы. Играй честно, бонусы забирай в магазине.</p>
+          </section>
+        </div>
+      </div>
+      <div id="intro-actions" class="intro__actions"></div>
+    </div>
+  </div>
+
+  
+  <div id="sheet" class="sheet sheet-bottom" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="sheet__overlay" data-close-sheet></div>
+    <section class="sheet__panel" tabindex="-1">
+      <div class="sheet__handle"></div>
+      <header class="sheet__header">
+        <div class="sheet__title" id="sheet-title"></div>
+        <button class="sheet__close" aria-label="Закрыть" data-close-sheet>✕</button>
+      </header>
+      <div class="sheet__body" id="sheet-body"></div>
+    </section>
+  </div>
+
+  <script>
+  (function(){
+    // Drag-reorder is disabled for now (the studio modal overlaps the preview).
+    const ENABLE_REORDER = false;
+    function pingReady(){ try{ parent.postMessage({type:'ready'}, '*'); }catch(_){} }
+
+const Q = new URLSearchParams(location.search);
+const appId   = Q.get('app_id') || 'my_app';
+const ch      = (Q.get('preview') || 'draft').toLowerCase();
+// public режим: конфиг берём из воркера по publicId
+const publicId = Q.get('publicId') || Q.get('public_id') || '';
+// можно переопределить через ?api=..., по умолчанию наш воркер
+// Allow overriding via ?api=..., otherwise use same-origin Worker Route
+const API_BASE = Q.get('api') || '';
+
+function escapeHtml(s){
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function kv(k){
+  try { return JSON.parse(localStorage.getItem(k)); }
+  catch(_) { return null; }
+}
+
+// В режиме превью (студия) берём из localStorage;
+// в режиме public (есть publicId) – не трогаем localStorage, ждём fetch.
+function loadBP(){
+  if (publicId) return null;
+  const blob = kv(`bp:${appId}:${ch}`) || kv(`bp:${appId}:draft`);
+  return (blob && blob.json) || null;
+}
+
+let bp = loadBP();
+// expose для других скриптов (sheet/page opener)
+window.bp = bp;
+
+// Фоллбек на демо-шаблон НУЖЕН только в режиме превью (когда НЕТ publicId)
+if (!bp && !publicId) {
+  try{
+    const tmpl = window.Templates
+      && window.Templates['Demo Main']
+      && window.Templates['Demo Main'].blueprint;
+    if (tmpl) {
+      bp = JSON.parse(JSON.stringify(tmpl));
+      window.bp = bp;
+    }
+  }catch(_){}
+}
+
+
+    const themeEl = document.getElementById('theme');
+    function applyTheme(){ const css = (bp?.app?.theme?.css) || ''; themeEl.textContent = css; }
+
+    let current = location.hash.replace('#','') || (bp?.routes?.[0]?.path || '/');
+    window.addEventListener('hashchange', ()=>{ current = location.hash.replace('#','') || '/'; render(); });
+
+    function renderTabbar(){
+      const el = document.getElementById('tabbar');
+      const routes = (bp?.nav?.routes||[]).filter(r=>r.kind!=='sheet' && !r.hidden);
+      el.innerHTML = routes.map(r=>{
+        const on = r.path===current ? 'active':'';
+        const ico = (r.icon_img?`<img src='${r.icon_img}' style='width:20px;height:20px;border-radius:6px'/>`:(r.icon_g||'●'));
+        return `<div class="tab ${on}" data-path="${r.path}"><div>${ico}</div><div>${r.title||r.path}</div></div>`;
+      }).join('');
+      [...el.querySelectorAll('.tab')].forEach(t=>t.onclick=()=>{ location.hash = t.dataset.path; });
+    }
+
+    const __cleanup = new Map(); // id -> fn
+
+    // --------- Drag & drop reorder (preview -> studio) [legacy] ----------
+    function enableReorderLegacy(container){
+      if(!container) return;
+      // enable draggable
+      container.querySelectorAll('.blk[data-id]').forEach(el=>{
+        el.setAttribute('draggable','true');
+      });
+
+      let draggingId = null;
+      let overId = null;
+      let before = true;
+
+      function clearMarks(){
+        container.querySelectorAll('.blk.drop-before,.blk.drop-after').forEach(el=>el.classList.remove('drop-before','drop-after'));
+      }
+
+      container.addEventListener('dragstart', (e)=>{
+        const blk = e.target.closest && e.target.closest('.blk[data-id]');
+        if(!blk) return;
+        draggingId = blk.getAttribute('data-id');
+        blk.classList.add('dragging');
+        document.body.classList.add('reordering');
+        try{ e.dataTransfer.setData('text/plain', draggingId); }catch(_){ }
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      container.addEventListener('dragend', (e)=>{
+        const blk = e.target.closest && e.target.closest('.blk[data-id]');
+        if(blk) blk.classList.remove('dragging');
+        document.body.classList.remove('reordering');
+        draggingId = null; overId=null; clearMarks();
+      });
+
+      container.addEventListener('dragover', (e)=>{
+        if(!draggingId) return;
+        const blk = e.target.closest && e.target.closest('.blk[data-id]');
+        if(!blk) return;
+        e.preventDefault();
+        const rect = blk.getBoundingClientRect();
+        const mid = rect.top + rect.height/2;
+        before = (e.clientY < mid);
+        overId = blk.getAttribute('data-id');
+        clearMarks();
+        blk.classList.add(before ? 'drop-before' : 'drop-after');
+      });
+
+      container.addEventListener('drop', (e)=>{
+        if(!draggingId || !overId) return;
+        e.preventDefault();
+        clearMarks();
+        const draggingEl = container.querySelector(`.blk[data-id="${CSS.escape(draggingId)}"]`);
+        const overEl = container.querySelector(`.blk[data-id="${CSS.escape(overId)}"]`);
+        if(!draggingEl || !overEl || draggingEl===overEl) return;
+        // move in DOM
+        if(before) container.insertBefore(draggingEl, overEl);
+        else container.insertBefore(draggingEl, overEl.nextSibling);
+
+        // emit new order to studio
+        const order = [...container.querySelectorAll('.blk[data-id]')].map(x=>x.getAttribute('data-id'));
+        if(ENABLE_REORDER){
+          try{ parent.postMessage({type:'blocks:reorder', path: current, order}, '*'); }catch(_){ }
+        }
+      });
+    }
+
+function initBlocks(container, blocks, route){
+  // cleanup previous
+  try{ __cleanup.forEach(fn=>{ try{ fn&&fn(); }catch(_){} }); }catch(_){}
+  __cleanup.clear();
+
+  const els = [...container.querySelectorAll('.blk[data-id][data-key]')];
+  els.forEach(el=>{
+    const id  = el.getAttribute('data-id');
+    const key = el.getAttribute('data-key');
+    const reg = (window.BlockRegistry && window.BlockRegistry[key]) || null;
+    if(!reg || typeof reg.init!=='function') return;
+
+    const inst = blocks.find(b=>String(b.id)===String(id)) || {id,key};
+    const props = (bp.blocks && bp.blocks[id]) || (reg.defaults||{});
+    try{
+      const fn = reg.init(el, props, {bp, route, path: current}) || null;
+      if(typeof fn==='function') __cleanup.set(id, fn);
+    }catch(e){}
+  });
+}
+
+function blockHTMLInst(inst){
+
+      const reg = window.BlockRegistry[inst.key]||{};
+      const props = (bp.blocks && bp.blocks[inst.id]) || (reg.defaults||{});
+      if(props && props.__hidden) return '';
+      const inner = reg.preview ? reg.preview(props) : `<div class="card">${reg.title||inst.key}</div>`;
+
+      // Interactive blocks should not hijack clicks to open block editor.
+      // - Games must be playable
+      // - CTA buttons must be clickable (open sheet / sheet-page)
+      const isGame = String(reg.type||'') === 'game';
+      const isCta  = String(inst.key||'') === 'cta';
+      const onEdit = (isGame || isCta) ? '' : ` onclick='window.__editBlk && window.__editBlk("${inst.id}")'`;
+      // allow drag reorder in preview (can be disabled)
+      return `<div class='blk' draggable='${ENABLE_REORDER?'true':'false'}' data-id='${inst.id}' data-key='${inst.key}'${onEdit}>${inner}</div>`;
+    }
+
+    function enableReorder(container){
+      if(!container) return;
+      if(!ENABLE_REORDER) return;
+      let dragId = null;
+
+      function clearMarks(){
+        container.querySelectorAll('.blk.drop-before,.blk.drop-after').forEach(el=>el.classList.remove('drop-before','drop-after'));
+      }
+      function sendOrder(){
+        const order = [...container.querySelectorAll('.blk[data-id]')].map(el=>el.getAttribute('data-id'));
+        try{ parent.postMessage({type:'blocks:reorder', path: current, order}, '*'); }catch(_){ }
+      }
+
+      container.querySelectorAll('.blk[draggable="true"]').forEach(el=>{
+        el.addEventListener('dragstart', (e)=>{
+          dragId = el.getAttribute('data-id');
+          el.classList.add('dragging');
+          document.body.classList.add('reordering');
+          try{ e.dataTransfer.setData('text/x-blk-id', dragId); }catch(_){ }
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        el.addEventListener('dragend', ()=>{
+          el.classList.remove('dragging');
+          document.body.classList.remove('reordering');
+          clearMarks();
+          dragId = null;
+        });
+      });
+
+      container.addEventListener('dragover', (e)=>{
+        if(!dragId) return;
+        e.preventDefault();
+        const over = e.target.closest('.blk[data-id]');
+        if(!over || over.getAttribute('data-id')===dragId) return;
+        clearMarks();
+        const r = over.getBoundingClientRect();
+        const before = (e.clientY < r.top + r.height/2);
+        over.classList.add(before ? 'drop-before' : 'drop-after');
+      });
+
+      container.addEventListener('drop', (e)=>{
+        if(!dragId) return;
+        e.preventDefault();
+        const dragged = container.querySelector(`.blk[data-id="${dragId}"]`);
+        const over = e.target.closest('.blk[data-id]');
+        if(!dragged || !over || over===dragged) return;
+        const r = over.getBoundingClientRect();
+        const before = (e.clientY < r.top + r.height/2);
+        if(before) over.before(dragged); else over.after(dragged);
+        clearMarks();
+        sendOrder();
+      });
+    }
+
+    function render(){
+      if(!bp){ document.getElementById('root').textContent='NO_BLUEPRINT'; return; }
+      applyTheme();
+      renderTabbar();
+      const route = (bp.routes||[]).find(x=>x.path===current) || (bp.routes||[])[0];
+      const container = document.getElementById('root');
+      container.className='container';
+      const blocks = (route?.blocks||[]);
+
+      // -------- Sections (renderable containers) -----------------------
+      // A section is a special marker block. All subsequent blocks belong to it
+      // until the next section marker (exactly like in the live mini-app).
+      function isSectionMarker(inst){
+        if(!inst) return false;
+        const meta = bp.blocks && bp.blocks[inst.id];
+        const t = inst.k || inst.key || inst.type;
+        return t==='__section' || t==='section' || (meta && meta.__isSection);
+      }
+      function sectionTitle(secId){
+        const p = bp.blocks && bp.blocks[secId];
+        return (p && (p.__label || p.title || p.name)) || 'Раздел';
+      }
+      function renderSection(secId, children){
+        // Рендер контейнера-раздела как "С чего начать" на боевой мини‑аппке.
+        // Вложенные блоки рендерим как обычные блоки внутри .list.
+        const items = [];
+        for(const c of (children||[])){
+          if(!c) continue;
+          if(isSectionMarker(c)) continue;
+          items.push(blockHTMLInst(c));
+        }
+        const title = sectionTitle(secId);
+        return `
+          <div class="card list-card tight blk" data-id="${secId}" data-key="section">
+            <div class="list-head">${escapeHtml(title)}</div>
+            <div class="list">
+              ${items.length ? items.join('') : '<div class="list__empty">Пусто</div>'}
+            </div>
+          </div>
+        `;
+}
+
+      // Сбор вложенности по ссылке bp.blocks[childId].__section.
+      // Это то, что рисует левая панель (recomputeSectionFlow), поэтому превью должно следовать ей.
+      const childIds = new Set();
+      const secChildren = new Map(); // secId -> [inst]
+      for(const inst of blocks){
+        if(!inst || isSectionMarker(inst)) continue;
+        const meta = bp.blocks && bp.blocks[inst.id];
+        const sid  = meta && meta.__section;
+        if(sid){
+          if(!secChildren.has(sid)) secChildren.set(sid, []);
+          secChildren.get(sid).push(inst);
+          childIds.add(String(inst.id));
+        }
+      }
+
+      const html = [];
+      for(const inst of blocks){
+        if(!inst) continue;
+        if(isSectionMarker(inst)){
+          const secId = inst.id;
+          const children = secChildren.get(secId) || [];
+          html.push(renderSection(secId, children));
+          continue;
+        }
+        if(childIds.has(String(inst.id))) continue; // уже внутри раздела
+        html.push(blockHTMLInst(inst));
+      }
+
+      container.innerHTML = html.length ? html.join('\n') : '<div class="card">Нет блоков</div>';
+      // init blocks in entire container (including inside sections)
+      // init blocks for all NON-section blocks (включая вложенные)
+      initBlocks(container, blocks.filter(b=>b && !isSectionMarker(b)), route);
+      if(ENABLE_REORDER) enableReorder(container);
+
+    }
+
+    // Messages from studio
+    window.addEventListener('message', (ev)=>{
+      const d=ev.data||{};
+      if(d.type==='bp:inline' && d.bp){ bp = d.bp; window.bp = bp; render(); }
+      if(d.type==='nav:go' && d.path){ location.hash = d.path; }
+    
+      if(d.type==='block:focus' && d.id){
+        const el = document.querySelector(`.blk[data-id="${d.id}"]`);
+        if(el){
+          try{ el.scrollIntoView({block:'center', behavior:'smooth'});
+
+// --- Live sync from localStorage draft (на случай если postMessage не долетает) ---
+let __lastDraftVer = 0;
+setInterval(()=>{
+  try{
+    const appId = new URLSearchParams(location.search).get('app_id') || 'my_app';
+    const raw = localStorage.getItem(`bp:${appId}:draft`);
+    if(!raw) return;
+    const blob = JSON.parse(raw);
+    const ver = Number(blob && blob.version || 0);
+    if(ver && ver !== __lastDraftVer){
+      __lastDraftVer = ver;
+      const next = (blob && blob.json) || null;
+      if(next){
+        bp = next; window.bp = bp;
+        render();
+      }
+    }
+  }catch(_){}
+}, 300);
+ }catch(_){ el.scrollIntoView(); }
+          el.classList.add('focus');
+          setTimeout(()=>el.classList.remove('focus'), 900);
+        }
+      }
+});
+
+    render();
+    window.__editBlk = function(id){ try{ parent.postMessage({type:'block:edit', id, path: current}, '*'); }catch(_){} };
+    // export helpers for sheet-page renderer
+    window.blockHTMLInst = blockHTMLInst;
+    window.initBlocks = initBlocks;
+    setTimeout(pingReady, 0);
+
+    // ----- PUBLIC РЕЖИМ (боевой мини-апп): грузим конфиг из воркера по publicId -----
+    if (publicId) {   // <-- убираем проверку !bp
+      try {
+        const url = API_BASE.replace(/\/$/,'') +
+          '/api/public/app/' + encodeURIComponent(publicId) + '/config';
+
+        fetch(url)
+          .then(function(res){
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function(data){
+            bp = (data && data.config) || null;
+            window.bp = bp;
+            render();   // рисуем экран
+          })
+          .catch(function(err){
+            console.error('Failed to load public config', err);
+            var root = document.getElementById('root');
+            if (root) root.textContent = 'Ошибка загрузки мини-аппа';
+          });
+      } catch (e) {
+        console.error('Public init error', e);
+      }
+    }
+
+
+  })();
+  </script>
+
+  <script>
+  (function(){
+    const TG = window.Telegram && window.Telegram.WebApp;
+    const root  = document.getElementById('sheet');
+    const panel = root && root.querySelector('.sheet__panel');
+    const body  = document.getElementById('sheet-body');
+    const title = document.getElementById('sheet-title');
+
+    function haptic(level){
+      try{ TG && TG.HapticFeedback && TG.HapticFeedback.impactOccurred(level||'light'); }catch(_){}
+    }
+
+    function openSheet(opts){
+      if (!root) return;
+      opts = opts || {};
+      const t = opts.title || '';
+      const html = opts.html || '';
+      if (title) title.textContent = t;
+      if (body) body.innerHTML = html;
+      root.classList.add('is-open');
+      document.body.classList.add('sheet-open');
+      haptic('light');
+      try{ panel && panel.focus({preventScroll:true}); }catch(_){}
+    }
+    function closeSheet(){
+      if (!root) return;
+      root.classList.remove('is-open');
+      document.body.classList.remove('sheet-open');
+      haptic('light');
+    }
+    window.openSheet = openSheet;
+    window.closeSheet = closeSheet;
+
+    root && root.addEventListener('click', (e)=>{
+      if (e.target.closest('[data-close-sheet]')) closeSheet();
+    });
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape' && root && root.classList.contains('is-open')) closeSheet();
+    });
+
+    // кнопки, открывающие шторки
+    document.addEventListener('click', (e)=>{
+      // --- CTA fallback -------------------------------------------------
+      // Если data-open-* не проставлены (или пользователь кликает по вложенному
+      // элементу кнопки), но это CTA блок, читаем действие из bp.blocks[id].
+      // Плюс нормализуем путь шторки (добавляем ведущий '/').
+      try{
+        const btn = e.target.closest('button');
+        const blk = btn && btn.closest('.blk[data-key="cta"][data-id]');
+        if (btn && blk && !btn.hasAttribute('data-open-sheet') && !btn.hasAttribute('data-open-sheet-page')){
+          const bid = blk.getAttribute('data-id');
+          const props = (window.bp && window.bp.blocks && window.bp.blocks[bid]) || (window.BlockRegistry && window.BlockRegistry.cta && window.BlockRegistry.cta.defaults) || {};
+          const act  = (props && props.action) || 'none';
+          const sid  = (props && props.sheet_id) || '';
+          let   sp   = (props && props.sheet_path) || '';
+          if (sp && sp[0] !== '/') sp = '/' + sp;
+
+          if (act === 'sheet_page' && sp){
+            btn.setAttribute('data-open-sheet-page', sp);
+          } else if (act === 'sheet' && sid){
+            // Если в sheet_id введён путь страницы (например /profile) — считаем как sheet_page.
+            if (sid[0] === '/') btn.setAttribute('data-open-sheet-page', sid);
+            else btn.setAttribute('data-open-sheet', sid);
+          }
+        }
+      }catch(_){ }
+
+// Обработка кнопок с data-link (переходы по страницам и внешние ссылки)
+      try{
+        const btnLink = e.target.closest('[data-link]');
+        if (btnLink){
+          e.stopPropagation(); // не даём клику дойти до .blk (чтобы не открывал редактор)
+          const link = btnLink.getAttribute('data-link') || '';
+          if (link){
+            // если клик пришёл из шторки — закрываем её
+            try{
+              const sheetRoot = document.getElementById('sheet');
+              if (sheetRoot && sheetRoot.classList.contains('is-open') && sheetRoot.contains(btnLink)){
+                if (window.closeSheet) window.closeSheet();
+              }
+            }catch(_){}
+
+            if (link[0] === '#'){
+              // якорь на страницу мини‑аппа: #play -> /play, #tournament -> /tournament
+              const slug = link.slice(1);
+              const path = '/' + slug;
+              try{ location.hash = path; }catch(_){}
+              return;
+            } else if (link[0] === '/'){
+              // прямой путь /play, /tournament
+              try{ location.hash = link; }catch(_){}
+              return;
+            } else if (/^https?:\/\//.test(link)){
+              // внешняя ссылка
+              try{ window.location.href = link; }catch(_){}
+              return;
+            }
+          }
+        }
+      }catch(_){ }
+
+      // Вариант 1: простая шторка по template (старый режим)
+      const btnSimple = e.target.closest('[data-open-sheet]');
+      if (btnSimple){
+        e.stopPropagation(); // чтобы клик по кнопке не открывал редактор блока
+        const id = btnSimple.getAttribute('data-open-sheet');
+        if (!id) return;
+        const tpl = document.getElementById('tpl-sheet-' + id);
+        if (!tpl){
+          // fallback: если id похож на путь страницы — откроем как sheet-page
+          if (id[0] === '/'){
+            btnSimple.removeAttribute('data-open-sheet');
+            btnSimple.setAttribute('data-open-sheet-page', id);
+            // дальше обработает ветка sheet-page ниже
+          } else {
+            return;
+          }
+        }
+        if (!tpl) return;
+        const t = tpl.dataset.sheetTitle || '';
+        const html = tpl.innerHTML;
+        openSheet({ title:t, html });
+        return;
+      }
+
+      // Вариант 2: шторка-страница
+      const btnPage = e.target.closest('[data-open-sheet-page]');
+      if (!btnPage) return;
+      e.stopPropagation(); // тоже не даём событию дойти до .blk
+      let path = btnPage.getAttribute('data-open-sheet-page');
+      if (!path) return;
+      // нормализация пути
+      if (path[0] !== '/') path = '/' + path;
+
+      const sheetRoot = document.getElementById('sheet');
+      if (!sheetRoot) return;
+      const sheetBody = document.getElementById('sheet-body');
+      const sheetTitle = document.getElementById('sheet-title');
+      if (!sheetBody) return;
+
+      const route = (window.bp && (window.bp.routes||[]).find(x=>x.path===path)) || null;
+      if (!route) return;
+      const blocks = route.blocks || [];
+      const htmlInner = blocks.length ? blocks.map(window.blockHTMLInst).join('\n') : '<div class="card">Нет блоков</div>';
+
+      if (sheetTitle) sheetTitle.textContent = route.title || (path === '/' ? 'Главная' : path.replace(/^\//,''));
+
+      sheetBody.innerHTML = htmlInner;
+      sheetRoot.classList.add('is-open');
+      document.body.classList.add('sheet-open');
+      haptic('light');
+      const panel = sheetRoot.querySelector('.sheet__panel');
+      try{ panel && panel.focus({preventScroll:true}); }catch(_){}
+
+      try{ window.initBlocks && window.initBlocks(sheetBody, blocks, route); }catch(_){}
+
+
+      
+    });
+  })();
+  </script>
+
+  <script src="beer/calendar.demo.js"></script>
+  <script src="beer/introSlider.js"></script>
+  <script src="../../panel_shell.js"></script>
+</body>
+</html>
