@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <!-- API is served by the same origin via Worker Route: /api/* -->
+  <script>window.API_BASE='';</script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales Genius — Личный кабинет</title>
+  <style>
+    :root{
+      --bg-light: #f4f6ff;
+      --bg-card: rgba(255,255,255,.92);
+      --border: rgba(15,23,42,.12);
+      --text-main:#0b1220;
+      --text-muted: rgba(15,23,42,.65);
+      --accent:#22d3ee;
+      --accent-soft: rgba(34,211,238,.16);
+      --shadow: 0 18px 52px rgba(2,6,23,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at 10% 0, #ffffff 0, #f3f6ff 55%, #eef2ff 100%);
+      color:var(--text-main);
+    }
+
+    .sg-topbar{
+      position:sticky; top:0; z-index:1000;
+      display:flex; align-items:center; gap:16px;
+      padding:14px 20px;
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(10px) saturate(110%);
+      border-bottom:1px solid var(--border);
+    }
+    .sg-topbar__left{display:flex; align-items:center; gap:12px}
+    .brand b{font-weight:900}
+    .brand span{display:block;font-size:12px;color:var(--text-muted)}
+    .sg-topbar__nav{
+      display:flex;
+      gap:8px;
+      flex:1;
+      justify-content:center;
+    }
+    .sg-topbar__right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+    }
+
+    .nav-item{
+      border:1px solid var(--border);
+      background: var(--bg-card);
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .nav-item.is-active{
+      background: var(--accent-soft);
+      border-color: rgba(34,211,238,.55);
+    }
+
+    .badge{
+      padding:8px 12px;border-radius:999px;border:1px solid var(--border);font-weight:700
+    }
+    .btn{
+      border-radius:999px;
+      padding:9px 14px;
+      font-weight:800;
+      border:1px solid var(--border);
+      cursor:pointer;
+      background:#fff;
+      font-size:13px;
+    }
+    .btn.primary{
+      background:linear-gradient(135deg,#22d3ee,#3b82f6);color:#001018;border:none
+    }
+
+    main{padding:28px 22px; max-width:1200px; margin:0 auto}
+    h1{margin:0 0 8px}
+    .tools{display:flex; gap:12px; margin:16px 0}
+    .search{flex:1}
+    .search input{
+      width:100%; padding:12px 14px; border-radius:999px;
+      border:1px solid var(--border); background:#fff
+    }
+    .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px}
+    .card{
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:18px; padding:16px; box-shadow:var(--shadow)
+    }
+
+    /* ===== Dark theme ===== */
+    html[data-theme="dark"] body{
+      background: radial-gradient(circle at 10% 0, #111827 0, #020617 60%, #020617 100%);
+      color:#e5e7eb;
+    }
+    html[data-theme="dark"] .sg-topbar{
+      background: rgba(2,6,23,.75);
+      border-bottom-color: rgba(148,163,184,.18);
+    }
+    html[data-theme="dark"] .nav-item{
+      background: rgba(15,23,42,.6);
+      border-color: rgba(148,163,184,.22);
+      color:#e5e7eb;
+    }
+    html[data-theme="dark"] .nav-item.is-active{
+      background: rgba(34,211,238,.14);
+      border-color: rgba(34,211,238,.55);
+    }
+    html[data-theme="dark"] .badge,
+    html[data-theme="dark"] .btn{
+      background: rgba(15,23,42,.6);
+      border-color: rgba(148,163,184,.22);
+      color:#e5e7eb;
+    }
+    html[data-theme="dark"] .search input{
+      background: rgba(15,23,42,.6);
+      border-color: rgba(148,163,184,.22);
+      color:#e5e7eb;
+    }
+    html[data-theme="dark"] .card{
+      background: rgba(15,23,42,.85);
+      border-color: rgba(148,163,184,.22);
+      box-shadow: 0 20px 60px rgba(2,6,23,.6);
+    }
+    html[data-theme="dark"] .theme-toggle span{
+      background: rgba(15,23,42,.6);
+      border-color: rgba(148,163,184,.22);
+    }
+
+    /* ===== Landing topbar style ===== */
+    .sg-topbar--landing{
+      background: rgba(2,6,23,.78) !important;
+      border-bottom-color: rgba(148,163,184,.18) !important;
+      color: rgba(255,255,255,.92);
+    }
+    .sg-topbar--landing .brand span{color: rgba(255,255,255,.60) !important;}
+    .sg-topbar--landing .brand b{color: rgba(255,255,255,.92) !important;}
+    .sg-topbar__nav{gap:26px;}
+    .nav-item{
+      border:none !important;
+      background:transparent !important;
+      padding:10px 2px !important;
+      border-radius:0 !important;
+      font-size:15px;
+      font-weight:800;
+      color: rgba(255,255,255,.80) !important;
+      position:relative;
+    }
+    .nav-item:hover{color:#fff !important;}
+    .nav-item::after{
+      content:"";
+      position:absolute;
+      left:0; right:0;
+      bottom:-10px;
+      height:3px;
+      border-radius:999px;
+      background: rgba(34,211,238,0);
+      transform: scaleX(.2);
+      transform-origin:center;
+      transition: transform .18s ease, background .18s ease, opacity .18s ease;
+      opacity:0;
+    }
+    .nav-item.is-active{color:#fff !important;}
+    .nav-item.is-active::after{
+      background: linear-gradient(90deg, rgba(34,211,238,1), rgba(59,130,246,1));
+      transform: scaleX(1);
+      opacity:1;
+    }
+    .logo{
+      width:34px;height:34px;
+      border-radius:10px;
+      object-fit:contain;
+      background: rgba(255,255,255,.06);
+      box-shadow:0 10px 26px rgba(2,6,23,.25);
+    }
+
+    /* Right side elements in landing topbar */
+    .sg-topbar--landing .badge,
+    .sg-topbar--landing .btn{
+      background: rgba(15,23,42,.55) !important;
+      border-color: rgba(148,163,184,.22) !important;
+      color: rgba(255,255,255,.92) !important;
+    }
+
+    /* ===== Theme toggle with icons ===== */
+    .theme-toggle{display:flex; align-items:center; cursor:pointer;}
+    .theme-toggle input{display:none}
+    .theme-toggle .tt{
+      width:54px;height:28px;border-radius:999px;
+      border:1px solid rgba(148,163,184,.22);
+      background: rgba(15,23,42,.55);
+      position:relative;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 8px;
+    }
+    .theme-toggle .tt-ico{
+      font-size:14px;
+      line-height:1;
+      opacity:.92;
+      filter: drop-shadow(0 6px 12px rgba(2,6,23,.35));
+    }
+    .theme-toggle .tt-thumb{
+      position:absolute; top:50%; left:4px;
+      width:22px;height:22px;border-radius:50%;
+      transform:translateY(-50%);
+      background: linear-gradient(135deg,#67e8f9,#3b82f6);
+      box-shadow: 0 14px 34px rgba(2,6,23,.55);
+      transition:left .2s ease;
+    }
+    /* checked = light (as in your JS) */
+    #themeToggle:checked + .tt .tt-thumb{ left:28px; }
+
+    /* Keep content light in light theme; header remains dark */
+    html[data-theme="light"] body{
+      background: radial-gradient(circle at 10% 0, #ffffff 0, #f3f6ff 55%, #eef2ff 100%);
+      color: var(--text-main);
+    }
+    @media (max-width: 980px){
+      .sg-topbar__nav{
+        justify-content:flex-start;
+        overflow:auto;
+        flex-wrap:nowrap;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+      }
+      .sg-topbar__nav::-webkit-scrollbar{display:none;}
+      .nav-item::after{bottom:-8px;}
+      .sg-topbar__right{
+        gap:6px;
+      }
+    }
+
+    /* ===== FIXES (nav position + dark toggle thumb) ===== */
+    .sg-topbar__nav{
+      flex: 0 0 auto !important;
+      justify-content: flex-start !important;
+      margin-left: 22px !important;
+    }
+
+    /* dark theme: keep thumb bright blue like light */
+    html[data-theme="dark"] .theme-toggle .tt-thumb{
+      background: linear-gradient(135deg,#67e8f9,#3b82f6) !important;
+      box-shadow:
+        0 14px 34px rgba(2,6,23,.55),
+        0 0 18px rgba(34,211,238,.22) !important;
+    }
+
+    /* Сдвиг всего контента ниже шапки вправо (только на десктопе) */
+    @media (min-width: 1100px){
+      main{
+        padding-left: 85px;
+        padding-right: 22px;
+      }
+    }
+
+    /* ===== FIX: переменные для тёмной темы (чтобы текст не пропадал) ===== */
+    html[data-theme="dark"]{
+      --text-main: #e5e7eb;
+      --text-muted: rgba(229,231,235,.66);
+      --border: rgba(148,163,184,.22);
+    }
+
+    /* плейсхолдер и текст в инпутах */
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] textarea{
+      color: var(--text-main);
+    }
+    html[data-theme="dark"] input::placeholder,
+    html[data-theme="dark"] textarea::placeholder{
+      color: rgba(229,231,235,.40);
+    }
+
+    html[data-theme="dark"] .card p,
+    html[data-theme="dark"] .meta,
+    html[data-theme="dark"] .hint{
+      color: var(--text-muted);
+    }
+
+    /* ===== USER BLOCK (правый верхний угол) ===== */
+    .user{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:4px 10px;
+      border-radius:999px;
+      background: rgba(15,23,42,.40);
+      border:1px solid rgba(148,163,184,.32);
+    }
+    .avatar{
+      width:26px;
+      height:26px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      font-size:13px;
+      color:#0b1120;
+      background:linear-gradient(135deg,#22d3ee,#3b82f6);
+      box-shadow:0 10px 26px rgba(2,6,23,.65);
+    }
+    .u-label{
+      font-size:13px;
+      color:#e5e7eb;
+      max-width:180px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* ===== EMAIL VERIFY PILL ===== */
+    .verify-pill{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(248,113,113,.55);
+      background:rgba(127,29,29,.45);
+      color:#fee2e2;
+      font-size:11px;
+      font-weight:600;
+      white-space:nowrap;
+    }
+    .verify-pill__dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#f97316;
+      box-shadow:0 0 10px rgba(248,113,113,.8);
+    }
+    .verify-pill--ok{
+      border-color:rgba(52,211,153,.55);
+      background:rgba(22,163,74,.35);
+      color:#bbf7d0;
+    }
+    .verify-pill--ok .verify-pill__dot{
+      background:#22c55e;
+      box-shadow:0 0 10px rgba(52,211,153,.9);
+    }
+
+    @media (max-width: 720px){
+      .verify-pill{display:none;} /* на мобиле можно скрыть, чтобы не ломало шапку */
+    }
+  </style>
+</head>
+<body>
+<header class="sg-topbar sg-topbar--landing">
+  <div class="sg-topbar__left">
+    <img class="logo" src="./logo.png" alt="Sales Genius"/>
+    <div class="brand">
+      <b>Sales Genius</b>
+      <span>TELEGRAM MINI-APPS</span>
+    </div>
+  </div>
+
+  <nav class="sg-topbar__nav" aria-label="Разделы кабинета">
+    <button class="nav-item is-active" type="button" data-view="projects">Проекты</button>
+    <button class="nav-item" type="button" data-view="templates">Шаблоны</button>
+    <button class="nav-item" type="button" data-view="tariff">Тариф</button>
+    <button class="nav-item" type="button" data-view="bots">Боты</button>
+    <button class="nav-item" type="button" data-view="access">Доступы</button>
+    <button class="nav-item" type="button" data-view="settings">Настройки</button>
+  </nav>
+
+  <div class="sg-topbar__right">
+    <label class="theme-toggle" title="Светлая / тёмная тема">
+      <input id="themeToggle" type="checkbox"/>
+      <span class="tt" aria-hidden="true">
+        <span class="tt-ico tt-moon">🌙</span>
+        <span class="tt-ico tt-sun">☀️</span>
+        <span class="tt-thumb"></span>
+      </span>
+    </label>
+
+    <div class="verify-pill" id="verifyPill">
+      <span class="verify-pill__dot"></span>
+      <span id="verifyPillText">Email не подтверждён</span>
+    </div>
+
+    <div class="user">
+      <div class="avatar" id="userAvatar">S</div>
+      <div class="u-label" id="userEmailLabel">user@example.com</div>
+    </div>
+    <button class="btn" id="logoutBtn">Выйти</button>
+  </div>
+</header>
+
+<main>
+  <h1>Мои mini-apps</h1>
+  <p style="color:var(--text-muted)">Создавай проекты, выбирай шаблоны, подключай бота и открывай конструктор.</p>
+
+  <div class="tools">
+    <div class="search">
+      <input id="q" placeholder="Поиск по названию / slug / id"/>
+    </div>
+    <select class="btn">
+      <option>Сначала последние изменённые</option>
+    </select>
+  </div>
+
+  <div class="grid" id="projectsGrid">
+    <div class="card create-card" id="createProject">
+      <div style="
+        height:120px;
+        border:2px dashed rgba(34,211,238,.55);
+        border-radius:14px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:42px;
+        font-weight:900;
+        color:#22d3ee;
+        cursor:pointer;
+      ">+</div>
+      <p style="margin-top:10px;font-weight:800">Создать mini-app</p>
+    </div>
+
+    <div class="card">
+      <b>Craft Beer | Demo</b>
+      <p style="color:var(--text-muted)">craft_beer_demo-1000198682-uMZ</p>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+    // Prefer same-origin API (Worker Route on this domain: /api/*)
+    const API_BASE = (window.AUTH_API_BASE || window.CAB_API_BASE || window.API_BASE || '').replace(/\/$/,'');
+  const ENDPOINTS = {
+    me: '/api/auth/me',
+    logout: '/api/auth/logout',
+    // ниже — типовые эндпоинты для SAAS. Если в воркере они иначе — поменяй тут пути.
+    appsList: '/api/my/apps',
+    appCreate: '/api/app',
+    templatesList: '/api/templates'
+  };
+
+  async function api(path, opts){
+    const res = await fetch(API_BASE + path, Object.assign({
+      credentials:'include',
+      headers:{'Content-Type':'application/json'}
+    }, opts||{}));
+    let data=null;
+    try{ data = await res.json(); }catch(_){}
+    return {res,data};
+  }
+
+  // === THEME ===
+  const THEME_KEY='sg_theme';
+  const root=document.documentElement;
+  const applyTheme=t=>root.setAttribute('data-theme',t);
+  const savedTheme=localStorage.getItem(THEME_KEY)||'light';
+  applyTheme(savedTheme);
+  const tgl=document.getElementById('themeToggle');
+  tgl.checked = savedTheme==='light';
+  tgl.addEventListener('change',()=>{
+    const t=tgl.checked?'light':'dark';
+    localStorage.setItem(THEME_KEY,t);
+    applyTheme(t);
+  });
+
+  // === UI refs ===
+  const emailEl = document.getElementById('userEmailLabel');
+  const avatarEl = document.getElementById('userAvatar');
+  const verifyPill = document.getElementById('verifyPill');
+  const verifyTextEl = document.getElementById('verifyPillText');
+  const projectsGrid = document.getElementById('projectsGrid');
+
+  // === USER MENU (аватарка -> профиль/выйти) ===
+  const userBox = document.querySelector('.user');
+  const logoutBtn = document.getElementById('logoutBtn');
+  // оставляем кнопку "Выйти" как бэкап (по просьбе можно потом скрыть), но добавим dropdown
+  const menu = document.createElement('div');
+  menu.style.position='absolute';
+  menu.style.top='calc(100% + 10px)';
+  menu.style.right='0';
+  menu.style.minWidth='220px';
+  menu.style.borderRadius='14px';
+  menu.style.border='1px solid rgba(148,163,184,.22)';
+  menu.style.background='rgba(2,6,23,.88)';
+  menu.style.backdropFilter='blur(14px)';
+  menu.style.boxShadow='0 20px 60px rgba(2,6,23,.55)';
+  menu.style.padding='8px';
+  menu.style.display='none';
+  menu.innerHTML = `
+    <button data-act="profile" style="width:100%;text-align:left;border:0;background:transparent;color:#e5e7eb;padding:10px 10px;border-radius:12px;font-weight:800;cursor:pointer">Профиль</button>
+    <button data-act="logout" style="width:100%;text-align:left;border:0;background:transparent;color:#fecaca;padding:10px 10px;border-radius:12px;font-weight:800;cursor:pointer">Выйти</button>
+  `;
+  if (userBox){
+    userBox.style.position='relative';
+    userBox.appendChild(menu);
+    userBox.style.cursor='pointer';
+    userBox.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      menu.style.display = (menu.style.display==='none'?'block':'none');
+    });
+  }
+  document.addEventListener('click',()=>{ menu.style.display='none'; });
+  menu.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const btn = e.target.closest('button[data-act]');
+    if(!btn) return;
+    const act = btn.getAttribute('data-act');
+    if (act==='profile'){
+      alert('Профиль: тут можно открыть настройки аккаунта (добавим позже).');
+      menu.style.display='none';
+    }
+    if (act==='logout'){
+      doLogout();
+    }
+  });
+
+  // === AUTH bootstrap ===
+  async function bootstrap(){
+    // 1) проверяем сессию
+    const {res,data} = await api(ENDPOINTS.me, {method:'GET'});
+    if (!res.ok || !data || !data.ok || !data.authenticated){
+      // нет сессии — обратно на auth
+      try{ localStorage.setItem('sg_logout_ts', String(Date.now())); }catch(_){ }
+    window.location.href = '/auth.html';
+      return;
+    }
+
+    const user = data.user || {};
+    const email = user.email || localStorage.getItem('sg_user_email') || 'user@example.com';
+    const verified = !!(user.email_verified ?? user.is_verified ?? user.verified ?? false);
+
+    if (emailEl) emailEl.textContent = email;
+    if (avatarEl) avatarEl.textContent = (email[0]||'S').toUpperCase();
+    try{ localStorage.setItem('sg_user_email', email); }catch(_){}
+
+    if (verifyPill && verifyTextEl){
+      if (verified){
+        verifyPill.classList.add('verify-pill--ok');
+        verifyTextEl.textContent = 'Email подтверждён';
+      }else{
+        verifyPill.classList.remove('verify-pill--ok');
+        verifyTextEl.textContent = 'Email не подтверждён';
+      }
+    }
+
+    // 2) грузим проекты
+    await loadApps();
+  }
+
+  async function loadApps(){
+    // очищаем старые карточки (кроме create-card)
+    [...projectsGrid.querySelectorAll('.card:not(.create-card)')].forEach(el=>el.remove());
+
+    const {res,data} = await api(ENDPOINTS.appsList, {method:'GET'});
+    if (!res.ok || !data || !data.ok){
+      const err = (data && data.error) ? data.error : ('HTTP '+res.status);
+      const card = document.createElement('div');
+      card.className='card';
+      card.innerHTML = `<b>Не удалось загрузить проекты</b><p style="color:var(--text-muted);margin-top:8px">Проверь воркер: ${err}. Путь можно настроить в ENDPOINTS.appsList.</p>`;
+      projectsGrid.appendChild(card);
+      return;
+    }
+
+    const items = data.items || data.apps || [];
+    if (!items.length){
+      const card = document.createElement('div');
+      card.className='card';
+      card.innerHTML = `<b>Пока нет проектов</b><p style="color:var(--text-muted);margin-top:8px">Нажми “+”, выбери шаблон и создай mini‑app.</p>`;
+      projectsGrid.appendChild(card);
+      return;
+    }
+
+    items.forEach(app=>{
+      const title = app.title || app.name || 'Без названия';
+      const slug  = app.slug  || app.app_id || app.id || '';
+      const updated = app.updated_at || app.updated || '';
+
+      const c = document.createElement('div');
+      c.className='card';
+      c.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div>
+            <b>${escapeHtml(title)}</b>
+            <p style="color:var(--text-muted);margin:8px 0 0">${escapeHtml(slug)}</p>
+            ${updated ? `<p style="color:var(--text-muted);margin:6px 0 0;font-size:12px">Обновлено: ${escapeHtml(updated)}</p>`:''}
+          </div>
+          <button class="btn primary" data-act="edit">Редактировать</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn" data-act="delete" style="border-color:rgba(239,68,68,.35);color:#ef4444">Удалить</button>
+        </div>
+      `;
+      c.querySelectorAll('button[data-act]').forEach(b=>{
+        b.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          const act = b.getAttribute('data-act');
+          if (act==='edit'){
+            // переход в конструктор именно этого mini‑app
+            // IMPORTANT: URL конструктора
+            const appId = app.app_id || app.id || slug;
+            window.location.href = `panel.html?view=constructor&app=${encodeURIComponent(appId)}`;
+          }
+          if (act==='delete'){
+            const appId = app.app_id || app.id || slug;
+            doDeleteApp(appId, title);
+          }
+        });
+      });
+      projectsGrid.appendChild(c);
+    });
+  }
+
+  async function doDeleteApp(appId, title){
+    if (!appId) return;
+    const ok = confirm(`Удалить проект “${title}”?\nЭто удалит конфиг из D1 и KV.`);
+    if (!ok) return;
+    const {res,data} = await api(`/api/app/${encodeURIComponent(appId)}`, { method:'DELETE' });
+    if (!res.ok || !data || !data.ok){
+      const err = (data && data.error) ? data.error : ('HTTP ' + res.status);
+      alert('Не удалось удалить проект: ' + err);
+      return;
+    }
+    await loadApps();
+  }
+
+  function escapeHtml(s){
+    return String(s??'').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  // === SLUGIFY (ru/en) ===
+  // Воркер хранит apps.id как TEXT-слуг и принимает только [a-z0-9_].
+  // Чтобы проекты создавались даже с русскими названиями — делаем транслит на фронте.
+  function slugifyRu(input, maxLen=48){
+    const s = String(input||'').trim().toLowerCase();
+
+    const map = {
+      'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y',
+      'к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f',
+      'х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
+    };
+
+    let out = '';
+    for (const ch of s){
+      out += (map[ch] ?? ch);
+    }
+
+    out = out
+      .replace(/[^a-z0-9]+/g,'_')
+      .replace(/^_+|_+$/g,'')
+      .slice(0, maxLen);
+
+    // если название совсем «без латиницы» — делаем безопасный id
+    if (!out){
+      out = 'app_' + Date.now().toString(36);
+    }
+    return out;
+  }
+
+
+  // === SEARCH по карточкам ===
+  document.getElementById('q').addEventListener('input',e=>{
+    const s=e.target.value.toLowerCase();
+    document.querySelectorAll('#projectsGrid .card').forEach(c=>{
+      if (c.classList.contains('create-card')) return;
+      c.style.display = c.textContent.toLowerCase().includes(s)?'':'none';
+    });
+  });
+
+  // === CREATE PROJECT (модалка: шаблон + имя) ===
+  let createModal;
+  function ensureCreateModal(){
+    if (createModal) return createModal;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'createModal';
+    wrap.style.cssText = `position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:2000;`;
+
+    wrap.innerHTML = `
+      <div class="m-backdrop" style="position:absolute;inset:0;background:rgba(2,6,23,.55);backdrop-filter:blur(6px)"></div>
+      <div class="m-card" style="position:relative;width:min(920px,92vw);max-height:86vh;overflow:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);padding:18px 18px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div>
+            <b style="font-size:18px">Создать mini‑app</b>
+            <div style="color:var(--text-muted);font-size:13px;margin-top:4px">Выбери шаблон и задай название проекта</div>
+          </div>
+          <button class="btn" data-act="close">Закрыть</button>
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;align-items:flex-end">
+          <div style="flex:1;min-width:240px">
+            <div style="font-size:12px;color:var(--text-muted);margin:0 0 6px">Название</div>
+            <input id="cm_name" placeholder="Новый проект" style="width:100%;padding:12px 12px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.72);outline:none" />
+          </div>
+          <div style="min-width:220px">
+            <div style="font-size:12px;color:var(--text-muted);margin:0 0 6px">Slug (id)</div>
+            <input id="cm_slug" placeholder="auto" style="width:100%;padding:12px 12px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.72);outline:none" />
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <div style="font-size:12px;color:var(--text-muted);margin:0 0 10px">Шаблоны</div>
+          <div id="cm_templates" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px"></div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+          <button class="btn" data-act="cancel">Отмена</button>
+          <button class="btn primary" data-act="create">Создать</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(wrap);
+    const close = ()=>{ wrap.style.display='none'; };
+    wrap.querySelector('[data-act="close"]').addEventListener('click', close);
+    wrap.querySelector('[data-act="cancel"]').addEventListener('click', close);
+    wrap.querySelector('.m-backdrop').addEventListener('click', close);
+
+    // live slug
+    const nameEl = wrap.querySelector('#cm_name');
+    const slugEl = wrap.querySelector('#cm_slug');
+    nameEl.addEventListener('input', ()=>{
+      if (!slugEl.dataset.touched){
+        slugEl.value = slugifyRu(nameEl.value);
+      }
+    });
+    slugEl.addEventListener('input', ()=>{ slugEl.dataset.touched='1'; });
+
+    createModal = wrap;
+    return createModal;
+  }
+
+  async function openCreateModal(){
+    const m = ensureCreateModal();
+    const nameEl = m.querySelector('#cm_name');
+    const slugEl = m.querySelector('#cm_slug');
+    const listEl = m.querySelector('#cm_templates');
+
+    nameEl.value = 'Новый проект';
+    slugEl.value = '';
+    slugEl.dataset.touched = '';
+    listEl.innerHTML = `<div style="color:var(--text-muted)">Загрузка…</div>`;
+
+    let templates = [];
+    const {res,data} = await api(ENDPOINTS.templatesList, {method:'GET'});
+    if (res.ok && data && data.ok) {
+      templates = data.items || data.templates || [];
+    }
+    if (!templates.length){
+      templates = [{id:'blank',title:'Пустой',desc:'Чистый проект'}];
+    }
+
+    let selId = templates[0].id;
+    const renderTemplates = ()=>{
+      listEl.innerHTML = '';
+      templates.forEach(t=>{
+        const it = document.createElement('button');
+        it.type='button';
+        it.className = 'btn';
+        it.style.cssText = `text-align:left;padding:14px;border-radius:16px;min-height:74px;display:flex;flex-direction:column;gap:6px;${selId===t.id?'border-color:rgba(34,211,238,.65);box-shadow:0 0 0 3px rgba(34,211,238,.12)':''}`;
+        it.innerHTML = `<b style="font-size:14px">${escapeHtml(t.title||t.name||t.id)}</b><span style="color:var(--text-muted);font-size:12px">${escapeHtml(t.desc||'')}</span>`;
+        it.addEventListener('click',()=>{ selId = t.id; renderTemplates(); });
+        listEl.appendChild(it);
+      });
+    };
+    renderTemplates();
+
+    // create
+    const createBtn = m.querySelector('[data-act="create"]');
+    createBtn.onclick = async ()=>{
+      const name = (nameEl.value || '').trim();
+      if (!name) return;
+      const slug = (slugEl.value || '').trim() || slugifyRu(name);
+
+      const {res,data} = await api(ENDPOINTS.appCreate, {
+        method:'POST',
+        body: JSON.stringify({ title:name, slug, template_id: selId })
+      });
+
+      if (!res.ok || !data || !data.ok){
+        const err = (data && data.error) ? data.error : ('HTTP '+res.status);
+        alert('Не удалось создать проект: ' + err);
+        return;
+      }
+
+      m.style.display='none';
+      await loadApps();
+      const appId = (data.app && (data.app.app_id||data.app.id)) || data.app_id || data.id;
+      if (appId){
+        window.location.href = `panel.html?view=constructor&app=${encodeURIComponent(appId)}`;
+      }
+    };
+
+    m.style.display='flex';
+  }
+
+  document.getElementById('createProject')?.addEventListener('click', openCreateModal);
+
+  // === LOGOUT ===
+  async function doLogout(){
+    try{
+      await api(ENDPOINTS.logout, {method:'POST'});
+    }catch(_){}
+    try{
+      localStorage.removeItem('sg_user_email');
+      localStorage.removeItem('sg_user_verified');
+    }catch(_){}
+    try{ localStorage.setItem('sg_logout_ts', String(Date.now())); }catch(_){ }
+    window.location.href = '/auth.html';
+  }
+  logoutBtn?.addEventListener('click', doLogout);
+
+  // старт
+  bootstrap().catch(err=>{
+    console.error(err);
+    // если что-то упало — лучше выгнать на auth, чем показывать пустой кабинет
+    try{ localStorage.setItem('sg_logout_ts', String(Date.now())); }catch(_){ }
+    window.location.href = '/auth.html';
+  });
+})();
+</script>
+  <script src="panel_shell.js"></script>
+</body>
+</html>
