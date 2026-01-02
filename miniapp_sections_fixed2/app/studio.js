@@ -698,34 +698,27 @@ let MODAL_CTX = null; // {path, filter}
       });
       if (res.status===401 || res.status===403){ goToAuth(); return; }
       if (res.ok){
-        const data = await res.json().catch(()=>null);
-	        let publicUrl = (data && (data.publicUrl || data.url)) ? (data.publicUrl || data.url) : '';
-	        // нормализуем ссылку под текущий домен (app.salesgenius.ru) и api-параметр
-	        if (publicUrl){
-	          try{
-	            const u = new URL(publicUrl, location.origin);
-	            u.protocol = location.protocol;
-	            u.host = location.host;
-	            // старые ссылки могли везти api=... (чтобы мини-апп ходил в воркер). Делаем единую "истину": same-origin.
-	            if (u.searchParams && u.searchParams.has('api')){
-	              u.searchParams.set('api', location.origin);
-	            }
-	            publicUrl = u.toString();
-	          }catch(_e){}
-	        }
-	        if (publicUrl){
-	          showCopyModal_('Опубликовано', publicUrl);
-	        } else {
-	          showCopyModal_('Опубликовано', '(ссылка не вернулась от сервера)');
-	        }
-      } else {
-	        showCopyModal_('Опубликовано локально', 'Сервер вернул статус ' + res.status);
-      }
-    }catch(e){
-      console.warn('[studio] publishLive remote error', e);
-	      showCopyModal_('Опубликовано локально', 'Не удалось отправить данные на сервер.');
-    }
-  }
+const data = await res.json().catch(()=>null);
+
+// 1) берем publicUrl если вернул воркер
+let publicUrl = (data && (data.publicUrl || data.url)) ? (data.publicUrl || data.url) : '';
+
+// 2) если вдруг воркер вернул только publicId — соберем сами
+if (!publicUrl && data && data.publicId){
+  publicUrl = location.origin.replace(/\/$/,'') + '/m/' + encodeURIComponent(data.publicId);
+}
+
+// 3) нормализуем домен под текущий (на случай если воркер на другом hostname)
+if (publicUrl){
+  try{
+    const u = new URL(publicUrl, location.origin);
+    u.protocol = location.protocol;
+    u.host = location.host;
+    publicUrl = u.toString();
+  }catch(_e){}
+}
+
+showCopyModal_('Опубликовано', publicUrl || '(ссылка не вернулась от сервера)');
 
   $('#save').onclick = ()=>{ saveDraft(); };
   $('#publish').onclick = publishLive;
