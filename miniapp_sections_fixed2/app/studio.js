@@ -476,16 +476,34 @@ let MODAL_CTX = null; // {path, filter}
 
   // v1.7 base blueprint — базовый шаблон (на случай, если на сервере пока пусто)
   let BP = JSON.parse(JSON.stringify(window.Templates['Demo Main'].blueprint));
-  let CURRENT_PATH = '/';
+  function pickDefaultPath_(bp){
+    const r = (bp && bp.routes) ? bp.routes : {};
+    if (r['/home']) return '/home';
+    if (r['/']) return '/';
+    const keys = Object.keys(r);
+    return keys[0] || '/';
+  }
+
+  let CURRENT_PATH = pickDefaultPath_(BP);
 
   // Пытаемся поверх демо-шаблона подгрузить конфиг с сервера (если этот appId уже существует)
   try{
     const remoteCfg = await fetchAppConfigFromServer();
-    if (remoteCfg && typeof remoteCfg === 'object') {
+    // Важно: иногда воркер может вернуть пустой объект/частичный конфиг.
+    // Если перезаписать BP таким объектом — в UI останется одна "Главная".
+    const looksLikeBlueprint = (obj)=>{
+      if (!obj || typeof obj !== 'object') return false;
+      const hasRoutes = obj.routes && typeof obj.routes === 'object' && Object.keys(obj.routes).length;
+      const hasPages  = obj.pages  && typeof obj.pages  === 'object' && Object.keys(obj.pages).length;
+      return !!(hasRoutes && hasPages);
+    };
+
+    if (looksLikeBlueprint(remoteCfg)){
       BP = JSON.parse(JSON.stringify(remoteCfg));
+      CURRENT_PATH = pickDefaultPath_(BP);
       console.log('[studio] loaded BP from worker for appId=', getAppId());
     } else {
-      console.log('[studio] no remote BP, using demo blueprint');
+      console.log('[studio] no valid remote BP, using demo blueprint');
     }
   }catch(e){
     console.warn('[studio] apply remote BP failed', e);
@@ -617,6 +635,46 @@ let MODAL_CTX = null; // {path, filter}
     })();
   }
 
+	function showCopyModal_(title, text){
+		const existing = document.getElementById('sgCopyModal');
+		if (existing) existing.remove();
+		const wrap = document.createElement('div');
+		wrap.id = 'sgCopyModal';
+		wrap.style.position = 'fixed';
+		wrap.style.inset = '0';
+		wrap.style.zIndex = '9999';
+		wrap.style.background = 'rgba(0,0,0,.35)';
+		wrap.innerHTML = `
+		  <div style="position:absolute;left:50%;top:15%;transform:translateX(-50%);width:min(720px,calc(100vw - 32px));background:var(--card,#fff);border-radius:18px;box-shadow:0 12px 50px rgba(0,0,0,.25);padding:18px 18px 14px;">
+		    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+		      <div style="font-weight:800;font-size:18px;">${title}</div>
+		      <button id="sgCopyModalClose" class="btn" style="padding:8px 12px;">Закрыть</button>
+		    </div>
+		    <div style="margin-top:12px;color:var(--mutedText,#667);font-size:14px;">Ссылка на WebApp</div>
+		    <textarea id="sgCopyModalText" style="margin-top:8px;width:100%;height:96px;resize:none;border-radius:12px;border:1px solid rgba(0,0,0,.12);padding:10px 12px;font-size:13px;line-height:1.35;">${(text||'').replace(/</g,'&lt;')}</textarea>
+		    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+		      <button id="sgCopyModalCopy" class="btn primary">Скопировать</button>
+		      <button id="sgCopyModalOk" class="btn">ОК</button>
+		    </div>
+		  </div>`;
+		document.body.appendChild(wrap);
+		const close = ()=>wrap.remove();
+		wrap.addEventListener('click', (e)=>{ if (e.target===wrap) close(); });
+		document.getElementById('sgCopyModalClose').onclick = close;
+		document.getElementById('sgCopyModalOk').onclick = close;
+		const ta = document.getElementById('sgCopyModalText');
+		setTimeout(()=>{ try{ ta.focus(); ta.select(); }catch(_e){} }, 30);
+		document.getElementById('sgCopyModalCopy').onclick = async ()=>{
+			try{
+				await navigator.clipboard.writeText(ta.value);
+				toast('Скопировано');
+			} catch(e){
+				try{ ta.focus(); ta.select(); document.execCommand('copy'); toast('Скопировано'); }
+				catch(_e){ toast('Не удалось скопировать'); }
+			}
+		};
+	}
+
   async function publishLive(){
     const appId = getAppId();
     const d = localStorage.getItem(`bp:${appId}:draft`);
@@ -641,17 +699,31 @@ let MODAL_CTX = null; // {path, filter}
       if (res.status===401 || res.status===403){ goToAuth(); return; }
       if (res.ok){
         const data = await res.json().catch(()=>null);
-        let msg = 'Опубликовано.';
-        if (data && data.publicUrl){
-          msg = 'Опубликовано.\n\nWebApp URL:\n' + data.publicUrl;
-        }
-        alert(msg);
+	        let publicUrl = (data && (data.publicUrl || data.url)) ? (data.publicUrl || data.url) : '';
+	        // нормализуем ссылку под текущий домен (app.salesgenius.ru) и api-параметр
+	        if (publicUrl){
+	          try{
+	            const u = new URL(publicUrl, location.origin);
+	            u.protocol = location.protocol;
+	            u.host = location.host;
+	            // старые ссылки могли везти api=... (чтобы мини-апп ходил в воркер). Делаем единую "истину": same-origin.
+	            if (u.searchParams && u.searchParams.has('api')){
+	              u.searchParams.set('api', location.origin);
+	            }
+	            publicUrl = u.toString();
+	          }catch(_e){}
+	        }
+	        if (publicUrl){
+	          showCopyModal_('Опубликовано', publicUrl);
+	        } else {
+	          showCopyModal_('Опубликовано', '(ссылка не вернулась от сервера)');
+	        }
       } else {
-        alert('Опубликовано локально.\nСервер вернул статус ' + res.status);
+	        showCopyModal_('Опубликовано локально', 'Сервер вернул статус ' + res.status);
       }
     }catch(e){
       console.warn('[studio] publishLive remote error', e);
-      alert('Опубликовано локально.\nНе удалось отправить данные на сервер.');
+	      showCopyModal_('Опубликовано локально', 'Не удалось отправить данные на сервер.');
     }
   }
 
