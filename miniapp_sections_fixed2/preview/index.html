@@ -99,21 +99,46 @@ function loadBP(){
   return null;
 }
 
+// ===============================
+// Loading вместо Demo Main (preview constructor)
+// ===============================
+function renderLoading(){
+  const root = document.getElementById('app') || document.body;
+  root.innerHTML = `
+    <div style="
+      min-height: 60vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:12px;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: rgba(255,255,255,.85);
+    ">
+      <div style="
+        width:42px;height:42px;border-radius:999px;
+        border:3px solid rgba(255,255,255,.18);
+        border-top-color: rgba(255,255,255,.85);
+        animation: spin 0.9s linear infinite;
+      "></div>
+      <div style="opacity:.85">Загрузка шаблона…</div>
+    </div>
+    <style>
+      @keyframes spin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    </style>
+  `;
+}
+
 let bp = loadBP();
 // expose для других скриптов (sheet/page opener)
 window.bp = bp;
 
-// Фоллбек на демо-шаблон НУЖЕН только в режиме превью (когда НЕТ publicId)
+// Вместо Demo Main: если bp ещё не готов (и это превью конструктора), показываем loader
 if (!bp && !publicId) {
-  try{
-    const tmpl = window.Templates
-      && window.Templates['Demo Main']
-      && window.Templates['Demo Main'].blueprint;
-    if (tmpl) {
-      bp = JSON.parse(JSON.stringify(tmpl));
-      window.bp = bp;
-    }
-  }catch(_){}
+  renderLoading();
+} else if (bp) {
+  // если bp уже есть — рисуем сразу, не ждём interval
+  render();
 }
 
 // ===============================
@@ -123,6 +148,7 @@ let __lastDraftVer = 0;
 setInterval(()=>{
   try{
     if (publicId) return;
+
     const raw = localStorage.getItem(`bp:${appId}:draft`);
     if(!raw) return;
 
@@ -149,6 +175,7 @@ setInterval(()=>{
     render();
   }catch(_){}
 }, 300);
+
 
 
 
