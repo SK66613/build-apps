@@ -66,15 +66,9 @@
 
 const Q = new URLSearchParams(location.search);
 const appId   = Q.get('app_id') || 'my_app';
-const chRaw   = (Q.get('preview') || 'draft');
-const ch      = String(chRaw).toLowerCase();
-
-// если есть ?preview=... — это превью конструктора, publicId здесь НЕ нужен
-const IS_PREVIEW = Q.has('preview');
-
-// public режим: конфиг берём из воркера по publicId (ТОЛЬКО если это не превью)
-const publicId = IS_PREVIEW ? '' : (Q.get('publicId') || Q.get('public_id') || '');
-
+const ch      = (Q.get('preview') || 'draft').toLowerCase();
+// public режим: конфиг берём из воркера по publicId
+const publicId = Q.get('publicId') || Q.get('public_id') || '';
 // можно переопределить через ?api=..., по умолчанию наш воркер
 // Allow overriding via ?api=..., otherwise use same-origin Worker Route
 const API_BASE = Q.get('api') || '';
@@ -109,10 +103,7 @@ function loadBP(){
 // Loading вместо Demo Main (preview constructor)
 // ===============================
 function renderLoading(){
-  const root = document.getElementById('root');
-  if(!root) return;
-
-  root.className = 'container';
+  const root = document.getElementById('app') || document.body;
   root.innerHTML = `
     <div style="
       min-height: 60vh;
@@ -132,14 +123,10 @@ function renderLoading(){
       "></div>
       <div style="opacity:.85">Загрузка шаблона…</div>
     </div>
+    <style>
+      @keyframes spin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    </style>
   `;
-
-  if(!document.getElementById('__loaderSpinStyle')){
-    const st = document.createElement('style');
-    st.id = '__loaderSpinStyle';
-    st.textContent = `@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`;
-    document.head.appendChild(st);
-  }
 }
 
 let bp = loadBP();
@@ -465,13 +452,7 @@ function blockHTMLInst(inst){
       }
 });
 
-    if (publicId) {
-      renderLoading();
-    } else if (bp) {
-      render();
-    } else {
-      renderLoading();
-    }
+    render();
     window.__editBlk = function(id){ try{ parent.postMessage({type:'block:edit', id, path: current}, '*'); }catch(_){} };
     // export helpers for sheet-page renderer
     window.blockHTMLInst = blockHTMLInst;
