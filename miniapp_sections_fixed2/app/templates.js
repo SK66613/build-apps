@@ -1671,7 +1671,7 @@ leaderboard:{
 };
 
 window.PagePresets = {
-  home: ['beerHero','infoCardPlain','spacer','promo','gamesList'],
+  home: [],
   play: ['gamesPicker'],
   tournament: ['leaderboard'],
   bonuses: ['bonusWheel','beerStartList'],
