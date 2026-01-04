@@ -483,6 +483,21 @@ let MODAL_CTX = null; // {path, filter}
     const remoteCfg = await fetchAppConfigFromServer();
     if (remoteCfg && typeof remoteCfg === 'object') {
       BP = JSON.parse(JSON.stringify(remoteCfg));
+
+      // --- normalize BP to avoid "empty + library doesn't add" bugs
+BP.blocks = BP.blocks || {};
+BP.routes = Array.isArray(BP.routes) ? BP.routes : [];
+BP.nav = BP.nav || {};
+BP.nav.routes = Array.isArray(BP.nav.routes) ? BP.nav.routes : BP.routes.map(r=>({
+  id: r.id || r.path,
+  path: r.path,
+  title: r.title || r.path
+}));
+
+BP.routes.forEach(r=>{
+  r.blocks = Array.isArray(r.blocks) ? r.blocks : [];
+});
+
       console.log('[studio] loaded BP from worker for appId=', getAppId());
     } else {
       console.log('[studio] no remote BP, using demo blueprint');
