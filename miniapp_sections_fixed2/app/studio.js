@@ -583,7 +583,7 @@ let MODAL_CTX = null; // {path, filter}
 
     // 1) Локальный бэкап для спокойствия
     try{
-      const d = JSON.stringify(BP || {}, null, 0);
+      const d = JSON.stringify({ version: Date.now(), json: (BP || {}) });
       localStorage.setItem(`bp:${appId}:draft`, d);
     }catch(e){
       console.warn('[studio] local saveDraft failed', e);
@@ -4174,8 +4174,8 @@ async function remoteGetBP_(mode, appId){
 // Переопределяем saveDraft/publishLive так, чтобы они ещё и пушили на сервер (если настроено).
 function saveDraft(){
   const appId = getAppId() || "my_app";
-localStorage.setItem(`bp:${appId}:draft`, JSON.stringify({ version: Date.now(), json: BP }));
-
+  const d = JSON.stringify({ version: Date.now(), json: (BP || {}) });
+  localStorage.setItem(`bp:${appId}:draft`, d);
 
   (async()=>{
     try{ await remotePutBP_('draft', appId, sanitizeBP(BP)); }catch(e){ console.warn(e); }
@@ -4192,7 +4192,8 @@ async function publishLive(){
 
   // удалённо (если настроено)
   try{
-    const bp = JSON.parse(d);
+    const blob = JSON.parse(d);
+    const bp = (blob && blob.json) ? blob.json : blob;
     const res = await remotePutBP_('live', appId, sanitizeBP(bp));
     if(res && res.skipped) alert('Опубликовано локально. Укажи studio:remote_put_url чтобы обновлялось на телефоне.');
     else alert('Опубликовано (и на сервер отправлено).');
