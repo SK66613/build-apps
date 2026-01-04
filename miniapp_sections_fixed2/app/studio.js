@@ -111,17 +111,7 @@ console.log("[studio] build step21");
       u.searchParams.set('preview', 'draft');
       u.searchParams.set('app_id', String(appId||'').trim() || '1');
 
-      // ВАЖНО: превью НЕ должно уходить в public-режим
-u.searchParams.delete('publicId');
-u.searchParams.delete('public_id');
-
-// (опционально) чтобы публичные fetch тоже знали где API (если вдруг понадобится)
-try{
-  const base = (window.CTOR_API_BASE || window.location.origin).replace(/\/$/,'');
-  u.searchParams.set('api', base);
-}catch(_){}
-
-      
+           
       // Важно: не добавляем cache-buster постоянно, иначе превью будет перезагружаться на каждое изменение.
       fr.src = u.toString();
     }catch(_){ }
