@@ -103,7 +103,10 @@ function loadBP(){
 // Loading вместо Demo Main (preview constructor)
 // ===============================
 function renderLoading(){
-  const root = document.getElementById('app') || document.body;
+  const root = document.getElementById('root');
+  if(!root) return;
+
+  root.className = 'container';
   root.innerHTML = `
     <div style="
       min-height: 60vh;
@@ -123,10 +126,14 @@ function renderLoading(){
       "></div>
       <div style="opacity:.85">Загрузка шаблона…</div>
     </div>
-    <style>
-      @keyframes spin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
-    </style>
   `;
+
+  if(!document.getElementById('__loaderSpinStyle')){
+    const st = document.createElement('style');
+    st.id = '__loaderSpinStyle';
+    st.textContent = `@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`;
+    document.head.appendChild(st);
+  }
 }
 
 let bp = loadBP();
@@ -452,7 +459,13 @@ function blockHTMLInst(inst){
       }
 });
 
-    render();
+    if (publicId) {
+      renderLoading();
+    } else if (bp) {
+      render();
+    } else {
+      renderLoading();
+    }
     window.__editBlk = function(id){ try{ parent.postMessage({type:'block:edit', id, path: current}, '*'); }catch(_){} };
     // export helpers for sheet-page renderer
     window.blockHTMLInst = blockHTMLInst;
