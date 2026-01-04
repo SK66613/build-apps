@@ -91,62 +91,22 @@ function kv(k){
 function loadBP(){
   if (publicId) return null;
   const blob = kv(`bp:${appId}:${ch}`) || kv(`bp:${appId}:draft`);
-  if(!blob) return null;
-  // новый формат: {version, json}
-  if(blob && typeof blob === 'object' && blob.json) return blob.json;
-  // старый формат: BP напрямую
-  if(blob && typeof blob === 'object' && blob.routes && blob.nav) return blob;
-  return null;
-}
-
-// ===============================
-// Loading вместо Demo Main (preview constructor)
-// ===============================
-function renderLoading(){
-  const root = document.getElementById('app') || document.body;
-  root.innerHTML = `
-    <div style="
-      min-height: 60vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      flex-direction:column;
-      gap:12px;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      color: rgba(255,255,255,.85);
-    ">
-      <div style="
-        width:42px;height:42px;border-radius:999px;
-        border:3px solid rgba(255,255,255,.18);
-        border-top-color: rgba(255,255,255,.85);
-        animation: spin 0.9s linear infinite;
-      "></div>
-      <div style="opacity:.85">Загрузка шаблона…</div>
-    </div>
-    <style>
-      @keyframes spin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
-    </style>
-  `;
+  return (blob && blob.json) || null;
 }
 
 let bp = loadBP();
 // expose для других скриптов (sheet/page opener)
 window.bp = bp;
 
-// Вместо Demo Main: если bp ещё не готов (и это превью конструктора), показываем loader
-if (!bp && !publicId) {
-  renderLoading();
-} else if (bp) {
-  // если bp уже есть — рисуем сразу, не ждём interval
-  render();
-}
 
 // ===============================
 // LIVE SYNC: один таймер на страницу
 // ===============================
 let __lastDraftVer = 0;
+
 setInterval(()=>{
   try{
+    // в public режиме не лезем в localStorage
     if (publicId) return;
 
     const raw = localStorage.getItem(`bp:${appId}:draft`);
@@ -154,21 +114,24 @@ setInterval(()=>{
 
     const blob = JSON.parse(raw);
 
+    // новый формат: { version, json }
     let ver = 0;
     let next = null;
 
     if(blob && typeof blob === 'object' && blob.json){
       ver  = Number(blob.version || 0);
       next = blob.json;
-      if(ver && ver === __lastDraftVer) return;
+      if(ver && ver === __lastDraftVer) return; // ничего не поменялось
       __lastDraftVer = ver || Date.now();
-    } else if(blob && typeof blob === 'object' && blob.routes && blob.nav){
-      next = blob; // старый формат BP
-      if(__lastDraftVer) return; // один раз
-      __lastDraftVer = 1;
     } else {
-      return;
+      // старый формат: просто BP (на случай старых записей)
+      next = blob;
+      // чтобы не перерисовывать бесконечно — рисуем один раз
+      if(__lastDraftVer) return;
+      __lastDraftVer = 1;
     }
+
+    if(!next) return;
 
     bp = next;
     window.bp = bp;
@@ -176,8 +139,18 @@ setInterval(()=>{
   }catch(_){}
 }, 300);
 
-
-
+// Фоллбек на демо-шаблон НУЖЕН только в режиме превью (когда НЕТ publicId)
+if (!bp && !publicId) {
+  try{
+    const tmpl = window.Templates
+      && window.Templates['Demo Main']
+      && window.Templates['Demo Main'].blueprint;
+    if (tmpl) {
+      bp = JSON.parse(JSON.stringify(tmpl));
+      window.bp = bp;
+    }
+  }catch(_){}
+}
 
 
     const themeEl = document.getElementById('theme');
@@ -444,6 +417,9 @@ function blockHTMLInst(inst){
         const el = document.querySelector(`.blk[data-id="${d.id}"]`);
         if(el){
           try{ el.scrollIntoView({block:'center', behavior:'smooth'});
+
+// --- Live sync from localStorage draft (на случай если postMessage не долетает) ---
+let __lastDraftVer = 0;
 
  }catch(_){ el.scrollIntoView(); }
           el.classList.add('focus');
