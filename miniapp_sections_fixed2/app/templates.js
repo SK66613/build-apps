@@ -1672,10 +1672,10 @@ leaderboard:{
 
 window.PagePresets = {
   home: [],
-  play: ['gamesPicker'],
-  tournament: ['leaderboard'],
-  bonuses: ['bonusWheel','beerStartList'],
-  profile: ['profile_header','spacer','profile_achievements','spacer','profile_tournament','spacer','profile_recent_prizes'],
+  play: [],
+  tournament: [],
+  bonuses: [],
+  profile: [],
   custom: [],
 };
 
