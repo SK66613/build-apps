@@ -4174,8 +4174,8 @@ async function remoteGetBP_(mode, appId){
 // Переопределяем saveDraft/publishLive так, чтобы они ещё и пушили на сервер (если настроено).
 function saveDraft(){
   const appId = getAppId() || "my_app";
-  const d = JSON.stringify(BP||{}, null, 0);
-  localStorage.setItem(`bp:${appId}:draft`, d);
+localStorage.setItem(`bp:${appId}:draft`, JSON.stringify({ version: Date.now(), json: BP }));
+
 
   (async()=>{
     try{ await remotePutBP_('draft', appId, sanitizeBP(BP)); }catch(e){ console.warn(e); }
