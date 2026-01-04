@@ -66,9 +66,15 @@
 
 const Q = new URLSearchParams(location.search);
 const appId   = Q.get('app_id') || 'my_app';
-const ch      = (Q.get('preview') || 'draft').toLowerCase();
-// public режим: конфиг берём из воркера по publicId
-const publicId = Q.get('publicId') || Q.get('public_id') || '';
+const chRaw   = (Q.get('preview') || 'draft');
+const ch      = String(chRaw).toLowerCase();
+
+// если есть ?preview=... — это превью конструктора, publicId здесь НЕ нужен
+const IS_PREVIEW = Q.has('preview');
+
+// public режим: конфиг берём из воркера по publicId (ТОЛЬКО если это не превью)
+const publicId = IS_PREVIEW ? '' : (Q.get('publicId') || Q.get('public_id') || '');
+
 // можно переопределить через ?api=..., по умолчанию наш воркер
 // Allow overriding via ?api=..., otherwise use same-origin Worker Route
 const API_BASE = Q.get('api') || '';
