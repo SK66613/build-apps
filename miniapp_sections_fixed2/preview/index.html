@@ -379,23 +379,7 @@ function blockHTMLInst(inst){
 
 // --- Live sync from localStorage draft (на случай если postMessage не долетает) ---
 let __lastDraftVer = 0;
-setInterval(()=>{
-  try{
-    const appId = new URLSearchParams(location.search).get('app_id') || 'my_app';
-    const raw = localStorage.getItem(`bp:${appId}:draft`);
-    if(!raw) return;
-    const blob = JSON.parse(raw);
-    const ver = Number(blob && blob.version || 0);
-    if(ver && ver !== __lastDraftVer){
-      __lastDraftVer = ver;
-      const next = (blob && blob.json) || null;
-      if(next){
-        bp = next; window.bp = bp;
-        render();
-      }
-    }
-  }catch(_){}
-}, 300);
+
  }catch(_){ el.scrollIntoView(); }
           el.classList.add('focus');
           setTimeout(()=>el.classList.remove('focus'), 900);
