@@ -110,6 +110,10 @@ console.log("[studio] build step21");
       const u = new URL(fr.getAttribute('src') || fr.src || '', window.location.href);
       u.searchParams.set('preview', 'draft');
       u.searchParams.set('app_id', String(appId||'').trim() || '1');
+
+      u.searchParams.delete('publicId');
+u.searchParams.delete('public_id');
+      
       // Важно: не добавляем cache-buster постоянно, иначе превью будет перезагружаться на каждое изменение.
       fr.src = u.toString();
     }catch(_){ }
