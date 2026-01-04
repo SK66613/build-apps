@@ -91,53 +91,17 @@ function kv(k){
 function loadBP(){
   if (publicId) return null;
   const blob = kv(`bp:${appId}:${ch}`) || kv(`bp:${appId}:draft`);
-  return (blob && blob.json) || null;
+  if(!blob) return null;
+  // новый формат: {version, json}
+  if(blob && typeof blob === 'object' && blob.json) return blob.json;
+  // старый формат: BP напрямую
+  if(blob && typeof blob === 'object' && blob.routes && blob.nav) return blob;
+  return null;
 }
 
 let bp = loadBP();
 // expose для других скриптов (sheet/page opener)
 window.bp = bp;
-
-
-// ===============================
-// LIVE SYNC: один таймер на страницу
-// ===============================
-let __lastDraftVer = 0;
-
-setInterval(()=>{
-  try{
-    // в public режиме не лезем в localStorage
-    if (publicId) return;
-
-    const raw = localStorage.getItem(`bp:${appId}:draft`);
-    if(!raw) return;
-
-    const blob = JSON.parse(raw);
-
-    // новый формат: { version, json }
-    let ver = 0;
-    let next = null;
-
-    if(blob && typeof blob === 'object' && blob.json){
-      ver  = Number(blob.version || 0);
-      next = blob.json;
-      if(ver && ver === __lastDraftVer) return; // ничего не поменялось
-      __lastDraftVer = ver || Date.now();
-    } else {
-      // старый формат: просто BP (на случай старых записей)
-      next = blob;
-      // чтобы не перерисовывать бесконечно — рисуем один раз
-      if(__lastDraftVer) return;
-      __lastDraftVer = 1;
-    }
-
-    if(!next) return;
-
-    bp = next;
-    window.bp = bp;
-    render();
-  }catch(_){}
-}, 300);
 
 // Фоллбек на демо-шаблон НУЖЕН только в режиме превью (когда НЕТ publicId)
 if (!bp && !publicId) {
@@ -151,6 +115,42 @@ if (!bp && !publicId) {
     }
   }catch(_){}
 }
+
+// ===============================
+// LIVE SYNC: один таймер на страницу
+// ===============================
+let __lastDraftVer = 0;
+setInterval(()=>{
+  try{
+    if (publicId) return;
+    const raw = localStorage.getItem(`bp:${appId}:draft`);
+    if(!raw) return;
+
+    const blob = JSON.parse(raw);
+
+    let ver = 0;
+    let next = null;
+
+    if(blob && typeof blob === 'object' && blob.json){
+      ver  = Number(blob.version || 0);
+      next = blob.json;
+      if(ver && ver === __lastDraftVer) return;
+      __lastDraftVer = ver || Date.now();
+    } else if(blob && typeof blob === 'object' && blob.routes && blob.nav){
+      next = blob; // старый формат BP
+      if(__lastDraftVer) return; // один раз
+      __lastDraftVer = 1;
+    } else {
+      return;
+    }
+
+    bp = next;
+    window.bp = bp;
+    render();
+  }catch(_){}
+}, 300);
+
+
 
 
     const themeEl = document.getElementById('theme');
@@ -417,9 +417,6 @@ function blockHTMLInst(inst){
         const el = document.querySelector(`.blk[data-id="${d.id}"]`);
         if(el){
           try{ el.scrollIntoView({block:'center', behavior:'smooth'});
-
-// --- Live sync from localStorage draft (на случай если postMessage не долетает) ---
-let __lastDraftVer = 0;
 
  }catch(_){ el.scrollIntoView(); }
           el.classList.add('focus');
