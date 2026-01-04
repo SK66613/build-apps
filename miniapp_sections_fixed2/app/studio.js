@@ -1974,6 +1974,9 @@ if(a==='sec_del'){
     route.blocks = route.blocks||[];
     route.blocks.push({ id, key, type: key });
 
+    BP.blocks = BP.blocks || {};
+
+
     BP.blocks[id] = JSON.parse(JSON.stringify(window.BlockRegistry[key].defaults||{}));
     _pushRecent(key);
     updatePreviewInline();
