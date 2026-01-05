@@ -4,6 +4,8 @@
   const AUTH_URL = (window.SG_AUTH_URL || '/auth.html'); // relative to cabinet.salesgenius.ru
   const LOGOUT_KEY = 'sg_logout_ts';
   const CURRENT_APP_KEY = 'sg_current_app';
+  const LAST_GOOD_KEY = 'sg_last_good_url';
+
 
   const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('sg_auth') : null;
   function broadcastLogout(){
