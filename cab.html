@@ -799,15 +799,12 @@
 
     
     // create (auto slug)
-    const createBtn = m.querySelector('[data-act="create"]');
-    createBtn.onclick = async ()=>{
+     createBtn.onclick = async ()=>{
       const name = (nameEl.value || '').trim();
       if (!name) return;
 
-      // базовый slug: если поле трогали — берём его как базу, иначе автоген
       const baseSlug = ((slugEl.value || '').trim() || slugifyRu(name));
 
-      // чтобы не было двойных кликов
       createBtn.disabled = true;
       const oldText = createBtn.textContent;
       createBtn.textContent = 'Создаём…';
@@ -840,6 +837,13 @@
         window.location.href = `panel.html?view=constructor&app=${encodeURIComponent(appId)}`;
       }
     };
+
+    // ПОКАЗЫВАЕМ МОДАЛКУ
+    m.style.display = 'flex';
+    setTimeout(()=> nameEl.focus(), 0);
+  } // <-- ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЛО! Закрываем openCreateModal()
+
+  
 
 
   // === LOGOUT ===
