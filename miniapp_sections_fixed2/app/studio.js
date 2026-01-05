@@ -666,6 +666,20 @@ BP.routes.forEach(r=>{
       console.warn('[studio] local publishLive failed', e);
     }
 
+try{
+  const cfg = extractConfigFromBP(BP);
+  await fetch(CTOR_API_BASE + '/api/app/' + encodeURIComponent(appId) + '/config', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ config: cfg })
+  });
+}catch(e){
+  console.warn('[studio] publish: save config failed', e);
+}
+
+    
+
     // 2) Сообщаем воркеру, что надо "опубликовать" (создать/обновить publicId и ссылку)
     try{
       const res = await fetch(CTOR_API_BASE + '/api/app/' + encodeURIComponent(appId) + '/publish', {
