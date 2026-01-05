@@ -797,36 +797,50 @@
     };
     renderTemplates();
 
-    // create
+    
+    // create (auto slug)
     const createBtn = m.querySelector('[data-act="create"]');
     createBtn.onclick = async ()=>{
       const name = (nameEl.value || '').trim();
       if (!name) return;
-      const slug = (slugEl.value || '').trim() || slugifyRu(name);
 
-      const {res,data} = await api(ENDPOINTS.appCreate, {
-        method:'POST',
-        body: JSON.stringify({ title:name, slug, template_id: selId })
-      });
+      // базовый slug: если поле трогали — берём его как базу, иначе автоген
+      const baseSlug = ((slugEl.value || '').trim() || slugifyRu(name));
 
-      if (!res.ok || !data || !data.ok){
-        const err = (data && data.error) ? data.error : ('HTTP '+res.status);
-        alert('Не удалось создать проект: ' + err);
+      // чтобы не было двойных кликов
+      createBtn.disabled = true;
+      const oldText = createBtn.textContent;
+      createBtn.textContent = 'Создаём…';
+
+      let result;
+      try{
+        result = await createAppWithAutoSlug(name, baseSlug, selId);
+      } finally {
+        createBtn.disabled = false;
+        createBtn.textContent = oldText;
+      }
+
+      if (!result || !result.ok){
+        const err = result && result.error ? result.error : 'UNKNOWN_ERROR';
+        if (err === 'APP_ALREADY_EXISTS'){
+          alert('Не удалось подобрать свободный slug (все варианты заняты). Попробуй другое название.');
+        } else {
+          alert('Не удалось создать проект: ' + err);
+        }
         return;
       }
 
+      const data = result.data;
+
       m.style.display='none';
       await loadApps();
-      const appId = (data.app && (data.app.app_id||data.app.id)) || data.app_id || data.id;
+
+      const appId = (data.app && (data.app.app_id||data.app.id)) || data.app_id || data.id || baseSlug;
       if (appId){
         window.location.href = `panel.html?view=constructor&app=${encodeURIComponent(appId)}`;
       }
     };
 
-    m.style.display='flex';
-  }
-
-  document.getElementById('createProject')?.addEventListener('click', openCreateModal);
 
   // === LOGOUT ===
   async function doLogout(){
