@@ -659,6 +659,37 @@
   }
 
 
+  async function createAppWithAutoSlug(name, baseSlug, templateId){
+    const base = (baseSlug || '').trim() || slugifyRu(name);
+    const variants = [base];
+    for (let i = 2; i <= 50; i++) variants.push(base + '_' + i); // _2 _3 _4 ...
+
+    for (const slug of variants){
+      const {res,data} = await api(ENDPOINTS.appCreate, {
+        method:'POST',
+        body: JSON.stringify({ title:name, slug, template_id: templateId })
+      });
+
+      if (res.ok && data && data.ok){
+        return { ok:true, data, slug };
+      }
+
+      const err = (data && data.error) ? data.error : ('HTTP ' + res.status);
+
+      // если занято — пробуем следующий
+      if (err === 'APP_ALREADY_EXISTS'){
+        continue;
+      }
+
+      // любая другая ошибка — прекращаем
+      return { ok:false, error: err };
+    }
+
+    // если перебрали всё и везде занято
+    return { ok:false, error: 'APP_ALREADY_EXISTS' };
+  }
+
+  
   // === SEARCH по карточкам ===
   document.getElementById('q').addEventListener('input',e=>{
     const s=e.target.value.toLowerCase();
