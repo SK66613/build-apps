@@ -12,6 +12,17 @@
     try{ localStorage.setItem(LOGOUT_KEY, String(Date.now())); }catch(_){}
     try{ bc && bc.postMessage('logout'); }catch(_){}
   }
+
+  // Запоминаем последнюю "нормальную" страницу (cab/panel), чтобы не возвращаться в preview после логина
+try{
+  const p = location.pathname || '';
+  const isAuth = /\/auth\.html$/.test(p);
+  const isPreview = p.startsWith('/miniapp_sections_fixed2/');
+  if (!isAuth && !isPreview){
+    localStorage.setItem(LAST_GOOD_KEY, p + location.search + location.hash);
+  }
+}catch(_){}
+
   function redirectToAuth(){
     // preserve "next" so after login can return
     let target = '/auth.html';
