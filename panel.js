@@ -75,8 +75,8 @@ const META = {
 
     // update constructor iframe with current app_id
     if (id === 'constructor' && ctorFrame){
-      const url = new URL(window.location.href);
-      const appId = url.searchParams.get('app_id') || url.searchParams.get('app') || 'my_app';
+const appId = resolveCabAppId() || '';
+
       const srcBase = 'miniapp_sections_fixed2/app/index.html';
       // embed=1 => seamless mode inside iframe (no outer padding/left panel)
       const hostSideW = getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px';
@@ -159,16 +159,29 @@ const META = {
   // иначе по умолчанию берём твой воркер.
   // Same-origin API (Worker Route on this domain): /api/*
   const CAB_API_BASE = (window.CTOR_API_BASE || window.API_BASE || '').replace(/\/$/, '');
-  const currentUrl = new URL(window.location.href);
-  const CAB_APP_ID =
-    currentUrl.searchParams.get('app_id') ||
-    currentUrl.searchParams.get('app')   ||
-    'my_app';
+    function resolveCabAppId(){
+    const u = new URL(window.location.href);
+    const id = String(u.searchParams.get('app_id') || u.searchParams.get('app') || '').trim();
+    // "more" — это не id приложения (у тебя это попадает из view=constructor&app=more)
+    if (!id || id === 'more' || id === 'my_app') return '';
+    return id;
+  }
+
+  const CAB_APP_ID = resolveCabAppId();
+
 
   // Подтягиваем текущие настройки бота
   async function loadBotIntegration(){
-    if (!botSaveBtn || !CAB_APP_ID) return;
+    if (!botSaveBtn) return;
+
+    if (!CAB_APP_ID){
+      if (botSaveHint) botSaveHint.textContent = 'Не выбран мини-апп в URL (нужен ?app=<apps.id>). Сейчас стоит app=more.';
+      if (botStatusBadge) botStatusBadge.textContent = 'Не выбран';
+      return;
+    }
+
     if (botSaveHint) botSaveHint.textContent = 'Загружаем интеграцию…';
+
     botSaveBtn.disabled = true;
 
     try{
