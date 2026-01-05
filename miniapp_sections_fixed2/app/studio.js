@@ -676,8 +676,68 @@ BP.routes.forEach(r=>{
   $('#publish').onclick = publishLive;
 
 
-  /* ---------- live preview ---------- */
+  /* ---------- extract App Config (wheel/passport/profile) from BP ---------- */
+function extractConfigFromBP(BP){
+  const cfg = {
+    wheel:      { spin_cost:0, claim_cooldown_h:24, daily_limit:0, prizes:[] },
+    passport:   { require_pin:false, collect_coins:0, styles:[] },
+    profile_quiz:{ coins_per_correct:0, max_per_submit:0 },
+    leaderboard:{ top_n:10 }
+  };
+
+  // Собираем плоский список инстансов блоков из роутов
+  const insts = [];
+  try{
+    const routes = (BP && (BP.routes || BP.nav?.routes)) || [];
+    routes.forEach(rt => (rt.blocks||[]).forEach(b => insts.push(b)));
+  }catch(_){}
+
+  // Колесо
+  const wheel = insts.find(b => b.key==='bonusWheel' || b.type==='bonusWheel');
+  if (wheel && wheel.props){
+    const p = wheel.props;
+    cfg.wheel.spin_cost         = Number(p.spin_cost || 0);
+    cfg.wheel.claim_cooldown_h  = Number(p.claim_cooldown_h || 24);
+    cfg.wheel.daily_limit       = Number(p.daily_limit || 0);
+    const arr = Array.isArray(p.prizes) ? p.prizes : [];
+    cfg.wheel.prizes = arr.map(pr => ({
+      code:   String(pr.code || '').trim(),
+      title:  String(pr.title || pr.code || '').trim(),
+      weight: Number(pr.weight || 0),
+      coins:  Number(pr.coins || 0),
+      active: (pr.active !== false)
+    }));
+  }
+
+  // Паспорт стилей
+  const passp = insts.find(b => b.key==='stylesPassport' || b.type==='stylesPassport');
+  if (passp && passp.props){
+    const p = passp.props;
+    cfg.passport.require_pin   = !!p.require_pin;
+    cfg.passport.collect_coins = Number(p.collect_coins || 0);
+    if (isFinite(p.grid_cols)) cfg.passport.grid_cols = Number(p.grid_cols);
+    const arr = Array.isArray(p.styles) ? p.styles : [];
+    cfg.passport.styles = arr.map(s => ({
+      code:   String(s.code || '').trim(),
+      name:   String(s.name || s.code || '').trim(),
+      active: (s.active !== false)
+    }));
+  }
+
+  // Профиль (если задаёшь там монеты за ответы)
+  const prof = insts.find(b => b.key==='profile' || b.type==='profile');
+  if (prof && prof.props){
+    const p = prof.props;
+    if (isFinite(p.coins_per_correct)) cfg.profile_quiz.coins_per_correct = Number(p.coins_per_correct);
+    if (isFinite(p.max_per_submit))    cfg.profile_quiz.max_per_submit    = Number(p.max_per_submit);
+  }
+
+  return cfg;
+}
+
+
   
+  /* ---------- live preview ---------- */
 function sanitizeBP(bp){
   // Ничего не выкидываем (включая section / __isSection / __section), иначе превью не сможет собрать "раздел → блоки".
   // Только нормализуем inst.type и убираем битые записи.
