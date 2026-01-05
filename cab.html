@@ -843,7 +843,9 @@
     setTimeout(()=> nameEl.focus(), 0);
   } // <-- ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЛО! Закрываем openCreateModal()
 
-  
+    // клик по карточке "+"
+  document.getElementById('createProject')?.addEventListener('click', openCreateModal);
+
 
 
   // === LOGOUT ===
