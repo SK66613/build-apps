@@ -634,6 +634,23 @@ BP.routes.forEach(r=>{
     })();
   }
 
+
+  try{
+  const appId = getAppId();
+  const cfg = extractConfigFromBP(BP);
+  await fetch(CTOR_API_BASE + '/api/app/' + encodeURIComponent(appId) + '/config', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ config: cfg })
+  });
+  // опционально: небольшой тост/лог
+  console.log('[studio] config saved');
+}catch(e){
+  console.warn('[studio] save config failed', e);
+}
+
+
   async function publishLive(){
     const appId = getAppId();
     const d = localStorage.getItem(`bp:${appId}:draft`);
