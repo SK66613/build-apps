@@ -844,7 +844,11 @@
   } // <-- ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЛО! Закрываем openCreateModal()
 
     // клик по карточке "+"
-  document.getElementById('createProject')?.addEventListener('click', openCreateModal);
+const createCard = document.getElementById('createProject');
+createCard?.addEventListener('click', openCreateModal);
+// на всякий случай — сам блок с "+"
+createCard?.querySelector('div')?.addEventListener('click', openCreateModal);
+
 
 
 
