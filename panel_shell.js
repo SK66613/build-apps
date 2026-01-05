@@ -23,39 +23,44 @@ try{
   }
 }catch(_){}
 
-  function redirectToAuth(){
-    // preserve "next" so after login can return
-    let target = '/auth.html';
-    try{
-      const u = new URL(location.href);
-      const next = u.pathname + u.search + u.hash;
-      const a = new URL('/auth.html', location.origin);
-      a.searchParams.set('next', next);
-      target = a.toString();
-    }catch(_){}
-    try{
-      if (window.top && window.top !== window.self){
-        window.top.location.href = target;
-        return;
-      }
-    }catch(_){}
-    try{
-      location.href = target;
-    }catch(_){
-      location.href = AUTH_URL;
-    }
-  }
+function redirectToAuth(){
+  // preserve "next" so after login can return
+  let target = '/auth.html';
 
-  window.addEventListener('storage', (e)=>{
-    if (e.key === LOGOUT_KEY && e.newValue){
-      redirectToAuth();
+  try{
+    const u = new URL(location.href);
+
+    // что хотели бы вернуть после логина
+    let next = u.pathname + u.search + u.hash;
+
+    // ❗️НО: если мы сейчас на preview/внутренностях конструктора — это "плохой next"
+    if ((u.pathname || '').startsWith('/miniapp_sections_fixed2/')){
+      try{
+        next = localStorage.getItem(LAST_GOOD_KEY) || '/cab';
+      }catch(_){
+        next = '/cab';
+      }
     }
-  });
-  if (bc){
-    bc.onmessage = (ev)=>{
-      if (ev && ev.data === 'logout') redirectToAuth();
-    };
+
+    const a = new URL('/auth.html', location.origin);
+    a.searchParams.set('next', next);
+    target = a.toString();
+  }catch(_){}
+
+  try{
+    if (window.top && window.top !== window.self){
+      window.top.location.href = target;
+      return;
+    }
+  }catch(_){}
+
+  try{
+    location.href = target;
+  }catch(_){
+    location.href = AUTH_URL;
   }
+}
+
 
   async function api(path, opts){
     try{
