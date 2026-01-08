@@ -985,7 +985,7 @@ leaderboard:{
         <div class="lb-you">
           <div class="lb-you__avatar">S</div>
           <div>
-            <div class="lb-you__name">Serge Kamesky</div>
+            <div class="lb-you__name">Dem Demovich</div>
             <div class="lb-you__sub" data-bind="lb-me-label">best score all</div>
           </div>
           <div class="lb-you__score js-lb-me-best" id="lb-you-score">94</div>
@@ -996,7 +996,7 @@ leaderboard:{
             <div class="lb-row">
               <div class="lb-rank">1</div>
               <div class="lb-you__avatar">S</div>
-              <div class="lb-name">Serge Kamesky</div>
+              <div class="lb-name">Dem Demovich</div>
               <div class="lb-score">94</div>
             </div>
             <div class="lb-row">
@@ -1569,7 +1569,7 @@ leaderboard:{
   profile_header:{
     type:'htmlEmbed',
     title:'Профиль — шапка',
-    defaults:{ title:'Serge Kamesky', text:'@Serge_Kamensky' },
+    defaults:{ title:'Dem Demov', text:'@Demov_Dem' },
     init:(el, p, ctx)=>{
       // Telegram user + coins from D1 via api('state')
       const q = (sel)=> el.querySelector(sel);
@@ -1617,12 +1617,12 @@ leaderboard:{
             <img src="https://via.placeholder.com/56x56" alt="avatar">
           </div>
           <div class="pf-about">
-            <div class="pf-name">${p.title||'Serge Kamesky'}</div>
-            <div class="pf-username">${p.text||'@Serge_Kamensky'}</div>
+            <div class="pf-name">${p.title||'Dem Demov'}</div>
+            <div class="pf-username">${p.text||'@Demov_Dem'}</div>
           </div>
           <div class="metric metric--balance">
             <div class="metric__val">
-              <span id="pf-coins">4667</span><span class="coin-ico"></span>
+              <span id="pf-coins">00</span><span class="coin-ico"></span>
             </div>
             <div class="metric__lbl">Монеты</div>
           </div>
