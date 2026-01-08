@@ -1570,6 +1570,46 @@ leaderboard:{
     type:'htmlEmbed',
     title:'Профиль — шапка',
     defaults:{ title:'Serge Kamesky', text:'@Serge_Kamensky' },
+    init:(el, p, ctx)=>{
+      // Telegram user + coins from D1 via api('state')
+      const q = (sel)=> el.querySelector(sel);
+      const img = q('.pf-ava img');
+      const nameEl = q('.pf-name');
+      const userEl = q('.pf-username');
+      const coinsEl = q('#pf-coins');
+
+      const tg = (window.getTgUserSafe && window.getTgUserSafe())
+        || (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user)
+        || null;
+
+      if (tg){
+        const full = ((tg.first_name||'') + ' ' + (tg.last_name||'')).trim();
+        if (nameEl) nameEl.textContent = full || (p.title||'');
+        if (userEl){
+          const un = tg.username ? ('@' + tg.username) : '';
+          userEl.textContent = un || (p.text||'');
+          if(!un && !p.text) userEl.style.display='none';
+        }
+        if (img && tg.photo_url){ img.src = tg.photo_url; }
+      }
+
+      let alive = true;
+      (async()=>{
+        try{
+          if(!window.api) return;
+          const r = await window.api('state', {});
+          if(!alive) return;
+          const st = (r && (r.state || r.data || r)) || {};
+          const coins = (st.user && (st.user.coins ?? st.user.balance ?? st.user.total_coins))
+            ?? (st.coins ?? st.balance ?? st.total_coins)
+            ?? 0;
+          if (coinsEl) coinsEl.textContent = String(coins);
+        }catch(_){}
+      })();
+
+      return ()=>{ alive = false; };
+    },
+
     preview:(p={})=>`
       <section class="profile-block">
         <div class="pf-hero">
