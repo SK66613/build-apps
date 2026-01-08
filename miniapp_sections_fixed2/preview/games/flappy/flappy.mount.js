@@ -1,321 +1,488 @@
-/* Flappy (simple) - mounts into provided host element.
-   Expects window.api(method, payload) to exist (defined in index.html).
+/* Flappy-lite+ mountable version for constructor preview
+   Based on original app_block_06.js logic, but scoped to a host container.
+   Exposes: window.GAMES.flappy.mount(host, ctx) -> cleanup()
 */
 (function(){
-  const KEY = 'flappy';
+  window.GAMES = window.GAMES || {};
 
-  function loadImg(src){
-    return new Promise((res)=>{
-      const img = new Image();
-      img.onload = ()=>res(img);
-      img.onerror = ()=>res(null);
-      img.src = src;
-    });
-  }
+  const ASSET_BASE = './games/flappy/assets/';
+  const ASSETS = {
+    bird:   { img: ASSET_BASE+'bumblebee.png',  w: 56, h: 42 },
+    pipes:  { top: ASSET_BASE+'pipe_top.png', bottom: ASSET_BASE+'pipe_bottom.png', width:54 },
+    coin:   { img: ASSET_BASE+'coin.png',   w:32, h:32, value:5 },
+    shield: { img: ASSET_BASE+'shield.png', w:34, h:34, dur_ms:6000 }
+  };
 
-  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  window.GAMES.flappy = {
+    title:'Flappy',
+    mount(host, ctx){
+      const props = (ctx && ctx.props) || {};
+      const difficulty = props.difficulty || 'normal';
+      const birdMode   = props.bird_mode || 'default';
+      const customBirdImg = (birdMode === 'custom' && props.bird_img) ? props.bird_img : null;
+      const shieldImg = props.shield_img || null;
 
-  window.GAMES = window.GAMES || Object.create(null);
+      const TG = window.Telegram && window.Telegram.WebApp;
 
-  window.GAMES[KEY] = {
-    mount: async function(host, opts){
-      const ctx = (opts && opts.ctx) || {};
-      const props = (opts && opts.props) || {};
-      const base = (ctx && ctx.assetsBase) ? ctx.assetsBase.replace(/\/$/,'') : '.';
-
+      // Fullscreen overlay inside iframe (covers the preview viewport)
       host.innerHTML = `
-        <div class="flp-wrap" style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-          <canvas class="flp-c" style="width:100%;height:100%;display:block;border-radius:18px;"></canvas>
-          <div class="flp-hud" style="position:absolute;left:12px;top:10px;font:600 12px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#fff;opacity:.92;text-shadow:0 1px 3px rgba(0,0,0,.45)">
-            <div>Score: <span class="flp-score">0</span></div>
-            <div style="opacity:.8">Best: <span class="flp-best">0</span> • Plays: <span class="flp-plays">0</span></div>
+        <div class="flappy is-open" role="dialog" aria-label="Flappy">
+          <div class="flappy__wrap" id="flappy">
+            <div class="fl-hud">
+              <div class="fl-score">Счёт: <span id="fl-score">0</span></div>
+              <div class="fl-bar"><i id="fl-bar"></i></div>
+
+              <div class="fl-stats">
+                <div class="fl-stat">
+                  <span class="fl-ico" id="fl-coin-ico"></span>
+                  <span id="fl-coin-count">0</span>
+                </div>
+                <div class="fl-stat fl-shield-wrap">
+                  <span class="fl-ico" id="fl-shield-ico"></span>
+                  <span class="fl-shield-bar"><i id="fl-shield-bar"></i></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="fl-stage" id="fl-stage">
+              <div class="fl-hint" id="fl-hint">Тапни чтобы начать</div>
+              <div class="fl-bird" id="fl-bird"></div>
+            </div>
+
+            <div class="fl-result" id="fl-result">
+              <div class="fl-card">
+                <div class="fl-cell"><div class="fl-val" id="fl-best">0</div><div class="fl-sub">Лучший</div></div>
+                <div class="fl-cell"><div class="fl-val" id="fl-world">200</div><div class="fl-sub">Мир</div></div>
+              </div>
+            </div>
+
+            <div class="fl-cta" id="fl-cta">
+              <button class="btn">Ещё раз</button>
+            </div>
           </div>
-          <button class="flp-btn" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.24);background:rgba(0,0,0,.45);color:#fff;font:700 13px system-ui;cursor:pointer;">
-            Start
-          </button>
         </div>
       `;
 
-      const canvas = host.querySelector('.flp-c');
-      const btn = host.querySelector('.flp-btn');
-      const scoreEl = host.querySelector('.flp-score');
-      const bestEl = host.querySelector('.flp-best');
-      const playsEl = host.querySelector('.flp-plays');
+      // scope helpers
+      const doc = host.ownerDocument;
+      const $ = (sel)=>host.querySelector(sel);
 
-      // HiDPI resize
-      const ctx2d = canvas.getContext('2d');
-      function resize(){
-        const r = canvas.getBoundingClientRect();
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-        canvas.width = Math.floor(r.width * dpr);
-        canvas.height = Math.floor(r.height * dpr);
-        ctx2d.setTransform(dpr,0,0,dpr,0,0);
-      }
-      resize();
-      const ro = new ResizeObserver(resize);
-      ro.observe(canvas);
+      const root   = $('#flappy');
+      const stage  = $('#fl-stage');
+      const birdEl = $('#fl-bird');
+      const hintEl = $('#fl-hint');
+      const scoreEl= $('#fl-score');
+      const barEl  = $('#fl-bar');
 
-      // Assets (optional)
-      const birdImg = await loadImg(`${base}/games/flappy/assets/bumblebee.png`);
-      const pipeTopImg = await loadImg(`${base}/games/flappy/assets/pipe_top.png`);
-      const pipeBottomImg = await loadImg(`${base}/games/flappy/assets/pipe_bottom.png`);
-      const coinImg = await loadImg(`${base}/games/flappy/assets/coin.png`);
+      const coinIco= $('#fl-coin-ico');
+      const coinCnt= $('#fl-coin-count');
+      const shIco  = $('#fl-shield-ico');
+      const shBar  = $('#fl-shield-bar');
 
-      // Game state
-      let running = false;
-      let raf = 0;
-      let t0 = 0;
-      let last = 0;
+      const resBox = $('#fl-result');
+      const bestEl = $('#fl-best');
+      const worldEl= $('#fl-world');
+      const cta    = $('#fl-cta');
 
-      let score = 0;
-      let best = 0;
-      let plays = 0;
-
-      // physics
-      let bird = { x: 0, y: 0, vy: 0, r: 14 };
-      let pipes = [];
-      let coins = [];
-
-      function reset(){
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        bird.x = w * 0.30;
-        bird.y = h * 0.45;
-        bird.vy = 0;
-        pipes = [];
-        coins = [];
-        score = 0;
-        scoreEl.textContent = String(score);
-      }
-
-      function spawn(){
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const gap = clamp(h * 0.26, 110, 190);
-        const pipeW = 60;
-        const margin = 40;
-        const topH = Math.floor(margin + Math.random() * (h - gap - margin*2));
-        const x = w + 10;
-        pipes.push({ x, w: pipeW, topH, gap });
-        // coin between pipes sometimes
-        if (Math.random() < 0.65){
-          coins.push({ x: x + pipeW + 18, y: topH + gap/2, r: 10, taken:false });
-        }
-      }
-
-      function flap(){
-        if (!running){
-          start();
-          return;
-        }
-        bird.vy = -320;
-      }
-
-      // input
-      const onKey = (e)=>{
-        if (e.code === 'Space' || e.code === 'ArrowUp'){
-          e.preventDefault();
-          flap();
-        }
-      };
-      window.addEventListener('keydown', onKey, {passive:false});
-      host.addEventListener('pointerdown', flap);
-
-      async function loadStatsFromState(){
-        try{
-          if (typeof window.api !== 'function') return;
-          const r = await window.api('state', {});
-          if (r && r.ok){
-            const st = r.state || {};
-            // support multiple shapes
-            const b = Number((st.game_today_best ?? st.game_best_today ?? st.best_score ?? 0) || 0);
-            const p = Number((st.game_today_plays ?? st.game_plays_today ?? st.plays ?? 0) || 0);
-            best = b; plays = p;
-            bestEl.textContent = String(best);
-            playsEl.textContent = String(plays);
-          }
-        }catch(_){}
-      }
-
-      async function submit(scoreFinal, durMs){
-        try{
-          if (typeof window.api !== 'function') return;
-          const r = await window.api('game_submit', {
-            game_id: 'flappy',
-            mode: 'daily',
-            score: scoreFinal,
-            duration_ms: durMs|0
-          });
-          if (r && r.ok){
-            // refresh stats
-            const st = r.fresh_state || r.state || null;
-            if (st){
-              const b = Number((st.game_today_best ?? st.game_best_today ?? st.best_score ?? r.best_score ?? 0) || 0);
-              const p = Number((st.game_today_plays ?? st.game_plays_today ?? r.plays ?? 0) || 0);
-              best = b; plays = p;
-              bestEl.textContent = String(best);
-              playsEl.textContent = String(plays);
-            }else{
-              if (typeof r.best_score !== 'undefined') best = Number(r.best_score)||best;
-              if (typeof r.plays !== 'undefined') plays = Number(r.plays)||plays;
-              bestEl.textContent = String(best);
-              playsEl.textContent = String(plays);
-            }
-          }
-        }catch(e){
-          console.warn('[flappy] submit failed', e);
-        }
-      }
-
-      function draw(){
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-
-        // bg
-        ctx2d.clearRect(0,0,w,h);
-        ctx2d.fillStyle = 'rgba(20,24,32,1)';
-        ctx2d.fillRect(0,0,w,h);
-
-        // subtle grid
-        ctx2d.globalAlpha = 0.08;
-        ctx2d.strokeStyle = '#fff';
-        for(let x=0;x<w;x+=40){ ctx2d.beginPath(); ctx2d.moveTo(x,0); ctx2d.lineTo(x,h); ctx2d.stroke(); }
-        for(let y=0;y<h;y+=40){ ctx2d.beginPath(); ctx2d.moveTo(0,y); ctx2d.lineTo(w,y); ctx2d.stroke(); }
-        ctx2d.globalAlpha = 1;
-
-        // pipes
-        ctx2d.fillStyle = 'rgba(255,255,255,.16)';
-        for(const p of pipes){
-          const topH = p.topH;
-          const botY = topH + p.gap;
-          // draw top
-          if (pipeTopImg){
-            ctx2d.drawImage(pipeTopImg, p.x, topH - 260, p.w, 260);
-          } else {
-            ctx2d.fillRect(p.x, 0, p.w, topH);
-          }
-          // draw bottom
-          if (pipeBottomImg){
-            ctx2d.drawImage(pipeBottomImg, p.x, botY, p.w, 260);
-          } else {
-            ctx2d.fillRect(p.x, botY, p.w, h - botY);
-          }
-        }
-
-        // coins
-        for(const c of coins){
-          if (c.taken) continue;
-          if (coinImg){
-            ctx2d.drawImage(coinImg, c.x - 12, c.y - 12, 24, 24);
-          } else {
-            ctx2d.beginPath(); ctx2d.arc(c.x,c.y,c.r,0,Math.PI*2); ctx2d.fillStyle='rgba(255,215,0,.9)'; ctx2d.fill();
-          }
-        }
-
-        // bird
+      // ===== ASSETS apply (same as original, but with our paths) =====
+      function applyAssets(){
+        doc.documentElement.style.setProperty('--bird-w', (ASSETS.bird.w||48)+'px');
+        doc.documentElement.style.setProperty('--bird-h', (ASSETS.bird.h||36)+'px');
+        const birdImg = customBirdImg || ASSETS.bird.img;
         if (birdImg){
-          ctx2d.drawImage(birdImg, bird.x - 18, bird.y - 18, 36, 36);
+          birdEl.classList.add('fl-bird--sprite');
+          birdEl.style.backgroundImage = `url(${birdImg})`;
         } else {
-          ctx2d.beginPath(); ctx2d.arc(bird.x,bird.y,bird.r,0,Math.PI*2); ctx2d.fillStyle='rgba(120,200,255,.95)'; ctx2d.fill();
+          birdEl.classList.remove('fl-bird--sprite');
+          birdEl.style.backgroundImage = '';
+        }
+        doc.documentElement.style.setProperty('--pipe-w', (ASSETS.pipes.width||76)+'px');
+        if (ASSETS.coin.img)   coinIco.style.backgroundImage = `url(${ASSETS.coin.img})`;
+        const shieldSprite = shieldImg || ASSETS.shield.img;
+        if (shieldSprite) shIco.style.backgroundImage = `url(${shieldSprite})`;
+        doc.documentElement.style.setProperty('--coin-w', (ASSETS.coin.w||32)+'px');
+        doc.documentElement.style.setProperty('--coin-h', (ASSETS.coin.h||32)+'px');
+        doc.documentElement.style.setProperty('--pow-w',  (ASSETS.shield.w||34)+'px');
+        doc.documentElement.style.setProperty('--pow-h',  (ASSETS.shield.h||34)+'px');
+      }
+
+      // ===== TUNING (from original) =====
+      const WORLD_RECORD     = 200;
+      const GRAVITY          = 1800;
+      const FLAP_VELOCITY    = -520;
+      let SPEED_X          = 220;
+      const ACCEL_EACH_MS    = 8000;
+      const SPEED_STEP       = 28;
+      const PIPE_SPAWN_MS    = 1300;
+      let GAP_MIN          = 150;
+      let GAP_MAX          = 190;
+      // tuning by difficulty
+      if (difficulty === 'easy'){
+        SPEED_X *= 0.8;
+        GAP_MIN *= 1.2;
+        GAP_MAX *= 1.2;
+      } else if (difficulty === 'hard'){
+        SPEED_X *= 1.25;
+        GAP_MIN *= 0.85;
+        GAP_MAX *= 0.85;
+      }
+
+      const GAP_TOP_PAD      = 80;
+      const BIRD_X_FACTOR    = 0.25;
+      const ROT_UP           = -35, ROT_DOWN = 90;
+      const SAFE_FLOOR_PAD   = 6;
+
+      const COIN_IN_GAP_PROB = 0.9;
+      const SHIELD_PROB      = 0.18;   // in preview keep sane (original had 0.9)
+      const SHIELD_COOLDOWN  = 9000;
+
+      const MAGNET_ENABLED   = true;
+      const MAGNET_RADIUS    = 140;
+      const MAGNET_PULL_PX_S = 300;
+
+      // ===== STATE =====
+      let best     = 0;
+      try{ best = Number(doc.defaultView.localStorage.getItem('flappy_best')||0) || 0; }catch(_){}
+      let running=false, started=false;
+      let raf=0, spawnT=Infinity, t0=0;
+      let w=0,h=0, birdX=0, birdY=0, birdVY=0;
+
+      let pipes=[];   // {x, gapY, gap, topEl, botEl, passed:false}
+      let items=[];   // {type, x,y, el}
+      let lastShieldSpawn=0;
+
+      let score=0, coins=0;
+      let shieldActive=false, shieldUntil=0;
+
+      const haptic = lvl=>{ try{ TG?.HapticFeedback?.impactOccurred(lvl||'light'); }catch(_){} };
+      const clamp  = (v,a,b)=> Math.max(a, Math.min(b, v));
+      const rand   = (a,b)=> a + Math.random()*(b-a);
+
+      function layout(){
+        w = stage.clientWidth;
+        h = stage.clientHeight;
+        birdX = w * BIRD_X_FACTOR;
+        if (!started){
+          birdY = h * 0.45;
+          applyBird();
+        }
+      }
+      function applyBird(){ birdEl.style.left = birdX + 'px'; birdEl.style.top = birdY + 'px'; }
+      function setScore(v){ scoreEl.textContent = String(v|0); }
+      function setCoins(v){ coinCnt.textContent = String(v|0); }
+
+      function spawnPipe(){
+        const gap = rand(GAP_MIN, GAP_MAX);
+        const minY = GAP_TOP_PAD + gap/2;
+        const maxY = h - GAP_TOP_PAD - gap/2;
+        const gapY = rand(minY, maxY);
+
+        const top = doc.createElement('div');
+        const bot = doc.createElement('div');
+        top.className = 'fl-pipe-part';
+        bot.className = 'fl-pipe-part';
+        if (ASSETS.pipes.top && ASSETS.pipes.bottom){
+          top.classList.add('fl-pipe--sprite');
+          bot.classList.add('fl-pipe--sprite');
+          top.style.backgroundImage = `url(${ASSETS.pipes.top})`;
+          bot.style.backgroundImage = `url(${ASSETS.pipes.bottom})`;
+        }
+        stage.appendChild(top);
+        stage.appendChild(bot);
+
+        const p = { x: w + (ASSETS.pipes.width||76), gapY, gap, topEl: top, botEl: bot, passed:false };
+        pipes.push(p);
+        positionPipe(p);
+
+        // coin in gap
+        if (Math.random() < COIN_IN_GAP_PROB){
+          const c = doc.createElement('div');
+          c.className = 'fl-coin';
+          if (ASSETS.coin.img) c.style.backgroundImage = `url(${ASSETS.coin.img})`;
+          stage.appendChild(c);
+          const it = { type:'coin', x: p.x + 200, y: gapY, el: c };
+          items.push(it);
+          positionItem(it);
+        }
+
+        // shield (cooldown)
+        if (Date.now() - lastShieldSpawn > SHIELD_COOLDOWN && Math.random() < SHIELD_PROB){
+          const s = doc.createElement('div');
+          s.className = 'fl-power';
+          const shieldSprite = shieldImg || ASSETS.shield.img;
+          if (shieldSprite) s.style.backgroundImage = `url(${shieldSprite})`;
+          stage.appendChild(s);
+          const it = { type:'shield', x: p.x + 300, y: gapY - gap*0.35, el: s };
+          items.push(it);
+          positionItem(it);
+          lastShieldSpawn = Date.now();
         }
       }
 
-      function collide(){
-        const h = canvas.clientHeight;
-        if (bird.y - bird.r < 0 || bird.y + bird.r > h) return true;
-        for(const p of pipes){
-          const inX = bird.x + bird.r > p.x && bird.x - bird.r < p.x + p.w;
-          if (!inX) continue;
-          const topH = p.topH;
-          const botY = topH + p.gap;
-          if (bird.y - bird.r < topH || bird.y + bird.r > botY) return true;
+      function positionPipe(p){
+        const pipeW = (ASSETS.pipes.width||76);
+        const th = p.gapY - p.gap/2;
+        const bt = p.gapY + p.gap/2;
+        p.topEl.style.left = p.x + 'px';
+        p.topEl.style.top  = '0px';
+        p.topEl.style.height = th + 'px';
+        p.topEl.style.width  = pipeW + 'px';
+        p.botEl.style.left = p.x + 'px';
+        p.botEl.style.top  = bt + 'px';
+        p.botEl.style.height = (h - bt) + 'px';
+        p.botEl.style.width  = pipeW + 'px';
+      }
+
+      function positionItem(it){
+        it.el.style.left = it.x + 'px';
+        it.el.style.top  = it.y + 'px';
+      }
+      function removePipe(p){ try{ p.topEl.remove(); p.botEl.remove(); }catch(_){ } }
+      function removeItem(it){ try{ it.el.remove(); }catch(_){ } }
+
+      function rectsOverlap(a,b){ return !(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom); }
+
+      function collidePipe(){
+        const br = birdEl.getBoundingClientRect();
+        for (const p of pipes){
+          if (rectsOverlap(br, p.topEl.getBoundingClientRect()) || rectsOverlap(br, p.botEl.getBoundingClientRect())) return true;
         }
         return false;
       }
 
-      function step(ts){
+      function activateShield(){
+        shieldActive = true;
+        shieldUntil  = Date.now() + (ASSETS.shield.dur_ms||6000);
+        birdEl.classList.add('fl-bird--shield');
+      }
+      function updateShieldHud(){
+        if (!shieldActive){ shBar.style.transform = 'scaleX(0)'; return; }
+        const left = shieldUntil - Date.now();
+        if (left <= 0){
+          shieldActive = false;
+          birdEl.classList.remove('fl-bird--shield');
+          shBar.style.transform = 'scaleX(0)';
+        } else {
+          const pct = clamp(left / (ASSETS.shield.dur_ms||6000), 0, 1);
+          shBar.style.transform = `scaleX(${pct})`;
+        }
+      }
+
+      function collideItems(){
+        const br = birdEl.getBoundingClientRect();
+        const dead=[];
+        for (let i=0;i<items.length;i++){
+          const it = items[i];
+          const ir = it.el.getBoundingClientRect();
+          if (rectsOverlap(br, ir)){
+            if (it.type==='coin'){
+              coins += 1;
+              setCoins(coins);
+              score += 1; // score for passing is separate; keep simple here
+              setScore(score);
+              haptic('medium');
+            } else if (it.type==='shield'){
+              activateShield();
+              haptic('medium');
+            }
+            removeItem(it); dead.push(i);
+          }
+        }
+        for (let i=dead.length-1;i>=0;i--) items.splice(dead[i],1);
+      }
+
+      function flap(){
         if (!running) return;
-        if (!t0) t0 = ts;
-        const dt = Math.min(0.032, (ts - last)/1000 || 0.016);
-        last = ts;
+        if (!started){
+          started = true;
+          hintEl.style.display = 'none';
+          birdVY = FLAP_VELOCITY;
+          t0 = performance.now();
+          spawnT = t0;
+          tick._prev = t0;
+        } else {
+          birdVY = FLAP_VELOCITY;
+        }
+        haptic('light');
+      }
 
-        const w = canvas.clientWidth;
+      function crash(){ haptic('heavy'); finish(); }
 
-        // spawn pipes
-        if (!pipes.length || (w - pipes[pipes.length-1].x) > 180){
-          spawn();
+      function finish(){
+        running = false;
+        cancelAnimationFrame(raf);
+
+        if (score > best){
+          best = score;
+          try{ doc.defaultView.localStorage.setItem('flappy_best', String(best)); }catch(_){}
         }
 
-        // move
-        const speed = 170;
-        for(const p of pipes) p.x -= speed*dt;
-        for(const c of coins) c.x -= speed*dt;
-        pipes = pipes.filter(p=> p.x + p.w > -20);
-        coins = coins.filter(c=> c.x > -40 && !c.taken);
+        bestEl.textContent = String(best|0);
+        worldEl.textContent = String(WORLD_RECORD);
 
-        // bird
-        bird.vy += 860*dt;
-        bird.y += bird.vy*dt;
+        resBox.classList.add('show');
+        cta.classList.add('show');
+      }
 
-        // scoring (pass pipes)
-        for(const p of pipes){
-          if (!p._scored && p.x + p.w < bird.x){
-            p._scored = true;
-            score += 1;
-            scoreEl.textContent = String(score);
-          }
-        }
-        // coin pickup
-        for(const c of coins){
-          if (c.taken) continue;
-          const dx = c.x - bird.x, dy = c.y - bird.y;
-          if (dx*dx + dy*dy < (c.r + bird.r)*(c.r + bird.r)){
-            c.taken = true;
-            score += 1;
-            scoreEl.textContent = String(score);
-          }
-        }
+      function resetScene(){
+        pipes.forEach(removePipe); pipes = [];
+        items.forEach(removeItem); items = [];
+        coins=0; setCoins(0);
 
-        draw();
+        shieldActive=false;
+        birdEl.classList.remove('fl-bird--shield');
+        shBar.style.transform = 'scaleX(0)';
 
-        if (collide()){
-          stop();
+        started=false; score=0; setScore(0);
+        hintEl.style.display = '';
+        birdVY = 0;
+        birdEl.style.transform = 'translate(-50%,-50%) rotate(0deg)';
+        barEl.style.transform = 'scaleX(1)';
+
+        layout();
+
+        spawnT = Infinity;
+        tick._prev = performance.now();
+        resBox.classList.remove('show');
+        cta.classList.remove('show');
+      }
+
+      function tick(){
+        const now = performance.now();
+        const dt  = Math.min(32, now - (tick._prev||now)); tick._prev = now;
+
+        if (!started){
+          birdY += Math.sin(now/300) * 0.12;
+          applyBird();
+          updateShieldHud();
+          raf = requestAnimationFrame(tick);
           return;
         }
 
-        raf = requestAnimationFrame(step);
+        const elapsed = now - t0;
+        const prog = Math.min(1, elapsed / 45000);
+        barEl.style.transform = `scaleX(${1-prog})`;
+
+        const speed = SPEED_X + Math.floor(elapsed / ACCEL_EACH_MS) * SPEED_STEP;
+
+        birdVY += GRAVITY * (dt/1000);
+        birdY  += birdVY * (dt/1000);
+
+        const ang = clamp((birdVY/600)*45, ROT_UP, ROT_DOWN);
+        birdEl.style.transform = `translate(-50%,-50%) rotate(${ang}deg)`;
+
+        const topLimit = 6;
+        const botLimit = h - SAFE_FLOOR_PAD;
+        if (birdY <= topLimit){ birdY = topLimit; birdVY = 0; }
+        if (birdY >= botLimit){
+          birdY = botLimit;
+          if (!shieldActive){ crash(); return; }
+          birdVY = -200;
+        }
+
+        const dx = speed * dt/1000;
+        for (const p of pipes){ p.x -= dx; positionPipe(p); }
+        for (const it of items){
+          it.x -= dx;
+
+          if (MAGNET_ENABLED && shieldActive && it.type === 'coin'){
+            const vx=birdX-it.x, vy=birdY-it.y, dist=Math.hypot(vx,vy);
+            if (dist < MAGNET_RADIUS){
+              const pull = MAGNET_PULL_PX_S * (dt/1000);
+              const step = Math.min(pull, dist||0);
+              const nx = vx/(dist||1), ny = vy/(dist||1);
+              it.x += nx*step; it.y += ny*step;
+              it.el.style.transform = 'translate(-50%,-50%) scale(1.08)';
+            } else it.el.style.transform = 'translate(-50%,-50%)';
+          } else it.el.style.transform = 'translate(-50%,-50%)';
+
+          positionItem(it);
+        }
+
+        for (const p of pipes){
+          if (!p.passed && p.x + (ASSETS.pipes.width||76) < birdX){
+            p.passed = true;
+            score += 1;
+            setScore(score);
+            haptic('light');
+          }
+        }
+
+        while (pipes.length && pipes[0].x < -(ASSETS.pipes.width||76)-2){ removePipe(pipes[0]); pipes.shift(); }
+        while (items.length && items[0].x < -80){ removeItem(items[0]); items.shift(); }
+
+        collideItems();
+        if (collidePipe()){
+          if (shieldActive){
+            shieldActive = false;
+            birdEl.classList.remove('fl-bird--shield');
+            shBar.style.transform = 'scaleX(0)';
+            birdVY = -260;
+          } else { crash(); return; }
+        }
+
+        if (now - spawnT > PIPE_SPAWN_MS){ spawnT = now; spawnPipe(); }
+
+        applyBird();
+        updateShieldHud();
+
+        raf = requestAnimationFrame(tick);
       }
 
-      function start(){
-        running = true;
-        btn.style.display = 'none';
-        t0 = 0; last = 0;
-        reset();
-        raf = requestAnimationFrame(step);
-      }
-
-      async function stop(){
-        running = false;
-        cancelAnimationFrame(raf);
-        btn.textContent = 'Restart';
-        btn.style.display = 'block';
-        // submit best
-        const durMs = Math.max(0, (performance.now() - (t0||performance.now()))|0);
-        await submit(score, durMs);
-      }
-
-      btn.addEventListener('click', ()=>{ if(!running) start(); });
-
-      // initial stats
-      loadStatsFromState();
-
-      // cleanup
-      return function cleanup(){
-        cancelAnimationFrame(raf);
-        try{ ro.disconnect(); }catch(_){}
-        window.removeEventListener('keydown', onKey);
-        host.removeEventListener('pointerdown', flap);
+      // listeners (scoped + removable)
+      const onPointer = (e)=>{
+        // ignore taps on stage while result/CTA is visible
+        if (cta.classList.contains('show') || resBox.classList.contains('show')) return;
+        e.preventDefault();
+        flap();
       };
+      stage.addEventListener('pointerdown', onPointer, {passive:false});
+
+      const onKey = (e)=>{
+        if (e.code==='Space' || e.key==='ArrowUp'){ e.preventDefault(); flap(); }
+        if (e.key==='Escape'){ cleanup(); }
+      };
+      doc.addEventListener('keydown', onKey);
+
+      const onCta = (e)=>{
+        const btn = e.target.closest('.btn');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        resetScene();
+
+        running = true;
+        tick._prev = performance.now();
+        raf = requestAnimationFrame(tick);
+      };
+      cta.addEventListener('click', onCta);
+
+      // open fullscreen immediately
+      try{ doc.body.classList.add('flappy-open'); }catch(_){}
+      applyAssets();
+      layout();
+      resetScene();
+
+      running = true;
+      raf = requestAnimationFrame(tick);
+
+      // resize
+      const ro = new (doc.defaultView.ResizeObserver || ResizeObserver)(()=>layout());
+      try{ ro.observe(stage); }catch(_){}
+
+      function cleanup(){
+        try{ running=false; cancelAnimationFrame(raf); }catch(_){}
+        try{ stage.removeEventListener('pointerdown', onPointer); }catch(_){}
+        try{ doc.removeEventListener('keydown', onKey); }catch(_){}
+        try{ cta.removeEventListener('click', onCta); }catch(_){}
+        try{ ro.disconnect(); }catch(_){}
+        try{ doc.body.classList.remove('flappy-open'); }catch(_){}
+        host.innerHTML = '';
+      }
+
+      return cleanup;
     }
   };
 })();
