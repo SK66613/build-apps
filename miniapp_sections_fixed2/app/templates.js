@@ -1622,7 +1622,7 @@ leaderboard:{
           </div>
           <div class="metric metric--balance">
             <div class="metric__val">
-              <span id="pf-coins">00</span><span class="coin-ico"></span>
+              <span id="pf-coins">-100</span><span class="coin-ico"></span>
             </div>
             <div class="metric__lbl">Монеты</div>
           </div>
