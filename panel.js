@@ -61,20 +61,11 @@ const META = {
 
   // (collapse handler removed)
 
- function showView(id){
-  views.forEach(v=>v.classList.toggle('is-show', v.dataset.view===id));
-  const m = META[id] || {t:'',s:''};
-  pageTitle.textContent = m.t;
-  pageSub.textContent = m.s;
-
-  if (id === 'constructor' && ctorFrame){
-    const appId = resolveCabAppId() || '';
-    setCtorSrcStable(appId);
-  
-
-  // дальше твой старый код showView идёт как был…
-}
-
+  function showView(id){
+    views.forEach(v=>v.classList.toggle('is-show', v.dataset.view===id));
+    const m = META[id] || {t:'',s:''};
+    pageTitle.textContent = m.t;
+    pageSub.textContent = m.s;
 
     // constructor mode: maximum space
     document.body.classList.toggle('is-ctor', id === 'constructor');
@@ -83,45 +74,25 @@ const META = {
     if (id === 'settings') setSettingsTab('base');
 
     // update constructor iframe with current app_id
-    // --- ctor iframe load (stable) ---
-let ctorTimer = null;
+    if (id === 'constructor' && ctorFrame){
+const appId = resolveCabAppId() || '';
 
-function setCtorSrcStable(appId){
-  if (!ctorFrame) return;
-
-  const srcBase = 'miniapp_sections_fixed2/app/index.html';
-  const hostSideW = (getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px');
-
-  const next = srcBase
-    + '?preview=draft&embed=1'
-    + '&host_side_w=' + encodeURIComponent(hostSideW)
-    + '&app_id=' + encodeURIComponent(appId || '');
-
-  // debounce: не дергаем iframe много раз подряд
-  clearTimeout(ctorTimer);
-  ctorTimer = setTimeout(()=>{
-    const cur = ctorFrame.getAttribute('src') || '';
-
-    // если iframe ещё не загружался или базовый путь другой — грузим
-    if (!cur || cur.indexOf(srcBase) === -1){
-      ctorFrame.setAttribute('src', next);
-      ctorFrame.dataset.bound = '1';
-      return;
-    }
-
-    // сравниваем полностью URL (а не только app_id)
-    try{
-      const curUrl = new URL(cur, location.href);
-      const nextUrl = new URL(next, location.href);
-      if (curUrl.href !== nextUrl.href){
-        ctorFrame.setAttribute('src', next);
+      const srcBase = 'miniapp_sections_fixed2/app/index.html';
+      // embed=1 => seamless mode inside iframe (no outer padding/left panel)
+      const hostSideW = getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px';
+      const src = srcBase + '?preview=draft&embed=1&host_side_w=' + encodeURIComponent(hostSideW) + '&app_id=' + encodeURIComponent(appId);
+      if (!ctorFrame.dataset.bound || ctorFrame.src.indexOf(srcBase) === -1){
+        // first time
+        ctorFrame.src = src;
+        ctorFrame.dataset.bound = '1';
+      } else {
+        // only change app_id if differs
+        const cur = new URL(ctorFrame.src, window.location.href);
+        if (cur.searchParams.get('app_id') !== appId){
+          ctorFrame.src = src;
+        }
       }
-    }catch(_){
-      // на всякий — если URL не парсится, просто не дергаем
     }
-  }, 120);
-}
-
 
     // apply page layout mode (hide topbar/paddings for constructor)
     setMode(id);
@@ -189,17 +160,12 @@ function setCtorSrcStable(appId){
   // Same-origin API (Worker Route on this domain): /api/*
   const CAB_API_BASE = (window.CTOR_API_BASE || window.API_BASE || '').replace(/\/$/, '');
     function resolveCabAppId(){
-  const u = new URL(window.location.href);
-  const id = String(u.searchParams.get('app_id') || u.searchParams.get('app') || '').trim();
-
-  // 'my_app' — это дефолт из preview, его игнорим
-  if (id === 'my_app') return '';
-
-  // 'more' у тебя РЕАЛЬНО бывает app_id (как проект),
-  // поэтому НЕ выкидываем его
-  return id;
-}
-
+    const u = new URL(window.location.href);
+    const id = String(u.searchParams.get('app_id') || u.searchParams.get('app') || '').trim();
+    // "more" — это не id приложения (у тебя это попадает из view=constructor&app=more)
+    if (!id || id === 'more' || id === 'my_app') return '';
+    return id;
+  }
 
   const CAB_APP_ID = resolveCabAppId();
 
