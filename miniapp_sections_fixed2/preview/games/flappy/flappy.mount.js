@@ -5,7 +5,7 @@
 (function(){
   window.GAMES = window.GAMES || {};
 
-  const ASSET_BASE = '/games/flappy/assets/';
+  const ASSET_BASE = './games/flappy/assets/';
   const ASSETS = {
     bird:   { img: ASSET_BASE+'bumblebee.png',  w: 56, h: 42 },
     pipes:  { top: ASSET_BASE+'pipe_top.png', bottom: ASSET_BASE+'pipe_bottom.png', width:54 },
