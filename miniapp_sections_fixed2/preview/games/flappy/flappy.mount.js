@@ -530,34 +530,18 @@ try {
         raf = requestAnimationFrame(tick);
       }
 
-      // listeners (scoped + removable)
+// listeners (scoped + removable)
 const onPointer = (e)=>{
-  // ✅ если тап по UI — не трогаем игру (и не preventDefault)
+  // ✅ если тап по UI (кнопка/оверлей) — НЕ трогаем игру
   if (
     e.target.closest('#fl-cta') ||
     e.target.closest('#fl-result') ||
     e.target.closest('button,a,input,textarea,select')
   ) return;
 
-  // ✅ если показан результат/CTA — любой тап = рестарт (надежнее чем click)
-  if (cta.classList.contains('show') || resBox.classList.contains('show')){
-    e.preventDefault();
-    e.stopPropagation();
+  // ✅ при показанном результате/CTA — сцену игнорируем (никакого рестарта)
+  if (cta.classList.contains('show') || resBox.classList.contains('show')) return;
 
-    // рестарт "как при открытии": ждём тап
-    resBox.classList.remove('show');
-    cta.classList.remove('show');
-
-    resetScene();
-    running = true;
-    const t = performance.now();
-    tick._prev = t;
-    if (raf) cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(tick);
-    return;
-  }
-
-  // обычный тап по сцене
   e.preventDefault();
   flap();
 };
@@ -569,16 +553,19 @@ const onKey = (e)=>{
 };
 doc.addEventListener('keydown', onKey);
 
-// CTA: в конструкторе click может не приходить → ловим pointerdown в capture
+// ✅ рестарт ТОЛЬКО по кнопке (pointerdown в capture, чтобы не зависеть от click)
 const onCta = (e)=>{
-  if (!e.target.closest('.btn')) return;
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
 
   e.preventDefault();
   e.stopPropagation();
 
+  // спрятать результат и кнопку
   resBox.classList.remove('show');
   cta.classList.remove('show');
 
+  // сброс в режим ожидания тапа
   resetScene();
   running = true;
   const t = performance.now();
@@ -587,8 +574,9 @@ const onCta = (e)=>{
   raf = requestAnimationFrame(tick);
 };
 
-// ✅ основной — pointerdown (capture), запасной — click
+// вместо click:
 cta.addEventListener('pointerdown', onCta, { capture:true, passive:false });
+// можно оставить click как запасной:
 cta.addEventListener('click', onCta, true);
 
 
