@@ -22,7 +22,10 @@
       const customBirdImg = (birdMode === 'custom' && props.bird_img) ? props.bird_img : null;
       const shieldImg = props.shield_img || null;
 
-      const TG = window.Telegram && window.Telegram.WebApp;
+      const TG =
+  (window.Telegram && window.Telegram.WebApp) ||
+  (window.parent && window.parent.Telegram && window.parent.Telegram.WebApp);
+
 
       // Fullscreen overlay inside iframe (covers the preview viewport)
       host.innerHTML = `
@@ -308,7 +311,8 @@
 
       function crash(){ haptic('heavy'); finish(); }
 
-      function finish(){
+      async function finish(){
+
         running = false;
         cancelAnimationFrame(raf);
 
@@ -317,6 +321,103 @@
           try{ doc.defaultView.localStorage.setItem('flappy_best', String(best)); }catch(_){}
         }
 
+            // === submit score to backend (D1) ===
+try {
+  const TG =
+  (window.Telegram && window.Telegram.WebApp) ||
+  (window.parent && window.parent.Telegram && window.parent.Telegram.WebApp);
+
+
+  // public_id из урла вида /m/<public_id>  (например: /m/app-test1-jxk6)
+  const pid = (function () {
+    try {
+      const p = (location.pathname || "").split("/").filter(Boolean);
+      const i = p.indexOf("m") >= 0 ? p.indexOf("m") : p.indexOf("app");
+      if (i >= 0 && p[i + 1]) return p[i + 1];
+      return new URL(location.href).searchParams.get("public_id") || "";
+    } catch (_) {
+      return "";
+    }
+  })();
+
+  if (TG && pid) {
+    const init_data = TG.initData || "";
+    const u =
+      TG.initDataUnsafe && TG.initDataUnsafe.user ? TG.initDataUnsafe.user : null;
+
+    if (init_data && u && u.id) {
+      // ВАЖНО: правильный роут воркера для событий из мини-аппа:
+      // POST /api/public/app/<publicId>/event
+      const url =
+        "https://app.salesgenius.ru/api/public/app/" +
+        encodeURIComponent(pid) +
+        "/event";
+
+      const payload = {
+        type: "game.submit",
+        init_data,
+        tg_user: {
+          id: u.id,
+          username: u.username || "",
+          first_name: u.first_name || "",
+          last_name: u.last_name || "",
+        },
+        payload: {
+          game_id: "flappy",
+          mode: "daily",
+          score: Number(score || 0),
+          // опционально (если захочешь учитывать время игры)
+          // duration_ms: Number(performance.now() - t0 || 0)
+        },
+      };
+
+      // НЕ глушим ошибки: читаем ответ и показываем в UI/локально
+      let status = 0;
+      let text = "";
+      try {
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        status = resp.status;
+        text = await resp.text();
+
+        // сохраним на всякий случай, чтобы потом посмотреть без консоли
+        try {
+          localStorage.setItem(
+            "flappy_last_submit",
+            JSON.stringify({ at: Date.now(), status, body: text }).slice(0, 8000)
+          );
+        } catch (_) {}
+
+        // если есть тосты — покажем
+        if (window.showToast) {
+          if (resp.ok) window.showToast("Score отправлен ✅", true);
+          else window.showToast("Score НЕ отправлен: " + status, false);
+        }
+      } catch (e) {
+        try {
+          localStorage.setItem(
+            "flappy_last_submit",
+            JSON.stringify({ at: Date.now(), status: 0, error: String(e) }).slice(
+              0,
+              8000
+            )
+          );
+        } catch (_) {}
+
+        if (window.showToast) window.showToast("Score: ошибка сети", false);
+      }
+    }
+  }
+} catch (_) {}
+
+
+
+
+         
         bestEl.textContent = String(best|0);
         worldEl.textContent = String(WORLD_RECORD);
 
