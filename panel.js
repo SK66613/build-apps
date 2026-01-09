@@ -61,11 +61,20 @@ const META = {
 
   // (collapse handler removed)
 
-  function showView(id){
-    views.forEach(v=>v.classList.toggle('is-show', v.dataset.view===id));
-    const m = META[id] || {t:'',s:''};
-    pageTitle.textContent = m.t;
-    pageSub.textContent = m.s;
+ function showView(id){
+  views.forEach(v=>v.classList.toggle('is-show', v.dataset.view===id));
+  const m = META[id] || {t:'',s:''};
+  pageTitle.textContent = m.t;
+  pageSub.textContent = m.s;
+
+  if (id === 'constructor' && ctorFrame){
+    const appId = resolveCabAppId() || '';
+    setCtorSrcStable(appId);
+  }
+
+  // дальше твой старый код showView идёт как был…
+}
+
 
     // constructor mode: maximum space
     document.body.classList.toggle('is-ctor', id === 'constructor');
