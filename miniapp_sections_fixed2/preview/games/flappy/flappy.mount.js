@@ -5,7 +5,7 @@
 (function(){
   window.GAMES = window.GAMES || {};
 
-  const ASSET_BASE = './games/flappy/assets/';
+  const ASSET_BASE = '/games/flappy/assets/';
   const ASSETS = {
     bird:   { img: ASSET_BASE+'bumblebee.png',  w: 56, h: 42 },
     pipes:  { top: ASSET_BASE+'pipe_top.png', bottom: ASSET_BASE+'pipe_bottom.png', width:54 },
@@ -531,34 +531,66 @@ try {
       }
 
       // listeners (scoped + removable)
-      const onPointer = (e)=>{
-        // ignore taps on stage while result/CTA is visible
-        if (cta.classList.contains('show') || resBox.classList.contains('show')) return;
-        e.preventDefault();
-        flap();
-      };
-      stage.addEventListener('pointerdown', onPointer, {passive:false});
+const onPointer = (e)=>{
+  // ✅ если тап по UI — не трогаем игру (и не preventDefault)
+  if (
+    e.target.closest('#fl-cta') ||
+    e.target.closest('#fl-result') ||
+    e.target.closest('button,a,input,textarea,select')
+  ) return;
 
-      const onKey = (e)=>{
-        if (e.code==='Space' || e.key==='ArrowUp'){ e.preventDefault(); flap(); }
-        if (e.key==='Escape'){ cleanup(); }
-      };
-      doc.addEventListener('keydown', onKey);
+  // ✅ если показан результат/CTA — любой тап = рестарт (надежнее чем click)
+  if (cta.classList.contains('show') || resBox.classList.contains('show')){
+    e.preventDefault();
+    e.stopPropagation();
 
-      const onCta = (e)=>{
-        const btn = e.target.closest('.btn');
-        if (!btn) return;
+    // рестарт "как при открытии": ждём тап
+    resBox.classList.remove('show');
+    cta.classList.remove('show');
 
-        e.preventDefault();
-        e.stopPropagation();
+    resetScene();
+    running = true;
+    const t = performance.now();
+    tick._prev = t;
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
+    return;
+  }
 
-        resetScene();
+  // обычный тап по сцене
+  e.preventDefault();
+  flap();
+};
+stage.addEventListener('pointerdown', onPointer, { passive:false });
 
-        running = true;
-        tick._prev = performance.now();
-        raf = requestAnimationFrame(tick);
-      };
-      cta.addEventListener('click', onCta);
+const onKey = (e)=>{
+  if (e.code==='Space' || e.key==='ArrowUp'){ e.preventDefault(); flap(); }
+  if (e.key==='Escape'){ cleanup(); }
+};
+doc.addEventListener('keydown', onKey);
+
+// CTA: в конструкторе click может не приходить → ловим pointerdown в capture
+const onCta = (e)=>{
+  if (!e.target.closest('.btn')) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  resBox.classList.remove('show');
+  cta.classList.remove('show');
+
+  resetScene();
+  running = true;
+  const t = performance.now();
+  tick._prev = t;
+  if (raf) cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(tick);
+};
+
+// ✅ основной — pointerdown (capture), запасной — click
+cta.addEventListener('pointerdown', onCta, { capture:true, passive:false });
+cta.addEventListener('click', onCta, true);
+
 
       // open fullscreen immediately
       try{ doc.body.classList.add('flappy-open'); }catch(_){}
