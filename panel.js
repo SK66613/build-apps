@@ -70,7 +70,7 @@ const META = {
   if (id === 'constructor' && ctorFrame){
     const appId = resolveCabAppId() || '';
     setCtorSrcStable(appId);
-  }
+  
 
   // дальше твой старый код showView идёт как был…
 }
