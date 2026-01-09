@@ -74,25 +74,45 @@ const META = {
     if (id === 'settings') setSettingsTab('base');
 
     // update constructor iframe with current app_id
-    if (id === 'constructor' && ctorFrame){
-const appId = resolveCabAppId() || '';
+    // --- ctor iframe load (stable) ---
+let ctorTimer = null;
 
-      const srcBase = 'miniapp_sections_fixed2/app/index.html';
-      // embed=1 => seamless mode inside iframe (no outer padding/left panel)
-      const hostSideW = getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px';
-      const src = srcBase + '?preview=draft&embed=1&host_side_w=' + encodeURIComponent(hostSideW) + '&app_id=' + encodeURIComponent(appId);
-      if (!ctorFrame.dataset.bound || ctorFrame.src.indexOf(srcBase) === -1){
-        // first time
-        ctorFrame.src = src;
-        ctorFrame.dataset.bound = '1';
-      } else {
-        // only change app_id if differs
-        const cur = new URL(ctorFrame.src, window.location.href);
-        if (cur.searchParams.get('app_id') !== appId){
-          ctorFrame.src = src;
-        }
-      }
+function setCtorSrcStable(appId){
+  if (!ctorFrame) return;
+
+  const srcBase = 'miniapp_sections_fixed2/app/index.html';
+  const hostSideW = (getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px');
+
+  const next = srcBase
+    + '?preview=draft&embed=1'
+    + '&host_side_w=' + encodeURIComponent(hostSideW)
+    + '&app_id=' + encodeURIComponent(appId || '');
+
+  // debounce: не дергаем iframe много раз подряд
+  clearTimeout(ctorTimer);
+  ctorTimer = setTimeout(()=>{
+    const cur = ctorFrame.getAttribute('src') || '';
+
+    // если iframe ещё не загружался или базовый путь другой — грузим
+    if (!cur || cur.indexOf(srcBase) === -1){
+      ctorFrame.setAttribute('src', next);
+      ctorFrame.dataset.bound = '1';
+      return;
     }
+
+    // сравниваем полностью URL (а не только app_id)
+    try{
+      const curUrl = new URL(cur, location.href);
+      const nextUrl = new URL(next, location.href);
+      if (curUrl.href !== nextUrl.href){
+        ctorFrame.setAttribute('src', next);
+      }
+    }catch(_){
+      // на всякий — если URL не парсится, просто не дергаем
+    }
+  }, 120);
+}
+
 
     // apply page layout mode (hide topbar/paddings for constructor)
     setMode(id);
