@@ -160,12 +160,17 @@ const appId = resolveCabAppId() || '';
   // Same-origin API (Worker Route on this domain): /api/*
   const CAB_API_BASE = (window.CTOR_API_BASE || window.API_BASE || '').replace(/\/$/, '');
     function resolveCabAppId(){
-    const u = new URL(window.location.href);
-    const id = String(u.searchParams.get('app_id') || u.searchParams.get('app') || '').trim();
-    // "more" — это не id приложения (у тебя это попадает из view=constructor&app=more)
-    if (!id || id === 'more' || id === 'my_app') return '';
-    return id;
-  }
+  const u = new URL(window.location.href);
+  const id = String(u.searchParams.get('app_id') || u.searchParams.get('app') || '').trim();
+
+  // 'my_app' — это дефолт из preview, его игнорим
+  if (id === 'my_app') return '';
+
+  // 'more' у тебя РЕАЛЬНО бывает app_id (как проект),
+  // поэтому НЕ выкидываем его
+  return id;
+}
+
 
   const CAB_APP_ID = resolveCabAppId();
 
