@@ -6,6 +6,17 @@
   const CURRENT_APP_KEY = 'sg_current_app';
   const LAST_GOOD_KEY = 'sg_last_good_url';
 
+  const AUTH_REDIRECT_GUARD = 'sg_auth_redirect_guard';
+function canRedirectAuth(){
+  try{
+    const now = Date.now();
+    const last = Number(sessionStorage.getItem(AUTH_REDIRECT_GUARD) || 0);
+    if (now - last < 2500) return false;
+    sessionStorage.setItem(AUTH_REDIRECT_GUARD, String(now));
+    return true;
+  }catch(_){ return true; }
+}
+
 
   const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('sg_auth') : null;
   function broadcastLogout(){
@@ -84,14 +95,26 @@ function redirectToAuth(){
     return data.user || {};
   }
 
-  async function guardAuth(){
-    // allow pages to opt-out
-    if (document.documentElement.hasAttribute('data-auth-off')) return;
-    const user = await authMe();
-    if (!user) { redirectToAuth(); return null; }
-    window.SG_USER = user;
-    return user;
+async function guardAuth(){
+  if (document.documentElement.hasAttribute('data-auth-off')) return;
+
+  let user = await authMe();
+
+  // ретрай: часто cookie/сессия “подтягивается” чуть позже
+  if (!user){
+    await new Promise(r=>setTimeout(r, 250));
+    user = await authMe();
   }
+
+  if (!user){
+    if (canRedirectAuth()) redirectToAuth();
+    return null;
+  }
+
+  window.SG_USER = user;
+  return user;
+}
+
 
   function getAppId(){
     const sp = new URLSearchParams(location.search||'');
@@ -105,13 +128,20 @@ function redirectToAuth(){
     try{ localStorage.setItem(CURRENT_APP_KEY, id); }catch(_){}
   }
 
-  function navigateWithApp(appId){
-    if(!appId) return;
-    setAppId(appId);
-    const u = new URL(location.href);
-    u.searchParams.set('app', appId);
-    location.href = u.toString();
-  }
+function navigateWithApp(appId){
+  if(!appId) return;
+  setAppId(appId);
+
+  const u = new URL(location.href);
+  u.searchParams.set('app', appId);
+
+  // вместо перезагрузки — тихо меняем URL
+  history.replaceState(null, '', u.toString());
+
+  // сообщаем странице, что app поменялся (panel.js может слушать)
+  window.dispatchEvent(new Event('sg_app_changed'));
+}
+
 
   async function loadApps(){
     const {res,data} = await api('/api/my/apps', {method:'GET'});
