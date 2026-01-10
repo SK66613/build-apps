@@ -191,11 +191,17 @@ function navigateWithApp(appId){
       if (chosen) titleEl.textContent = appTitle(chosen);
     }
 
-    sel.addEventListener('change', ()=>{
-      const id = sel.value;
-      navigateWithApp(id);
-    });
-  }
+sel.addEventListener('change', ()=>{
+  const appId = sel.value || '';
+  if (!appId) return;
+
+  // ✅ переключаем сразу
+  navigateWithApp(appId);
+
+  // ✅ запоминаем как последний выбранный
+  try{ localStorage.setItem(LAST_GOOD_KEY, appId); }catch(_){}
+});
+
 
   // expose helpers
   window.SG_SHELL = { api, guardAuth, loadApps, renderSwitcher, broadcastLogout, redirectToAuth };
