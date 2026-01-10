@@ -135,12 +135,10 @@ function navigateWithApp(appId){
   const u = new URL(location.href);
   u.searchParams.set('app', appId);
 
-  // вместо перезагрузки — тихо меняем URL
-  history.replaceState(null, '', u.toString());
-
-  // сообщаем странице, что app поменялся (panel.js может слушать)
-  window.dispatchEvent(new Event('sg_app_changed'));
+  // ✅ полная перезагрузка, чтобы проект применился сразу
+  location.href = u.toString();
 }
+
 
 
   async function loadApps(){
