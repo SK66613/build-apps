@@ -35,6 +35,7 @@ try{
 }catch(_){}
 
 function redirectToAuth(){
+  if (!canRedirectAuth()) return;
   // preserve "next" so after login can return
   let target = '/auth.html';
 
@@ -128,26 +129,37 @@ async function guardAuth(){
     try{ localStorage.setItem(CURRENT_APP_KEY, id); }catch(_){}
   }
 
+function getCurrentAppFromUrl(){
+  try{ return new URLSearchParams(location.search||'').get('app') || ''; }catch(_){ return ''; }
+}
+
 function navigateWithApp(appId){
   if(!appId) return;
+
+  const cur = getCurrentAppFromUrl();
+  if (cur === String(appId)) return;
+
   setAppId(appId);
 
   const u = new URL(location.href);
   u.searchParams.set('app', appId);
 
-  // вместо перезагрузки — тихо меняем URL
+  // меняем URL без перезагрузки
   history.replaceState(null, '', u.toString());
 
-  // сообщаем странице, что app поменялся (panel.js может слушать)
-  window.dispatchEvent(new Event('sg_app_changed'));
+  // ✅ сообщаем всем, что app поменялся (с detail)
+  window.dispatchEvent(new CustomEvent('sg_app_changed', { detail:{ appId:String(appId) } }));
 }
 
 
   async function loadApps(){
     const {res,data} = await api('/api/my/apps', {method:'GET'});
-    if (!res || !res.ok || !data || !data.ok) return [];
-    // worker: {apps:[...]} or {items:[...]}
-    return data.apps || data.items || [];
+    if (!res || !res.ok) return [];
+    if (data && Array.isArray(data.apps))  return data.apps;
+    if (data && Array.isArray(data.items)) return data.items;
+    if (data && data.ok && Array.isArray(data.apps))  return data.apps;
+    if (data && data.ok && Array.isArray(data.items)) return data.items;
+    return [];
   }
 
   function appTitle(app){
@@ -191,11 +203,19 @@ function navigateWithApp(appId){
       if (chosen) titleEl.textContent = appTitle(chosen);
     }
 
-    sel.addEventListener('change', ()=>{
+    sel.onchange = ()=>{
       const id = sel.value;
+
+      // обновляем подпись проекта в шапке сразу
+      const titleEl2 = document.getElementById('projectName') || document.getElementById('botTitle');
+      if (titleEl2){
+        const chosen2 = apps.find(a=>appIdOf(a)===id);
+        if (chosen2) titleEl2.textContent = appTitle(chosen2);
+      }
+
       navigateWithApp(id);
-    });
-  }
+    };
+    }
 
   // expose helpers
   window.SG_SHELL = { api, guardAuth, loadApps, renderSwitcher, broadcastLogout, redirectToAuth };
