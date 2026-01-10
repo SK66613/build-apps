@@ -10,8 +10,6 @@
   const settingsTabs = document.getElementById('settingsTabs');
   const ctorFrame = document.getElementById('ctorFrame');
 
-  
-
   function sendThemeToCtor(){
     try{
       if (!ctorFrame || !ctorFrame.contentWindow) return;
@@ -25,10 +23,50 @@
     // when entering constructor, push theme into iframe
     if (viewId === 'constructor') setTimeout(sendThemeToCtor, 50);
   }
-const META = {
-    constructor:{t:'Конструктор',s:'Редактирование страниц, блоков и настроек mini‑app.'},
-    entities:{t:'Сущности',s:'Настройка сущностей mini‑app: товары, услуги, игры, страницы.'},
-    faq:{t:'Вопрос‑ответ (FAQ)',s:'Частые вопросы и ответы, которые бот отправляет автоматически.'},
+
+  // ===== ctor iframe stable loader (anti-flicker) =====
+  let __ctorTimer = null;
+  function setCtorSrcStable(appId){
+    if (!ctorFrame) return;
+
+    const srcBase = 'miniapp_sections_fixed2/app/index.html';
+
+    // берём актуальную ширину сайдбара; если ещё не рассчиталось — fallback
+    const hostSideW = (getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px');
+
+    const next = srcBase
+      + '?preview=draft&embed=1'
+      + '&host_side_w=' + encodeURIComponent(hostSideW)
+      + '&app_id=' + encodeURIComponent(appId || '');
+
+    clearTimeout(__ctorTimer);
+    __ctorTimer = setTimeout(()=>{
+      const cur = ctorFrame.getAttribute('src') || '';
+
+      // первый запуск или iframe ещё не на нужной базе
+      if (!cur || cur.indexOf(srcBase) === -1){
+        ctorFrame.setAttribute('src', next);
+        ctorFrame.dataset.bound = '1';
+        return;
+      }
+
+      // сравниваем полный URL, чтобы не дергать iframe без нужды
+      try{
+        const curUrl  = new URL(cur,  location.href);
+        const nextUrl = new URL(next, location.href);
+        if (curUrl.href !== nextUrl.href){
+          ctorFrame.setAttribute('src', next);
+        }
+      }catch(_){
+        // если не парсится — ничего не дергаем
+      }
+    }, 120);
+  }
+
+  const META = {
+    constructor:{t:'Конструктор',s:'Редактирование страниц, блоков и настроек mini-app.'},
+    entities:{t:'Сущности',s:'Настройка сущностей mini-app: товары, услуги, игры, страницы.'},
+    faq:{t:'Вопрос-ответ (FAQ)',s:'Частые вопросы и ответы, которые бот отправляет автоматически.'},
     broadcasts:{t:'Рассылки',s:'Кампании, сегменты и расписания отправок.'},
     channels:{t:'Подключения каналов',s:'Интеграции: Telegram, Webhook, CRM, касса, Google Sheets.'},
     stats:{t:'Статистика',s:'KPI, активность пользователей, продажи и вовлечённость.'},
@@ -73,25 +111,10 @@ const META = {
     settingsTabs.hidden = id !== 'settings';
     if (id === 'settings') setSettingsTab('base');
 
-    // update constructor iframe with current app_id
+    // ✅ stable ctor iframe update (no flicker)
     if (id === 'constructor' && ctorFrame){
-const appId = resolveCabAppId() || '';
-
-      const srcBase = 'miniapp_sections_fixed2/app/index.html';
-      // embed=1 => seamless mode inside iframe (no outer padding/left panel)
-      const hostSideW = getComputedStyle(document.documentElement).getPropertyValue('--side-w').trim() || '96px';
-      const src = srcBase + '?preview=draft&embed=1&host_side_w=' + encodeURIComponent(hostSideW) + '&app_id=' + encodeURIComponent(appId);
-      if (!ctorFrame.dataset.bound || ctorFrame.src.indexOf(srcBase) === -1){
-        // first time
-        ctorFrame.src = src;
-        ctorFrame.dataset.bound = '1';
-      } else {
-        // only change app_id if differs
-        const cur = new URL(ctorFrame.src, window.location.href);
-        if (cur.searchParams.get('app_id') !== appId){
-          ctorFrame.src = src;
-        }
-      }
+      const appId = resolveCabAppId() || '';
+      setCtorSrcStable(appId);
     }
 
     // apply page layout mode (hide topbar/paddings for constructor)
@@ -147,7 +170,8 @@ const appId = resolveCabAppId() || '';
 
   showView(startView);
   sideNav.querySelectorAll('.side__item').forEach(x=>x.classList.toggle('is-active', x.dataset.view===startView));
-// ====== Bot integration (Telegram) ======
+
+  // ====== Bot integration (Telegram) ======
   const botUsernameInput = document.getElementById('botUsername');
   const botTokenInput = document.getElementById('botToken');
   const botStatusBadge = document.getElementById('botStatusBadge');
@@ -155,33 +179,33 @@ const appId = resolveCabAppId() || '';
   const botSaveHint = document.getElementById('botSaveHint');
 
   // API base для конструктора / мини-аппов (Cloudflare Worker)
-  // Можно переопределить window.CTOR_API_BASE сверху в HTML,
-  // иначе по умолчанию берём твой воркер.
   // Same-origin API (Worker Route on this domain): /api/*
   const CAB_API_BASE = (window.CTOR_API_BASE || window.API_BASE || '').replace(/\/$/, '');
-    function resolveCabAppId(){
+
+  // ✅ FIX: не выкидываем 'more' (это может быть реальным app_id)
+  function resolveCabAppId(){
     const u = new URL(window.location.href);
     const id = String(u.searchParams.get('app_id') || u.searchParams.get('app') || '').trim();
-    // "more" — это не id приложения (у тебя это попадает из view=constructor&app=more)
-    if (!id || id === 'more' || id === 'my_app') return '';
+    if (!id || id === 'my_app') return '';
     return id;
   }
 
+  // NOTE: оставляем как было — BOT интеграция берётся один раз при загрузке.
+  // Если хочешь, чтобы интеграция работала при переключении app без перезагрузки,
+  // нужно пересчитывать CAB_APP_ID и заново делать loadBotIntegration().
   const CAB_APP_ID = resolveCabAppId();
-
 
   // Подтягиваем текущие настройки бота
   async function loadBotIntegration(){
     if (!botSaveBtn) return;
 
     if (!CAB_APP_ID){
-      if (botSaveHint) botSaveHint.textContent = 'Не выбран мини-апп в URL (нужен ?app=<apps.id>). Сейчас стоит app=more.';
+      if (botSaveHint) botSaveHint.textContent = 'Не выбран мини-апп в URL (нужен ?app=<apps.id>).';
       if (botStatusBadge) botStatusBadge.textContent = 'Не выбран';
       return;
     }
 
     if (botSaveHint) botSaveHint.textContent = 'Загружаем интеграцию…';
-
     botSaveBtn.disabled = true;
 
     try{
@@ -193,11 +217,9 @@ const appId = resolveCabAppId() || '';
       const data = await r.json().catch(()=>null);
 
       if (data && data.ok){
-        // worker may return either bot_username (legacy) or username (current)
         const u = String(data.bot_username || data.username || '').trim();
-        if (botUsernameInput){
-          botUsernameInput.value = u;
-        }
+        if (botUsernameInput) botUsernameInput.value = u;
+
         if (botStatusBadge){
           const linked = !!data.linked;
           botStatusBadge.textContent = linked ? 'Подключён' : 'Не подключён';
@@ -231,7 +253,6 @@ const appId = resolveCabAppId() || '';
           headers:{ 'Content-Type': 'application/json' },
           credentials:'include',
           body: JSON.stringify({
-            // worker expects username/token (legacy panel used bot_username/bot_token)
             username: username || null,
             token:    token    || null   // пустая строка = не меняем токен
           })
@@ -242,7 +263,6 @@ const appId = resolveCabAppId() || '';
         throw new Error((data && data.error) || ('HTTP ' + r.status));
       }
 
-      // Токен после сохранения чистим из поля (не подсвечиваем пользователю)
       if (botTokenInput) botTokenInput.value = '';
 
       if (botStatusBadge){
@@ -260,13 +280,11 @@ const appId = resolveCabAppId() || '';
     }
   }
 
-  // Клик по кнопке «Сохранить интеграцию»
   botSaveBtn?.addEventListener('click', (e)=>{
     e.preventDefault();
     saveBotIntegration();
   });
 
-  // Подгружаем интеграцию, когда пользователь заходит на вкладку «Интеграции»
   settingsTabs?.addEventListener('click',(e)=>{
     const t = e.target.closest('[data-tab]');
     if (!t) return;
@@ -275,20 +293,15 @@ const appId = resolveCabAppId() || '';
     }
   });
 
-
-
-
   // sync theme into constructor iframe
   try{
     const obs = new MutationObserver(()=>sendThemeToCtor());
     obs.observe(html, {attributes:true, attributeFilter:['data-theme']});
-    // also send when iframe loads
     if (ctorFrame){
       ctorFrame.addEventListener('load', ()=>sendThemeToCtor());
     }
   }catch(_){}
 })();
-
 
 
 // === SaaS: global logout (works on GitHub Pages too) ===
