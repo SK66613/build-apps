@@ -145,14 +145,9 @@ function navigateWithApp(appId){
 
   async function loadApps(){
     const {res,data} = await api('/api/my/apps', {method:'GET'});
-    if (!res || !res.ok) return [];
-
-    // поддерживаем разные форматы ответа
-    if (data && Array.isArray(data.apps)) return data.apps;
-    if (data && Array.isArray(data.items)) return data.items;
-    if (data && data.ok && Array.isArray(data.data)) return data.data;
-
-    return [];
+    if (!res || !res.ok || !data || !data.ok) return [];
+    // worker: {apps:[...]} or {items:[...]}
+    return data.apps || data.items || [];
   }
 
   function appTitle(app){
@@ -165,13 +160,6 @@ function navigateWithApp(appId){
   function renderSwitcher(apps){
     const sel = document.getElementById('appSwitchGlobal') || document.getElementById('appSwitch');
     if (!sel) return;
-    // если список не пришёл — не затираем селект (иначе кажется что "пропал")
-    if (!apps || !apps.length){
-      if (!sel.options.length){
-        sel.innerHTML = '<option value="">Нет проектов</option>';
-      }
-      return;
-    }
 
     // fill
     sel.innerHTML = '';
@@ -203,11 +191,11 @@ function navigateWithApp(appId){
       if (chosen) titleEl.textContent = appTitle(chosen);
     }
 
-    sel.onchange = ()=>{
+    sel.addEventListener('change', ()=>{
       const id = sel.value;
       navigateWithApp(id);
-    };
-}
+    });
+  }
 
   // expose helpers
   window.SG_SHELL = { api, guardAuth, loadApps, renderSwitcher, broadcastLogout, redirectToAuth };
