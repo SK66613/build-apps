@@ -35,11 +35,28 @@ try{
 }catch(_){}
 
 function redirectToAuth(){
-  const next = location.pathname + location.search + location.hash;
-  const target = AUTH_URL + '?next=' + encodeURIComponent(next) + '&mode=login';
+  // preserve "next" so after login can return
+  let target = '/auth.html';
 
-  // ✅ анти-луп: если редирект уже был недавно — НЕ дёргаем
-  if (!canRedirectAuth()) return;
+  try{
+    const u = new URL(location.href);
+
+    // что хотели бы вернуть после логина
+    let next = u.pathname + u.search + u.hash;
+
+    // ❗️НО: если мы сейчас на preview/внутренностях конструктора — это "плохой next"
+    if ((u.pathname || '').startsWith('/miniapp_sections_fixed2/')){
+      try{
+        next = localStorage.getItem(LAST_GOOD_KEY) || '/cab';
+      }catch(_){
+        next = '/cab';
+      }
+    }
+
+    const a = new URL('/auth.html', location.origin);
+    a.searchParams.set('next', next);
+    target = a.toString();
+  }catch(_){}
 
   try{
     if (window.top && window.top !== window.self){
