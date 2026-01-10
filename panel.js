@@ -303,6 +303,15 @@
   }catch(_){}
 })();
 
+window.addEventListener('sg_app_changed', (e)=>{
+  const appId = (e && e.detail && e.detail.appId) ? e.detail.appId : '';
+  // если сейчас открыт конструктор — перегрузи iframe
+  if (typeof setCtorSrcStable === 'function' && appId){
+    setCtorSrcStable(appId);
+  }
+});
+
+
 
 // === SaaS: global logout (works on GitHub Pages too) ===
 (function(){
