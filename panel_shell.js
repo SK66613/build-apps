@@ -128,18 +128,24 @@ async function guardAuth(){
     try{ localStorage.setItem(CURRENT_APP_KEY, id); }catch(_){}
   }
 
+function getCurrentAppFromUrl(){
+  return new URLSearchParams(location.search||'').get('app') || '';
+}
+
 function navigateWithApp(appId){
   if(!appId) return;
+
+  const cur = getCurrentAppFromUrl();
+  if (cur === appId) return;
+
   setAppId(appId);
 
   const u = new URL(location.href);
   u.searchParams.set('app', appId);
-
-  // вместо перезагрузки — тихо меняем URL
   history.replaceState(null, '', u.toString());
 
-  // сообщаем странице, что app поменялся (panel.js может слушать)
-  window.dispatchEvent(new Event('sg_app_changed'));
+  // ✅ сообщаем всем, что app поменялся
+  window.dispatchEvent(new CustomEvent('sg_app_changed', {detail:{appId}}));
 }
 
 
@@ -201,6 +207,23 @@ sel.addEventListener('change', ()=>{
   // ✅ запоминаем как последний выбранный
   try{ localStorage.setItem(LAST_GOOD_KEY, appId); }catch(_){}
 });
+
+    window.addEventListener('sg_app_changed', (e)=>{
+  // если сейчас открыт constructor — сразу перегружаем iframe на новый app
+  const appId = (e && e.detail && e.detail.appId) ? e.detail.appId : (resolveCabAppId() || '');
+
+  // определяем какой view сейчас активен
+  const curViewEl = views.find(v => v.classList.contains('is-show'));
+  const curView = curViewEl ? curViewEl.dataset.view : '';
+
+  if (curView === 'constructor' && ctorFrame){
+    setCtorSrcStable(appId);
+  }
+
+  // если у тебя есть какие-то данные/интеграции, завязанные на app — тут тоже перезагружай
+  // например: loadBotIntegration(); (если хочешь обновлять интеграцию сразу)
+});
+
 
 
   // expose helpers
