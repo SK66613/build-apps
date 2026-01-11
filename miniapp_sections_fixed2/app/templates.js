@@ -760,35 +760,148 @@ if (action === 'sheet' && c.sheet_id){
   },
 
 
-  beerInviteFriends:{
-    type:'htmlEmbed',
-    title:'Beer: Пригласи друзей',
-    defaults:{
-      title:'Пригласи друзей',
-      text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
-      link:'https://t.me/your_bot?start=invite',
-      primary:'Скопировать',
-      secondary:'Поделиться'
-    },
-    preview:(p={})=>{
-      const title = p.title || 'Пригласи друзей';
-      const text  = p.text  || 'За друга — +100 монет. За 3 друзей — мини-дегустация.';
-      const link  = p.link  || 'https://t.me/your_bot?start=invite';
-      const primary   = p.primary   || 'Скопировать';
-      const secondary = p.secondary || 'Поделиться';
-      return `
-        <section class="card invite-card">
-          <div class="invite-card__title">${title}</div>
-          <div class="invite-card__text">${text}</div>
-          <div class="invite-card__link">${link}</div>
-          <div class="invite-card__btns">
-            <button type="button" class="invite-card__btn invite-card__btn--primary">${primary}</button>
-            <button type="button" class="invite-card__btn">${secondary}</button>
-          </div>
-        </section>
-      `;
-    }
+ beerInviteFriends:{
+  type:'htmlEmbed',
+  title:'Beer: Пригласи друзей',
+  defaults:{
+    title:'Пригласи друзей',
+    text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
+    link:'https://t.me/your_bot?start=invite', // редактируемое поле (как было)
+    primary:'Скопировать',
+    secondary:'Поделиться'
   },
+
+  preview:(p={})=>{
+    const title = p.title || 'Пригласи друзей';
+    const text  = p.text  || 'За друга — +100 монет. За 3 друзей — мини-дегустация.';
+    const link  = p.link  || 'https://t.me/your_bot?start=invite';
+    const primary   = p.primary   || 'Скопировать';
+    const secondary = p.secondary || 'Поделиться';
+
+    // data-invite нужен, чтобы runtime-инициализация нашла блок и подменила ссылку
+    return `
+      <section class="card invite-card" data-invite="1">
+        <div class="invite-card__title">${title}</div>
+        <div class="invite-card__text">${text}</div>
+        <div class="invite-card__link" data-invite-link>${link}</div>
+        <div class="invite-card__btns">
+          <button type="button" class="invite-card__btn invite-card__btn--primary" data-invite-act="copy">${primary}</button>
+          <button type="button" class="invite-card__btn" data-invite-act="share">${secondary}</button>
+        </div>
+      </section>
+    `;
+  },
+
+  // ✅ добавили runtime init (в конструкторе не мешает, в мини-аппе оживляет)
+  init:(rootEl, p={}, ctx)=>{
+    const root = rootEl && rootEl.querySelector ? rootEl.querySelector('[data-invite="1"]') : null;
+    if (!root) return null;
+
+    const linkEl = root.querySelector('[data-invite-link]');
+    const btnCopy  = root.querySelector('[data-invite-act="copy"]');
+    const btnShare = root.querySelector('[data-invite-act="share"]');
+
+    const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+
+    const getUid = ()=>{
+      try{
+        const u = TG?.initDataUnsafe?.user;
+        return (u && u.id) ? String(u.id) : '';
+      }catch(_){ return ''; }
+    };
+
+    const getBot = ()=>{
+      // берём из server state (лучший вариант) — ты это уже можешь отдавать из buildState
+      const b1 = window.MiniState?.bot_username ? String(window.MiniState.bot_username) : '';
+      const b2 = window.MiniState?.botUsername ? String(window.MiniState.botUsername) : '';
+      // если когда-нибудь захочешь передавать бот в параметрах блока (не обязательно)
+      const b3 = p.bot_username ? String(p.bot_username) : '';
+
+      return (b1 || b2 || b3 || '').replace(/^@/,'').trim();
+    };
+
+    const buildRefLink = ()=>{
+      const bot = getBot();
+      const uid = getUid();
+      if (!bot) return '';
+      if (!uid) return `https://t.me/${bot}/app`;
+      return `https://t.me/${bot}/app?startapp=ref_${uid}`;
+    };
+
+    // 1) берём ссылку из параметров (редактируется в конструкторе)
+    let finalLink = (p.link && String(p.link).trim()) ? String(p.link).trim() : '';
+
+    // 2) если это дефолтная заглушка — подменяем на динамику
+    const isDefaultStub =
+      !finalLink ||
+      finalLink === 'https://t.me/your_bot?start=invite' ||
+      finalLink === 'https://t.me/your_bot/app' ||
+      finalLink === '#';
+
+    if (isDefaultStub){
+      const dyn = buildRefLink();
+      if (dyn) finalLink = dyn;
+    }
+
+    // показать ссылку в UI
+    if (linkEl) linkEl.textContent = finalLink;
+
+    const doCopy = async ()=>{
+      try{
+        await navigator.clipboard.writeText(finalLink);
+      }catch(_){
+        const ta = document.createElement('textarea');
+        ta.value = finalLink;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try{ document.execCommand('copy'); }catch(_){}
+        ta.remove();
+      }
+      if (window.toast) window.toast('Ссылка скопирована');
+    };
+
+    const doShare = async ()=>{
+      // TG share
+      if (TG && TG.openTelegramLink){
+        TG.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(finalLink)}`);
+        return;
+      }
+      // Web Share fallback
+      if (navigator.share){
+        try{ await navigator.share({ url: finalLink }); }catch(_){}
+        return;
+      }
+      await doCopy();
+    };
+
+    const onCopy = (e)=>{ e.preventDefault(); doCopy(); };
+    const onShare = (e)=>{ e.preventDefault(); doShare(); };
+
+    if (btnCopy) btnCopy.addEventListener('click', onCopy);
+    if (btnShare) btnShare.addEventListener('click', onShare);
+
+    // если MiniState подтянется чуть позже — обновим ссылку (только если была заглушка)
+    const refreshLater = ()=>{
+      if (!isDefaultStub) return;
+      const dyn = buildRefLink();
+      if (dyn && dyn !== finalLink){
+        finalLink = dyn;
+        if (linkEl) linkEl.textContent = finalLink;
+      }
+    };
+    const t1 = setTimeout(refreshLater, 300);
+    const t2 = setTimeout(refreshLater, 1200);
+
+    return ()=>{
+      clearTimeout(t1); clearTimeout(t2);
+      if (btnCopy) btnCopy.removeEventListener('click', onCopy);
+      if (btnShare) btnShare.removeEventListener('click', onShare);
+    };
+  }
+},
+
 
   
 
