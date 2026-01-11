@@ -1115,15 +1115,18 @@ bookingContact:{
   },
 
 leaderboard:{
-  type:'leaderboard',
+  type:'htmlEmbed',
   title:'Турнир',
   defaults:{
     title:'Bumblebee',
     text:'Турнирная таблица'
   },
+
   preview:(p={})=>`
     <section class="blk blk-beer">
-      <div id="leaderboard" class="lb-card">
+
+
+      <div class="lb-card" data-page="leaderboard">
         <div class="lb-head">
           <div>
             <div class="lb-title">${p.title || 'Bumblebee'}</div>
@@ -1136,44 +1139,19 @@ leaderboard:{
         </div>
 
         <div class="lb-you">
-          <div class="lb-you__avatar">S</div>
+          <div class="lb-you__avatar js-lb-me-avatar">U</div>
           <div>
-            <div class="lb-you__name">Dem Demovich</div>
-            <div class="lb-you__sub" data-bind="lb-me-label">best score all</div>
+            <div class="lb-you__name js-lb-me-name">—</div>
+            <div class="lb-you__sub" data-bind="lb-me-label">—</div>
           </div>
-          <div class="lb-you__score js-lb-me-best" id="lb-you-score">94</div>
+          <div class="lb-you__score js-lb-me-best">0</div>
         </div>
 
         <div class="lb-lists">
-          <div class="lb-list" data-lb-list="today" style="display:block;">
-            <div class="lb-row">
-              <div class="lb-rank">1</div>
-              <div class="lb-you__avatar">S</div>
-              <div class="lb-name">Dem Demovich</div>
-              <div class="lb-score">94</div>
-            </div>
-            <div class="lb-row">
-              <div class="lb-rank">2</div>
-              <div class="lb-you__avatar">O</div>
-              <div class="lb-name">Ob Server</div>
-              <div class="lb-score">93</div>
-            </div>
-          </div>
-          <div class="lb-list" data-lb-list="all" style="display:none;">
-            <div class="lb-row">
-              <div class="lb-rank">1</div>
-              <div class="lb-you__avatar">A</div>
-              <div class="lb-name">All Time Ace</div>
-              <div class="lb-score">999</div>
-            </div>
-            <div class="lb-row">
-              <div class="lb-rank">2</div>
-              <div class="lb-you__avatar">B</div>
-              <div class="lb-name">Best Player</div>
-              <div class="lb-score">800</div>
-            </div>
-          </div>
+          <div class="lb-list" data-lb-list="today" style="display:block;"></div>
+          <div class="lb-list" data-lb-list="all" style="display:none;"></div>
         </div>
+
         <div class="lb-actions">
           <button type="button" class="lb-btn" data-action="lb-refresh">Обновить</button>
           <button type="button" class="lb-btn lb-btn--primary js-lb-play">Играть</button>
@@ -1181,11 +1159,162 @@ leaderboard:{
       </div>
     </section>
   `,
+
   init:(el, props, ctx)=>{
     try{
-      const tabs = el.querySelectorAll('[data-lb-tab]');
-      const lists = el.querySelectorAll('[data-lb-list]');
-      if (!tabs.length || !lists.length) return null;
+      const root = el.querySelector('[data-page="leaderboard"]') || el;
+
+      const tabs  = root.querySelectorAll('[data-lb-tab]');
+      const lists = root.querySelectorAll('[data-lb-list]');
+      const btnRefresh = root.querySelector('[data-action="lb-refresh"]');
+      const btnPlay = root.querySelector('.js-lb-play');
+
+      const meScoreEl = root.querySelector('.js-lb-me-best');
+      const meLabelEl = root.querySelector('[data-bind="lb-me-label"]');
+      const meNameEl  = root.querySelector('.js-lb-me-name');
+      const meAvEl    = root.querySelector('.js-lb-me-avatar');
+
+      function esc(s){
+        return String(s||'').replace(/[&<>"']/g, m=>({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[m]));
+      }
+      function initials(name){
+        const n = String(name||'').replace('@','').trim();
+        return (n[0] || 'U').toUpperCase();
+      }
+
+      function getTgUser(){
+        if (window.TG_USER && window.TG_USER.id) return window.TG_USER;
+        const u = (window.Telegram && window.Telegram.WebApp &&
+                  window.Telegram.WebApp.initDataUnsafe &&
+                  window.Telegram.WebApp.initDataUnsafe.user)
+          ? window.Telegram.WebApp.initDataUnsafe.user
+          : null;
+        return u || {};
+      }
+
+      function pickMyDisplayName(u){
+        const fn = String(u.first_name || '').trim();
+        const ln = String(u.last_name || '').trim();
+        const full = (fn + ' ' + ln).trim();
+        if (full) return full;
+
+        const un = String(u.username || '').replace(/^@/,'').trim();
+        if (un) return '@' + un;
+
+        const id = u.id ? String(u.id) : '';
+        return id ? ('ID ' + id.slice(-4)) : '—';
+      }
+
+      function pickMyPhotoUrl(state, u){
+        if (state && state.user_photo) return String(state.user_photo);
+        if (state && state.profile && state.profile.photo_url) return String(state.profile.photo_url);
+        if (window.USER && window.USER.photo_url) return String(window.USER.photo_url);
+        if (u && u.photo_url) return String(u.photo_url);
+        return '';
+      }
+
+      // ✅ Имя участника: если бэк отдаёт name/username — используем, иначе ID ####
+      function pickRowName(r){
+        if (!r) return '—';
+        const n1 = String(r.name || '').trim();
+        if (n1) return n1;
+
+        const u1 = String(r.username || '').replace(/^@/,'').trim();
+        if (u1) return '@' + u1;
+
+        const id = (r.tg_id != null) ? String(r.tg_id) : '';
+        return id ? ('ID ' + id.slice(-4)) : '—';
+      }
+
+      function pickRowAvatarHtml(r){
+        // если в будущем начнёшь отдавать photo_url в лидерборде — оно сразу заработает
+        const photo = r && (r.photo_url || r.photo);
+        const nm = pickRowName(r);
+        if (photo){
+          return `<img src="${esc(photo)}" alt="">`;
+        }
+        return esc(initials(nm));
+      }
+
+      function renderRows(container, rows){
+        if(!container) return;
+        if(!rows || !rows.length){
+          container.innerHTML = '<div class="lb-empty">Пока пусто. Сыграй и попади в топ 👇</div>';
+          return;
+        }
+        const myId = String((getTgUser()||{}).id || '');
+        container.innerHTML = rows.map(r=>{
+          const nm = pickRowName(r);
+          const isMe = String(r.tg_id) === myId;
+          return `
+            <div class="lb-row ${isMe ? 'is-me' : ''}">
+              <div class="lb-rank">${Number(r.rank||0) || ''}</div>
+              <div class="lb-you__avatar">${pickRowAvatarHtml(r)}</div>
+              <div class="lb-name">${esc(nm)}</div>
+              <div class="lb-score" style="margin-left:auto;">${Number(r.score||0)}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderSkeleton(){
+        const todayList = root.querySelector('[data-lb-list="today"]');
+        const allList   = root.querySelector('[data-lb-list="all"]');
+        const sk = `
+          <div class="lb-skel">
+            ${Array.from({length:4}).map((_,i)=>`
+              <div class="lb-row">
+                <div class="lb-rank">${i+1}</div>
+                <div class="lb-you__avatar"></div>
+                <div class="lb-name">█████████████</div>
+                <div class="lb-score">██</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        if (todayList) todayList.innerHTML = sk;
+        if (allList)   allList.innerHTML   = sk;
+      }
+
+      function applyStateToLeaderboard(state){
+        state = state || window.MiniState || {};
+
+        const todayList = root.querySelector('[data-lb-list="today"]');
+        const allList   = root.querySelector('[data-lb-list="all"]');
+
+        renderRows(todayList, state.leaderboard_today || []);
+        renderRows(allList,   state.leaderboard_alltime || []);
+
+        // === Я (имя/аватар) ===
+        const tg = getTgUser();
+        const myName = pickMyDisplayName(tg);
+
+        if (meNameEl) meNameEl.textContent = myName;
+
+        if (meAvEl){
+          const photo = pickMyPhotoUrl(state, tg);
+          if (photo){
+            meAvEl.innerHTML = `<img src="${esc(photo)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:999px;">`;
+          } else {
+            meAvEl.textContent = initials(myName);
+          }
+        }
+
+        // === Мой best score ===
+        if (meScoreEl) {
+          const all = (state.leaderboard_alltime||[]).find(x=>String(x.tg_id)===String(tg.id));
+          const tdy = (state.leaderboard_today||[]).find(x=>String(x.tg_id)===String(tg.id));
+          meScoreEl.textContent = String((all && all.score) || (tdy && tdy.score) || state.game_today_best || 0);
+        }
+
+        if (meLabelEl) {
+          const rt = state.rank_today ? ('#'+state.rank_today+' сегодня') : 'Сыграй — появишься в топе';
+          const ra = state.rank_alltime ? ('#'+state.rank_alltime+' all-time') : '';
+          meLabelEl.textContent = ra ? (rt + ' · ' + ra) : rt;
+        }
+      }
 
       function setMode(mode){
         tabs.forEach(btn=>{
@@ -1200,18 +1329,66 @@ leaderboard:{
 
       tabs.forEach(btn=>{
         btn.addEventListener('click', ()=>{
-          const mode = btn.getAttribute('data-lb-tab') || 'today';
-          setMode(mode);
+          setMode(btn.getAttribute('data-lb-tab') || 'today');
         });
       });
 
+      // ✅ при открытии: сразу скелетон + мгновенный state
       setMode('today');
+      renderSkeleton();
+      applyStateToLeaderboard(window.MiniState || {});
+      (async ()=>{
+        try{
+          if (typeof window.api !== 'function') return;
+          const r = await window.api('state', {});
+          if (r && r.ok && r.state){
+            window.MiniState = r.state;
+            applyStateToLeaderboard(r.state);
+          }
+        }catch(e){
+          // тихо, чтобы не ломало UX
+          console.warn('lb auto-load state failed', e);
+        }
+      })();
+
+      // refresh кнопка — оставляем как есть
+      if (btnRefresh){
+        btnRefresh.addEventListener('click', async ()=>{
+          try{
+            if (typeof window.api !== 'function') return;
+            renderSkeleton();
+            const r = await window.api('state', {});
+            if (r && r.ok && r.state){
+              window.MiniState = r.state;
+              applyStateToLeaderboard(r.state);
+            }
+          }catch(e){
+            console.error('lb-refresh failed', e);
+          }
+        });
+      }
+
+      if (btnPlay){
+        btnPlay.addEventListener('click', ()=>{
+          if (window.router && typeof window.router.go === 'function'){
+            window.router.go('/play');
+          } else {
+            location.hash = '#/play';
+          }
+        });
+      }
+
+      window.__applyLeaderboardState = applyStateToLeaderboard;
+
     }catch(e){
       console.error('leaderboard init error', e);
     }
     return null;
   }
 },
+
+
+   
   bonusWheel:{
     type:'bonusWheel',
     title:'Колесо',
