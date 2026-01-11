@@ -775,7 +775,7 @@ beerInviteFriends:{
   preview:(p={})=>{
     const title = p.title || 'Пригласи друзей';
     const text  = p.text  || 'За друга — +100 монет. За 3 друзей — мини-дегустация.';
-    const link  = p.link  || 'https://t.me/your_bot?start=invite';
+    const link  = p.link  || 'https://t.me/your_bot';
     const primary   = p.primary   || 'Скопировать';
     const secondary = p.secondary || 'Поделиться';
 
