@@ -766,7 +766,9 @@ beerInviteFriends:{
   defaults:{
     title:'Пригласи друзей',
     text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
-    link:'https://t.me/your_bot?start=invite', // редактируемое поле (как было)
+    // можно оставить как было, но лучше сделать явный авто-маркер:
+    // link:'{auto}'
+    link:'https://t.me/your_bot?start=invite',
     primary:'Скопировать',
     secondary:'Поделиться'
   },
@@ -778,7 +780,6 @@ beerInviteFriends:{
     const primary   = p.primary   || 'Скопировать';
     const secondary = p.secondary || 'Поделиться';
 
-    // data-invite нужен, чтобы runtime-инициализация нашла блок и подменила ссылку
     return `
       <section class="card invite-card" data-invite="1">
         <div class="invite-card__title">${title}</div>
@@ -792,16 +793,15 @@ beerInviteFriends:{
     `;
   },
 
-  // ✅ добавили runtime init (в конструкторе не мешает, в мини-аппе оживляет)
   init:(rootEl, p={}, ctx)=>{
-    const root = rootEl && rootEl.querySelector ? rootEl.querySelector('[data-invite="1"]') : null;
+    const root = rootEl?.querySelector?.('[data-invite="1"]');
     if (!root) return null;
 
     const linkEl = root.querySelector('[data-invite-link]');
     const btnCopy  = root.querySelector('[data-invite-act="copy"]');
     const btnShare = root.querySelector('[data-invite-act="share"]');
 
-    const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+    const TG = window.Telegram?.WebApp || null;
 
     const getUid = ()=>{
       try{
@@ -811,12 +811,9 @@ beerInviteFriends:{
     };
 
     const getBot = ()=>{
-      // берём из server state (лучший вариант) — ты это уже можешь отдавать из buildState
       const b1 = window.MiniState?.bot_username ? String(window.MiniState.bot_username) : '';
-      const b2 = window.MiniState?.botUsername ? String(window.MiniState.botUsername) : '';
-      // если когда-нибудь захочешь передавать бот в параметрах блока (не обязательно)
+      const b2 = window.MiniState?.botUsername  ? String(window.MiniState.botUsername)  : '';
       const b3 = p.bot_username ? String(p.bot_username) : '';
-
       return (b1 || b2 || b3 || '').replace(/^@/,'').trim();
     };
 
@@ -824,26 +821,38 @@ beerInviteFriends:{
       const bot = getBot();
       const uid = getUid();
       if (!bot) return '';
+      // telegram miniapp deep link:
+      // https://t.me/<bot>/app?startapp=...
       if (!uid) return `https://t.me/${bot}/app`;
       return `https://t.me/${bot}/app?startapp=ref_${uid}`;
     };
 
-    // 1) берём ссылку из параметров (редактируется в конструкторе)
-    let finalLink = (p.link && String(p.link).trim()) ? String(p.link).trim() : '';
+    const normalize = (s)=>{
+      s = String(s||'').trim();
+      if (!s) return '';
+      // если пользователь вставил "@advance_cobot" — превратим в ссылку
+      if (/^@[\w\d_]+$/i.test(s)) return `https://t.me/${s.replace(/^@/,'')}/app`;
+      return s;
+    };
 
-    // 2) если это дефолтная заглушка — подменяем на динамику
-    const isDefaultStub =
+    // 1) берём что указано в блоке (редактируется)
+    let finalLink = normalize(p.link);
+
+    // 2) определяем авто-режим (заглушка или явный маркер)
+    const isAuto =
       !finalLink ||
       finalLink === 'https://t.me/your_bot?start=invite' ||
       finalLink === 'https://t.me/your_bot/app' ||
-      finalLink === '#';
+      finalLink === '#' ||
+      finalLink === '{auto}' || finalLink === 'auto';
 
-    if (isDefaultStub){
+    // 3) если авто — подставляем динамику
+    if (isAuto){
       const dyn = buildRefLink();
       if (dyn) finalLink = dyn;
     }
 
-    // показать ссылку в UI
+    // показать ссылку
     if (linkEl) linkEl.textContent = finalLink;
 
     const doCopy = async ()=>{
@@ -859,16 +868,14 @@ beerInviteFriends:{
         try{ document.execCommand('copy'); }catch(_){}
         ta.remove();
       }
-      if (window.toast) window.toast('Ссылка скопирована');
+      window.toast?.('Ссылка скопирована');
     };
 
     const doShare = async ()=>{
-      // TG share
-      if (TG && TG.openTelegramLink){
+      if (TG?.openTelegramLink){
         TG.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(finalLink)}`);
         return;
       }
-      // Web Share fallback
       if (navigator.share){
         try{ await navigator.share({ url: finalLink }); }catch(_){}
         return;
@@ -876,28 +883,28 @@ beerInviteFriends:{
       await doCopy();
     };
 
-    const onCopy = (e)=>{ e.preventDefault(); doCopy(); };
+    const onCopy  = (e)=>{ e.preventDefault(); doCopy(); };
     const onShare = (e)=>{ e.preventDefault(); doShare(); };
 
-    if (btnCopy) btnCopy.addEventListener('click', onCopy);
-    if (btnShare) btnShare.addEventListener('click', onShare);
+    btnCopy?.addEventListener('click', onCopy);
+    btnShare?.addEventListener('click', onShare);
 
-    // если MiniState подтянется чуть позже — обновим ссылку (только если была заглушка)
+    // если MiniState (и bot_username) придёт позже — обновим, но только в авто-режиме
     const refreshLater = ()=>{
-      if (!isDefaultStub) return;
+      if (!isAuto) return;
       const dyn = buildRefLink();
       if (dyn && dyn !== finalLink){
         finalLink = dyn;
         if (linkEl) linkEl.textContent = finalLink;
       }
     };
-    const t1 = setTimeout(refreshLater, 300);
+    const t1 = setTimeout(refreshLater, 250);
     const t2 = setTimeout(refreshLater, 1200);
 
     return ()=>{
       clearTimeout(t1); clearTimeout(t2);
-      if (btnCopy) btnCopy.removeEventListener('click', onCopy);
-      if (btnShare) btnShare.removeEventListener('click', onShare);
+      btnCopy?.removeEventListener('click', onCopy);
+      btnShare?.removeEventListener('click', onShare);
     };
   }
 },
