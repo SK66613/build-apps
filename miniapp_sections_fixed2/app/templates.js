@@ -1124,8 +1124,6 @@ leaderboard:{
 
   preview:(p={})=>`
     <section class="blk blk-beer">
-
-
       <div class="lb-card" data-page="leaderboard">
         <div class="lb-head">
           <div>
@@ -1215,21 +1213,63 @@ leaderboard:{
         return '';
       }
 
-      // ✅ Имя участника: если бэк отдаёт name/username — используем, иначе ID ####
+      // --- helpers for leaderboard rows ---
+
+      // медальки для топ-3
+      function rankBadge(i){
+        if (i === 0) return '🥇';
+        if (i === 1) return '🥈';
+        if (i === 2) return '🥉';
+        return String(i + 1);
+      }
+
+      // прячем последние N символов
+      function maskTail(s, hideLast){
+        const str = String(s||'').trim();
+        const n = Math.max(0, Math.floor(hideLast||0));
+        if (!str) return '';
+        if (str.length <= n) return '•'.repeat(str.length);
+        return str.slice(0, str.length - n) + '•'.repeat(n);
+      }
+
+      // ✅ Имя участника: name -> username -> masked tg id
       function pickRowName(r){
         if (!r) return '—';
+
         const n1 = String(r.name || '').trim();
         if (n1) return n1;
 
         const u1 = String(r.username || '').replace(/^@/,'').trim();
         if (u1) return '@' + u1;
 
-        const id = (r.tg_id != null) ? String(r.tg_id) : '';
-        return id ? ('ID ' + id.slice(-4)) : '—';
+        const id = (r.tg_id != null) ? String(r.tg_id).trim() : '';
+        if (!id) return '—';
+
+        // скрываем последние 3 символа
+        return 'ID ' + maskTail(id, 3);
       }
 
+      // 🔥 резка без конфликта: ID не режем, @ режем мягко, имена режем обычно
+      function shortNameSmart(s, maxLen){
+        const str = String(s || '').trim();
+        if (!str) return '—';
+
+        // ID и так "безопасный" (маской), оставляем больше символов
+        if (str.startsWith('ID ')) return str;
+
+        // @username: показываем больше до …
+        if (str.startsWith('@')){
+          if (str.length <= maxLen) return str;
+          return str.slice(0, Math.max(3, maxLen - 1)) + '…';
+        }
+
+        // обычное имя
+        if (str.length <= maxLen) return str;
+        return str.slice(0, Math.max(3, maxLen - 1)) + '…';
+      }
+
+      // оставил на будущее (если вернёшь аватарки)
       function pickRowAvatarHtml(r){
-        // если в будущем начнёшь отдавать photo_url в лидерборде — оно сразу заработает
         const photo = r && (r.photo_url || r.photo);
         const nm = pickRowName(r);
         if (photo){
@@ -1238,22 +1278,38 @@ leaderboard:{
         return esc(initials(nm));
       }
 
+      function findMyRank(rows, myId){
+        if (!rows || !rows.length || !myId) return 0;
+        const idx = rows.findIndex(x => String(x.tg_id) === String(myId));
+        return (idx >= 0) ? (idx + 1) : 0;
+      }
+
       function renderRows(container, rows){
         if(!container) return;
+
         if(!rows || !rows.length){
           container.innerHTML = '<div class="lb-empty">Пока пусто. Сыграй и попади в топ 👇</div>';
           return;
         }
-        const myId = String((getTgUser()||{}).id || '');
-        container.innerHTML = rows.map(r=>{
-          const nm = pickRowName(r);
-          const isMe = String(r.tg_id) === myId;
+
+        // ✅ увеличили лимит — будет больше символов до …
+        const NAME_MAX = 30;
+
+        container.innerHTML = rows.map((r, idx)=>{
+          const rawName = pickRowName(r);
+          const nm = shortNameSmart(rawName, NAME_MAX);
+
+          const score = Number((r && (r.score != null ? r.score : r.best_score)) || 0);
+
           return `
-            <div class="lb-row ${isMe ? 'is-me' : ''}">
-              <div class="lb-rank">${Number(r.rank||0) || ''}</div>
-              <div class="lb-you__avatar">${pickRowAvatarHtml(r)}</div>
+            <div class="lb-row">
+              <div class="lb-rank">${rankBadge(idx)}</div>
+
+              <!-- аватарки участников отключены -->
+              <!-- <div class="lb-you__avatar">${pickRowAvatarHtml(r)}</div> -->
+
               <div class="lb-name">${esc(nm)}</div>
-              <div class="lb-score" style="margin-left:auto;">${Number(r.score||0)}</div>
+              <div class="lb-score" style="margin-left:auto;">${score}</div>
             </div>
           `;
         }).join('');
@@ -1262,18 +1318,20 @@ leaderboard:{
       function renderSkeleton(){
         const todayList = root.querySelector('[data-lb-list="today"]');
         const allList   = root.querySelector('[data-lb-list="all"]');
+
         const sk = `
           <div class="lb-skel">
             ${Array.from({length:4}).map((_,i)=>`
               <div class="lb-row">
-                <div class="lb-rank">${i+1}</div>
-                <div class="lb-you__avatar"></div>
-                <div class="lb-name">█████████████</div>
-                <div class="lb-score">██</div>
+                <div class="lb-rank">${rankBadge(i)}</div>
+                <!-- <div class="lb-you__avatar"></div> -->
+                <div class="lb-name">ID 562472273•••</div>
+                <div class="lb-score" style="margin-left:auto;">0</div>
               </div>
             `).join('')}
           </div>
         `;
+
         if (todayList) todayList.innerHTML = sk;
         if (allList)   allList.innerHTML   = sk;
       }
@@ -1306,13 +1364,24 @@ leaderboard:{
         if (meScoreEl) {
           const all = (state.leaderboard_alltime||[]).find(x=>String(x.tg_id)===String(tg.id));
           const tdy = (state.leaderboard_today||[]).find(x=>String(x.tg_id)===String(tg.id));
-          meScoreEl.textContent = String((all && all.score) || (tdy && tdy.score) || state.game_today_best || 0);
+          const v = (all && (all.score ?? all.best_score)) || (tdy && (tdy.score ?? tdy.best_score)) || state.game_today_best || 0;
+          meScoreEl.textContent = String(v);
         }
 
+        // === Под именем: без # ===
         if (meLabelEl) {
-          const rt = state.rank_today ? ('#'+state.rank_today+' сегодня') : 'Сыграй — появишься в топе';
-          const ra = state.rank_alltime ? ('#'+state.rank_alltime+' all-time') : '';
-          meLabelEl.textContent = ra ? (rt + ' · ' + ra) : rt;
+          const myId = String((tg && tg.id) || '');
+
+          const rankToday = Number(state.rank_today || 0) || findMyRank(state.leaderboard_today || [], myId);
+          const rankAll   = Number(state.rank_alltime || 0) || findMyRank(state.leaderboard_alltime || [], myId);
+
+          if (rankToday || rankAll){
+            const a = rankToday ? ('Сегодня: ' + rankToday + ' место') : 'Сегодня: вне топа';
+            const b = rankAll   ? (' · All-time: ' + rankAll + ' место') : '';
+            meLabelEl.textContent = a + b;
+          } else {
+            meLabelEl.textContent = 'Ты вне топа — сыграй ещё 😄';
+          }
         }
       }
 
@@ -1333,7 +1402,7 @@ leaderboard:{
         });
       });
 
-      // ✅ при открытии: сразу скелетон + мгновенный state
+      // ✅ при открытии: сразу скелетон + текущий state + догрузка state
       setMode('today');
       renderSkeleton();
       applyStateToLeaderboard(window.MiniState || {});
@@ -1346,12 +1415,11 @@ leaderboard:{
             applyStateToLeaderboard(r.state);
           }
         }catch(e){
-          // тихо, чтобы не ломало UX
           console.warn('lb auto-load state failed', e);
         }
       })();
 
-      // refresh кнопка — оставляем как есть
+      // refresh кнопка — оставляем
       if (btnRefresh){
         btnRefresh.addEventListener('click', async ()=>{
           try{
