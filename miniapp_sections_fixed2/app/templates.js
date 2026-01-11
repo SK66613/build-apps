@@ -767,7 +767,7 @@ beerInviteFriends:{
     title:'Пригласи друзей',
     text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
     // лучше держать авто-маркер, но можно и заглушку:
-    link:'https://t.me/name_bot,
+    link:'https://t.me/your_bot',
     primary:'Скопировать',
     secondary:'Поделиться'
   },
