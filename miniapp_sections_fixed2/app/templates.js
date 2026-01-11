@@ -766,8 +766,7 @@ beerInviteFriends:{
   defaults:{
     title:'Пригласи друзей',
     text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
-    // можно оставить как было, но лучше сделать явный авто-маркер:
-    // link:'{auto}'
+    // лучше держать авто-маркер, но можно и заглушку:
     link:'https://t.me/your_bot?start=invite',
     primary:'Скопировать',
     secondary:'Поделиться'
@@ -810,27 +809,50 @@ beerInviteFriends:{
       }catch(_){ return ''; }
     };
 
+    // вытащить username бота из разных источников (MiniState / ctx / props / p.link)
     const getBot = ()=>{
+      // 1) MiniState
       const b1 = window.MiniState?.bot_username ? String(window.MiniState.bot_username) : '';
       const b2 = window.MiniState?.botUsername  ? String(window.MiniState.botUsername)  : '';
+
+      // 2) props блока (если прокидываешь)
       const b3 = p.bot_username ? String(p.bot_username) : '';
-      return (b1 || b2 || b3 || '').replace(/^@/,'').trim();
+
+      // 3) ctx.state (если в превью есть state)
+      const b4 = ctx?.state?.bot_username ? String(ctx.state.bot_username) : '';
+      const b5 = ctx?.state?.botUsername  ? String(ctx.state.botUsername)  : '';
+
+      // 4) fallback: достать username из p.link (чтобы работало даже без MiniState)
+      const link = String(p.link || '').trim();
+      let b6 = '';
+      if (link){
+        // @advance_cobot
+        const m1 = link.match(/^@([\w\d_]+)$/i);
+        if (m1) b6 = m1[1];
+
+        // https://t.me/advance_cobot  или  https://t.me/advance_cobot/app
+        const m2 = link.match(/^https?:\/\/t\.me\/([\w\d_]+)(?:\/app)?\/?$/i);
+        if (!b6 && m2) b6 = m2[1];
+      }
+
+      return (b1 || b2 || b3 || b4 || b5 || b6 || '').replace(/^@/,'').trim();
     };
 
     const buildRefLink = ()=>{
       const bot = getBot();
       const uid = getUid();
       if (!bot) return '';
+
       // telegram miniapp deep link:
       // https://t.me/<bot>/app?startapp=...
-      if (!uid) return `https://t.me/${bot}/app`;
-      return `https://t.me/${bot}/app?startapp=ref_${uid}`;
+      if (!uid) return `https://t.me/${bot}/app`;            // превью/браузер без uid
+      return `https://t.me/${bot}/app?startapp=ref_${uid}`;  // Telegram WebApp
     };
 
     const normalize = (s)=>{
       s = String(s||'').trim();
       if (!s) return '';
-      // если пользователь вставил "@advance_cobot" — превратим в ссылку
+      // "@advance_cobot" -> "https://t.me/advance_cobot/app"
       if (/^@[\w\d_]+$/i.test(s)) return `https://t.me/${s.replace(/^@/,'')}/app`;
       return s;
     };
@@ -839,15 +861,28 @@ beerInviteFriends:{
     let finalLink = normalize(p.link);
 
     // 2) определяем авто-режим (заглушка или явный маркер)
-    const isAuto =
+    const isAutoMarker =
       !finalLink ||
       finalLink === 'https://t.me/your_bot?start=invite' ||
       finalLink === 'https://t.me/your_bot/app' ||
       finalLink === '#' ||
       finalLink === '{auto}' || finalLink === 'auto';
 
+    // 2.1) если человек указал просто ссылку на бота без параметров — тоже считаем как авто
+    const isBotLinkNoParams = (() => {
+      const s = String(finalLink || '').trim();
+      if (!s) return false;
+
+      // уже есть start/startapp — значит это уже “готовая” ссылка, не трогаем
+      if (/[?&](startapp|start)=/i.test(s)) return false;
+
+      // https://t.me/advance_cobot  или  https://t.me/advance_cobot/app
+      const m = s.match(/^https?:\/\/t\.me\/([\w\d_]+)(\/app)?\/?$/i);
+      return !!m;
+    })();
+
     // 3) если авто — подставляем динамику
-    if (isAuto){
+    if (isAutoMarker || isBotLinkNoParams){
       const dyn = buildRefLink();
       if (dyn) finalLink = dyn;
     }
@@ -889,9 +924,9 @@ beerInviteFriends:{
     btnCopy?.addEventListener('click', onCopy);
     btnShare?.addEventListener('click', onShare);
 
-    // если MiniState (и bot_username) придёт позже — обновим, но только в авто-режиме
+    // если MiniState (и bot_username) придёт позже — обновим, но только если мы в авто-режиме
     const refreshLater = ()=>{
-      if (!isAuto) return;
+      if (!(isAutoMarker || isBotLinkNoParams)) return;
       const dyn = buildRefLink();
       if (dyn && dyn !== finalLink){
         finalLink = dyn;
@@ -908,6 +943,7 @@ beerInviteFriends:{
     };
   }
 },
+
 
 
 bookingCalendar:{
