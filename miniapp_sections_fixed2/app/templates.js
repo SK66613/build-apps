@@ -760,12 +760,13 @@ if (action === 'sheet' && c.sheet_id){
   },
 
 
- beerInviteFriends:{
+beerInviteFriends:{
   type:'htmlEmbed',
   title:'Beer: Пригласи друзей',
   defaults:{
     title:'Пригласи друзей',
     text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
+    link:'https://t.me/your_bot?start=invite', // редактируемое поле (как было)
     primary:'Скопировать',
     secondary:'Поделиться'
   },
@@ -773,55 +774,53 @@ if (action === 'sheet' && c.sheet_id){
   preview:(p={})=>{
     const title = p.title || 'Пригласи друзей';
     const text  = p.text  || 'За друга — +100 монет. За 3 друзей — мини-дегустация.';
+    const link  = p.link  || 'https://t.me/your_bot?start=invite';
     const primary   = p.primary   || 'Скопировать';
     const secondary = p.secondary || 'Поделиться';
 
+    // data-invite нужен, чтобы runtime-инициализация нашла блок и подменила ссылку
     return `
       <section class="card invite-card" data-invite="1">
         <div class="invite-card__title">${title}</div>
         <div class="invite-card__text">${text}</div>
-        <div class="invite-card__link" data-invite-link>
-          https://t.me/your_bot/app?startapp=ref_123456
-        </div>
+        <div class="invite-card__link" data-invite-link>${link}</div>
         <div class="invite-card__btns">
-          <button type="button"
-            class="invite-card__btn invite-card__btn--primary"
-            data-invite-act="copy">${primary}</button>
-          <button type="button"
-            class="invite-card__btn"
-            data-invite-act="share">${secondary}</button>
+          <button type="button" class="invite-card__btn invite-card__btn--primary" data-invite-act="copy">${primary}</button>
+          <button type="button" class="invite-card__btn" data-invite-act="share">${secondary}</button>
         </div>
       </section>
     `;
   },
 
-  init:(rootEl)=>{
-    const root = rootEl?.querySelector?.('[data-invite="1"]');
-    if (!root) return;
+  // ✅ добавили runtime init (в конструкторе не мешает, в мини-аппе оживляет)
+  init:(rootEl, p={}, ctx)=>{
+    const root = rootEl && rootEl.querySelector ? rootEl.querySelector('[data-invite="1"]') : null;
+    if (!root) return null;
 
     const linkEl = root.querySelector('[data-invite-link]');
     const btnCopy  = root.querySelector('[data-invite-act="copy"]');
     const btnShare = root.querySelector('[data-invite-act="share"]');
 
-    const TG = window.Telegram?.WebApp || null;
+    const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
 
     const getUid = ()=>{
       try{
-        return TG?.initDataUnsafe?.user?.id
-          ? String(TG.initDataUnsafe.user.id)
-          : '';
+        const u = TG?.initDataUnsafe?.user;
+        return (u && u.id) ? String(u.id) : '';
       }catch(_){ return ''; }
     };
 
     const getBot = ()=>{
-      const b =
-        window.MiniState?.bot_username ||
-        window.MiniState?.botUsername ||
-        '';
-      return String(b).replace(/^@/,'').trim();
+      // берём из server state (лучший вариант) — ты это уже можешь отдавать из buildState
+      const b1 = window.MiniState?.bot_username ? String(window.MiniState.bot_username) : '';
+      const b2 = window.MiniState?.botUsername ? String(window.MiniState.botUsername) : '';
+      // если когда-нибудь захочешь передавать бот в параметрах блока (не обязательно)
+      const b3 = p.bot_username ? String(p.bot_username) : '';
+
+      return (b1 || b2 || b3 || '').replace(/^@/,'').trim();
     };
 
-    const buildLink = ()=>{
+    const buildRefLink = ()=>{
       const bot = getBot();
       const uid = getUid();
       if (!bot) return '';
@@ -829,55 +828,79 @@ if (action === 'sheet' && c.sheet_id){
       return `https://t.me/${bot}/app?startapp=ref_${uid}`;
     };
 
-    let refLink = buildLink();
-    if (linkEl && refLink) linkEl.textContent = refLink;
+    // 1) берём ссылку из параметров (редактируется в конструкторе)
+    let finalLink = (p.link && String(p.link).trim()) ? String(p.link).trim() : '';
 
-    const copy = async ()=>{
+    // 2) если это дефолтная заглушка — подменяем на динамику
+    const isDefaultStub =
+      !finalLink ||
+      finalLink === 'https://t.me/your_bot?start=invite' ||
+      finalLink === 'https://t.me/your_bot/app' ||
+      finalLink === '#';
+
+    if (isDefaultStub){
+      const dyn = buildRefLink();
+      if (dyn) finalLink = dyn;
+    }
+
+    // показать ссылку в UI
+    if (linkEl) linkEl.textContent = finalLink;
+
+    const doCopy = async ()=>{
       try{
-        await navigator.clipboard.writeText(refLink);
+        await navigator.clipboard.writeText(finalLink);
       }catch(_){
         const ta = document.createElement('textarea');
-        ta.value = refLink;
+        ta.value = finalLink;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
         document.body.appendChild(ta);
         ta.select();
-        document.execCommand('copy');
+        try{ document.execCommand('copy'); }catch(_){}
         ta.remove();
       }
-      window.toast?.('Ссылка скопирована');
+      if (window.toast) window.toast('Ссылка скопирована');
     };
 
-    const share = ()=>{
-      if (TG?.openTelegramLink){
-        TG.openTelegramLink(
-          `https://t.me/share/url?url=${encodeURIComponent(refLink)}`
-        );
+    const doShare = async ()=>{
+      // TG share
+      if (TG && TG.openTelegramLink){
+        TG.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(finalLink)}`);
         return;
       }
+      // Web Share fallback
       if (navigator.share){
-        navigator.share({ url: refLink }).catch(()=>{});
+        try{ await navigator.share({ url: finalLink }); }catch(_){}
         return;
       }
-      copy();
+      await doCopy();
     };
 
-    btnCopy?.addEventListener('click', e=>{
-      e.preventDefault(); copy();
-    });
-    btnShare?.addEventListener('click', e=>{
-      e.preventDefault(); share();
-    });
+    const onCopy = (e)=>{ e.preventDefault(); doCopy(); };
+    const onShare = (e)=>{ e.preventDefault(); doShare(); };
 
-    // если MiniState пришёл позже (state догрузился)
-    setTimeout(()=>{
-      const fresh = buildLink();
-      if (fresh && fresh !== refLink){
-        refLink = fresh;
-        if (linkEl) linkEl.textContent = refLink;
+    if (btnCopy) btnCopy.addEventListener('click', onCopy);
+    if (btnShare) btnShare.addEventListener('click', onShare);
+
+    // если MiniState подтянется чуть позже — обновим ссылку (только если была заглушка)
+    const refreshLater = ()=>{
+      if (!isDefaultStub) return;
+      const dyn = buildRefLink();
+      if (dyn && dyn !== finalLink){
+        finalLink = dyn;
+        if (linkEl) linkEl.textContent = finalLink;
       }
-    }, 500);
+    };
+    const t1 = setTimeout(refreshLater, 300);
+    const t2 = setTimeout(refreshLater, 1200);
+
+    return ()=>{
+      clearTimeout(t1); clearTimeout(t2);
+      if (btnCopy) btnCopy.removeEventListener('click', onCopy);
+      if (btnShare) btnShare.removeEventListener('click', onShare);
+    };
   }
 },
-
 
 
 bookingCalendar:{
