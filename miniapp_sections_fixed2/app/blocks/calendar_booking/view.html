@@ -1,8 +1,6 @@
-<section class="blk blk-calendar"
-  data-view="{{view}}"
-  style="--acc: {{accent}}; --chipBg: {{chipBg}}; --chipText: {{chipText}}; --radius: {{radius}}px; --gap: {{gap}}px;">
+<section class="blk blk-calendar">
   <div class="blk-head">
-    <div class="blk-title">{{title}}</div>
+    <div class="blk-title" data-title></div>
     <div class="blk-sub">Выберите дату и время</div>
   </div>
 
@@ -15,8 +13,8 @@
   <div class="cal-slots"></div>
 
   <div class="cal-actions">
-    {{#show_contact}}<input class="cal-contact" placeholder="{{contact_placeholder}}"/>{{/show_contact}}
-    {{#show_hold}}<button class="btn cal-hold">Держать слот</button>{{/show_hold}}
+    <input class="cal-contact" placeholder="Ваш телефон/ник"/>
+    <button class="btn cal-hold">Держать слот</button>
     <button class="btn cal-book">Забронировать</button>
   </div>
 </section>
