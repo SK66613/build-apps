@@ -945,7 +945,125 @@ beerInviteFriends:{
 },
 
 
+// --- calendar_booking (Календарь: запись) ---
+BlockRegistry.calendar_booking = {
+  type: 'htmlEmbed',
+  title: 'Календарь: запись',
+  defaults: {
+    title: 'Записаться на консультацию',
+    duration_min: 60,
+    text_hold: 'Держать слот',
+    text_ok: 'Забронировать',
+    show_contact: true,
+    contact_placeholder: 'Ваш телефон/ник'
+  },
 
+  preview: (p = {}) => `
+    <section class="blk blk-calendar">
+      <div class="blk-head">
+        <div class="blk-title">${p.title || 'Календарь: запись'}</div>
+        <div class="blk-sub">Выберите дату и время</div>
+      </div>
+
+      <div class="cal-ui">
+        <div class="cal-row" style="display:flex;gap:10px;align-items:center;margin:8px 0">
+          <input type="date" class="cal-date" />
+          <select class="cal-dur">
+            <option value="30"${Number(p.duration_min||60)===30?' selected':''}>30 мин</option>
+            <option value="60"${Number(p.duration_min||60)===60?' selected':''}>60 мин</option>
+            <option value="90"${Number(p.duration_min||60)===90?' selected':''}>90 мин</option>
+          </select>
+        </div>
+
+        <div class="cal-slots" aria-live="polite" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0"></div>
+
+        <div class="cal-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          ${p.show_contact ? `<input class="cal-contact" placeholder="${p.contact_placeholder||''}" style="min-width:220px" />` : ''}
+          <button type="button" class="btn cal-hold">${p.text_hold||'Держать слот'}</button>
+          <button type="button" class="btn cal-book">${p.text_ok||'Забронировать'}</button>
+        </div>
+      </div>
+    </section>
+  `,
+
+  mount: async (root, ctx) => {
+    const $ = s => root.querySelector(s);
+    const dateEl = $('.cal-date');
+    const durEl  = $('.cal-dur');
+    const slotsEl= $('.cal-slots');
+    const contactEl = $('.cal-contact');
+    const btnHold = $('.cal-hold');
+    const btnBook = $('.cal-book');
+
+    // дефолты
+    try{ if (ctx.props?.duration_min) durEl.value = String(ctx.props.duration_min); }catch(_){}
+    if (!dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+
+    // безопасный вызов мини-API с фолбэком для превью (когда window.api нет)
+    async function callApi(method, payload){
+      if (typeof window.api !== 'function') return { ok:false, preview:true };
+      try { return await window.api(method, payload); }
+      catch(e){ console.warn('calendar api error', e); return { ok:false }; }
+    }
+
+    const demo = ['10:00','10:30','11:00','12:30','13:00','15:00','16:30']; // для превью
+
+    async function loadSlots(){
+      slotsEl.textContent = 'Загрузка...';
+      const payload = { date: dateEl.value, duration_min: Number(durEl.value||60) };
+      const r = await callApi('calendar.free_slots', payload);
+
+      if (r.preview === true){
+        slotsEl.innerHTML = demo.map(h=>`<button type="button" class="slot" data-hh="${h}" style="padding:8px 10px;border:1px solid rgba(255,255,255,.16);border-radius:10px;cursor:pointer">${h}</button>`).join('');
+        return;
+      }
+      const arr = (r && r.ok && Array.isArray(r.slots)) ? r.slots : [];
+      slotsEl.innerHTML = arr.length
+        ? arr.map(h=>`<button type="button" class="slot" data-hh="${h}" style="padding:8px 10px;border:1px solid rgba(255,255,255,.16);border-radius:10px;cursor:pointer">${h}</button>`).join('')
+        : '<div class="muted-sm">Нет слотов</div>';
+    }
+
+    slotsEl.addEventListener('click', e=>{
+      const b = e.target.closest('.slot'); if(!b) return;
+      slotsEl.querySelectorAll('.slot.selected').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      b.style.outline = '2px solid rgba(124,92,255,.7)';
+    });
+
+    btnHold?.addEventListener('click', async ()=>{
+      const hh = slotsEl.querySelector('.slot.selected')?.dataset.hh;
+      if (!hh) return;
+      const r = await callApi('calendar.hold', {
+        date: dateEl.value, time: hh, duration_min: Number(durEl.value||60)
+      });
+      if (!r || !r.ok){ alert('Слот занят или превью'); }
+      await loadSlots();
+    });
+
+    btnBook?.addEventListener('click', async ()=>{
+      const hh = slotsEl.querySelector('.slot.selected')?.dataset.hh;
+      if (!hh) return;
+      const r = await callApi('calendar.book', {
+        date: dateEl.value,
+        time: hh,
+        duration_min: Number(durEl.value||60),
+        contact: (contactEl && contactEl.value) || '',
+        format: 'tg_call'
+      });
+      if (r && r.ok){ alert('Бронь подтверждена'); await loadSlots(); }
+      else { alert('Превью-режим или ошибка'); }
+    });
+
+    dateEl.addEventListener('change', loadSlots);
+    durEl.addEventListener('change', loadSlots);
+    await loadSlots();
+    return ()=>{};
+  }
+};
+
+
+
+   
 bookingCalendar:{
     type:'htmlEmbed',
     title:'Booking: Календарь',
