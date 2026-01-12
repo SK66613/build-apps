@@ -1902,5 +1902,11 @@ html[data-theme="dark"] .lib-side-item{ border-color: rgba(255,255,255,0.08) !im
   text-overflow:ellipsis;
 }
 
+/* мини-чекбоксы в редакторе */
+.tinyCheck{
+  transform: scale(0.82);
+  transform-origin: center;
+}
+
 
 
