@@ -2536,30 +2536,53 @@ beBody.innerHTML = '';
 
 
 
-// === Специальные настройки для календаря записи (calendar_booking) ===
+// === Специальные настройки для календаря записи (calendar_booking) v1.2 ===
 if (inst.key === 'calendar_booking') {
-  if (!props) BP.blocks[inst.id] = props = {};
-  // дефолты (подтянутся и из BlockRegistry.defaults, но продублируем на всякий)
-  if (props.title            === undefined) props.title = 'Записаться на консультацию';
-  if (props.show_contact     === undefined) props.show_contact = true;
-  if (props.allowed_minutes  === undefined) props.allowed_minutes = [30,60,90]; // варианты длительности
-  if (props.slot_step_min    === undefined) props.slot_step_min = 30;           // шаг слотов
-  if (props.hold_minutes     === undefined) props.hold_minutes = 5;             // сколько держать слот
-  if (props.radius           === undefined) props.radius = 12;                  // скругление кнопок
-  if (props.theme_color      === undefined) props.theme_color = '#ffffff';      // цвет текста/рамок
-  if (props.accent_color     === undefined) props.accent_color = '#6ea8fe';     // акцент (кнопки)
+  if (!props) BP.blocks[inst.id] = (props = {});
+  const d = (window.BlockRegistry && BlockRegistry.calendar_booking && BlockRegistry.calendar_booking.defaults) || {};
 
-  // Заголовок (если хочешь отдельным полем; базовое поле уже рисуется generic-секцией)
-  // addField('Заголовок', `<input type="text" data-f="title" value="${String(props.title||'').replace(/"/g,'&quot;')}">`);
+  // дефолты ставим ТОЛЬКО если значение отсутствует (а не пустая строка)
+  if (props.title           === undefined) props.title        = d.title        ?? 'Записаться на консультацию';
+  if (props.allowed_minutes === undefined) props.allowed_minutes = d.allowed_minutes ?? [30,60,90];
+  if (props.slot_step_min   === undefined) props.slot_step_min   = d.slot_step_min   ?? 30;
+  if (props.hold_minutes    === undefined) props.hold_minutes    = 5; // для воркера, в UI не показываем таймер
+  if (props.radius          === undefined) props.radius          = d.radius          ?? 12;
+  if (props.slots_title     === undefined) props.slots_title     = d.slots_title     ?? 'Свободные слоты';
+  if (props.text_ok         === undefined) props.text_ok         = d.text_ok         ?? 'Забронировать';
+  if (props.text_hold       === undefined) props.text_hold       = d.text_hold       ?? 'Держать слот';
 
-  // Длительности: 30/60/90 (можно оставить один-два)
+  // ── Заголовок блока редактируется generic-секцией выше; здесь новые поля ─────────
+
+  // Заголовок секции слотов (можно очистить — тогда не будет показан)
+  addField('Заголовок секции слотов', `
+    <input type="text" data-f="slots_title"
+           value="${String(props.slots_title ?? '').replace(/"/g,'&quot;')}">
+  `);
+
+  // Подписи кнопок
+  addField('Подписи кнопок', `
+    <div class="row2" style="gap:10px">
+      <label style="display:flex;gap:6px;align-items:center;flex:1">
+        <span>Верхняя</span>
+        <input type="text" data-f="text_ok"
+               value="${String(props.text_ok ?? '').replace(/"/g,'&quot;')}">
+      </label>
+      <label style="display:flex;gap:6px;align-items:center;flex:1">
+        <span>Нижняя</span>
+        <input type="text" data-f="text_hold"
+               value="${String(props.text_hold ?? '').replace(/"/g,'&quot;')}">
+      </label>
+    </div>
+  `);
+
+  // Длительности 30/60/90 (можно оставить один-два)
   {
     const set = new Set(Array.isArray(props.allowed_minutes) ? props.allowed_minutes : []);
     const w = addField('Длительность слота (разрешённые)', `
       <div class="row2" data-cal-durations>
         ${[30,60,90].map(v => `
-          <label style="display:flex;gap:6px;align-items:center">
-            <input type="checkbox" data-cal-dur value="${v}" ${set.has(v)?'checked':''}>
+          <label class="cal-mini" style="display:flex;gap:6px;align-items:center">
+            <input type="checkbox" class="tinyCheck" data-cal-dur value="${v}" ${set.has(v)?'checked':''}>
             <span>${v} мин</span>
           </label>
         `).join('')}
@@ -2570,63 +2593,25 @@ if (inst.key === 'calendar_booking') {
         pushHistory();
         const vals=[];
         w.querySelectorAll('[data-cal-dur]:checked').forEach(x=>vals.push(Number(x.value)));
-        props.allowed_minutes = vals.length ? vals : [60]; // хотя бы одно значение
+        props.allowed_minutes = vals.length ? vals : [60]; // страховка: хотя бы один
         updatePreviewInline();
       });
     });
   }
 
   // Шаг сетки слотов
-  {
-    const w = addField('Шаг сетки слотов (мин)', `
-      <input type="number" min="5" step="5" data-f="slot_step_min" value="${Number(props.slot_step_min||30)}">
-    `);
-    // универсальная привязка data-f уже есть ниже в коде openBlockEditor
-  }
+  addField('Шаг сетки слотов (мин)', `
+    <input type="number" min="5" step="5" data-f="slot_step_min" value="${Number(props.slot_step_min||30)}">
+  `);
 
-  // Сколько минут «держать» слот после клика «Держать»
-  {
-    const w = addField('Время удержания слота (мин)', `
-      <input type="number" min="1" step="1" data-f="hold_minutes" value="${Number(props.hold_minutes||5)}">
-    `);
-  }
+  // Скругление
+  addField('Скругление, px', `
+    <input type="number" min="0" max="32" step="1" data-f="radius" value="${Number(props.radius||12)}">
+  `);
 
-  // Поле контакта (показывать/скрывать)
-  {
-    const w = addField('Показывать поле контакта', `
-      <label style="display:flex;gap:8px;align-items:center">
-        <input type="checkbox" data-cal-show-contact ${props.show_contact?'checked':''}>
-        <span>Показывать</span>
-      </label>
-    `);
-    const inp = w.querySelector('[data-cal-show-contact]');
-    inp.addEventListener('change', ()=>{
-      pushHistory();
-      props.show_contact = !!inp.checked;
-      updatePreviewInline();
-    });
-  }
-
-  // Стиль: цвета и скругления
-  {
-    const w = addField('Стиль (цвета/скругления)', `
-      <div class="row2" style="gap:10px">
-        <label style="display:flex;gap:6px;align-items:center">
-          <span>Текст/рамки</span>
-          <input type="color" data-f="theme_color" value="${String(props.theme_color||'#ffffff')}">
-        </label>
-        <label style="display:flex;gap:6px;align-items:center">
-          <span>Акцент</span>
-          <input type="color" data-f="accent_color" value="${String(props.accent_color||'#6ea8fe')}">
-        </label>
-        <label style="display:flex;gap:6px;align-items:center">
-          <span>Скругление, px</span>
-          <input type="number" min="0" max="32" step="1" data-f="radius" value="${Number(props.radius||12)}">
-        </label>
-      </div>
-    `);
-  }
+  // ⚠️ НЕ добавляем show_contact / theme_color / accent_color — блок берёт цвета из общей темы
 }
+
 
 
     
