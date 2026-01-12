@@ -1062,6 +1062,133 @@ bookingContact:{
   },
 
 
+   const calendarSlotter = {
+  type: 'htmlEmbed',
+  title: 'Календарь слотов',
+  defaults: {
+    duration_min: 60,
+    lead_min: 60,
+    header: 'Выберите дату и время'
+  },
+  preview: (p = {}) => `
+    <section class="blk blk-calendar">
+      <div class="cal-header">${p.header||'Выберите дату и время'}</div>
+      <div class="cal-controls">
+        <label>Длительность:
+          <select data-cal="dur">
+            <option value="30">30 мин</option>
+            <option value="60" selected>60 мин</option>
+            <option value="90">90 мин</option>
+          </select>
+        </label>
+        <label>Порог (lead):
+          <select data-cal="lead">
+            <option value="0">0</option>
+            <option value="60" selected>60</option>
+            <option value="120">120</option>
+          </select>
+        </label>
+      </div>
+      <div class="cal-days" data-cal="days"></div>
+      <div class="cal-cta hidden" data-cal="cta">
+        <div>Вы выбрали: <span data-cal="pick"></span></div>
+        <button class="btn" data-cal="confirm">Подтвердить бронь</button>
+      </div>
+    </section>
+  `,
+  mount: async (root, ctx) => {
+    const $ = sel => root.querySelector(sel);
+    const daysEl = $('[data-cal="days"]');
+    const pickEl = $('[data-cal="pick"]');
+    const ctaEl  = $('[data-cal="cta"]');
+    const durSel = $('[data-cal="dur"]');  durSel.value = String(ctx.props.duration_min||60);
+    const leadSel= $('[data-cal="lead"]'); leadSel.value= String(ctx.props.lead_min||60);
+
+    const state = ctx.getState?.() || {}; // там должен быть tg.id и app_public_id
+    const appPublicId = state?.app_public_id || ctx.app_public_id || '';
+    const tgId = (state?.tg && state.tg.id) || state?.tg_id || '';
+
+    let picked = null;
+
+    async function fetchSlots(){
+      daysEl.innerHTML = 'Загрузка...';
+      const q = new URLSearchParams({
+        duration_min: durSel.value,
+        lead_min: leadSel.value
+      });
+      const r = await fetch(`/api/public/app/${appPublicId}/calendar/free_slots?`+q.toString(), { credentials:'include' });
+      const j = await r.json();
+      if (!j.ok){ daysEl.innerHTML = 'Ошибка загрузки слотов'; return; }
+      renderDays(j.days);
+    }
+
+    function renderDays(days){
+      const keys = Object.keys(days).sort();
+      daysEl.innerHTML = keys.map(ds=>{
+        const times = days[ds];
+        if (!times.length) return `<div class="cal-day"><div class="cal-date">${ds}</div><div class="cal-times empty">Нет слотов</div></div>`;
+        return `<div class="cal-day">
+          <div class="cal-date">${ds}</div>
+          <div class="cal-times">
+            ${times.map(t=>`<button type="button" class="cal-slot" data-d="${ds}" data-h="${t}">${t}</button>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    daysEl.addEventListener('click', async (e)=>{
+      const b = e.target.closest('.cal-slot'); if(!b) return;
+      const date = b.getAttribute('data-d');
+      const time = b.getAttribute('data-h');
+
+      // HOLD на 5 минут
+      const payload = {
+        mode:'event', type:'hold_slot',
+        payload:{ date, time, duration_min: Number(durSel.value), tg_id: String(tgId) },
+        _service_key: ctx.env?.CALENDAR_SERVICE_KEY || '' // подставь из воркера/рендеринга
+      };
+      const r = await fetch(`/api/public/app/${appPublicId}/calendar/event`, {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(payload), credentials:'include'
+      });
+      const j = await r.json();
+      if (!j.ok){ alert('Слот занят. Выберите другой.'); await fetchSlots(); return; }
+
+      picked = { date, time };
+      pickEl.textContent = `${date} ${time} (${durSel.value} мин)`;
+      ctaEl.classList.remove('hidden');
+    });
+
+    $('[data-cal="confirm"]').addEventListener('click', async ()=>{
+      if (!picked) return;
+      const payload = {
+        mode:'event', type:'consult_booking',
+        payload:{
+          date: picked.date, time: picked.time,
+          duration_min: Number(durSel.value),
+          format: 'tg_call', contact: '',
+          tg_id: String(tgId)
+        },
+        _service_key: ctx.env?.CALENDAR_SERVICE_KEY || ''
+      };
+      const r = await fetch(`/api/public/app/${appPublicId}/calendar/event`, {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(payload), credentials:'include'
+      });
+      const j = await r.json();
+      if (!j.ok){ alert('Не удалось подтвердить бронь (слот занят?)'); await fetchSlots(); return; }
+      alert('Бронь подтверждена: '+j.booking_id);
+      picked = null; ctaEl.classList.add('hidden'); await fetchSlots();
+    });
+
+    durSel.addEventListener('change', fetchSlots);
+    leadSel.addEventListener('change', fetchSlots);
+    await fetchSlots();
+  }
+};
+
+
+
   flappyGame:{
     type:'game',
     title:'Flappy',
