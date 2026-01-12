@@ -1,0 +1,6 @@
+.blk-calendar .cal-row{display:flex;gap:10px;align-items:center;margin:8px 0}
+.blk-calendar .cal-slots{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.blk-calendar .cal-slots .slot{padding:8px 10px;border:1px solid rgba(255,255,255,.16);border-radius:10px;cursor:pointer}
+.blk-calendar .cal-slots .slot.selected{outline:2px solid rgba(124,92,255,.7)}
+.blk-calendar .cal-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.blk-calendar .cal-contact{min-width:220px}

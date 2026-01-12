@@ -1,0 +1,25 @@
+<div class="blk-calendar card">
+  <div class="blk-head">
+    <div class="blk-title">{{title}}</div>
+    <div class="blk-sub">Выберите дату и время</div>
+  </div>
+
+  <div class="cal-ui">
+    <div class="cal-row">
+      <input type="date" class="cal-date" />
+      <select class="cal-dur">
+        <option value="30">30 мин</option>
+        <option value="60" selected>60 мин</option>
+        <option value="90">90 мин</option>
+      </select>
+    </div>
+
+    <div class="cal-slots" aria-live="polite"></div>
+
+    <div class="cal-actions">
+      <input class="cal-contact" placeholder="{{contact_placeholder}}" />
+      <button type="button" class="btn cal-hold">{{text_hold}}</button>
+      <button type="button" class="btn cal-book">{{text_ok}}</button>
+    </div>
+  </div>
+</div>
