@@ -20,6 +20,37 @@ export async function mount(root, props, ctx){
   root.style.setProperty('--radius', ((props.radius ?? 12)) + 'px');
   root.style.setProperty('--gap', ((props.gap ?? 8)) + 'px');
 
+  // ── HAPTIC + состояния кнопок ──────────────────────────────
+const haptic = (kind='impact')=>{
+  try{
+    const hw = window.Telegram?.WebApp?.HapticFeedback;
+    if (hw){
+      if (kind==='success') hw.notificationOccurred('success');
+      else if (kind==='error') hw.notificationOccurred('error');
+      else hw.impactOccurred('light');
+    } else if (navigator.vibrate) {
+      navigator.vibrate(12);
+    }
+  }catch(_){}
+};
+
+const setLoading = (btn, text)=>{
+  if (!btn) return ()=>{};
+  const prev = btn.textContent;
+  btn.dataset.prevText = prev;
+  if (text) btn.textContent = text;
+  btn.setAttribute('aria-busy','true');
+  return ()=>{ btn.removeAttribute('aria-busy'); btn.textContent = btn.dataset.prevText || prev; };
+};
+
+const setSuccess = (btn, text='Заявка отправлена', ms=1400)=>{
+  if (!btn) return;
+  const prev = btn.textContent;
+  btn.textContent = text;
+  setTimeout(()=>{ btn.textContent = prev; }, ms);
+};
+
+
   // Title (hide when empty)
   const userTitle = (typeof props.title === 'string') ? props.title.trim() : '';
   if (userTitle){
@@ -146,17 +177,64 @@ export async function mount(root, props, ctx){
       return;
     }
 
-    if (e.target.closest('.cal-hold')){
-      const hh = root.querySelector('.slot.is-active')?.dataset.hh; if (!hh || isPreview) return;
-      await window.api('calendar.hold', { date: selectedISO, time: hh, duration_min: activeDuration, services: getSelectedServices() });
-      await loadSlots(); return;
+// HOLD (держать слот)
+if (e.target.closest('.cal-hold')){
+  const hh = root.querySelector('.slot.is-active')?.dataset.hh;
+  if (!hh || isPreview) return;
+  haptic('impact');
+  const end = setLoading(btnHold, 'Держим…');
+  try{
+    const r = await window.api('calendar.hold', {
+      date: selectedISO,
+      time: hh,
+      duration_min: activeDuration,
+      services: getSelectedServices()
+    });
+    end();
+    if (r?.ok){
+      haptic('success');
+      setSuccess(btnHold, 'Заявка отправлена');
+      await loadSlots();
+    }else{
+      haptic('error');
+      setSuccess(btnHold, 'Ошибка', 900);
     }
-    if (e.target.closest('.cal-book')){
-      const hh = root.querySelector('.slot.is-active')?.dataset.hh; if (!hh || isPreview) return;
-      const r = await window.api('calendar.book', { date: selectedISO, time: hh, duration_min: activeDuration, contact: '', format: 'tg_call', services: getSelectedServices() });
-      if (r?.ok) await loadSlots(); else alert(r?.error==='slot_full'?'Слот занят':'Ошибка');
-      return;
+  }catch(_){
+    end(); haptic('error'); setSuccess(btnHold, 'Ошибка', 900);
+  }
+  return;
+}
+
+// BOOK (забронировать)
+if (e.target.closest('.cal-book')){
+  const hh = root.querySelector('.slot.is-active')?.dataset.hh;
+  if (!hh || isPreview) return;
+  haptic('impact');
+  const end = setLoading(btnBook, 'Отправка…');
+  try{
+    const r = await window.api('calendar.book', {
+      date: selectedISO,
+      time: hh,
+      duration_min: activeDuration,
+      contact: '',
+      format: 'tg_call',
+      services: getSelectedServices()
+    });
+    end();
+    if (r?.ok){
+      haptic('success');
+      setSuccess(btnBook, 'Заявка отправлена');
+      await loadSlots();
+    }else{
+      haptic('error');
+      setSuccess(btnBook, 'Ошибка', 900);
     }
+  }catch(_){
+    end(); haptic('error'); setSuccess(btnBook, 'Ошибка', 900);
+  }
+  return;
+}
+
   });
 
   renderDurations();
