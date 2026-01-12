@@ -61,3 +61,22 @@
 .blk-calendar .cal-group.cal-services .services-list{
   gap: 10px;             /* как было, можно менять */
 }
+
+/* загрузка на кнопках */
+.blk-calendar .btn[aria-busy="true"]{
+  pointer-events: none;
+  opacity: .9;
+  position: relative;
+}
+.blk-calendar .btn[aria-busy="true"]::after{
+  content: "";
+  width: 14px; height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: calspin .8s linear infinite;
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+}
+@keyframes calspin{ to{ transform: translateY(-50%) rotate(360deg); } }
