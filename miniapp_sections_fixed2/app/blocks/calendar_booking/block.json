@@ -1,0 +1,31 @@
+{
+  "id": "calendar_booking",
+  "type": "htmlEmbed",
+  "title": "Календарь: запись",
+  "defaults": {
+    "title": "Записаться на консультацию",
+    "view": "slots",
+    "accent": "var(--accent)",
+    "chipBg": "var(--surface2)",
+    "chipText": "var(--text)",
+    "radius": 10,
+    "gap": 8,
+    "show_hold": true,
+    "allowedDurations": [
+      30,
+      60,
+      90
+    ],
+    "defaultDuration": 60,
+    "show_contact": true,
+    "contact_placeholder": "Ваш телефон/ник"
+  },
+  "assets": {
+    "css": [
+      "style.css"
+    ],
+    "js": [
+      "runtime.js"
+    ]
+  }
+}

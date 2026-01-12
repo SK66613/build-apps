@@ -1,0 +1,22 @@
+<section class="blk blk-calendar"
+  data-view="{{view}}"
+  style="--acc: {{accent}}; --chipBg: {{chipBg}}; --chipText: {{chipText}}; --radius: {{radius}}px; --gap: {{gap}}px;">
+  <div class="blk-head">
+    <div class="blk-title">{{title}}</div>
+    <div class="blk-sub">Выберите дату и время</div>
+  </div>
+
+  <div class="cal-toolbar">
+    <input type="date" class="cal-date"/>
+    <select class="cal-dur"></select>
+  </div>
+
+  <div class="cal-month" hidden></div>
+  <div class="cal-slots"></div>
+
+  <div class="cal-actions">
+    {{#show_contact}}<input class="cal-contact" placeholder="{{contact_placeholder}}"/>{{/show_contact}}
+    {{#show_hold}}<button class="btn cal-hold">Держать слот</button>{{/show_hold}}
+    <button class="btn cal-book">Забронировать</button>
+  </div>
+</section>
