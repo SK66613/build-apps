@@ -2344,17 +2344,13 @@ window.Templates = {
     reg.defaults = mf.defaults || reg.defaults || {};
     reg.__mf = mf;
 
-    if (reg.type === 'htmlEmbed'){
-      reg.html = tpl;
-      reg.preview = reg.preview || function(p){
-        try{
-          const src = (p && p.img) ? String(p.img) : '';
-          const r = Number((p && p.radius) ?? 16);
-          if (src) return `<div class="card" style="padding:0;overflow:hidden;border-radius:${r}px"><img src="${esc(src)}" style="display:block;width:100%;height:120px;object-fit:cover"/></div>`;
-        }catch(_){}
-        return `<div class="card">${esc(reg.title||mf.id)}</div>`;
-      };
-    }
+if (reg.type === 'htmlEmbed'){
+  reg.html = tpl;
+  // ВАЖНО: в конструкторе превью рисуем реальный шаблон,
+  // чтобы не было «пустой карточки» с заголовком.
+  reg.preview = reg.preview || ((p)=> applyTpl(tpl, p||{}));
+}
+
 
     // init hook from runtime mount/unmount
     if (mf.__runtime && (mf.__runtime.mount || mf.__runtime.unmount)){
