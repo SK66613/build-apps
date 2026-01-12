@@ -4,28 +4,26 @@
   "title": "Календарь: запись",
   "defaults": {
     "title": "Записаться на консультацию",
-    "view": "slots",
-    "accent": "var(--accent)",
-    "chipBg": "var(--surface2)",
-    "chipText": "var(--text)",
-    "radius": 10,
-    "gap": 8,
-    "show_hold": true,
-    "allowedDurations": [
-      30,
-      60,
-      90
-    ],
-    "defaultDuration": 60,
-    "show_contact": true,
-    "contact_placeholder": "Ваш телефон/ник"
+    "view": "month",                    // month | slots  (по умолчанию — весь месяц)
+    "show_hold": true,                  // показать кнопку «Держать слот»
+    "show_book": true,                  // показать кнопку «Забронировать»
+    "show_contact": true,               // поле контакта
+    "contact_placeholder": "Ваш телефон/ник",
+
+    "allowed_minutes": [30,60,90],      // какие длительности доступны (пусто -> [60])
+    "defaultDuration": 60,              // выбранная по умолчанию
+    "slot_step_min": 30,                // шаг сетки (для свободных слотов в runtime)
+
+    "accent": "var(--accent)",          // базовый акцент
+    "accentActiveBg": "var(--accent)",  // фон выбранного «чипа»/слота
+    "accentActiveText": "#fff",         // текст выбранного «чипа»/слота
+    "chipBg": "var(--surface2)",        // фон «чипов»
+    "chipText": "var(--text)",          // текст «чипов»
+    "radius": 10,                       // скругление
+    "gap": 8                            // отступы между элементами
   },
   "assets": {
-    "css": [
-      "style.css"
-    ],
-    "js": [
-      "runtime.js"
-    ]
+    "css": ["style.css"],
+    "js": ["runtime.js"]
   }
 }
