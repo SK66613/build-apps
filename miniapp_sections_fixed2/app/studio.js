@@ -2553,6 +2553,24 @@ if (inst.key === 'calendar_booking') {
   if (props.show_book       === undefined) props.show_book       = d.show_book ?? true;
   if (props.show_hold       === undefined) props.show_hold       = d.show_hold ?? true;
 
+  // после инициализации props
+if (!Array.isArray(props.services)) props.services = ["","","","",""];
+if (props.srv_title === undefined)  props.srv_title = "Услуги";
+
+// заголовок секции услуг (можно очистить — скроется)
+addField('Заголовок секции услуг', `
+  <input type="text" data-f="srv_title" value="${String(props.srv_title ?? '').replace(/"/g,'&quot;')}">
+`);
+
+// пять инпутов для названий услуг
+for (let i = 0; i < 5; i++){
+  const val = String(props.services[i] ?? '');
+  addField('Услуга ' + (i+1), `
+    <input type="text" data-f="services[${i}]" value="${val.replace(/"/g,'&quot;')}">
+  `);
+}
+
+
   // Заголовки секций
   addField('Заголовок секции длительностей', `
     <input type="text" data-f="dur_title" value="${String(props.dur_title ?? '').replace(/"/g,'&quot;')}">
