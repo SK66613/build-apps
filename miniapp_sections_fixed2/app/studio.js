@@ -2536,27 +2536,29 @@ beBody.innerHTML = '';
 
 
 
-// === Специальные настройки для календаря записи (calendar_booking) v1.2 ===
+// === Спец-настройки calendar_booking v1.3 ===
 if (inst.key === 'calendar_booking') {
   if (!props) BP.blocks[inst.id] = (props = {});
-  const d = (window.BlockRegistry && BlockRegistry.calendar_booking && BlockRegistry.calendar_booking.defaults) || {};
+  const d = (window.BlockRegistry?.calendar_booking?.defaults) || {};
 
-  // дефолты ставим ТОЛЬКО если значение отсутствует (а не пустая строка)
-  if (props.title           === undefined) props.title        = d.title        ?? 'Записаться на консультацию';
+  // дефолты — только если undefined
+  if (props.title           === undefined) props.title           = d.title ?? 'Записаться на консультацию';
   if (props.allowed_minutes === undefined) props.allowed_minutes = d.allowed_minutes ?? [30,60,90];
-  if (props.slot_step_min   === undefined) props.slot_step_min   = d.slot_step_min   ?? 30;
-  if (props.hold_minutes    === undefined) props.hold_minutes    = 5; // для воркера, в UI не показываем таймер
-  if (props.radius          === undefined) props.radius          = d.radius          ?? 12;
-  if (props.slots_title     === undefined) props.slots_title     = d.slots_title     ?? 'Свободные слоты';
-  if (props.text_ok         === undefined) props.text_ok         = d.text_ok         ?? 'Забронировать';
-  if (props.text_hold       === undefined) props.text_hold       = d.text_hold       ?? 'Держать слот';
+  if (props.slot_step_min   === undefined) props.slot_step_min   = d.slot_step_min ?? 30;
+  if (props.radius          === undefined) props.radius          = d.radius ?? 12;
+  if (props.dur_title       === undefined) props.dur_title       = d.dur_title ?? 'Длительность';
+  if (props.slots_title     === undefined) props.slots_title     = d.slots_title ?? 'Свободные слоты';
+  if (props.text_ok         === undefined) props.text_ok         = d.text_ok ?? 'Забронировать';
+  if (props.text_hold       === undefined) props.text_hold       = d.text_hold ?? 'Держать слот';
+  if (props.show_book       === undefined) props.show_book       = d.show_book ?? true;
+  if (props.show_hold       === undefined) props.show_hold       = d.show_hold ?? true;
 
-  // ── Заголовок блока редактируется generic-секцией выше; здесь новые поля ─────────
-
-  // Заголовок секции слотов (можно очистить — тогда не будет показан)
+  // Заголовки секций
+  addField('Заголовок секции длительностей', `
+    <input type="text" data-f="dur_title" value="${String(props.dur_title ?? '').replace(/"/g,'&quot;')}">
+  `);
   addField('Заголовок секции слотов', `
-    <input type="text" data-f="slots_title"
-           value="${String(props.slots_title ?? '').replace(/"/g,'&quot;')}">
+    <input type="text" data-f="slots_title" value="${String(props.slots_title ?? '').replace(/"/g,'&quot;')}">
   `);
 
   // Подписи кнопок
@@ -2564,18 +2566,16 @@ if (inst.key === 'calendar_booking') {
     <div class="row2" style="gap:10px">
       <label style="display:flex;gap:6px;align-items:center;flex:1">
         <span>Верхняя</span>
-        <input type="text" data-f="text_ok"
-               value="${String(props.text_ok ?? '').replace(/"/g,'&quot;')}">
+        <input type="text" data-f="text_ok" value="${String(props.text_ok ?? '').replace(/"/g,'&quot;')}">
       </label>
       <label style="display:flex;gap:6px;align-items:center;flex:1">
         <span>Нижняя</span>
-        <input type="text" data-f="text_hold"
-               value="${String(props.text_hold ?? '').replace(/"/g,'&quot;')}">
+        <input type="text" data-f="text_hold" value="${String(props.text_hold ?? '').replace(/"/g,'&quot;')}">
       </label>
     </div>
   `);
 
-  // Длительности 30/60/90 (можно оставить один-два)
+  // Длительности 30/60/90
   {
     const set = new Set(Array.isArray(props.allowed_minutes) ? props.allowed_minutes : []);
     const w = addField('Длительность слота (разрешённые)', `
@@ -2591,9 +2591,8 @@ if (inst.key === 'calendar_booking') {
     w.querySelectorAll('[data-cal-dur]').forEach(ch => {
       ch.addEventListener('change', ()=>{
         pushHistory();
-        const vals=[];
-        w.querySelectorAll('[data-cal-dur]:checked').forEach(x=>vals.push(Number(x.value)));
-        props.allowed_minutes = vals.length ? vals : [60]; // страховка: хотя бы один
+        const vals=[]; w.querySelectorAll('[data-cal-dur]:checked').forEach(x=>vals.push(Number(x.value)));
+        props.allowed_minutes = vals.length ? vals : [60]; // всегда хотя бы одно
         updatePreviewInline();
       });
     });
@@ -2604,13 +2603,44 @@ if (inst.key === 'calendar_booking') {
     <input type="number" min="5" step="5" data-f="slot_step_min" value="${Number(props.slot_step_min||30)}">
   `);
 
+  // Кнопки: видимость (минимум одна включена)
+  {
+    const w = addField('Показывать кнопки', `
+      <div class="row2" style="gap:10px">
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" data-f="show_book" ${props.show_book!==false?'checked':''}> <span>Забронировать</span>
+        </label>
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" data-f="show_hold" ${props.show_hold!==false?'checked':''}> <span>Держать слот</span>
+        </label>
+      </div>
+    `);
+    const sync = ()=>{
+      const a = w.querySelector('[data-f="show_book"]');
+      const b = w.querySelector('[data-f="show_hold"]');
+      // не даём выключить обе
+      if (!a.checked && !b.checked) { b.checked = true; props.show_hold = true; }
+      pushHistory(); updatePreviewInline();
+    };
+    w.querySelectorAll('[data-f="show_book"],[data-f="show_hold"]').forEach(el=>{
+      el.addEventListener('change', (e)=>{
+        props[e.target.getAttribute('data-f')] = !!e.target.checked;
+        sync();
+      });
+    });
+  }
+
   // Скругление
   addField('Скругление, px', `
     <input type="number" min="0" max="32" step="1" data-f="radius" value="${Number(props.radius||12)}">
   `);
 
-  // ⚠️ НЕ добавляем show_contact / theme_color / accent_color — блок берёт цвета из общей темы
+  // мини-чекбоксы в редакторе
+  const css = document.createElement('style');
+  css.textContent = `.tinyCheck{ transform:scale(.82); transform-origin:center }`;
+  document.head.appendChild(css);
 }
+
 
 
 
