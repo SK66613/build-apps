@@ -49,3 +49,15 @@
 .blk-calendar .btn{ padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); background: var(--chipBg); color: var(--text); cursor: pointer; }
 .blk-calendar .btn--primary{ background: var(--acc); color: var(--onAcc); border-color: transparent; font-weight: 700; letter-spacing: .2px; }
 .blk-calendar .btn--ghost{ background: rgba(255,255,255,.06); }
+
+/* убрать рамку только у секции "Услуги" */
+.blk-calendar .cal-group.cal-services{
+  border: none;          /* без обводки */
+  padding: 0;            /* можно оставить 10px, если нужна внутренняя отступка */
+  background: transparent; /* чтобы не было фона карточки */
+}
+
+/* (необязательно) подровнять расстояния внутри списка услуг */
+.blk-calendar .cal-group.cal-services .services-list{
+  gap: 10px;             /* как было, можно менять */
+}
