@@ -2553,22 +2553,44 @@ if (inst.key === 'calendar_booking') {
   if (props.show_book       === undefined) props.show_book       = d.show_book ?? true;
   if (props.show_hold       === undefined) props.show_hold       = d.show_hold ?? true;
 
-  // после инициализации props
+  // === УСЛУГИ (локальная привязка массива к инпутам) ===
 if (!Array.isArray(props.services)) props.services = ["","","","",""];
 if (props.srv_title === undefined)  props.srv_title = "Услуги";
 
-// заголовок секции услуг (можно очистить — скроется)
+// заголовок секции услуг (очистишь — секция скроется)
 addField('Заголовок секции услуг', `
-  <input type="text" data-f="srv_title" value="${String(props.srv_title ?? '').replace(/"/g,'&quot;')}">
+  <input type="text" data-f="srv_title"
+         value="${String(props.srv_title ?? '').replace(/"/g,'&quot;')}">
 `);
 
-// пять инпутов для названий услуг
+// инпуты услуг + собственный слушатель
+const srvInputs = [];
 for (let i = 0; i < 5; i++){
   const val = String(props.services[i] ?? '');
-  addField('Услуга ' + (i+1), `
-    <input type="text" data-f="services[${i}]" value="${val.replace(/"/g,'&quot;')}">
+  const w = addField('Услуга ' + (i + 1), `
+    <input type="text" data-srv-idx="${i}"
+           value="${val.replace(/"/g,'&quot;')}">
   `);
+  srvInputs.push(w.querySelector('input'));
 }
+
+// небольшой дебаунс, чтобы не дергать превью на каждый символ
+const _debounce = (fn, ms=60) => {
+  let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); };
+};
+
+// синхронизация массива services -> props + превью
+const syncServices = _debounce(() => {
+  pushHistory();
+  const arr = new Array(5).fill('');
+  srvInputs.forEach((inp, idx) => { arr[idx] = String(inp.value || '').trim(); });
+  props.services = arr;             // именно массив, а не services[0] ключи
+  updatePreviewInline();            // перерисовать превью
+});
+
+// повесим input-слушатели
+srvInputs.forEach(inp => inp.addEventListener('input', syncServices));
+
 
 
   // Заголовки секций
