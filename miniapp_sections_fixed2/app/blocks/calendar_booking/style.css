@@ -1,6 +1,30 @@
-.blk-calendar .cal-row{display:flex;gap:10px;align-items:center;margin:8px 0}
-.blk-calendar .cal-slots{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
-.blk-calendar .cal-slots .slot{padding:8px 10px;border:1px solid rgba(255,255,255,.16);border-radius:10px;cursor:pointer}
-.blk-calendar .cal-slots .slot.selected{outline:2px solid rgba(124,92,255,.7)}
-.blk-calendar .cal-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
-.blk-calendar .cal-contact{min-width:220px}
+.blk-calendar{
+  --acc: var(--accent, #7C5CFF);
+  --chipBg: var(--surface2, #20232b);
+  --chipText: var(--text, #fff);
+  --radius: 10px;
+  --gap: 8px;
+}
+
+.blk-calendar .cal-toolbar{ display:flex; gap: var(--gap); align-items:center; margin:10px 0; }
+
+.blk-calendar .cal-slots{
+  display:flex; flex-wrap:wrap; gap: var(--gap); margin: 8px 0;
+}
+
+.blk-calendar .slot{
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius: var(--radius);
+  background: var(--chipBg);
+  color: var(--chipText);
+  cursor:pointer;
+}
+
+.blk-calendar .slot.selected{ outline:2px solid var(--acc); }
+
+.blk-calendar .cal-month{ display:grid; grid-template-columns: repeat(7,1fr); gap: var(--gap); }
+.blk-calendar .day{ padding:10px; border-radius: var(--radius); background: var(--chipBg); color: var(--chipText); text-align:center; }
+.blk-calendar .day.disabled{ opacity:.35; filter:grayscale(1); }
+
+.blk-calendar .cal-actions{ display:flex; flex-wrap:wrap; gap: var(--gap); margin-top:8px; }
