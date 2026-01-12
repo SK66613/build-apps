@@ -29,7 +29,16 @@ export async function mount(root, props, ctx){
   root.style.setProperty('--radius', (props.radius ?? 10) + 'px');
   root.style.setProperty('--gap', (props.gap ?? 8) + 'px');
 
-  titleEl.textContent = props.title || 'Записаться на консультацию';
+  // если пользователь стёр — не показываем заголовок вообще
+const userTitle = (typeof props.title === 'string') ? props.title.trim() : '';
+if (userTitle){
+  titleEl.textContent = userTitle;
+  titleEl.parentElement.style.display = '';      // показываем шапку блока
+} else {
+  titleEl.textContent = '';
+  titleEl.parentElement.style.display = 'none';  // скрываем шапку
+}
+
   contactEl.style.display = showContact ? '' : 'none';
   btnHold.style.display   = showHold ? '' : 'none';
   btnBook.style.display   = showBook ? '' : 'none';
