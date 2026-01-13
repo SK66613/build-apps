@@ -2240,10 +2240,17 @@ window.Templates = {
    - registers blocks into window.BlockRegistry
    ===================================================================== */
 (function(){
+  // Можно переопределять извне: window.SG_BLOCKS_BASE = 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/';
   const LIB_BASE = (function(){
-    try{ return new URL('blocks/', (document.currentScript && document.currentScript.src) || location.href).toString(); }
-    catch(_){ return 'blocks/'; }
+    try{
+      const ext = (window.SG_BLOCKS_BASE || 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/');
+      // гарантируем закрывающий слэш
+      return new URL(ext.endsWith('/') ? ext : (ext + '/'), location.href).toString();
+    }catch(_){
+      return 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/';
+    }
   })();
+
   const STYLE_ID = 'lib-blocks-style';
 
   function esc(s){ return String(s??''); }
@@ -2378,11 +2385,22 @@ if (reg.type === 'htmlEmbed'){
       if (this.loading) return this.loading;
       this.loading = (async ()=>{
         try{
-          const index = await fetchJSON(LIB_BASE + 'index.json');
-          if (Array.isArray(index)){
-            for (const id of index){
-              try{ await loadBlock(id); }catch(e){ console.warn('Block load failed', id, e); }
-            }
+const index = await fetchJSON(LIB_BASE + 'index.json');
+
+// поддерживаем 2 формата:
+// 1) ["calendar_booking", ...]
+// 2) { blocks: [{key:"calendar_booking", ...}, ...] }
+let ids = [];
+if (Array.isArray(index)) {
+  ids = index;
+} else if (index && Array.isArray(index.blocks)) {
+  ids = index.blocks.map(b => b.key || b.id).filter(Boolean);
+}
+
+for (const id of ids){
+  try{ await loadBlock(id); }catch(e){ console.warn('Block load failed', id, e); }
+
+
           }
           this.loaded = true;
           return true;
