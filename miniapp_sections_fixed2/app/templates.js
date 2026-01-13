@@ -1,7 +1,12 @@
 /* TEMPLATES_BUILD: step20 */
 console.log("[templates] build step20");
 
-
+// === SG Blocks base (через /blocks/* прокси воркера) ===
+const LIB_BASE = (
+  window.SG_BLOCKS_BASE ||
+  (location.origin + '/blocks/dist/blocks/')
+).replace(/\/+$/,'/') + '/';
+window.SG_BLOCKS_BASE = LIB_BASE; // даём возможность переопределять снаружи
 
 /* ===============================
    Styles Passport CSS (embedded)
