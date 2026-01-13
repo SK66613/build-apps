@@ -229,7 +229,7 @@ const STYLES_PASSPORT_CSS = `
 })();
 `;
 
-window.BlockRegistry = {
+window.BlockRegistry = Object.assign(window.BlockRegistry || {}, {
  
 promo:{
   type:'htmlEmbed',
@@ -2243,7 +2243,7 @@ window.Templates = {
   // Можно переопределять извне: window.SG_BLOCKS_BASE = 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/';
   const LIB_BASE = (function(){
     try{
-      const ext = (window.SG_BLOCKS_BASE || 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/');
+      const ext = (window.SG_BLOCKS_BASE || '/blocks/');
       // гарантируем закрывающий слэш
       return new URL(ext.endsWith('/') ? ext : (ext + '/'), location.href).toString();
     }catch(_){
