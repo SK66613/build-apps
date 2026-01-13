@@ -2,11 +2,21 @@
 console.log("[templates] build step20");
 
 // === SG Blocks base (через /blocks/* прокси воркера) ===
-const LIB_BASE = (
-  window.SG_BLOCKS_BASE ||
-  (location.origin + '/blocks/dist/blocks/')
-).replace(/\/+$/,'/') + '/';
-window.SG_BLOCKS_BASE = LIB_BASE; // даём возможность переопределять снаружи
+
+// repo root через воркер-прокси
+const BLOCKS_ROOT = (window.SG_BLOCKS_ROOT || (location.origin + '/blocks/'))
+  .replace(/\/+$/,'/') + '/';
+window.SG_BLOCKS_ROOT = BLOCKS_ROOT;
+
+// где реально лежат папки блоков в репо
+const LIB_BASE = (window.SG_BLOCKS_BASE || (BLOCKS_ROOT + 'blocks/'))
+  .replace(/\/+$/,'/') + '/';
+window.SG_BLOCKS_BASE = LIB_BASE; // оставляем как было
+
+// индекс лежит в dist
+const INDEX_URL = BLOCKS_ROOT + 'dist/blocks/index.json';
+window.SG_BLOCKS_INDEX_URL = INDEX_URL;
+
 
 /* ===============================
    Styles Passport CSS (embedded)
@@ -2390,7 +2400,8 @@ if (reg.type === 'htmlEmbed'){
       if (this.loading) return this.loading;
       this.loading = (async ()=>{
         try{
-const index = await fetchJSON(LIB_BASE + 'index.json');
+const index = await fetchJSON(INDEX_URL);
+
 
 // поддерживаем 2 формата индекса:
 // 1) ["calendar_booking", ...]
