@@ -2124,7 +2124,7 @@ leaderboard:{
         </div>
       </section>`
   },
-};
+});
 
 window.PagePresets = {
   home: [],
@@ -2257,12 +2257,9 @@ window.Templates = {
 (function(){
   // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
   // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
-const LIB_BASE = (function(){
-  // Можно переопределить извне:
-  // window.SG_BLOCKS_BASE = 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/';
-  const ext = (window.SG_BLOCKS_BASE || '/blocks/dist/blocks/');
-  return ext.endsWith('/') ? ext : (ext + '/');
-})();
+const LIB_BASE  = (window.SG_BLOCKS_BASE || '/blocks/dist/blocks/').replace(/\/+$/,'') + '/';
+const INDEX_URL = (window.SG_BLOCKS_INDEX_URL || (LIB_BASE + 'index.json'));
+
 
 
 
