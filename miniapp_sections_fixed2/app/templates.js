@@ -2241,10 +2241,13 @@ window.Templates = {
    ===================================================================== */
 (function(){
   // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
-  const LIB_BASE = (function(){
-    const ext = (window.SG_BLOCKS_BASE || '/blocks/dist/blocks/');
-    return ext.endsWith('/') ? ext : (ext + '/');
-  })();
+  // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
+const LIB_BASE = (function(){
+  // Можно переопределить извне:
+  // window.SG_BLOCKS_BASE = 'https://blocks.salesgenius.ru/sg-blocks/dist/blocks/';
+  const ext = (window.SG_BLOCKS_BASE || '/blocks/dist/blocks/');
+  return ext.endsWith('/') ? ext : (ext + '/');
+})();
 
 
 
@@ -2384,7 +2387,7 @@ if (reg.type === 'htmlEmbed'){
         try{
 const index = await fetchJSON(LIB_BASE + 'index.json');
 
-// поддерживаем 2 формата:
+// поддерживаем 2 формата индекса:
 // 1) ["calendar_booking", ...]
 // 2) { blocks: [{key:"calendar_booking", ...}, ...] }
 let ids = [];
@@ -2393,8 +2396,7 @@ if (Array.isArray(index)) {
 } else if (index && Array.isArray(index.blocks)) {
   ids = index.blocks.map(b => b.key || b.id).filter(Boolean);
 }
-
-for (const id of ids){
+for (const id of ids) {
   try{ await loadBlock(id); }catch(e){ console.warn('Block load failed', id, e); }
 
 
