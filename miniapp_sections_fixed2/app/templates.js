@@ -1,6 +1,21 @@
 /* TEMPLATES_BUILD: step20 */
 console.log("[templates] build step20");
 
+// === SG Blocks base (через /blocks/* прокси воркера) ===
+
+// repo root через воркер-прокси
+const BLOCKS_ROOT = (window.SG_BLOCKS_ROOT || (location.origin + '/blocks/'))
+  .replace(/\/+$/,'/') + '/';
+window.SG_BLOCKS_ROOT = BLOCKS_ROOT;
+
+// где реально лежат папки блоков в репо
+const LIB_BASE = (window.SG_BLOCKS_BASE || (BLOCKS_ROOT + 'blocks/'))
+  .replace(/\/+$/,'/') + '/';
+window.SG_BLOCKS_BASE = LIB_BASE; // оставляем как было
+
+// индекс лежит в dist
+const INDEX_URL = BLOCKS_ROOT + 'dist/blocks/index.json';
+window.SG_BLOCKS_INDEX_URL = INDEX_URL;
 
 
 /* ===============================
@@ -229,7 +244,7 @@ const STYLES_PASSPORT_CSS = `
 })();
 `;
 
-window.BlockRegistry = {
+window.BlockRegistry = Object.assign(window.BlockRegistry || {}, {
  
 promo:{
   type:'htmlEmbed',
@@ -2109,7 +2124,7 @@ leaderboard:{
         </div>
       </section>`
   },
-};
+});
 
 window.PagePresets = {
   home: [],
@@ -2240,10 +2255,14 @@ window.Templates = {
    - registers blocks into window.BlockRegistry
    ===================================================================== */
 (function(){
-  const LIB_BASE = (function(){
-    try{ return new URL('blocks/', (document.currentScript && document.currentScript.src) || location.href).toString(); }
-    catch(_){ return 'blocks/'; }
-  })();
+  // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
+  // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
+const LIB_BASE  = (window.SG_BLOCKS_BASE || '/blocks/dist/blocks/').replace(/\/+$/,'') + '/';
+const INDEX_URL = (window.SG_BLOCKS_INDEX_URL || (LIB_BASE + 'index.json'));
+
+
+
+
   const STYLE_ID = 'lib-blocks-style';
 
   function esc(s){ return String(s??''); }
@@ -2378,11 +2397,22 @@ if (reg.type === 'htmlEmbed'){
       if (this.loading) return this.loading;
       this.loading = (async ()=>{
         try{
-          const index = await fetchJSON(LIB_BASE + 'index.json');
-          if (Array.isArray(index)){
-            for (const id of index){
-              try{ await loadBlock(id); }catch(e){ console.warn('Block load failed', id, e); }
-            }
+const index = await fetchJSON(INDEX_URL);
+
+
+// поддерживаем 2 формата индекса:
+// 1) ["calendar_booking", ...]
+// 2) { blocks: [{key:"calendar_booking", ...}, ...] }
+let ids = [];
+if (Array.isArray(index)) {
+  ids = index;
+} else if (index && Array.isArray(index.blocks)) {
+  ids = index.blocks.map(b => b.key || b.id).filter(Boolean);
+}
+for (const id of ids) {
+  try{ await loadBlock(id); }catch(e){ console.warn('Block load failed', id, e); }
+
+
           }
           this.loaded = true;
           return true;
