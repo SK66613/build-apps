@@ -9,7 +9,7 @@ console.log("[templates] build step20");
 const STYLES_PASSPORT_CSS = `
 :root{ --card-pad:14px; }
 
-/* ===== РљР°СЂС‚РѕС‡РєР° В«РџР°СЃРїРѕСЂС‚В» (СЂР°РјРєР°) ===== */
+/* ===== Карточка «Паспорт» (рамка) ===== */
 .card.passport{
   padding: var(--card-pad);
   border: 1px solid rgba(255,255,255,.12);
@@ -21,7 +21,7 @@ const STYLES_PASSPORT_CSS = `
   align-items: stretch;
 }
 
-/* Р›РµРІР°СЏ РєР°СЂС‚РёРЅРєР° */
+/* Левая картинка */
 .passport__media{
   border-radius: 12px;
   overflow: hidden;
@@ -32,10 +32,10 @@ const STYLES_PASSPORT_CSS = `
   width:100%; height:100%; object-fit:cover; display:block;
 }
 
-/* РџСЂР°РІР°СЏ РєРѕР»РѕРЅРєР° */
+/* Правая колонка */
 .passport__body{ display:grid; gap:10px; }
 
-/* ===== РЎРµС‚РєР° РјРёРЅРё-РєР°СЂС‚РѕС‡РµРє ===== */
+/* ===== Сетка мини-карточек ===== */
 .passport-grid{
   display:grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
@@ -43,7 +43,7 @@ const STYLES_PASSPORT_CSS = `
 }
 
 
-/* Р•Р”РРќРђРЇ РєР°СЂС‚РѕС‡РєР° СЃС‚РёР»СЏ (РЅР°Р·РІР°РЅРёРµ + Р±РµР№РґР¶ РІРЅСѓС‚СЂРё РѕР±РІРѕРґРєРё) */
+/* ЕДИНАЯ карточка стиля (название + бейдж внутри обводки) */
 .pslot{
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.04);
@@ -54,7 +54,7 @@ const STYLES_PASSPORT_CSS = `
 }
 .pslot__title{ font-weight:800; line-height:1.2; }
 
-/* Р±РµР№РґР¶ СЃС‚Р°С‚СѓСЃР° */
+/* бейдж статуса */
 .pslot__badge{
   display:grid; place-items:center;
   padding:8px 10px; border-radius:999px;
@@ -63,7 +63,7 @@ const STYLES_PASSPORT_CSS = `
   background:rgba(255,255,255,.06); color:#fff; opacity:.95;
 }
 
-/* РџРѕРґСЃРІРµС‚РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё С€С‚Р°РјРїР° вЂ” Р’Р•РЎР¬ Р±Р»РѕРє */
+/* Подсветка при получении штампа — ВЕСЬ блок */
 .pslot.is-done{
   border-color: rgba(55,214,122,.55);
   background: rgba(55,214,122,.12);
@@ -76,7 +76,7 @@ const STYLES_PASSPORT_CSS = `
   color:#0b1a12;
 }
 
-/* ===== РњРѕР±РёР»РєР°: РєР°СЂС‚РёРЅРєР° full-bleed, 2 РєРѕР»РѕРЅРєРё СЃРµС‚РєРё ===== */
+/* ===== Мобилка: картинка full-bleed, 2 колонки сетки ===== */
 @media (max-width:520px){
   .card.passport{ grid-template-columns: 1fr; }
   .passport__media{
@@ -143,7 +143,7 @@ const STYLES_PASSPORT_CSS = `
     e.stopImmediatePropagation();
     e.preventDefault();
 
-    // If already collected вЂ” do nothing (button inactive)
+    // If already collected — do nothing (button inactive)
     if (card.classList.contains('is-done') || card.getAttribute('aria-disabled')==='true'){
       const badge = card.querySelector('.pslot__badge');
       if (badge){
@@ -164,17 +164,17 @@ const STYLES_PASSPORT_CSS = `
       const badge = card.querySelector('.pslot__badge');
       if (badge) badge.setAttribute('aria-busy','true');
 
-      const pin = window.prompt('PIN СЃРѕС‚СЂСѓРґРЅРёРєР° (РѕРґРЅРѕСЂР°Р·РѕРІС‹Р№)');
+      const pin = window.prompt('PIN сотрудника (одноразовый)');
       if (pin == null){ // cancel
-        toast('РћС‚РјРµРЅРµРЅРѕ', false);
+        toast('Отменено', false);
         return;
       }
       if (String(pin).trim() === ''){
-        toast('Р’РІРµРґРёС‚Рµ PIN', false);
+        toast('Введите PIN', false);
         return;
       }
 
-      // РћС‚РїСЂР°РІР»СЏРµРј РѕРґРЅРѕСЂР°Р·РѕРІС‹Р№ PIN РЅР° Р±СЌРєРµРЅРґ, РїСЂРѕРІРµСЂРєР° С‚РѕР»СЊРєРѕ РЅР° СЃРµСЂРІРµСЂРµ
+      // Отправляем одноразовый PIN на бэкенд, проверка только на сервере
       if (API){
         const r = await API('style.collect', {
           style_id: String(code),
@@ -187,7 +187,7 @@ const STYLES_PASSPORT_CSS = `
           card.classList.add('is-done');
           card.setAttribute('aria-disabled','true');
           if (badge){
-            badge.textContent = 'РџРѕР»СѓС‡РµРЅ';
+            badge.textContent = 'Получен';
             badge.setAttribute('aria-disabled','true');
             badge.removeAttribute('aria-busy');
           }
@@ -199,23 +199,23 @@ const STYLES_PASSPORT_CSS = `
               window.paintBadgesFromState(st);
             }
           }catch(_){}
-          toast('РЁС‚Р°РјРї РїРѕР»СѓС‡РµРЅ', true);
+          toast('Штамп получен', true);
         }else{
           if (r && r.error === 'pin_invalid'){
-            toast('РџРРќ РЅРµРІРµСЂРЅС‹Р№ РёР»Рё СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°РЅ', false);
+            toast('ПИН неверный или уже использован', false);
           }else if (r && r.error === 'pin_used'){
-            toast('Р­С‚РѕС‚ РџРРќ СѓР¶Рµ Р±С‹Р» РёСЃРїРѕР»СЊР·РѕРІР°РЅ', false);
+            toast('Этот ПИН уже был использован', false);
           }else if (r && r.error === 'pin_required'){
-            toast('РќСѓР¶РЅРѕ РІРІРµСЃС‚Рё РџРРќ Сѓ СЃРѕС‚СЂСѓРґРЅРёРєР°', false);
+            toast('Нужно ввести ПИН у сотрудника', false);
           }else if (r && r.error){
             toast(r.error, false);
           }else{
-            toast('РћС€РёР±РєР° СЃРµС‚Рё', false);
+            toast('Ошибка сети', false);
           }
         }
       }else{
-        // No API available вЂ” do not send, do not mark collected
-        toast('API РЅРµРґРѕСЃС‚СѓРїРµРЅ', false);
+        // No API available — do not send, do not mark collected
+        toast('API недоступен', false);
       }
 
     }finally{
@@ -233,7 +233,7 @@ window.BlockRegistry = {
  
 promo:{
   type:'htmlEmbed',
-  title:'РџСЂРѕРјРѕ СЃР»Р°Р№РґРµСЂ',
+  title:'Промо слайдер',
   defaults:{
     interval:4000,
     slides:[
@@ -311,7 +311,7 @@ promo:{
 
     timer = setInterval(tick, interval);
 
-    // РєР»РёРє РїРѕ С‚РѕС‡РєР°Рј
+    // клик по точкам
     dots.forEach((d, i)=>{
       d.addEventListener('click', ()=>{
         go(i);
@@ -327,11 +327,11 @@ promo:{
 
   infoCardPlain:{
     type:'htmlEmbed',
-    title:'РРЅС„Рѕ РєР°СЂС‚РѕС‡РєР° (РєР»РёРєР°Р±РµР»СЊРЅРѕРµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ)',
+    title:'Инфо карточка (кликабельное изображение)',
     defaults:{
       icon:'beer/img/beer_hero.jpg',
       title:'Craft Beer',
-      sub:'РљС‚Рѕ РјС‹, РіРґРµ РјС‹',
+      sub:'Кто мы, где мы',
       imgSide:'left',   // left | right
       action:'none',    // none | link | sheet | sheet_page
       link:'',
@@ -341,7 +341,7 @@ promo:{
     preview:(p={})=>{
       const icon    = p.icon  || '';
       const t       = p.title || 'Craft Beer';
-      const sub     = p.sub   || 'РљС‚Рѕ РјС‹, РіРґРµ РјС‹';
+      const sub     = p.sub   || 'Кто мы, где мы';
       const imgSide = (p.imgSide === 'right' ? 'right' : 'left');
 
       const action     = p.action     || 'none';
@@ -381,15 +381,15 @@ promo:{
 
   gamesList:{
     type:'htmlEmbed',
-    title:'РРіСЂС‹: СЃРїРёСЃРѕРє СЃ РєРЅРѕРїРєР°РјРё',
+    title:'Игры: список с кнопками',
     defaults:{
-      title:'РРіСЂС‹',
+      title:'Игры',
       cards:[
         {
           icon:'beer/img/game1.png',
           title:'Bumblebee',
-          sub:'Р”РѕР»РµС‚Рё РґРѕ РЅР°СЃ Рё РїРѕР»СѓС‡Рё РїСЂРёР·',
-          btn:'РРіСЂР°С‚СЊ',
+          sub:'Долети до нас и получи приз',
+          btn:'Играть',
           action:'link',
           link:'#play_bumble',
           sheet_id:'',
@@ -398,8 +398,8 @@ promo:{
         {
           icon:'beer/img/game2.png',
           title:'Night Racing',
-          sub:'РљР°С‚Р°Р№СЃСЏ Рё РїСЂРѕРєР°С‡РёРІР°Р№ С‚Р°С‡РєСѓ',
-          btn:'РЎРєРѕСЂРѕ',
+          sub:'Катайся и прокачивай тачку',
+          btn:'Скоро',
           action:'none',
           link:'',
           sheet_id:'',
@@ -408,8 +408,8 @@ promo:{
         {
           icon:'beer/img/game3.png',
           title:'Memory cards',
-          sub:'РќР°Р№РґРё РІСЃРµ СЃРїСЂСЏС‚Р°РЅРЅС‹Рµ РєР°СЂС‚РѕС‡РєРё Р±С‹СЃС‚СЂРµРµ',
-          btn:'РЎРєРѕСЂРѕ',
+          sub:'Найди все спрятанные карточки быстрее',
+          btn:'Скоро',
           action:'none',
           link:'',
           sheet_id:'',
@@ -418,7 +418,7 @@ promo:{
       ]
     },
     preview:(p={})=>{
-      const title = p.title || 'РРіСЂС‹';
+      const title = p.title || 'Игры';
       const def   = (window.BlockRegistry.gamesList && window.BlockRegistry.gamesList.defaults) || {};
       const cards = Array.isArray(p.cards) && p.cards.length ? p.cards : (def.cards || []);
 
@@ -430,7 +430,7 @@ promo:{
               const icon       = c.icon || '';
               const ct         = c.title || '';
               const sub        = c.sub   || '';
-              const btn        = c.btn   || 'РРіСЂР°С‚СЊ';
+              const btn        = c.btn   || 'Играть';
               const action     = c.action || 'none';
               const link       = c.link || '';
               const sheet_id   = c.sheet_id || '';
@@ -469,20 +469,20 @@ promo:{
 
     infoCardChevron:{
     type:'htmlEmbed',
-    title:'РРЅС„Рѕ РєР°СЂС‚РѕС‡РєР° СЃРѕ СЃС‚СЂРµР»РєРѕР№',
+    title:'Инфо карточка со стрелкой',
     defaults:{
       icon:'beer/img/beer_hero.jpg',
       title:'Craft Beer',
-      sub:'РљС‚Рѕ РјС‹, РіРґРµ РјС‹',
+      sub:'Кто мы, где мы',
       action:'link',     // none | link | sheet | sheet_page
-      link:'#about',     // РґР»СЏ link
-      sheet_id:'',       // РґР»СЏ sheet
-      sheet_path:''      // РґР»СЏ sheet_page
+      link:'#about',     // для link
+      sheet_id:'',       // для sheet
+      sheet_path:''      // для sheet_page
     },
     preview:(p={})=>{
       const icon       = p.icon || '';
       const t          = p.title || 'Craft Beer';
-      const sub        = p.sub   || 'РљС‚Рѕ РјС‹, РіРґРµ РјС‹';
+      const sub        = p.sub   || 'Кто мы, где мы';
       const action     = p.action || 'none';
       const link       = p.link || '';
       const sheet_id   = p.sheet_id || '';
@@ -507,7 +507,7 @@ promo:{
               <div class="info-card__title">${t}</div>
               <div class="info-card__sub">${sub}</div>
             </div>
-            <button class="list__chev-btn" type="button"${attr}>вЂє</button>
+            <button class="list__chev-btn" type="button"${attr}>›</button>
           </div>
         </section>
       `;
@@ -520,22 +520,22 @@ promo:{
 
     infoCard:{
     type:'htmlEmbed',
-    title:'РРЅС„Рѕ РєР°СЂС‚РѕС‡РєР° СЃ РєРЅРѕРїРєРѕР№',
+    title:'Инфо карточка с кнопкой',
     defaults:{
       icon:'beer/img/beer_hero.jpg',
       title:'Craft Beer',
-      sub:'РљС‚Рѕ РјС‹, РіРґРµ РјС‹',
-      btn:'Рћ РЅР°СЃ',
+      sub:'Кто мы, где мы',
+      btn:'О нас',
       action:'link',     // none | link | sheet | sheet_page
-      link:'#about',     // РґР»СЏ link
-      sheet_id:'',       // РґР»СЏ sheet
-      sheet_path:''      // РґР»СЏ sheet_page
+      link:'#about',     // для link
+      sheet_id:'',       // для sheet
+      sheet_path:''      // для sheet_page
     },
     preview:(p={})=>{
       const icon       = p.icon || '';
       const t          = p.title || 'Craft Beer';
-      const sub        = p.sub   || 'РљС‚Рѕ РјС‹, РіРґРµ РјС‹';
-      const btn        = p.btn   || 'Рћ РЅР°СЃ';
+      const sub        = p.sub   || 'Кто мы, где мы';
+      const btn        = p.btn   || 'О нас';
       const action     = p.action || 'none';
       const link       = p.link || '';
       const sheet_id   = p.sheet_id || '';
@@ -574,8 +574,8 @@ promo:{
 
   spacer:{
     type:'htmlEmbed',
-    title:'РћС‚СЃС‚СѓРї',
-    defaults:{ size:16 }, // РІС‹СЃРѕС‚Р° РІ РїРёРєСЃРµР»СЏС…
+    title:'Отступ',
+    defaults:{ size:16 }, // высота в пикселях
     preview:(p={})=>{
       const h = Number(p.size) || 16;
       return `
@@ -591,10 +591,10 @@ promo:{
   beerHero:{
     type:'htmlEmbed',
     title:'Beer: Hero',
-    defaults:{ title:'Craft Beer Club', text:'РЎРѕР±РёСЂР°Р№ С€С‚Р°РјРїС‹, РєСЂСѓС‚Рё РєРѕР»РµСЃРѕ, РїРѕР»СѓС‡Р°Р№ РїСЂРёР·С‹', img:'beer/img/beer_hero.jpg' },
+    defaults:{ title:'Craft Beer Club', text:'Собирай штампы, крути колесо, получай призы', img:'beer/img/beer_hero.jpg' },
     preview:(pp={})=>{
       const t=pp.title||'Craft Beer Club';
-      const tx=pp.text||'РЎРѕР±РёСЂР°Р№ С€С‚Р°РјРїС‹, РєСЂСѓС‚Рё РєРѕР»РµСЃРѕ, РїРѕР»СѓС‡Р°Р№ РїСЂРёР·С‹';
+      const tx=pp.text||'Собирай штампы, крути колесо, получай призы';
       const img=pp.img||'beer/img/beer_hero.jpg';
       return `
         <section class="b-hero">
@@ -612,19 +612,19 @@ promo:{
   
   beerIntroSlider:{
     type:'htmlEmbed',
-    title:'Beer: РЎР»Р°Р№РґРµСЂ РїСЂРёРІРµС‚СЃС‚РІРёСЏ',
+    title:'Beer: Слайдер приветствия',
     defaults:{
       slides:[
         {
-          title:'РљР°Рє СЌС‚Рѕ СЂР°Р±РѕС‚Р°РµС‚',
-          text:'РљРѕРїРёС‚Рµ РјРѕРЅРµС‚С‹, РёРіСЂР°СЏ Рё РґРµР»Р°СЏ РїРѕРєСѓРїРєРё. РћР±РјРµРЅРёРІР°Р№С‚Рµ РёС… РЅР° РїСЂРёР·С‹ РІ СЂР°Р·РґРµР»Рµ В«Р‘РѕРЅСѓСЃС‹В».',
-          primary:'РџСЂРѕРґРѕР»Р¶РёС‚СЊ',
+          title:'Как это работает',
+          text:'Копите монеты, играя и делая покупки. Обменивайте их на призы в разделе «Бонусы».',
+          primary:'Продолжить',
           ghost:''
         },
         {
-          title:'РћС‚Р»РёС‡РЅРѕ! РџРѕРіРЅР°Р»Рё',
-          text:'РџРµСЂРІС‹Р№ СЃРїРёРЅ вЂ” РІ РїРѕРґР°СЂРѕРє. Р’ РїСЂРѕС„РёР»Рµ РІРёРґРЅС‹ Р±Р°Р»Р°РЅСЃ, РїСЂРёР·С‹ Рё СЂРµС„РµСЂР°Р»С‹. РРіСЂР°Р№ С‡РµСЃС‚РЅРѕ, Р±РѕРЅСѓСЃС‹ Р·Р°Р±РёСЂР°Р№ РІ РјР°РіР°Р·РёРЅРµ.',
-          primary:'РРіСЂР°С‚СЊ',
+          title:'Отлично! Погнали',
+          text:'Первый спин — в подарок. В профиле видны баланс, призы и рефералы. Играй честно, бонусы забирай в магазине.',
+          primary:'Играть',
           ghost:''
         }
       ]
@@ -632,15 +632,15 @@ promo:{
     preview:(p={})=>{
       const defaults = [
         {
-          title:'РљР°Рє СЌС‚Рѕ СЂР°Р±РѕС‚Р°РµС‚',
-          text:'РљРѕРїРёС‚Рµ РјРѕРЅРµС‚С‹, РёРіСЂР°СЏ Рё РґРµР»Р°СЏ РїРѕРєСѓРїРєРё. РћР±РјРµРЅРёРІР°Р№С‚Рµ РёС… РЅР° РїСЂРёР·С‹ РІ СЂР°Р·РґРµР»Рµ В«Р‘РѕРЅСѓСЃС‹В».',
-          primary:'РџСЂРѕРґРѕР»Р¶РёС‚СЊ',
+          title:'Как это работает',
+          text:'Копите монеты, играя и делая покупки. Обменивайте их на призы в разделе «Бонусы».',
+          primary:'Продолжить',
           ghost:''
         },
         {
-          title:'РћС‚Р»РёС‡РЅРѕ! РџРѕРіРЅР°Р»Рё',
-          text:'РџРµСЂРІС‹Р№ СЃРїРёРЅ вЂ” РІ РїРѕРґР°СЂРѕРє. Р’ РїСЂРѕС„РёР»Рµ РІРёРґРЅС‹ Р±Р°Р»Р°РЅСЃ, РїСЂРёР·С‹ Рё СЂРµС„РµСЂР°Р»С‹. РРіСЂР°Р№ С‡РµСЃС‚РЅРѕ, Р±РѕРЅСѓСЃС‹ Р·Р°Р±РёСЂР°Р№ РІ РјР°РіР°Р·РёРЅРµ.',
-          primary:'РРіСЂР°С‚СЊ',
+          title:'Отлично! Погнали',
+          text:'Первый спин — в подарок. В профиле видны баланс, призы и рефералы. Играй честно, бонусы забирай в магазине.',
+          primary:'Играть',
           ghost:''
         }
       ];
@@ -688,9 +688,9 @@ promo:{
           slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
           segs.forEach((seg,i)=> seg.classList.toggle('active', i<=idx));
           if (idx === slides.length-1){
-            btnPrimary.textContent = 'Р“РѕС‚РѕРІРѕ';
+            btnPrimary.textContent = 'Готово';
           } else {
-            btnPrimary.textContent = 'РџСЂРѕРґРѕР»Р¶РёС‚СЊ';
+            btnPrimary.textContent = 'Продолжить';
           }
         }
 
@@ -699,7 +699,7 @@ promo:{
             idx++;
             apply();
           } else {
-            // Р·РґРµСЃСЊ РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ РїРµСЂРµС…РѕРґ РЅР° РґСЂСѓРіСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ
+            // здесь можно добавить переход на другую страницу
           }
         });
 
@@ -711,21 +711,21 @@ promo:{
 
   beerStartList:{
     type:'htmlEmbed',
-    title:'Beer: РЎС‚Р°СЂС‚РѕРІС‹Рµ РєР°СЂС‚РѕС‡РєРё',
+    title:'Beer: Стартовые карточки',
     defaults:{
-      title:'РЎ С‡РµРіРѕ РЅР°С‡Р°С‚СЊ',
+      title:'С чего начать',
       cards:[
-        { icon:'beer/img/pasport.png',       title:'РџР°СЃРїРѕСЂС‚ СЃС‚РёР»...Р№',   sub:'РЎРѕР±РµСЂРё 6 С€С‚Р°РјРїРѕРІ вЂ” РїРѕРґР°СЂРѕРє',      link:'#passport', action:'link', sheet_id:'', sheet_path:'' },
-        { icon:'beer/img/casino-chips.png',  title:'Р’РёРєС‚РѕСЂРёРЅР°',          sub:'РџСЂРѕРІРµСЂСЊ СЃРІРѕРё РїРёРІРЅС‹Рµ Р·РЅР°РЅРёСЏ',      link:'#quiz',     action:'link', sheet_id:'', sheet_path:'' },
-        { icon:'beer/img/fren.png',          title:'РџСЂРёРіР»Р°СЃРё РґСЂСѓР·РµР№',    sub:'Р”Р°СЂРёРј +100 РјРѕРЅРµС‚ Р·Р° РґСЂСѓРіР°',       link:'#invite',   action:'link', sheet_id:'', sheet_path:'' }
+        { icon:'beer/img/pasport.png',       title:'Паспорт стил...й',   sub:'Собери 6 штампов — подарок',      link:'#passport', action:'link', sheet_id:'', sheet_path:'' },
+        { icon:'beer/img/casino-chips.png',  title:'Викторина',          sub:'Проверь свои пивные знания',      link:'#quiz',     action:'link', sheet_id:'', sheet_path:'' },
+        { icon:'beer/img/fren.png',          title:'Пригласи друзей',    sub:'Дарим +100 монет за друга',       link:'#invite',   action:'link', sheet_id:'', sheet_path:'' }
       ]
     },
     preview:(p={})=>{
-      const title = p.title || 'РЎ С‡РµРіРѕ РЅР°С‡Р°С‚СЊ';
+      const title = p.title || 'С чего начать';
       const cards = Array.isArray(p.cards) && p.cards.length ? p.cards : [
-        { icon:'beer/img/pasport.png',       title:'РџР°СЃРїРѕСЂС‚ СЃС‚РёР»...Р№',   sub:'РЎРѕР±РµСЂРё 6 С€С‚Р°РјРїРѕРІ вЂ” РїРѕРґР°СЂРѕРє',      link:'#passport', action:'link', sheet_id:'', sheet_path:'' },
-        { icon:'beer/img/casino-chips.png',  title:'Р’РёРєС‚РѕСЂРёРЅР°',          sub:'РџСЂРѕРІРµСЂСЊ СЃРІРѕРё РїРёРІРЅС‹Рµ Р·РЅР°РЅРёСЏ',      link:'#quiz',     action:'link', sheet_id:'', sheet_path:'' },
-        { icon:'beer/img/fren.png',          title:'РџСЂРёРіР»Р°СЃРё РґСЂСѓР·РµР№',    sub:'Р”Р°СЂРёРј +100 РјРѕРЅРµС‚ Р·Р° РґСЂСѓРіР°',       link:'#invite',   action:'link', sheet_id:'', sheet_path:'' }
+        { icon:'beer/img/pasport.png',       title:'Паспорт стил...й',   sub:'Собери 6 штампов — подарок',      link:'#passport', action:'link', sheet_id:'', sheet_path:'' },
+        { icon:'beer/img/casino-chips.png',  title:'Викторина',          sub:'Проверь свои пивные знания',      link:'#quiz',     action:'link', sheet_id:'', sheet_path:'' },
+        { icon:'beer/img/fren.png',          title:'Пригласи друзей',    sub:'Дарим +100 монет за друга',       link:'#invite',   action:'link', sheet_id:'', sheet_path:'' }
       ];
       return `
         <section class="card list-card games tight">
@@ -750,7 +750,7 @@ if (action === 'sheet' && c.sheet_id){
                   <div class="list__title">${c.title||''}</div>
                   <div class="list__sub">${c.sub||''}</div>
                 </div>
-                <button class="list__chev-btn" type="button"${attr}>вЂє</button>
+                <button class="list__chev-btn" type="button"${attr}>›</button>
               </div>`;
             }).join('')}
           </div>
@@ -762,22 +762,22 @@ if (action === 'sheet' && c.sheet_id){
 
 beerInviteFriends:{
   type:'htmlEmbed',
-  title:'Beer: РџСЂРёРіР»Р°СЃРё РґСЂСѓР·РµР№',
+  title:'Beer: Пригласи друзей',
   defaults:{
-    title:'РџСЂРёРіР»Р°СЃРё РґСЂСѓР·РµР№',
-    text:'Р—Р° РґСЂСѓРіР° вЂ” +100 РјРѕРЅРµС‚. Р—Р° 3 РґСЂСѓР·РµР№ вЂ” РјРёРЅРё-РґРµРіСѓСЃС‚Р°С†РёСЏ.',
-    // Р»СѓС‡С€Рµ РґРµСЂР¶Р°С‚СЊ Р°РІС‚Рѕ-РјР°СЂРєРµСЂ, РЅРѕ РјРѕР¶РЅРѕ Рё Р·Р°РіР»СѓС€РєСѓ:
+    title:'Пригласи друзей',
+    text:'За друга — +100 монет. За 3 друзей — мини-дегустация.',
+    // лучше держать авто-маркер, но можно и заглушку:
     link:'https://t.me/your_bot',
-    primary:'РЎРєРѕРїРёСЂРѕРІР°С‚СЊ',
-    secondary:'РџРѕРґРµР»РёС‚СЊСЃСЏ'
+    primary:'Скопировать',
+    secondary:'Поделиться'
   },
 
   preview:(p={})=>{
-    const title = p.title || 'РџСЂРёРіР»Р°СЃРё РґСЂСѓР·РµР№';
-    const text  = p.text  || 'Р—Р° РґСЂСѓРіР° вЂ” +100 РјРѕРЅРµС‚. Р—Р° 3 РґСЂСѓР·РµР№ вЂ” РјРёРЅРё-РґРµРіСѓСЃС‚Р°С†РёСЏ.';
+    const title = p.title || 'Пригласи друзей';
+    const text  = p.text  || 'За друга — +100 монет. За 3 друзей — мини-дегустация.';
     const link  = p.link  || 'https://t.me/your_bot?start=invite';
-    const primary   = p.primary   || 'РЎРєРѕРїРёСЂРѕРІР°С‚СЊ';
-    const secondary = p.secondary || 'РџРѕРґРµР»РёС‚СЊСЃСЏ';
+    const primary   = p.primary   || 'Скопировать';
+    const secondary = p.secondary || 'Поделиться';
 
     return `
       <section class="card invite-card" data-invite="1">
@@ -809,20 +809,20 @@ beerInviteFriends:{
       }catch(_){ return ''; }
     };
 
-    // РІС‹С‚Р°С‰РёС‚СЊ username Р±РѕС‚Р° РёР· СЂР°Р·РЅС‹С… РёСЃС‚РѕС‡РЅРёРєРѕРІ (MiniState / ctx / props / p.link)
+    // вытащить username бота из разных источников (MiniState / ctx / props / p.link)
     const getBot = ()=>{
       // 1) MiniState
       const b1 = window.MiniState?.bot_username ? String(window.MiniState.bot_username) : '';
       const b2 = window.MiniState?.botUsername  ? String(window.MiniState.botUsername)  : '';
 
-      // 2) props Р±Р»РѕРєР° (РµСЃР»Рё РїСЂРѕРєРёРґС‹РІР°РµС€СЊ)
+      // 2) props блока (если прокидываешь)
       const b3 = p.bot_username ? String(p.bot_username) : '';
 
-      // 3) ctx.state (РµСЃР»Рё РІ РїСЂРµРІСЊСЋ РµСЃС‚СЊ state)
+      // 3) ctx.state (если в превью есть state)
       const b4 = ctx?.state?.bot_username ? String(ctx.state.bot_username) : '';
       const b5 = ctx?.state?.botUsername  ? String(ctx.state.botUsername)  : '';
 
-      // 4) fallback: РґРѕСЃС‚Р°С‚СЊ username РёР· p.link (С‡С‚РѕР±С‹ СЂР°Р±РѕС‚Р°Р»Рѕ РґР°Р¶Рµ Р±РµР· MiniState)
+      // 4) fallback: достать username из p.link (чтобы работало даже без MiniState)
       const link = String(p.link || '').trim();
       let b6 = '';
       if (link){
@@ -830,7 +830,7 @@ beerInviteFriends:{
         const m1 = link.match(/^@([\w\d_]+)$/i);
         if (m1) b6 = m1[1];
 
-        // https://t.me/advance_cobot  РёР»Рё  https://t.me/advance_cobot/app
+        // https://t.me/advance_cobot  или  https://t.me/advance_cobot/app
         const m2 = link.match(/^https?:\/\/t\.me\/([\w\d_]+)(?:\/app)?\/?$/i);
         if (!b6 && m2) b6 = m2[1];
       }
@@ -845,7 +845,7 @@ beerInviteFriends:{
 
       // telegram miniapp deep link:
       // https://t.me/<bot>/app?startapp=...
-      if (!uid) return `https://t.me/${bot}/app`;            // РїСЂРµРІСЊСЋ/Р±СЂР°СѓР·РµСЂ Р±РµР· uid
+      if (!uid) return `https://t.me/${bot}/app`;            // превью/браузер без uid
       return `https://t.me/${bot}/app?startapp=ref_${uid}`;  // Telegram WebApp
     };
 
@@ -857,10 +857,10 @@ beerInviteFriends:{
       return s;
     };
 
-    // 1) Р±РµСЂС‘Рј С‡С‚Рѕ СѓРєР°Р·Р°РЅРѕ РІ Р±Р»РѕРєРµ (СЂРµРґР°РєС‚РёСЂСѓРµС‚СЃСЏ)
+    // 1) берём что указано в блоке (редактируется)
     let finalLink = normalize(p.link);
 
-    // 2) РѕРїСЂРµРґРµР»СЏРµРј Р°РІС‚Рѕ-СЂРµР¶РёРј (Р·Р°РіР»СѓС€РєР° РёР»Рё СЏРІРЅС‹Р№ РјР°СЂРєРµСЂ)
+    // 2) определяем авто-режим (заглушка или явный маркер)
     const isAutoMarker =
       !finalLink ||
       finalLink === 'https://t.me/your_bot?start=invite' ||
@@ -868,26 +868,26 @@ beerInviteFriends:{
       finalLink === '#' ||
       finalLink === '{auto}' || finalLink === 'auto';
 
-    // 2.1) РµСЃР»Рё С‡РµР»РѕРІРµРє СѓРєР°Р·Р°Р» РїСЂРѕСЃС‚Рѕ СЃСЃС‹Р»РєСѓ РЅР° Р±РѕС‚Р° Р±РµР· РїР°СЂР°РјРµС‚СЂРѕРІ вЂ” С‚РѕР¶Рµ СЃС‡РёС‚Р°РµРј РєР°Рє Р°РІС‚Рѕ
+    // 2.1) если человек указал просто ссылку на бота без параметров — тоже считаем как авто
     const isBotLinkNoParams = (() => {
       const s = String(finalLink || '').trim();
       if (!s) return false;
 
-      // СѓР¶Рµ РµСЃС‚СЊ start/startapp вЂ” Р·РЅР°С‡РёС‚ СЌС‚Рѕ СѓР¶Рµ вЂњРіРѕС‚РѕРІР°СЏвЂќ СЃСЃС‹Р»РєР°, РЅРµ С‚СЂРѕРіР°РµРј
+      // уже есть start/startapp — значит это уже “готовая” ссылка, не трогаем
       if (/[?&](startapp|start)=/i.test(s)) return false;
 
-      // https://t.me/advance_cobot  РёР»Рё  https://t.me/advance_cobot/app
+      // https://t.me/advance_cobot  или  https://t.me/advance_cobot/app
       const m = s.match(/^https?:\/\/t\.me\/([\w\d_]+)(\/app)?\/?$/i);
       return !!m;
     })();
 
-    // 3) РµСЃР»Рё Р°РІС‚Рѕ вЂ” РїРѕРґСЃС‚Р°РІР»СЏРµРј РґРёРЅР°РјРёРєСѓ
+    // 3) если авто — подставляем динамику
     if (isAutoMarker || isBotLinkNoParams){
       const dyn = buildRefLink();
       if (dyn) finalLink = dyn;
     }
 
-    // РїРѕРєР°Р·Р°С‚СЊ СЃСЃС‹Р»РєСѓ
+    // показать ссылку
     if (linkEl) linkEl.textContent = finalLink;
 
     const doCopy = async ()=>{
@@ -903,7 +903,7 @@ beerInviteFriends:{
         try{ document.execCommand('copy'); }catch(_){}
         ta.remove();
       }
-      window.toast?.('РЎСЃС‹Р»РєР° СЃРєРѕРїРёСЂРѕРІР°РЅР°');
+      window.toast?.('Ссылка скопирована');
     };
 
     const doShare = async ()=>{
@@ -924,7 +924,7 @@ beerInviteFriends:{
     btnCopy?.addEventListener('click', onCopy);
     btnShare?.addEventListener('click', onShare);
 
-    // РµСЃР»Рё MiniState (Рё bot_username) РїСЂРёРґС‘С‚ РїРѕР·Р¶Рµ вЂ” РѕР±РЅРѕРІРёРј, РЅРѕ С‚РѕР»СЊРєРѕ РµСЃР»Рё РјС‹ РІ Р°РІС‚Рѕ-СЂРµР¶РёРјРµ
+    // если MiniState (и bot_username) придёт позже — обновим, но только если мы в авто-режиме
     const refreshLater = ()=>{
       if (!(isAutoMarker || isBotLinkNoParams)) return;
       const dyn = buildRefLink();
@@ -950,11 +950,11 @@ beerInviteFriends:{
    
 bookingCalendar:{
     type:'htmlEmbed',
-    title:'Booking: РљР°Р»РµРЅРґР°СЂСЊ',
-    defaults:{ title:'РљР°Р»РµРЅРґР°СЂСЊ', text:'Р”РµРєР°Р±СЂСЊ 2025 Рі.' },
+    title:'Booking: Календарь',
+    defaults:{ title:'Календарь', text:'Декабрь 2025 г.' },
     preview:(p={})=>{
-      const title = p.title || 'РљР°Р»РµРЅРґР°СЂСЊ';
-      const month = p.text  || 'Р”РµРєР°Р±СЂСЊ 2025 Рі.';
+      const title = p.title || 'Календарь';
+      const month = p.text  || 'Декабрь 2025 г.';
       return `
         <section class="booking-card">
           <div class="booking-card__title">${title}</div>
@@ -962,7 +962,7 @@ bookingCalendar:{
         </section>
       `;
     },
-    // Р›РѕРєР°Р»СЊРЅС‹Р№ РґРµРјРѕ-РєР°Р»РµРЅРґР°СЂСЊ РґР»СЏ РїСЂРµРІСЊСЋ (Рё СЃС‚СЂР°РЅРёС†С‹, Рё С€С‚РѕСЂРєРё)
+    // Локальный демо-календарь для превью (и страницы, и шторки)
     init:(el, props, ctx)=>{
       try{
         const calWrap = el.querySelector('.booking-calendar') || el.querySelector('#cal');
@@ -971,7 +971,7 @@ bookingCalendar:{
         let selDay = null;
 
         function buildCalendar(){
-          // РµСЃР»Рё СЃРµС‚РєР° СѓР¶Рµ РµСЃС‚СЊ (РЅР°РїСЂРёРјРµСЂ, РѕС‚ РіР»РѕР±Р°Р»СЊРЅРѕРіРѕ СЃРєСЂРёРїС‚Р°) вЂ” РЅРµ С‚СЂРѕРіР°РµРј
+          // если сетка уже есть (например, от глобального скрипта) — не трогаем
           if (calWrap.querySelector('.booking-calendar__grid')) return;
 
           calWrap.innerHTML = '';
@@ -980,13 +980,13 @@ bookingCalendar:{
           const y = now.getFullYear();
           const m = now.getMonth(); // 0-11
           const first = new Date(y, m, 1);
-          const startDow = (first.getDay() + 6) % 7; // РџРЅ=0
+          const startDow = (first.getDay() + 6) % 7; // Пн=0
           const daysInMonth = new Date(y, m+1, 0).getDate();
 
           const grid = document.createElement('div');
           grid.className = 'booking-calendar__grid';
 
-          const dow = ['РџРЅ','Р’С‚','РЎСЂ','Р§С‚','РџС‚','РЎР±','Р’СЃ'];
+          const dow = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
           dow.forEach(d=>{
             const elDow = document.createElement('div');
@@ -1026,10 +1026,10 @@ bookingCalendar:{
   },
 bookingSlots:{
     type:'htmlEmbed',
-    title:'Booking: Р’СЂРµРјСЏ',
-    defaults:{ title:'Р”РѕСЃС‚СѓРїРЅРѕРµ РІСЂРµРјСЏ', items:['10:30','11:30','12:30','13:30','14:30'] },
+    title:'Booking: Время',
+    defaults:{ title:'Доступное время', items:['10:30','11:30','12:30','13:30','14:30'] },
     preview:(p={})=>{
-      const title = p.title || 'Р”РѕСЃС‚СѓРїРЅРѕРµ РІСЂРµРјСЏ';
+      const title = p.title || 'Доступное время';
       const items = Array.isArray(p.items) ? p.items : String(p.items||'').split(',').map(s=>s.trim()).filter(Boolean);
       const times = items.length ? items : ['10:30','11:30','12:30','13:30','14:30'];
       return `
@@ -1047,12 +1047,12 @@ bookingSlots:{
 
 bookingContact:{
     type:'htmlEmbed',
-    title:'Booking: РљРѕРЅС‚Р°РєС‚С‹',
-    defaults:{ title:'РљРѕРЅС‚Р°РєС‚С‹', text:'', placeholder:'+79991234567', label:'РџРѕРґС‚РІРµСЂРґРёС‚СЊ' },
+    title:'Booking: Контакты',
+    defaults:{ title:'Контакты', text:'', placeholder:'+79991234567', label:'Подтвердить' },
     preview:(p={})=>{
-      const title = p.title || 'РљРѕРЅС‚Р°РєС‚С‹';
+      const title = p.title || 'Контакты';
       const placeholder = p.placeholder || '+79991234567';
-      const btn = p.label || 'РџРѕРґС‚РІРµСЂРґРёС‚СЊ';
+      const btn = p.label || 'Подтвердить';
       return `
         <section class="booking-card">
           <div class="booking-card__title">${title}</div>
@@ -1068,7 +1068,7 @@ bookingContact:{
   flappyGame:{
     type:'game',
     title:'Flappy',
-    // РЅР°СЃС‚СЂРѕР№РєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+    // настройки по умолчанию
     defaults:{
       key:'flappy',
       autostart:true,
@@ -1082,20 +1082,20 @@ bookingContact:{
       const key  = (p&&p.key)||'flappy';
       const mh   = (p&&p.min_h)||520;
       const diff = (p&&p.difficulty)||'normal';
-      const diffLabel = diff==='easy' ? 'Р›РµРіРєРѕ' : (diff==='hard' ? 'Р–С‘СЃС‚РєРѕ' : 'РќРѕСЂРјР°');
+      const diffLabel = diff==='easy' ? 'Легко' : (diff==='hard' ? 'Жёстко' : 'Норма');
       return `
         <div class="card game-card" data-game-block data-game-key="${key}">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-            <div><b>Flappy</b><div class="mut" style="opacity:.7;font-size:12px">РўР°РїР°Р№ / Space</div></div>
+            <div><b>Flappy</b><div class="mut" style="opacity:.7;font-size:12px">Тапай / Space</div></div>
             <div style="display:flex;align-items:center;gap:6px">
-              <span class="mut" style="opacity:.7;font-size:12px">РђРІС‚Рѕ</span>
+              <span class="mut" style="opacity:.7;font-size:12px">Авто</span>
               <span class="pill pill-xs" style="font-size:11px;opacity:.85">${diffLabel}</span>
             </div>
           </div>
           <div class="game-host" data-game-host style="margin-top:10px;min-height:${mh}px"></div>
         </div>`;
     },
-    // init РїСЂРµРІСЊСЋ: РјРѕРЅС‚РёСЂСѓРµРј РёРіСЂСѓ Рё РїСЂРѕР±СЂР°СЃС‹РІР°РµРј props
+    // init превью: монтируем игру и пробрасываем props
     init:(el, props, ctx)=>{
       try{
         const key = (props && props.key) ? String(props.key) : 'flappy';
@@ -1111,7 +1111,7 @@ bookingContact:{
           host.__cleanup = (typeof cleanup==='function') ? cleanup : null;
           return host.__cleanup;
         }
-        host.innerHTML = '<div class="card">РРіСЂР° РЅРµ РїРѕРґРєР»СЋС‡РµРЅР°: '+key+'</div>';
+        host.innerHTML = '<div class="card">Игра не подключена: '+key+'</div>';
         return null;
       }catch(_){ return null; }
     }
@@ -1119,10 +1119,10 @@ bookingContact:{
 
 leaderboard:{
   type:'htmlEmbed',
-  title:'РўСѓСЂРЅРёСЂ',
+  title:'Турнир',
   defaults:{
     title:'Bumblebee',
-    text:'РўСѓСЂРЅРёСЂРЅР°СЏ С‚Р°Р±Р»РёС†Р°'
+    text:'Турнирная таблица'
   },
 
   preview:(p={})=>`
@@ -1131,19 +1131,19 @@ leaderboard:{
         <div class="lb-head">
           <div>
             <div class="lb-title">${p.title || 'Bumblebee'}</div>
-            <div class="lb-sub">${p.text || 'РўСѓСЂРЅРёСЂРЅР°СЏ С‚Р°Р±Р»РёС†Р°'}</div>
+            <div class="lb-sub">${p.text || 'Турнирная таблица'}</div>
           </div>
           <div class="lb-seg">
-            <button type="button" data-lb-tab="today" aria-pressed="true">Р”РµРЅСЊ</button>
-            <button type="button" data-lb-tab="all" aria-pressed="false">Р’СЃРµ</button>
+            <button type="button" data-lb-tab="today" aria-pressed="true">День</button>
+            <button type="button" data-lb-tab="all" aria-pressed="false">Все</button>
           </div>
         </div>
 
         <div class="lb-you">
           <div class="lb-you__avatar js-lb-me-avatar">U</div>
           <div>
-            <div class="lb-you__name js-lb-me-name">вЂ”</div>
-            <div class="lb-you__sub" data-bind="lb-me-label">вЂ”</div>
+            <div class="lb-you__name js-lb-me-name">—</div>
+            <div class="lb-you__sub" data-bind="lb-me-label">—</div>
           </div>
           <div class="lb-you__score js-lb-me-best">0</div>
         </div>
@@ -1154,8 +1154,8 @@ leaderboard:{
         </div>
 
         <div class="lb-actions">
-          <button type="button" class="lb-btn" data-action="lb-refresh">РћР±РЅРѕРІРёС‚СЊ</button>
-          <button type="button" class="lb-btn lb-btn--primary js-lb-play">РРіСЂР°С‚СЊ</button>
+          <button type="button" class="lb-btn" data-action="lb-refresh">Обновить</button>
+          <button type="button" class="lb-btn lb-btn--primary js-lb-play">Играть</button>
         </div>
       </div>
     </section>
@@ -1205,7 +1205,7 @@ leaderboard:{
         if (un) return '@' + un;
 
         const id = u.id ? String(u.id) : '';
-        return id ? ('ID ' + id.slice(-4)) : 'вЂ”';
+        return id ? ('ID ' + id.slice(-4)) : '—';
       }
 
       function pickMyPhotoUrl(state, u){
@@ -1218,26 +1218,26 @@ leaderboard:{
 
       // --- helpers for leaderboard rows ---
 
-      // РјРµРґР°Р»СЊРєРё РґР»СЏ С‚РѕРї-3
+      // медальки для топ-3
       function rankBadge(i){
-        if (i === 0) return 'рџҐ‡';
-        if (i === 1) return 'рџҐ€';
-        if (i === 2) return 'рџҐ‰';
+        if (i === 0) return '🥇';
+        if (i === 1) return '🥈';
+        if (i === 2) return '🥉';
         return String(i + 1);
       }
 
-      // РїСЂСЏС‡РµРј РїРѕСЃР»РµРґРЅРёРµ N СЃРёРјРІРѕР»РѕРІ
+      // прячем последние N символов
       function maskTail(s, hideLast){
         const str = String(s||'').trim();
         const n = Math.max(0, Math.floor(hideLast||0));
         if (!str) return '';
-        if (str.length <= n) return 'вЂў'.repeat(str.length);
-        return str.slice(0, str.length - n) + 'вЂў'.repeat(n);
+        if (str.length <= n) return '•'.repeat(str.length);
+        return str.slice(0, str.length - n) + '•'.repeat(n);
       }
 
-      // вњ… РРјСЏ СѓС‡Р°СЃС‚РЅРёРєР°: name -> username -> masked tg id
+      // ✅ Имя участника: name -> username -> masked tg id
       function pickRowName(r){
-        if (!r) return 'вЂ”';
+        if (!r) return '—';
 
         const n1 = String(r.name || '').trim();
         if (n1) return n1;
@@ -1246,32 +1246,32 @@ leaderboard:{
         if (u1) return '@' + u1;
 
         const id = (r.tg_id != null) ? String(r.tg_id).trim() : '';
-        if (!id) return 'вЂ”';
+        if (!id) return '—';
 
-        // СЃРєСЂС‹РІР°РµРј РїРѕСЃР»РµРґРЅРёРµ 3 СЃРёРјРІРѕР»Р°
+        // скрываем последние 3 символа
         return 'ID ' + maskTail(id, 3);
       }
 
-      // рџ”Ґ СЂРµР·РєР° Р±РµР· РєРѕРЅС„Р»РёРєС‚Р°: ID РЅРµ СЂРµР¶РµРј, @ СЂРµР¶РµРј РјСЏРіРєРѕ, РёРјРµРЅР° СЂРµР¶РµРј РѕР±С‹С‡РЅРѕ
+      // 🔥 резка без конфликта: ID не режем, @ режем мягко, имена режем обычно
       function shortNameSmart(s, maxLen){
         const str = String(s || '').trim();
-        if (!str) return 'вЂ”';
+        if (!str) return '—';
 
-        // ID Рё С‚Р°Рє "Р±РµР·РѕРїР°СЃРЅС‹Р№" (РјР°СЃРєРѕР№), РѕСЃС‚Р°РІР»СЏРµРј Р±РѕР»СЊС€Рµ СЃРёРјРІРѕР»РѕРІ
+        // ID и так "безопасный" (маской), оставляем больше символов
         if (str.startsWith('ID ')) return str;
 
-        // @username: РїРѕРєР°Р·С‹РІР°РµРј Р±РѕР»СЊС€Рµ РґРѕ вЂ¦
+        // @username: показываем больше до …
         if (str.startsWith('@')){
           if (str.length <= maxLen) return str;
-          return str.slice(0, Math.max(3, maxLen - 1)) + 'вЂ¦';
+          return str.slice(0, Math.max(3, maxLen - 1)) + '…';
         }
 
-        // РѕР±С‹С‡РЅРѕРµ РёРјСЏ
+        // обычное имя
         if (str.length <= maxLen) return str;
-        return str.slice(0, Math.max(3, maxLen - 1)) + 'вЂ¦';
+        return str.slice(0, Math.max(3, maxLen - 1)) + '…';
       }
 
-      // РѕСЃС‚Р°РІРёР» РЅР° Р±СѓРґСѓС‰РµРµ (РµСЃР»Рё РІРµСЂРЅС‘С€СЊ Р°РІР°С‚Р°СЂРєРё)
+      // оставил на будущее (если вернёшь аватарки)
       function pickRowAvatarHtml(r){
         const photo = r && (r.photo_url || r.photo);
         const nm = pickRowName(r);
@@ -1291,11 +1291,11 @@ leaderboard:{
         if(!container) return;
 
         if(!rows || !rows.length){
-          container.innerHTML = '<div class="lb-empty">РџРѕРєР° РїСѓСЃС‚Рѕ. РЎС‹РіСЂР°Р№ Рё РїРѕРїР°РґРё РІ С‚РѕРї рџ‘‡</div>';
+          container.innerHTML = '<div class="lb-empty">Пока пусто. Сыграй и попади в топ 👇</div>';
           return;
         }
 
-        // вњ… СѓРІРµР»РёС‡РёР»Рё Р»РёРјРёС‚ вЂ” Р±СѓРґРµС‚ Р±РѕР»СЊС€Рµ СЃРёРјРІРѕР»РѕРІ РґРѕ вЂ¦
+        // ✅ увеличили лимит — будет больше символов до …
         const NAME_MAX = 30;
 
         container.innerHTML = rows.map((r, idx)=>{
@@ -1308,7 +1308,7 @@ leaderboard:{
             <div class="lb-row">
               <div class="lb-rank">${rankBadge(idx)}</div>
 
-              <!-- Р°РІР°С‚Р°СЂРєРё СѓС‡Р°СЃС‚РЅРёРєРѕРІ РѕС‚РєР»СЋС‡РµРЅС‹ -->
+              <!-- аватарки участников отключены -->
               <!-- <div class="lb-you__avatar">${pickRowAvatarHtml(r)}</div> -->
 
               <div class="lb-name">${esc(nm)}</div>
@@ -1328,7 +1328,7 @@ leaderboard:{
               <div class="lb-row">
                 <div class="lb-rank">${rankBadge(i)}</div>
                 <!-- <div class="lb-you__avatar"></div> -->
-                <div class="lb-name">ID 562472273вЂўвЂўвЂў</div>
+                <div class="lb-name">ID 562472273•••</div>
                 <div class="lb-score" style="margin-left:auto;">0</div>
               </div>
             `).join('')}
@@ -1348,7 +1348,7 @@ leaderboard:{
         renderRows(todayList, state.leaderboard_today || []);
         renderRows(allList,   state.leaderboard_alltime || []);
 
-        // === РЇ (РёРјСЏ/Р°РІР°С‚Р°СЂ) ===
+        // === Я (имя/аватар) ===
         const tg = getTgUser();
         const myName = pickMyDisplayName(tg);
 
@@ -1363,7 +1363,7 @@ leaderboard:{
           }
         }
 
-        // === РњРѕР№ best score ===
+        // === Мой best score ===
         if (meScoreEl) {
           const all = (state.leaderboard_alltime||[]).find(x=>String(x.tg_id)===String(tg.id));
           const tdy = (state.leaderboard_today||[]).find(x=>String(x.tg_id)===String(tg.id));
@@ -1371,7 +1371,7 @@ leaderboard:{
           meScoreEl.textContent = String(v);
         }
 
-        // === РџРѕРґ РёРјРµРЅРµРј: Р±РµР· # ===
+        // === Под именем: без # ===
         if (meLabelEl) {
           const myId = String((tg && tg.id) || '');
 
@@ -1379,11 +1379,11 @@ leaderboard:{
           const rankAll   = Number(state.rank_alltime || 0) || findMyRank(state.leaderboard_alltime || [], myId);
 
           if (rankToday || rankAll){
-            const a = rankToday ? ('РЎРµРіРѕРґРЅСЏ: ' + rankToday + ' РјРµСЃС‚Рѕ') : 'РЎРµРіРѕРґРЅСЏ: РІРЅРµ С‚РѕРїР°';
-            const b = rankAll   ? (' В· All-time: ' + rankAll + ' РјРµСЃС‚Рѕ') : '';
+            const a = rankToday ? ('Сегодня: ' + rankToday + ' место') : 'Сегодня: вне топа';
+            const b = rankAll   ? (' · All-time: ' + rankAll + ' место') : '';
             meLabelEl.textContent = a + b;
           } else {
-            meLabelEl.textContent = 'РўС‹ РІРЅРµ С‚РѕРїР° вЂ” СЃС‹РіСЂР°Р№ РµС‰С‘ рџ„';
+            meLabelEl.textContent = 'Ты вне топа — сыграй ещё 😄';
           }
         }
       }
@@ -1405,7 +1405,7 @@ leaderboard:{
         });
       });
 
-      // вњ… РїСЂРё РѕС‚РєСЂС‹С‚РёРё: СЃСЂР°Р·Сѓ СЃРєРµР»РµС‚РѕРЅ + С‚РµРєСѓС‰РёР№ state + РґРѕРіСЂСѓР·РєР° state
+      // ✅ при открытии: сразу скелетон + текущий state + догрузка state
       setMode('today');
       renderSkeleton();
       applyStateToLeaderboard(window.MiniState || {});
@@ -1422,7 +1422,7 @@ leaderboard:{
         }
       })();
 
-      // refresh РєРЅРѕРїРєР° вЂ” РѕСЃС‚Р°РІР»СЏРµРј
+      // refresh кнопка — оставляем
       if (btnRefresh){
         btnRefresh.addEventListener('click', async ()=>{
           try{
@@ -1462,9 +1462,9 @@ leaderboard:{
    
   bonusWheel:{
     type:'bonusWheel',
-    title:'РљРѕР»РµСЃРѕ',
+    title:'Колесо',
     defaults:{
-      title:'РљРѕР»РµСЃРѕ Р±РѕРЅСѓСЃРѕРІ',
+      title:'Колесо бонусов',
       spin_cost: 10,
       prizes:[
       {code:"coins_5", name:"5 \ud83e\ude99", img:"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22256%22%20height%3D%22256%22%3E%0A%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%0A%3Cstop%20offset%3D%220%22%20stop-color%3D%22%237b5bff%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23111827%22/%3E%3C/linearGradient%3E%3C/defs%3E%0A%3Crect%20width%3D%22256%22%20height%3D%22256%22%20rx%3D%2236%22%20fill%3D%22url%28%23g%29%22/%3E%0A%3Ctext%20x%3D%2250%25%22%20y%3D%2254%25%22%20dominant-baseline%3D%22middle%22%20text-anchor%3D%22middle%22%20font-family%3D%22Inter%2Csystem-ui%22%20font-size%3D%2292%22%20fill%3D%22white%22%3E5%3C/text%3E%0A%3C/svg%3E"},
@@ -1476,7 +1476,7 @@ leaderboard:{
       ]
     },
     preview:(p={})=>{
-      const title = (p && p.title) ? p.title : 'РљРѕР»РµСЃРѕ Р±РѕРЅСѓСЃРѕРІ';
+      const title = (p && p.title) ? p.title : 'Колесо бонусов';
       const prizes = Array.isArray(p.prizes) ? p.prizes : [];
       const items = prizes.map(pr=>`
         <button class="bonus" type="button" data-code="${pr.code||''}" data-name="${pr.name||''}">
@@ -1487,8 +1487,8 @@ leaderboard:{
       <div class="card bonus-card">
         <div class="h2">${title}</div>
         <div class="bonus-head">
-          <div class="picked-pill muted" data-picked-pill>РќР°Р¶РјРё В«РљСЂСѓС‚Р°РЅСѓС‚СЊВ»</div>
-          <div class="mut" style="margin-left:auto">РњРѕРЅРµС‚С‹: <b data-coins>0</b></div>
+          <div class="picked-pill muted" data-picked-pill>Нажми «Крутануть»</div>
+          <div class="mut" style="margin-left:auto">Монеты: <b data-coins>0</b></div>
         </div>
         <div class="bonus-wheel" data-bonus-wheel>
           <div class="wheel-track" data-wheel-track>
@@ -1497,8 +1497,8 @@ leaderboard:{
           <div class="wheel-center"></div>
         </div>
         <div class="actions">
-          <button class="btn primary" type="button" data-spin>РљСЂСѓС‚Р°РЅСѓС‚СЊ</button>
-          <button class="btn" type="button" data-claim disabled>РќРµС‚ РїСЂРёР·Р° Рє РІС‹РґР°С‡Рµ</button>
+          <button class="btn primary" type="button" data-spin>Крутануть</button>
+          <button class="btn" type="button" data-claim disabled>Нет приза к выдаче</button>
           <div data-picked class="mut"></div>
         </div>
       </div>`;
@@ -1602,7 +1602,7 @@ leaderboard:{
         const host=ensureToastHost();
         const el=document.createElement('div');
         el.className='toast'+(type==='ok'?' toast--ok':' toast--error');
-        el.innerHTML = `<span>${msg}</span><button class="toast__close" aria-label="Р—Р°РєСЂС‹С‚СЊ">вњ•</button>`;
+        el.innerHTML = `<span>${msg}</span><button class="toast__close" aria-label="Закрыть">✕</button>`;
         host.appendChild(el);
         const close=()=>{ el.style.animation='toast-out .22s ease forwards'; setTimeout(()=>el.remove(),240); };
         el.querySelector('.toast__close')?.addEventListener('click', close);
@@ -1652,17 +1652,17 @@ leaderboard:{
 
         if(claimTimerId){ clearInterval(claimTimerId); claimTimerId=null; }
 
-        if(!hasPrize){ claim.disabled=true; claim.textContent='РќРµС‚ РїСЂРёР·Р° Рє РІС‹РґР°С‡Рµ'; return; }
+        if(!hasPrize){ claim.disabled=true; claim.textContent='Нет приза к выдаче'; return; }
 
         claimLeftMsLocal = rem;
-        if(claimLeftMsLocal<=0){ claim.disabled=false; claim.textContent='Р—Р°Р±СЂР°С‚СЊ Р±РѕРЅСѓСЃ'; return; }
+        if(claimLeftMsLocal<=0){ claim.disabled=false; claim.textContent='Забрать бонус'; return; }
 
         claim.disabled=true;
         const tick=()=>{
-          if(claimLeftMsLocal<=0){ clearInterval(claimTimerId); claimTimerId=null; claim.disabled=false; claim.textContent='Р—Р°Р±СЂР°С‚СЊ Р±РѕРЅСѓСЃ'; return; }
+          if(claimLeftMsLocal<=0){ clearInterval(claimTimerId); claimTimerId=null; claim.disabled=false; claim.textContent='Забрать бонус'; return; }
           const totalSec=Math.floor(claimLeftMsLocal/1000);
           const m=Math.floor((totalSec%3600)/60), s=totalSec%60;
-          claim.textContent='Р”РѕСЃС‚СѓРїРЅРѕ С‡РµСЂРµР· '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+          claim.textContent='Доступно через '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
           claimLeftMsLocal -= 1000;
         };
         tick();
@@ -1671,7 +1671,7 @@ leaderboard:{
 
       function updatePillByIndex(idx){
         const it=items[idx];
-        const name=it?.dataset?.name||'вЂ”';
+        const name=it?.dataset?.name||'—';
         const img=it?.querySelector('img')?.src||'';
         if(!pill) return;
         pill.classList.remove('muted');
@@ -1688,7 +1688,7 @@ leaderboard:{
           node.classList.toggle('active', Math.round(Math.abs(dx))===0);
         });
         if(interacted) updatePillByIndex(mod(Math.round(curr), N));
-        else if(pill){ pill.classList.add('muted'); pill.textContent='РќР°Р¶РјРё В«РљСЂСѓС‚Р°РЅСѓС‚СЊВ»'; }
+        else if(pill){ pill.classList.add('muted'); pill.textContent='Нажми «Крутануть»'; }
         refreshClaimState();
         syncCoinsUI();
       }
@@ -1735,8 +1735,8 @@ leaderboard:{
       spin?.addEventListener('click', async ()=>{
         if(spinning) return;
         const coins=getCoins(), cost=getSpinCost();
-        if(coins < cost){ hapticPulse('medium'); showToast(`РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РјРѕРЅРµС‚. РќСѓР¶РЅРѕ ${cost} рџЄ™`, 'error'); return; }
-        if(typeof window.api!=='function'){ showToast('API РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°Р»РѕСЃСЊ', 'error', 3200); return; }
+        if(coins < cost){ hapticPulse('medium'); showToast(`Недостаточно монет. Нужно ${cost} 🪙`, 'error'); return; }
+        if(typeof window.api!=='function'){ showToast('API не инициализировалось', 'error', 3200); return; }
         spinning=true; spin.classList.add('is-locked');
         const startTs=performance.now();
         startFreeSpin();
@@ -1747,7 +1747,7 @@ leaderboard:{
           if(elapsed<MIN_SPIN_MS) await new Promise(res=>setTimeout(res, MIN_SPIN_MS-elapsed));
           stopFreeSpin();
 
-          if(!r || !r.ok){ showToast('РћС€РёР±РєР° РїСЂРё РєСЂСѓС‚РєРµ: '+(r?.error||'unknown'), 'error', 3200); return; }
+          if(!r || !r.ok){ showToast('Ошибка при крутке: '+(r?.error||'unknown'), 'error', 3200); return; }
 
           if(r.fresh_state && window.applyServerState) window.applyServerState(r.fresh_state);
 
@@ -1763,7 +1763,7 @@ leaderboard:{
           await spinTo(idx, FINAL_LAPS, FINAL_DUR);
 
           const ws=getWheelState();
-          if(pickedEl) pickedEl.textContent = ws.last_prize_title ? `Р’С‹РїР°Р»Рѕ: ${ws.last_prize_title}` : '';
+          if(pickedEl) pickedEl.textContent = ws.last_prize_title ? `Выпало: ${ws.last_prize_title}` : '';
         } finally {
           spinning=false; spin.classList.remove('is-locked');
           syncCoinsUI(); refreshClaimState();
@@ -1774,11 +1774,11 @@ leaderboard:{
         if(claim.disabled) return;
         try{
           const r = await window.api('wheel.claim', {});
-          if(!r || !r.ok){ showToast('РћС€РёР±РєР° РїСЂРё РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРё: '+(r?.error||'unknown'), 'error', 3200); refreshClaimState(); return; }
+          if(!r || !r.ok){ showToast('Ошибка при подтверждении: '+(r?.error||'unknown'), 'error', 3200); refreshClaimState(); return; }
           if(r.fresh_state && window.applyServerState) window.applyServerState(r.fresh_state);
-          showToast('РџСЂРёР· РїРѕРґС‚РІРµСЂР¶РґС‘РЅ, РїРѕРґРѕР№РґРё Рє Р±Р°СЂРјРµРЅСѓ', 'ok', 2200);
+          showToast('Приз подтверждён, подойди к бармену', 'ok', 2200);
           refreshClaimState();
-        }catch(e){ showToast('РћС€РёР±РєР° СЃРµС‚Рё', 'error', 2800); }
+        }catch(e){ showToast('Ошибка сети', 'error', 2800); }
       });
 
       // initial
@@ -1794,10 +1794,10 @@ leaderboard:{
 
   stylesPassport:{
     type:'stylesPassport',
-    title:'РџР°СЃРїРѕСЂС‚ СЃС‚РёР»РµР№',
+    title:'Паспорт стилей',
     defaults:{
-      title:'РџР°СЃРїРѕСЂС‚ СЃС‚РёР»РµР№',
-      subtitle:'РЎРѕР±РµСЂРё 6 С€С‚Р°РјРїРѕРІ вЂ” РїСЂРёР·.',
+      title:'Паспорт стилей',
+      subtitle:'Собери 6 штампов — приз.',
       cover_url:'',
       grid_cols: 3,
       require_pin: true,
@@ -1826,7 +1826,7 @@ leaderboard:{
       ${styles.map(st=>`
         <div class="pslot" data-style-code="${safe(st.code||'')}">
           <div class="pslot__title">${safe(st.name||st.code||'')}</div>
-          <div class="pslot__badge">РџРѕР»СѓС‡РёС‚СЊ</div>
+          <div class="pslot__badge">Получить</div>
         </div>
       `).join('')}
     </div>
@@ -1916,7 +1916,7 @@ leaderboard:{
           const isDone = done.has(code);
           card.classList.toggle('is-done', isDone);
           const badge = card.querySelector('.pslot__badge');
-          if(badge) badge.textContent = isDone ? 'РџРѕР»СѓС‡РµРЅ' : 'РџРѕР»СѓС‡РёС‚СЊ';
+          if(badge) badge.textContent = isDone ? 'Получен' : 'Получить';
         });
       }
 
@@ -1931,14 +1931,14 @@ leaderboard:{
 
         paint();
         if(card.classList.contains('is-done')){
-          toast('Р­С‚РѕС‚ СЃС‚РёР»СЊ СѓР¶Рµ РїРѕР»СѓС‡РµРЅ.', true);
+          toast('Этот стиль уже получен.', true);
           return;
         }
 
         let pin = '';
         if(props && props.require_pin){
-          pin = prompt('Р’РІРµРґРёС‚Рµ PIN РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ С€С‚Р°РјРїР°', '') || '';
-          if(!pin){ toast('РћС‚РјРµРЅРµРЅРѕ', false); return; }
+          pin = prompt('Введите PIN для получения штампа', '') || '';
+          if(!pin){ toast('Отменено', false); return; }
         }
 
         try{
@@ -1946,15 +1946,15 @@ leaderboard:{
           const r = await window.api('style.collect', {style_id, pin});
           if(!r || r.ok===false){
             const err = (r && r.error) ? String(r.error) : 'ERR';
-            toast(err==='BAD_PIN'?'РќРµРІРµСЂРЅС‹Р№ PIN':'РћС€РёР±РєР° РїРѕР»СѓС‡РµРЅРёСЏ', false);
+            toast(err==='BAD_PIN'?'Неверный PIN':'Ошибка получения', false);
             return;
           }
           if(r.fresh_state) window.applyServerState(r.fresh_state);
           updateLocalCaches(style_id);
           paint();
-          toast('РЁС‚Р°РјРї РїРѕР»СѓС‡РµРЅ!', true);
+          toast('Штамп получен!', true);
         }catch(ex){
-          toast('РћС€РёР±РєР° СЃРµС‚Рё', false);
+          toast('Ошибка сети', false);
         }finally{
           inFlight = false;
         }
@@ -1969,7 +1969,7 @@ leaderboard:{
 
   profile_header:{
     type:'htmlEmbed',
-    title:'РџСЂРѕС„РёР»СЊ вЂ” С€Р°РїРєР°',
+    title:'Профиль — шапка',
     defaults:{ title:'Dem Demov', text:'@Demov_Dem' },
     init:(el, p, ctx)=>{
       // Telegram user + coins from D1 via api('state')
@@ -2025,7 +2025,7 @@ leaderboard:{
             <div class="metric__val">
               <span id="pf-coins">-100</span><span class="coin-ico"></span>
             </div>
-            <div class="metric__lbl">РњРѕРЅРµС‚С‹</div>
+            <div class="metric__lbl">Монеты</div>
           </div>
         </div>
       </section>`
@@ -2033,33 +2033,33 @@ leaderboard:{
 
   profile_achievements:{
     type:'htmlEmbed',
-    title:'РџСЂРѕС„РёР»СЊ вЂ” РґРѕСЃС‚РёР¶РµРЅРёСЏ',
+    title:'Профиль — достижения',
     defaults:{
-      title:'рџЋЇ РњРѕРё РґРѕСЃС‚РёР¶РµРЅРёСЏ',
-      best_label:'РЁРјРµР»СЊ вЂ” Р»СѓС‡С€РёР№ СЃС‡С‘С‚',
-      pass_label:'РџР°СЃРїРѕСЂС‚ вЂ” С€С‚Р°РјРїС‹',
-      last_label:'РџРѕСЃР»РµРґРЅРёР№ С€С‚Р°РјРї',
-      refs_label:'РњРѕРё СЂРµС„РµСЂР°Р»С‹'
+      title:'🎯 Мои достижения',
+      best_label:'Шмель — лучший счёт',
+      pass_label:'Паспорт — штампы',
+      last_label:'Последний штамп',
+      refs_label:'Мои рефералы'
     },
     preview:(p={})=>`
       <section class="profile-block">
-        <div class="section-title">${p.title || 'рџЋЇ РњРѕРё РґРѕСЃС‚РёР¶РµРЅРёСЏ'}</div>
+        <div class="section-title">${p.title || '🎯 Мои достижения'}</div>
         <div class="metrics">
           <div class="metric">
             <div class="metric__val" id="pf-best-score">94</div>
-            <div class="metric__lbl">${p.best_label || 'РЁРјРµР»СЊ вЂ” Р»СѓС‡С€РёР№ СЃС‡С‘С‚'}</div>
+            <div class="metric__lbl">${p.best_label || 'Шмель — лучший счёт'}</div>
           </div>
           <div class="metric">
             <div class="metric__val" id="pf-pass-count">2/6</div>
-            <div class="metric__lbl">${p.pass_label || 'РџР°СЃРїРѕСЂС‚ вЂ” С€С‚Р°РјРїС‹'}</div>
+            <div class="metric__lbl">${p.pass_label || 'Паспорт — штампы'}</div>
           </div>
           <div class="metric">
             <div class="metric__val" id="pf-last-stamp">Weizen</div>
-            <div class="metric__lbl">${p.last_label || 'РџРѕСЃР»РµРґРЅРёР№ С€С‚Р°РјРї'}</div>
+            <div class="metric__lbl">${p.last_label || 'Последний штамп'}</div>
           </div>
           <div class="metric">
             <div class="metric__val" id="pf-referrals-count">1</div>
-            <div class="metric__lbl">${p.refs_label || 'РњРѕРё СЂРµС„РµСЂР°Р»С‹'}</div>
+            <div class="metric__lbl">${p.refs_label || 'Мои рефералы'}</div>
           </div>
         </div>
       </section>`
@@ -2071,15 +2071,15 @@ leaderboard:{
 
   profile_tournament:{
     type:'htmlEmbed',
-    title:'РџСЂРѕС„РёР»СЊ вЂ” С‚СѓСЂРЅРёСЂ',
-    defaults:{ title:'рџЏ† РўСѓСЂРЅРёСЂ', text:'' },
+    title:'Профиль — турнир',
+    defaults:{ title:'🏆 Турнир', text:'' },
     preview:(p={})=>`
       <section class="profile-block">
-        <div class="section-title">${p.title||'рџЏ† РўСѓСЂРЅРёСЂ'}</div>
+        <div class="section-title">${p.title||'🏆 Турнир'}</div>
         <div class="metrics">
           <div class="metric">
-            <div class="metric__val" id="pf-rank-today">вЂ”</div>
-            <div class="metric__lbl">РњРµСЃС‚Рѕ СЃРµРіРѕРґРЅСЏ</div>
+            <div class="metric__val" id="pf-rank-today">—</div>
+            <div class="metric__lbl">Место сегодня</div>
           </div>
           <div class="metric">
             <div class="metric__val" id="pf-rank-alltime">1</div>
@@ -2091,20 +2091,20 @@ leaderboard:{
 
   profile_recent_prizes:{
     type:'htmlEmbed',
-    title:'РџСЂРѕС„РёР»СЊ вЂ” РїРѕСЃР»РµРґРЅРёРµ РїСЂРёР·С‹',
-    defaults:{ title:'рџЋЃ РџРѕСЃР»РµРґРЅРёРµ РїСЂРёР·С‹', text:'' },
+    title:'Профиль — последние призы',
+    defaults:{ title:'🎁 Последние призы', text:'' },
     preview:(p={})=>`
       <section class="profile-block">
-        <div class="section-title">${p.title||'рџЋЃ РџРѕСЃР»РµРґРЅРёРµ РїСЂРёР·С‹'}</div>
+        <div class="section-title">${p.title||'🎁 Последние призы'}</div>
         <div class="chips">
           <div class="chip">
-            <span>рџЌє Р‘РµСЃРїР»Р°С‚РЅС‹Р№ Р±РѕРєР°Р»</span>
+            <span>🍺 Бесплатный бокал</span>
           </div>
           <div class="chip">
-            <span>рџЋџ Р‘РёР»РµС‚ РІ С‚СѓСЂРЅРёСЂ</span>
+            <span>🎟 Билет в турнир</span>
           </div>
           <div class="chip chip--muted">
-            <span>РќРѕРІС‹Рµ РїСЂРёР·С‹ Р±СѓРґСѓС‚ Р·РґРµСЃСЊ</span>
+            <span>Новые призы будут здесь</span>
           </div>
         </div>
       </section>`
@@ -2196,15 +2196,15 @@ function presetBlocks(keys){
 }
 
 window.IconSet = [
-  {k:'home', label:'Р”РѕРј', g:'в—Џ'},
-  {k:'gamepad', label:'РРіСЂР°', g:'в–І'},
-  {k:'cup', label:'РљСѓР±РѕРє', g:'в…'},
-  {k:'gift', label:'РџРѕРґР°СЂРѕРє', g:'вќ–'},
-  {k:'user', label:'РџСЂРѕС„РёР»СЊ', g:'вє'},
-  {k:'heart', label:'РЎРµСЂРґС†Рµ', g:'в™Ґ'},
-  {k:'star', label:'Р—РІРµР·РґР°', g:'в…'},
-  {k:'cart', label:'РљРѕСЂР·РёРЅР°', g:'рџ›’'},
-  {k:'custom', label:'РЎРІРѕР№вЂ¦', g:'в—Њ'}
+  {k:'home', label:'Дом', g:'●'},
+  {k:'gamepad', label:'Игра', g:'▲'},
+  {k:'cup', label:'Кубок', g:'★'},
+  {k:'gift', label:'Подарок', g:'❖'},
+  {k:'user', label:'Профиль', g:'☺'},
+  {k:'heart', label:'Сердце', g:'♥'},
+  {k:'star', label:'Звезда', g:'★'},
+  {k:'cart', label:'Корзина', g:'🛒'},
+  {k:'custom', label:'Свой…', g:'◌'}
 ];
 
 window.Templates = {
@@ -2213,11 +2213,11 @@ window.Templates = {
     blueprint: {
       app:{ name:'Demo', theme:{ css: window.DefaultTheme } },
       nav:{ type:'tabs', position:'bottom', routes:[
-        {path:'/',title:'Р“Р»Р°РІРЅР°СЏ',icon:'home', icon_g:'в—Џ', icon_img:'', kind:'home'},
-        {path:'/play',title:'РРіСЂР°С‚СЊ',icon:'gamepad', icon_g:'в–І', icon_img:'', kind:'play'},
-        {path:'/tournament',title:'РўСѓСЂРЅРёСЂ',icon:'cup', icon_g:'в…', icon_img:'', kind:'tournament'},
-        {path:'/bonuses',title:'Р‘РѕРЅСѓСЃС‹',icon:'gift', icon_g:'вќ–', icon_img:'', kind:'bonuses'},
-        {path:'/profile',title:'РџСЂРѕС„РёР»СЊ',icon:'user', icon_g:'вє', icon_img:'', kind:'profile'},
+        {path:'/',title:'Главная',icon:'home', icon_g:'●', icon_img:'', kind:'home'},
+        {path:'/play',title:'Играть',icon:'gamepad', icon_g:'▲', icon_img:'', kind:'play'},
+        {path:'/tournament',title:'Турнир',icon:'cup', icon_g:'★', icon_img:'', kind:'tournament'},
+        {path:'/bonuses',title:'Бонусы',icon:'gift', icon_g:'❖', icon_img:'', kind:'bonuses'},
+        {path:'/profile',title:'Профиль',icon:'user', icon_g:'☺', icon_img:'', kind:'profile'},
       ]},
       routes:[
         {path:'/', blocks:presetBlocks(window.PagePresets.home)},
@@ -2336,7 +2336,7 @@ window.Templates = {
     const reg = window.BlockRegistry[mf.id];
     reg.type = mf.type || reg.type || 'htmlEmbed';
     reg.title = mf.title || reg.title || mf.id;
-    reg.category = mf.category || reg.category || 'Р”СЂСѓРіРѕРµ';
+    reg.category = mf.category || reg.category || 'Другое';
     reg.meta = mf.meta || reg.meta || {};
     // merge top-level tags into meta.tags for convenience
     if (mf.tags){ reg.meta.tags = Array.isArray(mf.tags)? mf.tags : [mf.tags]; }
@@ -2346,8 +2346,8 @@ window.Templates = {
 
 if (reg.type === 'htmlEmbed'){
   reg.html = tpl;
-  // Р’РђР–РќРћ: РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂРµ РїСЂРµРІСЊСЋ СЂРёСЃСѓРµРј СЂРµР°Р»СЊРЅС‹Р№ С€Р°Р±Р»РѕРЅ,
-  // С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ В«РїСѓСЃС‚РѕР№ РєР°СЂС‚РѕС‡РєРёВ» СЃ Р·Р°РіРѕР»РѕРІРєРѕРј.
+  // ВАЖНО: в конструкторе превью рисуем реальный шаблон,
+  // чтобы не было «пустой карточки» с заголовком.
   reg.preview = reg.preview || ((p)=> applyTpl(tpl, p||{}));
 }
 
