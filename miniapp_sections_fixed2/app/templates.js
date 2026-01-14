@@ -1,3 +1,17 @@
+
+// ==== SG base override (mirrors safe) ====
+(function(){
+  const api = (window.API_BASE || window.CTOR_API_BASE || 'https://app.salesgenius.ru').replace(/\/+$/,'');
+  const blocksRoot = (window.SG_BLOCKS_ROOT || (api + '/blocks/')).replace(/\/+$/,'') + '/';
+  // Dist artifacts: dist/blocks/index.json and dist/blocks/<block>/*
+  const base = (window.__BLOCKS_BASE__ || window.LIB_BASE || (blocksRoot + 'dist/blocks/')).replace(/\/+$/,'') + '/';
+  window.API_BASE = api;
+  window.CTOR_API_BASE = api;
+  window.SG_BLOCKS_ROOT = blocksRoot;
+  window.__BLOCKS_BASE__ = base;
+  window.LIB_BASE = base;
+})();
+
 /* TEMPLATES_BUILD: step20 */
 console.log("[templates] build step20");
 
@@ -5,17 +19,18 @@ console.log("[templates] build step20");
 
 // repo root через воркер-прокси
 const BLOCKS_ROOT = (window.SG_BLOCKS_ROOT || (location.origin + '/blocks/'))
-  .replace(/\/+$/,'') + '/';
+  .replace(/\/+$/,'/');          // <-- ВАЖНО: больше НЕ добавляем +'/'
 window.SG_BLOCKS_ROOT = BLOCKS_ROOT;
 
 // где реально лежат папки блоков в репо
-const LIB_BASE = (window.SG_BLOCKS_BASE || (BLOCKS_ROOT + 'dist/blocks/'))
-  .replace(/\/+$/,'') + '/';
+const LIB_BASE = (window.SG_BLOCKS_BASE || (BLOCKS_ROOT + 'blocks/'))
+  .replace(/\/+$/,'/');          // <-- ВАЖНО: больше НЕ добавляем +'/'
 window.SG_BLOCKS_BASE = LIB_BASE;
 
 // индекс лежит в dist
 const INDEX_URL = BLOCKS_ROOT + 'dist/blocks/index.json';
 window.SG_BLOCKS_INDEX_URL = INDEX_URL;
+
 
 
 /* ===============================
@@ -2265,32 +2280,6 @@ const INDEX_URL = (window.SG_BLOCKS_INDEX_URL || (LIB_BASE + 'index.json'));
 
   const STYLE_ID = 'lib-blocks-style';
 
-const __MF_CACHE = new Map();   // id -> manifest (enriched)
-const __TEXT_CACHE = new Map(); // url -> text
-const __JSON_CACHE = new Map(); // url -> json
-
-function ssGet(key){
-  try{ return sessionStorage.getItem(key); }catch(_){ return null; }
-}
-function ssSet(key, val){
-  try{ sessionStorage.setItem(key, val); }catch(_){}
-}
-
-async function pool(items, limit, fn){
-  const executing = new Set();
-  const results = [];
-  for (const it of items){
-    const p = Promise.resolve().then(()=>fn(it));
-    results.push(p);
-    executing.add(p);
-    const done = ()=> executing.delete(p);
-    p.then(done, done);
-    if (executing.size >= limit) await Promise.race(executing);
-  }
-  return Promise.allSettled(results);
-}
-
-
   function esc(s){ return String(s??''); }
 
   function applyTpl(tpl, props){
@@ -2330,41 +2319,17 @@ async function pool(items, limit, fn){
   }
 
   async function fetchText(url){
-  if (__TEXT_CACHE.has(url)) return __TEXT_CACHE.get(url);
-  const cached = ssGet('sg:text:' + url);
-  if (cached != null){
-    __TEXT_CACHE.set(url, cached);
-    return cached;
+    const r = await fetch(url, {cache:'no-store'});
+    if (!r.ok) throw new Error('Fetch failed: '+url);
+    return await r.text();
   }
-  const r = await fetch(url, {cache:'force-cache'});
-  if (!r.ok) throw new Error('Fetch failed: '+url);
-  const t = await r.text();
-  __TEXT_CACHE.set(url, t);
-  // html/css мелкие — тоже кэшируем
-  if (/\.html$|\.css$/i.test(url) && t.length < 200000){
-    ssSet('sg:text:' + url, t);
-  }
-  return t;
-}
   async function fetchJSON(url){
-  if (__JSON_CACHE.has(url)) return __JSON_CACHE.get(url);
-  const cached = ssGet('sg:json:' + url);
-  if (cached){
-    try{ const j = JSON.parse(cached); __JSON_CACHE.set(url, j); return j; }catch(_){}
+    const r = await fetch(url, {cache:'no-store'});
+    if (!r.ok) throw new Error('Fetch failed: '+url);
+    return await r.json();
   }
-  const r = await fetch(url, {cache:'force-cache'});
-  if (!r.ok) throw new Error('Fetch failed: '+url);
-  const j = await r.json();
-  __JSON_CACHE.set(url, j);
-  // index.json и block.json можно кэшировать в sessionStorage (не тяжелые)
-  if (/index\.json$|block\.json$/i.test(url)){
-    try{ ssSet('sg:json:' + url, JSON.stringify(j)); }catch(_){}
-  }
-  return j;
-}
 
   async function loadBlock(id){
-    if (__MF_CACHE.has(id)) return __MF_CACHE.get(id);
     const base = LIB_BASE + id + '/';
     const mf = await fetchJSON(base + 'block.json');
     if(!mf || !mf.id) throw new Error('Bad manifest: '+id);
@@ -2436,7 +2401,6 @@ if (reg.type === 'htmlEmbed'){
       };
     }
 
-    __MF_CACHE.set(id, mf);
     return mf;
   }
 
@@ -2450,6 +2414,7 @@ if (reg.type === 'htmlEmbed'){
         try{
 const index = await fetchJSON(INDEX_URL);
 
+
 // поддерживаем 2 формата индекса:
 // 1) ["calendar_booking", ...]
 // 2) { blocks: [{key:"calendar_booking", ...}, ...] }
@@ -2459,9 +2424,11 @@ if (Array.isArray(index)) {
 } else if (index && Array.isArray(index.blocks)) {
   ids = index.blocks.map(b => b.key || b.id).filter(Boolean);
 }
-await pool(ids, 6, async (id)=>{
+for (const id of ids) {
   try{ await loadBlock(id); }catch(e){ console.warn('Block load failed', id, e); }
-});
+
+
+          }
           this.loaded = true;
           return true;
         }catch(e){
