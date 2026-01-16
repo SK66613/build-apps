@@ -1,4 +1,4 @@
-<script>
+
 (function(){
   // включение: ?debug=1 или localStorage.sg_debug="1"
   const params = new URLSearchParams(location.search);
@@ -178,4 +178,4 @@
     meta
   };
 })();
-</script>
+
