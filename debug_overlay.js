@@ -123,7 +123,10 @@
     try{
       const res = await nativeFetch(input, init);
       const ms = Math.round(performance.now() - t0);
-      push('FETCH', method, res.status, `${ms}ms`, `cred=${cred}`, url, res.redirected ? '(redirected)' : '');
+      const isKey = url.includes('/api/my/apps') || url.includes('/api/auth/me');
+const st = isKey ? (new Error('trace')).stack : '';
+push('FETCH', method, res.status, `${ms}ms`, `cred=${cred}`, url, res.redirected ? '(redirected)' : '', isKey ? ('\n' + st) : '');
+
       return res;
     }catch(err){
       const ms = Math.round(performance.now() - t0);
