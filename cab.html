@@ -865,18 +865,16 @@ createCard?.querySelector('div')?.addEventListener('click', openCreateModal);
   
   // === LOGOUT ===
   async function doLogout(){
-  try{
-    await api(ENDPOINTS.logout, { method:'POST', credentials:'include' });
-  }catch(_){}
-  try{
-    localStorage.removeItem('sg_user_email');
-    localStorage.removeItem('sg_user_verified');
-    localStorage.setItem('sg_logout_ts', String(Date.now()));
-  }catch(_){}
-  try{ sessionStorage.clear(); }catch(_){}
-
-  window.location.href = '/auth.html';
-}
+    try{
+      await api(ENDPOINTS.logout, {method:'POST'});
+    }catch(_){}
+    try{
+      localStorage.removeItem('sg_user_email');
+      localStorage.removeItem('sg_user_verified');
+    }catch(_){}
+    try{ localStorage.setItem('sg_logout_ts', String(Date.now())); }catch(_){ }
+    window.location.href = '/auth.html';
+  }
   logoutBtn?.addEventListener('click', doLogout);
 
   // старт
