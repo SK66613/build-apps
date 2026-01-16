@@ -1,17 +1,3 @@
-
-// ==== SG base override (mirrors safe) ====
-(function(){
-  const api = (window.API_BASE || window.CTOR_API_BASE || 'https://app.salesgenius.ru').replace(/\/+$/,'');
-  const blocksRoot = (window.SG_BLOCKS_ROOT || (api + '/blocks/')).replace(/\/+$/,'') + '/';
-  // Dist artifacts: dist/blocks/index.json and dist/blocks/<block>/*
-  const base = (window.__BLOCKS_BASE__ || window.LIB_BASE || (blocksRoot + 'dist/blocks/')).replace(/\/+$/,'') + '/';
-  window.API_BASE = api;
-  window.CTOR_API_BASE = api;
-  window.SG_BLOCKS_ROOT = blocksRoot;
-  window.__BLOCKS_BASE__ = base;
-  window.LIB_BASE = base;
-})();
-
 /* TEMPLATES_BUILD: step20 */
 console.log("[templates] build step20");
 
@@ -30,7 +16,6 @@ window.SG_BLOCKS_BASE = LIB_BASE;
 // индекс лежит в dist
 const INDEX_URL = BLOCKS_ROOT + 'dist/blocks/index.json';
 window.SG_BLOCKS_INDEX_URL = INDEX_URL;
-
 
 
 /* ===============================
@@ -2272,10 +2257,14 @@ window.Templates = {
 (function(){
   // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
   // БАЗА ДЛЯ БИБЛИОТЕКИ БЛОКОВ — через прокси воркера
-const LIB_BASE  = (window.SG_BLOCKS_BASE || '/blocks/dist/blocks/').replace(/\/+$/,'') + '/';
-const INDEX_URL = (window.SG_BLOCKS_INDEX_URL || (LIB_BASE + 'index.json'));
+// где реально лежат папки блоков в репо
+const LIB_BASE = (window.SG_BLOCKS_BASE || (BLOCKS_ROOT + 'blocks/'))
+  .replace(/\/+$/,'/');          // <-- ВАЖНО: больше НЕ добавляем +'/'
+window.SG_BLOCKS_BASE = LIB_BASE;
 
-
+// индекс лежит в dist
+const INDEX_URL = BLOCKS_ROOT + 'dist/blocks/index.json';
+window.SG_BLOCKS_INDEX_URL = INDEX_URL;
 
 
   const STYLE_ID = 'lib-blocks-style';
