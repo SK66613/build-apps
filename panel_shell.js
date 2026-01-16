@@ -198,11 +198,15 @@ function navigateWithApp(appId){
   // expose helpers
   window.SG_SHELL = { api, guardAuth, loadApps, renderSwitcher, broadcastLogout, redirectToAuth };
 
-  document.addEventListener('DOMContentLoaded', async ()=>{
-    const user = await guardAuth();
-    if (!user) return;
-    const apps = await loadApps();
-    window.SG_APPS = apps;
-    renderSwitcher(apps);
-  });
+document.addEventListener('DOMContentLoaded', async ()=>{
+  if (window.SG_DISABLE_SHELL_BOOT) return;
+
+  await guardAuth();
+  if (!user) return;
+
+  const apps = await loadApps();
+  window.SG_APPS = apps;
+  renderSwitcher(apps);
+});
+
 })();
