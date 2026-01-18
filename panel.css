@@ -467,3 +467,107 @@ html[data-theme="dark"] .textarea{background:rgba(255,255,255,.02)}
 }
 html[data-theme="dark"] .bcComposer{background:rgba(255,255,255,.02)}
 
+
+
+/* ===== Dialogs ===== */
+.dlgLayout{
+  display:grid;
+  grid-template-columns: 360px 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+
+.dlgLeft{
+  border:1px solid var(--line);
+  border-radius:14px;
+  overflow:hidden;
+  background:rgba(0,0,0,.02);
+}
+html[data-theme="dark"] .dlgLeft{background:rgba(255,255,255,.02)}
+
+.dlgSearch{ padding:10px; border-bottom:1px solid var(--line); }
+.dlgUsers{ max-height: 560px; overflow:auto; padding:8px; }
+
+.dlgUser{
+  display:flex;
+  gap:10px;
+  padding:10px;
+  border-radius:12px;
+  cursor:pointer;
+}
+.dlgUser:hover{ background:rgba(0,0,0,.04); }
+html[data-theme="dark"] .dlgUser:hover{ background:rgba(255,255,255,.05); }
+
+.dlgUser.active{ outline:2px solid rgba(41, 121, 255, .35); background:rgba(41, 121, 255, .06); }
+
+.dlgUName{ font-weight:700; }
+.dlgUMeta{ font-size:12px; opacity:.7; }
+.dlgULast{ font-size:12px; opacity:.8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px; }
+
+.dlgRight{
+  border:1px solid var(--line);
+  border-radius:14px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  background:rgba(0,0,0,.02);
+}
+html[data-theme="dark"] .dlgRight{background:rgba(255,255,255,.02)}
+
+.dlgTop{ padding:10px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+
+.dlgChat{
+  padding:12px;
+  overflow:auto;
+  flex:1;
+  max-height: 520px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.msgRow{ display:flex; }
+.msgRow.in{ justify-content:flex-start; }
+.msgRow.out{ justify-content:flex-end; }
+
+.msgBubble{
+  max-width: 70%;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:#fff;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+html[data-theme="dark"] .msgBubble{ background:rgba(0,0,0,.35); }
+
+.msgRow.out .msgBubble{
+  background:rgba(41, 121, 255, .08);
+  border-color:rgba(41, 121, 255, .25);
+}
+
+.msgTime{ font-size:11px; opacity:.65; margin-top:4px; }
+
+.dlgSend{
+  border-top:1px solid var(--line);
+  padding:10px;
+  display:grid;
+  grid-template-columns: 1fr 140px;
+  gap:10px;
+  align-items:end;
+}
+
+/* textarea если ещё не добавлял ранее */
+.textarea{
+  width:100%;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:rgba(0,0,0,.02);
+  color:var(--text);
+  outline:none;
+  resize:vertical;
+}
+html[data-theme="dark"] .textarea{background:rgba(255,255,255,.02)}
+
+
