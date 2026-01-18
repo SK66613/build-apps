@@ -302,5 +302,135 @@
 
   <script src="panel_shell.js"></script>
   <script src="panel.js"></script>
+
+
+  <script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  function getAppId(){
+    // у тебя уже есть ?app=two в URL
+    const u = new URL(location.href);
+    const q = u.searchParams.get('app');
+    if (q) return q;
+    // fallback: глобальный селектор
+    const sel = $('appSwitchGlobal');
+    return sel && sel.value ? sel.value : '';
+  }
+
+  async function api(path, opts={}){
+    const res = await fetch(path, {
+      credentials:'include',
+      ...opts,
+      headers: { 'content-type':'application/json', ...(opts.headers||{}) }
+    });
+    const j = await res.json().catch(()=>null);
+    if (!res.ok) throw new Error((j && (j.error||j.message)) || ('HTTP_'+res.status));
+    return j;
+  }
+
+  function renderList(items){
+    const tb = $('bcTbody');
+    if (!tb) return;
+    if (!items || !items.length){
+      tb.innerHTML = '<tr><td colspan="5" class="mut">Пока пусто. Нажми “Новая рассылка”.</td></tr>';
+      return;
+    }
+    tb.innerHTML = items.map(it=>{
+      const title = (it.title || '').trim() || '—';
+      const seg = it.segment || '—';
+      const st  = it.status || '—';
+      const res = `${it.sent||0}/${it.total||0} (fail:${it.failed||0}, blk:${it.blocked||0})`;
+      return `
+        <tr>
+          <td>${it.id}</td>
+          <td>${escapeHtml(title)}</td>
+          <td>${escapeHtml(seg)}</td>
+          <td><span class="pill ${st==='done' ? 'pill--ok':''}">${escapeHtml(st)}</span></td>
+          <td class="tr">${escapeHtml(res)}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, m=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  async function loadBroadcasts(){
+    const appId = getAppId();
+    if (!appId) return;
+    const j = await api(`/api/app/${encodeURIComponent(appId)}/broadcasts`, { method:'GET' });
+    renderList(j.items || []);
+  }
+
+  function openComposer(on){
+    const box = $('bcComposer');
+    if (!box) return;
+    box.hidden = !on;
+    $('bcStatus').textContent = '';
+    if (on) $('bcText').focus();
+  }
+
+  async function sendBroadcast(){
+    const appId = getAppId();
+    if (!appId) return;
+
+    const title = $('bcTitle').value || '';
+    const segment = $('bcSegment').value || 'bot_active';
+    const text = $('bcText').value || '';
+    const btn_text = $('bcBtnText').value || '';
+    const btn_url  = $('bcBtnUrl').value || '';
+
+    if (!text.trim()){
+      $('bcStatus').textContent = 'Нужен текст рассылки.';
+      return;
+    }
+
+    $('bcSendBtn').disabled = true;
+    $('bcStatus').textContent = 'Отправляю…';
+
+    try{
+      const j = await api(`/api/app/${encodeURIComponent(appId)}/broadcast`, {
+        method:'POST',
+        body: JSON.stringify({
+          title, segment, text,
+          btn_text: btn_text.trim() || null,
+          btn_url: btn_url.trim() || null
+        })
+      });
+
+      $('bcStatus').textContent = `Готово: sent ${j.sent}/${j.total}, fail ${j.failed}, blocked ${j.blocked}`;
+      openComposer(false);
+      await loadBroadcasts();
+    }catch(e){
+      $('bcStatus').textContent = 'Ошибка: ' + (e.message || e);
+    }finally{
+      $('bcSendBtn').disabled = false;
+    }
+  }
+
+  // bind
+  document.addEventListener('click', (e)=>{
+    if (e.target && e.target.id === 'bcNewBtn') openComposer(true);
+    if (e.target && e.target.id === 'bcCancelBtn') openComposer(false);
+    if (e.target && e.target.id === 'bcSendBtn') sendBroadcast();
+    if (e.target && e.target.id === 'bcReloadBtn') loadBroadcasts();
+  });
+
+  // когда открываешь view broadcasts — просто подгружаем
+  // (в панели уже есть своя логика переключения, но это безопасно)
+  window.addEventListener('focus', loadBroadcasts);
+
+  // если проект переключили — тоже обновим
+  const sel = $('appSwitchGlobal');
+  if (sel) sel.addEventListener('change', ()=>setTimeout(loadBroadcasts, 50));
+
+  // старт
+  setTimeout(loadBroadcasts, 200);
+})();
+</script>
+
 </body>
 </html>
