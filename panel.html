@@ -225,6 +225,47 @@
           </section>
 
 <section class="view" data-view="dialogs">
+  <div class="card">
+    <div class="card__hdr card__hdr--split">
+      <div>
+        <div class="card__title">Диалоги</div>
+        <div class="card__sub">История сообщений Telegram-бота и ответы оператора.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="dlgReload">Обновить</button>
+      </div>
+    </div>
+
+    <div class="dlgLayout">
+      <!-- left: users -->
+      <div class="dlgLeft">
+        <div class="dlgSearch">
+          <input class="input" id="dlgSearch" placeholder="Поиск: @username или ID">
+        </div>
+        <div class="dlgUsers" id="dlgUsers">
+          <div class="mut">Загрузка…</div>
+        </div>
+      </div>
+
+      <!-- right: chat -->
+      <div class="dlgRight">
+        <div class="dlgTop" id="dlgTop">
+          <div class="mut">Выбери пользователя слева</div>
+        </div>
+
+        <div class="dlgChat" id="dlgChat"></div>
+
+        <div class="dlgSend">
+          <textarea class="textarea" id="dlgText" rows="2" placeholder="Сообщение пользователю…"></textarea>
+          <button class="btn btn--primary" id="dlgSendBtn" disabled>Отправить</button>
+        </div>
+
+        <div class="mut" id="dlgStatus" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 
           <section class="view" data-view="settings">
             <div class="stack">
