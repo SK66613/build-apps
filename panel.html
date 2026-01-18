@@ -105,18 +105,86 @@
             </div>
           </section>
 
-          <section class="view" data-view="broadcasts">
-            <div class="card">
-              <div class="card__hdr">
-                <div>
-                  <div class="card__title">Рассылки</div>
-                  <div class="card__sub">Создание кампаний, сегменты, расписания.</div>
-                </div>
-                <button class="btn">Новая рассылка</button>
-              </div>
-              <div class="empty">Здесь будет список кампаний.</div>
+<section class="view" data-view="broadcasts">
+  <div class="card">
+    <div class="card__hdr">
+      <div>
+        <div class="card__title">Рассылки</div>
+        <div class="card__sub">Создай кампанию и отправь по сегменту.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="bcReloadBtn">Обновить</button>
+        <button class="btn btn--primary" id="bcNewBtn">Новая рассылка</button>
+      </div>
+    </div>
+
+    <div class="grid2" style="align-items:start">
+      <!-- composer -->
+      <div class="bcComposer" id="bcComposer" hidden>
+        <div class="form">
+          <div class="field">
+            <span>Название (для тебя)</span>
+            <input class="input" id="bcTitle" placeholder="Например: Скидка 10% до воскресенья"/>
+          </div>
+
+          <div class="field">
+            <span>Сегмент</span>
+            <select class="input" id="bcSegment">
+              <option value="bot_active">Запускали бота</option>
+              <option value="all">Все (осторожно)</option>
+              <option value="mini_active_7d">Открывали mini-app за 7 дней</option>
+              <option value="inactive_7d">Неактивные 7 дней</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <span>Текст рассылки <span class="req">*</span></span>
+            <textarea class="textarea" id="bcText" rows="6" placeholder="Напиши сообщение…"></textarea>
+            <div class="mut">HTML разрешён (parse_mode=HTML). Ссылки лучше кнопкой ниже.</div>
+          </div>
+
+          <div class="field">
+            <span>Кнопка (необязательно)</span>
+            <div class="grid2">
+              <input class="input" id="bcBtnText" placeholder="Текст кнопки"/>
+              <input class="input" id="bcBtnUrl" placeholder="https://..."/>
             </div>
-          </section>
+          </div>
+
+          <div class="actions">
+            <button class="btn" id="bcCancelBtn">Отмена</button>
+            <button class="btn btn--primary" id="bcSendBtn">Отправить</button>
+            <span class="mut" id="bcStatus"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- list -->
+      <div>
+        <div class="tableWrap">
+          <table class="table" id="bcTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Сегмент</th>
+                <th>Статус</th>
+                <th class="tr">Результат</th>
+              </tr>
+            </thead>
+            <tbody id="bcTbody">
+              <tr><td colspan="5" class="mut">Пока пусто. Нажми “Новая рассылка”.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mut" style="margin-top:10px">
+          Подсказка: пользователи попадут в базу как из mini-app, так и из бота (таблица app_users).
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 
           <section class="view" data-view="channels">
             <div class="card">
