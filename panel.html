@@ -224,17 +224,7 @@
             </div>
           </section>
 
-          <section class="view" data-view="dialogs">
-            <div class="card">
-              <div class="card__hdr">
-                <div>
-                  <div class="card__title">Диалоги</div>
-                  <div class="card__sub">История обращений, ответы оператора.</div>
-                </div>
-              </div>
-              <div class="empty">Диалогов пока нет.</div>
-            </div>
-          </section>
+<section class="view" data-view="dialogs">
 
           <section class="view" data-view="settings">
             <div class="stack">
@@ -499,6 +489,224 @@
   setTimeout(loadBroadcasts, 200);
 })();
 </script>
+
+  <script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  function getAppId(){
+    const u = new URL(location.href);
+    const q = u.searchParams.get('app');
+    if (q) return q;
+    const sel = $('appSwitchGlobal');
+    return sel && sel.value ? sel.value : '';
+  }
+
+  async function api(path, opts={}){
+    const res = await fetch(path, {
+      credentials:'include',
+      ...opts,
+      headers:{ 'content-type':'application/json', ...(opts.headers||{}) }
+    });
+    const j = await res.json().catch(()=>null);
+    if (!res.ok) throw new Error((j && (j.error||j.message)) || ('HTTP_'+res.status));
+    return j;
+  }
+
+  function esc(s){
+    return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  }
+
+  let dlgUsers = [];
+  let activeUserId = null;
+
+  function renderUsers(list){
+    const box = $('dlgUsers');
+    if (!box) return;
+
+    if (!list || !list.length){
+      box.innerHTML = '<div class="mut">Пока нет диалогов (пользователь должен написать боту /start).</div>';
+      return;
+    }
+
+    box.innerHTML = list.map(u=>{
+      const name = u.tg_username ? '@'+u.tg_username : ('ID ' + u.tg_user_id);
+      const meta = `${u.tg_user_id} · in:${u.in_count||0} out:${u.out_count||0}`;
+      const last = u.last_text ? (u.last_dir === 'out' ? 'Вы: ' : 'Он: ') + u.last_text : '';
+      const active = String(u.tg_user_id) === String(activeUserId) ? 'active' : '';
+      return `
+        <div class="dlgUser ${active}" data-uid="${esc(u.tg_user_id)}">
+          <div style="flex:1; min-width:0">
+            <div class="dlgUName">${esc(name)}</div>
+            <div class="dlgUMeta">${esc(meta)}</div>
+            <div class="dlgULast">${esc(last)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderTop(u){
+    const top = $('dlgTop');
+    if (!top) return;
+    const name = u.tg_username ? '@'+u.tg_username : 'Без username';
+    top.innerHTML = `
+      <div>
+        <div style="font-weight:800">${esc(name)}</div>
+        <div class="mut">ID: ${esc(u.tg_user_id)}</div>
+      </div>
+      <div class="mut">${esc(u.bot_last_seen || '')}</div>
+    `;
+  }
+
+  function renderMsgs(items){
+    const chat = $('dlgChat');
+    if (!chat) return;
+
+    if (!items || !items.length){
+      chat.innerHTML = '<div class="mut">Сообщений пока нет.</div>';
+      return;
+    }
+
+    chat.innerHTML = items.map(m=>{
+      const dir = m.direction === 'out' ? 'out' : 'in';
+      const txt = m.text || '';
+      const time = m.created_at || '';
+      return `
+        <div class="msgRow ${dir обеспечивается}">
+      `;
+    }).join('');
+  }
+
+  // маленькая правка: dir в template
+  function renderMsgs(items){
+    const chat = $('dlgChat');
+    if (!chat) return;
+
+    if (!items || !items.length){
+      chat.innerHTML = '<div class="mut">Сообщений пока нет.</div>';
+      return;
+    }
+
+    chat.innerHTML = items.map(m=>{
+      const dir = (m.direction === 'out') ? 'out' : 'in';
+      const txt = m.text || '';
+      const time = m.created_at || '';
+      return `
+        <div class="msgRow ${dir}">
+          <div>
+            <div class="msgBubble">${esc(txt)}</div>
+            <div class="msgTime">${esc(time)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function loadUsers(){
+    const appId = getAppId();
+    if (!appId) return;
+
+    $('dlgStatus').textContent = 'Загрузка диалогов…';
+    const j = await api(`/api/app/${encodeURIComponent(appId)}/dialogs`, { method:'GET' });
+    dlgUsers = j.items || [];
+    $('dlgStatus').textContent = '';
+    applySearch();
+  }
+
+  function applySearch(){
+    const q = String(($('dlgSearch')?.value || '')).trim().toLowerCase();
+    const list = !q ? dlgUsers : dlgUsers.filter(u=>{
+      const a = String(u.tg_user_id||'').toLowerCase();
+      const b = String(u.tg_username||'').toLowerCase();
+      return a.includes(q) || b.includes(q) || ('@'+b).includes(q);
+    });
+    renderUsers(list);
+  }
+
+  async function openDialog(tgUserId){
+    activeUserId = String(tgUserId);
+    $('dlgSendBtn').disabled = false;
+
+    const u = dlgUsers.find(x => String(x.tg_user_id) === String(activeUserId));
+    if (u) renderTop(u);
+
+    renderUsers((String(($('dlgSearch')?.value||'')).trim() ? dlgUsers.filter(()=>true) : dlgUsers));
+
+    const appId = getAppId();
+    const j = await api(`/api/app/${encodeURIComponent(appId)}/dialog/${encodeURIComponent(activeUserId)}?limit=120`, { method:'GET' });
+    renderMsgs(j.items || []);
+  }
+
+  async function sendMsg(){
+    const textEl = $('dlgText');
+    const btn = $('dlgSendBtn');
+
+    const text = String(textEl.value || '').trim();
+    if (!text) return;
+
+    if (!activeUserId){
+      $('dlgStatus').textContent = 'Сначала выбери пользователя слева.';
+      return;
+    }
+
+    btn.disabled = true;
+    $('dlgStatus').textContent = 'Отправляю…';
+
+    try{
+      const appId = getAppId();
+      await api(`/api/app/${encodeURIComponent(appId)}/dialog/${encodeURIComponent(activeUserId)}`, {
+        method:'POST',
+        body: JSON.stringify({ text })
+      });
+      textEl.value = '';
+      $('dlgStatus').textContent = 'Отправлено ✅';
+
+      // перезагрузим сообщения и список (чтобы last_text обновился)
+      await openDialog(activeUserId);
+      await loadUsers();
+    } catch(e){
+      $('dlgStatus').textContent = 'Ошибка: ' + (e.message || e);
+    } finally {
+      btn.disabled = false;
+      setTimeout(()=>{ if ($('dlgStatus').textContent === 'Отправлено ✅') $('dlgStatus').textContent = ''; }, 2000);
+    }
+  }
+
+  // events
+  document.addEventListener('click', (e)=>{
+    const card = e.target.closest('.dlgUser');
+    if (card && card.dataset.uid) openDialog(card.dataset.uid);
+
+    if (e.target && e.target.id === 'dlgReload') loadUsers();
+    if (e.target && e.target.id === 'dlgSendBtn') sendMsg();
+  });
+
+  document.addEventListener('input', (e)=>{
+    if (e.target && e.target.id === 'dlgSearch') applySearch();
+    if (e.target && e.target.id === 'dlgText') $('dlgSendBtn').disabled = !String($('dlgText').value||'').trim() || !activeUserId;
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if (e.target && e.target.id === 'dlgText'){
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+        e.preventDefault();
+        sendMsg();
+      }
+    }
+  });
+
+  // когда меняешь проект — обновляем
+  const sel = $('appSwitchGlobal');
+  if (sel) sel.addEventListener('change', ()=>setTimeout(()=>{ activeUserId=null; $('dlgSendBtn').disabled=true; loadUsers(); }, 50));
+
+  // автозагрузка при входе
+  setTimeout(loadUsers, 300);
+})();
+</script>
+
 
 </body>
 </html>
