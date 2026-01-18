@@ -539,7 +539,7 @@
     const q = u.searchParams.get('app');
     if (q) return q;
     const sel = $('appSwitchGlobal');
-    return sel && sel.value ? sel.value : '';
+    return (sel && sel.value) ? sel.value : '';
   }
 
   async function api(path, opts={}){
@@ -554,10 +554,12 @@
   }
 
   function esc(s){
-    return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    return String(s||'').replace(/[&<>"']/g, m=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
   }
 
-  let dlgUsers = [];
+  let allUsers = [];
   let activeUserId = null;
 
   function renderUsers(list){
@@ -565,17 +567,18 @@
     if (!box) return;
 
     if (!list || !list.length){
-      box.innerHTML = '<div class="mut">Пока нет диалогов (пользователь должен написать боту /start).</div>';
+      box.innerHTML = '<div class="mut">Пока нет диалогов (пользователь должен написать боту).</div>';
       return;
     }
 
     box.innerHTML = list.map(u=>{
-      const name = u.tg_username ? '@'+u.tg_username : ('ID ' + u.tg_user_id);
-      const meta = `${u.tg_user_id} · in:${u.in_count||0} out:${u.out_count||0}`;
-      const last = u.last_text ? (u.last_dir === 'out' ? 'Вы: ' : 'Он: ') + u.last_text : '';
-      const active = String(u.tg_user_id) === String(activeUserId) ? 'active' : '';
+      const uid = String(u.tg_user_id);
+      const name = u.tg_username ? '@'+u.tg_username : ('ID ' + uid);
+      const meta = `${uid} · in:${u.in_count||0} out:${u.out_count||0}`;
+      const last = u.last_text ? ((u.last_dir === 'out') ? 'Вы: ' : 'Он: ') + u.last_text : '';
+      const active = (uid === String(activeUserId)) ? 'active' : '';
       return `
-        <div class="dlgUser ${active}" data-uid="${esc(u.tg_user_id)}">
+        <div class="dlgUser ${active}" data-uid="${esc(uid)}">
           <div style="flex:1; min-width:0">
             <div class="dlgUName">${esc(name)}</div>
             <div class="dlgUMeta">${esc(meta)}</div>
@@ -589,6 +592,7 @@
   function renderTop(u){
     const top = $('dlgTop');
     if (!top) return;
+
     const name = u.tg_username ? '@'+u.tg_username : 'Без username';
     top.innerHTML = `
       <div>
@@ -599,26 +603,6 @@
     `;
   }
 
-  function renderMsgs(items){
-    const chat = $('dlgChat');
-    if (!chat) return;
-
-    if (!items || !items.length){
-      chat.innerHTML = '<div class="mut">Сообщений пока нет.</div>';
-      return;
-    }
-
-    chat.innerHTML = items.map(m=>{
-      const dir = m.direction === 'out' ? 'out' : 'in';
-      const txt = m.text || '';
-      const time = m.created_at || '';
-      return `
-        <div class="msgRow ${dir обеспечивается}">
-      `;
-    }).join('');
-  }
-
-  // маленькая правка: dir в template
   function renderMsgs(items){
     const chat = $('dlgChat');
     if (!chat) return;
@@ -645,20 +629,9 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
-  async function loadUsers(){
-    const appId = getAppId();
-    if (!appId) return;
-
-    $('dlgStatus').textContent = 'Загрузка диалогов…';
-    const j = await api(`/api/app/${encodeURIComponent(appId)}/dialogs`, { method:'GET' });
-    dlgUsers = j.items || [];
-    $('dlgStatus').textContent = '';
-    applySearch();
-  }
-
   function applySearch(){
     const q = String(($('dlgSearch')?.value || '')).trim().toLowerCase();
-    const list = !q ? dlgUsers : dlgUsers.filter(u=>{
+    const list = !q ? allUsers : allUsers.filter(u=>{
       const a = String(u.tg_user_id||'').toLowerCase();
       const b = String(u.tg_username||'').toLowerCase();
       return a.includes(q) || b.includes(q) || ('@'+b).includes(q);
@@ -666,14 +639,30 @@
     renderUsers(list);
   }
 
+  async function loadUsers(){
+    const appId = getAppId();
+    if (!appId) return;
+
+    const status = $('dlgStatus');
+    if (status) status.textContent = 'Загрузка диалогов…';
+
+    const j = await api(`/api/app/${encodeURIComponent(appId)}/dialogs`, { method:'GET' });
+    allUsers = j.items || [];
+
+    if (status) status.textContent = '';
+    applySearch();
+  }
+
   async function openDialog(tgUserId){
     activeUserId = String(tgUserId);
-    $('dlgSendBtn').disabled = false;
 
-    const u = dlgUsers.find(x => String(x.tg_user_id) === String(activeUserId));
+    const btn = $('dlgSendBtn');
+    if (btn) btn.disabled = false;
+
+    const u = allUsers.find(x => String(x.tg_user_id) === activeUserId);
     if (u) renderTop(u);
 
-    renderUsers((String(($('dlgSearch')?.value||'')).trim() ? dlgUsers.filter(()=>true) : dlgUsers));
+    applySearch();
 
     const appId = getAppId();
     const j = await api(`/api/app/${encodeURIComponent(appId)}/dialog/${encodeURIComponent(activeUserId)}?limit=120`, { method:'GET' });
@@ -683,17 +672,18 @@
   async function sendMsg(){
     const textEl = $('dlgText');
     const btn = $('dlgSendBtn');
+    const status = $('dlgStatus');
 
-    const text = String(textEl.value || '').trim();
+    const text = String(textEl?.value || '').trim();
     if (!text) return;
 
     if (!activeUserId){
-      $('dlgStatus').textContent = 'Сначала выбери пользователя слева.';
+      if (status) status.textContent = 'Сначала выбери пользователя слева.';
       return;
     }
 
-    btn.disabled = true;
-    $('dlgStatus').textContent = 'Отправляю…';
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = 'Отправляю…';
 
     try{
       const appId = getAppId();
@@ -701,51 +691,60 @@
         method:'POST',
         body: JSON.stringify({ text })
       });
-      textEl.value = '';
-      $('dlgStatus').textContent = 'Отправлено ✅';
 
-      // перезагрузим сообщения и список (чтобы last_text обновился)
+      if (textEl) textEl.value = '';
+      if (status) status.textContent = 'Отправлено ✅';
+
       await openDialog(activeUserId);
       await loadUsers();
-    } catch(e){
-      $('dlgStatus').textContent = 'Ошибка: ' + (e.message || e);
-    } finally {
-      btn.disabled = false;
-      setTimeout(()=>{ if ($('dlgStatus').textContent === 'Отправлено ✅') $('dlgStatus').textContent = ''; }, 2000);
+    }catch(e){
+      if (status) status.textContent = 'Ошибка: ' + (e.message || e);
+    }finally{
+      if (btn) btn.disabled = false;
+      setTimeout(()=>{ if (status && status.textContent === 'Отправлено ✅') status.textContent=''; }, 1500);
     }
   }
 
-  // events
+  // bind
   document.addEventListener('click', (e)=>{
-    const card = e.target.closest('.dlgUser');
-    if (card && card.dataset.uid) openDialog(card.dataset.uid);
+    const item = e.target.closest('.dlgUser');
+    if (item && item.dataset.uid) openDialog(item.dataset.uid);
 
-    if (e.target && e.target.id === 'dlgReload') loadUsers();
-    if (e.target && e.target.id === 'dlgSendBtn') sendMsg();
+    if (e.target?.id === 'dlgReload') loadUsers();
+    if (e.target?.id === 'dlgSendBtn') sendMsg();
   });
 
   document.addEventListener('input', (e)=>{
-    if (e.target && e.target.id === 'dlgSearch') applySearch();
-    if (e.target && e.target.id === 'dlgText') $('dlgSendBtn').disabled = !String($('dlgText').value||'').trim() || !activeUserId;
-  });
-
-  document.addEventListener('keydown', (e)=>{
-    if (e.target && e.target.id === 'dlgText'){
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
-        e.preventDefault();
-        sendMsg();
-      }
+    if (e.target?.id === 'dlgSearch') applySearch();
+    if (e.target?.id === 'dlgText'){
+      const btn = $('dlgSendBtn');
+      if (btn) btn.disabled = !String($('dlgText').value||'').trim() || !activeUserId;
     }
   });
 
-  // когда меняешь проект — обновляем
-  const sel = $('appSwitchGlobal');
-  if (sel) sel.addEventListener('change', ()=>setTimeout(()=>{ activeUserId=null; $('dlgSendBtn').disabled=true; loadUsers(); }, 50));
+  document.addEventListener('keydown', (e)=>{
+    if (e.target?.id === 'dlgText' && e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+      e.preventDefault();
+      sendMsg();
+    }
+  });
 
-  // автозагрузка при входе
-  setTimeout(loadUsers, 300);
+  // project switch
+  const sel = $('appSwitchGlobal');
+  if (sel) sel.addEventListener('change', ()=>setTimeout(()=>{
+    activeUserId = null;
+    const btn = $('dlgSendBtn'); if (btn) btn.disabled = true;
+    const chat = $('dlgChat'); if (chat) chat.innerHTML = '';
+    loadUsers();
+  }, 50));
+
+  // start only if dialogs markup exists
+  window.addEventListener('DOMContentLoaded', ()=>{
+    if ($('dlgUsers')) setTimeout(loadUsers, 200);
+  });
 })();
 </script>
+
 
 </body>
 </html>
