@@ -229,39 +229,46 @@
     <div class="card__hdr card__hdr--split">
       <div>
         <div class="card__title">Диалоги</div>
-        <div class="card__sub">История сообщений Telegram-бота и ответы оператора.</div>
+        <div class="card__sub">Telegram-бот: входящие, исходящие и ответы оператора.</div>
       </div>
       <div class="actions">
         <button class="btn" id="dlgReload">Обновить</button>
       </div>
     </div>
 
-    <div class="dlgLayout">
-      <!-- left: users -->
-      <div class="dlgLeft">
-        <div class="dlgSearch">
+    <div class="messenger">
+      <!-- LEFT -->
+      <aside class="msLeft">
+        <div class="msLeftTop">
           <input class="input" id="dlgSearch" placeholder="Поиск: @username или ID">
+          <div class="msFilters">
+            <button class="seg active" data-range="today">Сегодня</button>
+            <button class="seg" data-range="7d">7 дней</button>
+            <button class="seg" data-range="30d">30 дней</button>
+            <button class="seg" data-range="all">Все</button>
+          </div>
         </div>
-        <div class="dlgUsers" id="dlgUsers">
+
+        <div class="msUsers" id="dlgUsers">
           <div class="mut">Загрузка…</div>
         </div>
-      </div>
+      </aside>
 
-      <!-- right: chat -->
-      <div class="dlgRight">
-        <div class="dlgTop" id="dlgTop">
+      <!-- RIGHT -->
+      <section class="msRight">
+        <header class="msHeader" id="dlgTop">
           <div class="mut">Выбери пользователя слева</div>
-        </div>
+        </header>
 
-        <div class="dlgChat" id="dlgChat"></div>
+        <div class="msChat" id="dlgChat"></div>
 
-        <div class="dlgSend">
-          <textarea class="textarea" id="dlgText" rows="2" placeholder="Сообщение пользователю…"></textarea>
+        <footer class="msComposer">
+          <textarea class="msInput" id="dlgText" rows="2" placeholder="Сообщение… (Ctrl+Enter отправить)"></textarea>
           <button class="btn btn--primary" id="dlgSendBtn" disabled>Отправить</button>
-        </div>
+        </footer>
 
-        <div class="mut" id="dlgStatus" style="margin-top:8px"></div>
-      </div>
+        <div class="mut msStatus" id="dlgStatus"></div>
+      </section>
     </div>
   </div>
 </section>
@@ -536,10 +543,7 @@
 
   function getAppId(){
     const u = new URL(location.href);
-    const q = u.searchParams.get('app');
-    if (q) return q;
-    const sel = $('appSwitchGlobal');
-    return (sel && sel.value) ? sel.value : '';
+    return u.searchParams.get('app') || ($('appSwitchGlobal')?.value || '');
   }
 
   async function api(path, opts={}){
@@ -559,74 +563,40 @@
     }[m]));
   }
 
+  function fmtName(u){
+    const uid = String(u.tg_user_id);
+    return u.tg_username ? '@'+u.tg_username : 'ID '+uid;
+  }
+
   let allUsers = [];
   let activeUserId = null;
+  let activeRange = 'today';
 
   function renderUsers(list){
     const box = $('dlgUsers');
     if (!box) return;
 
-    if (!list || !list.length){
-      box.innerHTML = '<div class="mut">Пока нет диалогов (пользователь должен написать боту).</div>';
+    if (!list.length){
+      box.innerHTML = '<div class="mut">Нет диалогов в этом диапазоне.</div>';
       return;
     }
 
     box.innerHTML = list.map(u=>{
       const uid = String(u.tg_user_id);
-      const name = u.tg_username ? '@'+u.tg_username : ('ID ' + uid);
+      const active = (uid === String(activeUserId)) ? 'active' : '';
       const meta = `${uid} · in:${u.in_count||0} out:${u.out_count||0}`;
       const last = u.last_text ? ((u.last_dir === 'out') ? 'Вы: ' : 'Он: ') + u.last_text : '';
-      const active = (uid === String(activeUserId)) ? 'active' : '';
+      const seen = u.bot_last_seen || u.bot_started_at || '';
       return `
-        <div class="dlgUser ${active}" data-uid="${esc(uid)}">
+        <div class="userItem ${active}" data-uid="${esc(uid)}">
           <div style="flex:1; min-width:0">
-            <div class="dlgUName">${esc(name)}</div>
-            <div class="dlgUMeta">${esc(meta)}</div>
-            <div class="dlgULast">${esc(last)}</div>
+            <div class="uName">${esc(fmtName(u))}</div>
+            <div class="uMeta">${esc(meta)} · ${esc(seen)}</div>
+            <div class="uLast">${esc(last)}</div>
           </div>
         </div>
       `;
     }).join('');
-  }
-
-  function renderTop(u){
-    const top = $('dlgTop');
-    if (!top) return;
-
-    const name = u.tg_username ? '@'+u.tg_username : 'Без username';
-    top.innerHTML = `
-      <div>
-        <div style="font-weight:800">${esc(name)}</div>
-        <div class="mut">ID: ${esc(u.tg_user_id)}</div>
-      </div>
-      <div class="mut">${esc(u.bot_last_seen || '')}</div>
-    `;
-  }
-
-  function renderMsgs(items){
-    const chat = $('dlgChat');
-    if (!chat) return;
-
-    if (!items || !items.length){
-      chat.innerHTML = '<div class="mut">Сообщений пока нет.</div>';
-      return;
-    }
-
-    chat.innerHTML = items.map(m=>{
-      const dir = (m.direction === 'out') ? 'out' : 'in';
-      const txt = m.text || '';
-      const time = m.created_at || '';
-      return `
-        <div class="msgRow ${dir}">
-          <div>
-            <div class="msgBubble">${esc(txt)}</div>
-            <div class="msgTime">${esc(time)}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    chat.scrollTop = chat.scrollHeight;
   }
 
   function applySearch(){
@@ -639,28 +609,70 @@
     renderUsers(list);
   }
 
+  function renderHeader(u){
+    const top = $('dlgTop');
+    if (!top) return;
+
+    const appName = getAppId(); // можно заменить на красивое имя из твоего state, если есть
+    const who = fmtName(u) + ' · ID ' + String(u.tg_user_id);
+
+    top.innerHTML = `
+      <div class="msHdrLeft">
+        <div class="appName">${esc(appName)}</div>
+        <div class="who">${esc(who)}</div>
+      </div>
+      <div class="mut">${esc(u.bot_last_seen || '')}</div>
+    `;
+  }
+
+  function renderMsgs(items){
+    const chat = $('dlgChat');
+    if (!chat) return;
+
+    if (!items.length){
+      chat.innerHTML = '<div class="mut">Сообщений пока нет.</div>';
+      return;
+    }
+
+    chat.innerHTML = items.map(m=>{
+      const dir = (m.direction === 'out') ? 'out' : 'in';
+      const from = (dir === 'out') ? 'Вы' : 'Пользователь';
+      const txt = m.text || '';
+      const time = m.created_at || '';
+      return `
+        <div class="msgRow ${dir}">
+          <div>
+            <div class="bubble">${esc(txt)}</div>
+            <div class="bMeta"><span class="bFrom">${esc(from)}</span><span>${esc(time)}</span></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    chat.scrollTop = chat.scrollHeight;
+  }
+
   async function loadUsers(){
     const appId = getAppId();
     if (!appId) return;
 
-    const status = $('dlgStatus');
-    if (status) status.textContent = 'Загрузка диалогов…';
+    $('dlgStatus').textContent = 'Загрузка…';
 
-    const j = await api(`/api/app/${encodeURIComponent(appId)}/dialogs`, { method:'GET' });
+    const url = `/api/app/${encodeURIComponent(appId)}/dialogs` + (activeRange && activeRange!=='all' ? `?range=${encodeURIComponent(activeRange)}` : `?range=all`);
+    const j = await api(url, { method:'GET' });
+
     allUsers = j.items || [];
+    $('dlgStatus').textContent = '';
 
-    if (status) status.textContent = '';
     applySearch();
   }
 
-  async function openDialog(tgUserId){
-    activeUserId = String(tgUserId);
-
-    const btn = $('dlgSendBtn');
-    if (btn) btn.disabled = false;
+  async function openDialog(uid){
+    activeUserId = String(uid);
+    $('dlgSendBtn').disabled = false;
 
     const u = allUsers.find(x => String(x.tg_user_id) === activeUserId);
-    if (u) renderTop(u);
+    if (u) renderHeader(u);
 
     applySearch();
 
@@ -672,18 +684,17 @@
   async function sendMsg(){
     const textEl = $('dlgText');
     const btn = $('dlgSendBtn');
-    const status = $('dlgStatus');
 
-    const text = String(textEl?.value || '').trim();
+    const text = String(textEl.value || '').trim();
     if (!text) return;
 
     if (!activeUserId){
-      if (status) status.textContent = 'Сначала выбери пользователя слева.';
+      $('dlgStatus').textContent = 'Выбери пользователя слева.';
       return;
     }
 
-    if (btn) btn.disabled = true;
-    if (status) status.textContent = 'Отправляю…';
+    btn.disabled = true;
+    $('dlgStatus').textContent = 'Отправляю…';
 
     try{
       const appId = getAppId();
@@ -692,33 +703,45 @@
         body: JSON.stringify({ text })
       });
 
-      if (textEl) textEl.value = '';
-      if (status) status.textContent = 'Отправлено ✅';
+      textEl.value = '';
+      $('dlgStatus').textContent = 'Отправлено ✅';
 
       await openDialog(activeUserId);
       await loadUsers();
     }catch(e){
-      if (status) status.textContent = 'Ошибка: ' + (e.message || e);
+      $('dlgStatus').textContent = 'Ошибка: ' + (e.message || e);
     }finally{
-      if (btn) btn.disabled = false;
-      setTimeout(()=>{ if (status && status.textContent === 'Отправлено ✅') status.textContent=''; }, 1500);
+      btn.disabled = false;
+      setTimeout(()=>{ if ($('dlgStatus').textContent === 'Отправлено ✅') $('dlgStatus').textContent=''; }, 1500);
     }
   }
 
-  // bind
+  // events
   document.addEventListener('click', (e)=>{
-    const item = e.target.closest('.dlgUser');
-    if (item && item.dataset.uid) openDialog(item.dataset.uid);
+    const item = e.target.closest('.userItem');
+    if (item?.dataset?.uid) openDialog(item.dataset.uid);
 
     if (e.target?.id === 'dlgReload') loadUsers();
+
     if (e.target?.id === 'dlgSendBtn') sendMsg();
+
+    const seg = e.target.closest('.seg');
+    if (seg && seg.dataset.range){
+      document.querySelectorAll('.seg').forEach(x=>x.classList.remove('active'));
+      seg.classList.add('active');
+      activeRange = seg.dataset.range;
+      activeUserId = null;
+      $('dlgSendBtn').disabled = true;
+      $('dlgChat').innerHTML = '';
+      $('dlgTop').innerHTML = '<div class="mut">Выбери пользователя слева</div>';
+      loadUsers();
+    }
   });
 
   document.addEventListener('input', (e)=>{
     if (e.target?.id === 'dlgSearch') applySearch();
     if (e.target?.id === 'dlgText'){
-      const btn = $('dlgSendBtn');
-      if (btn) btn.disabled = !String($('dlgText').value||'').trim() || !activeUserId;
+      $('dlgSendBtn').disabled = !String($('dlgText').value||'').trim() || !activeUserId;
     }
   });
 
@@ -729,21 +752,13 @@
     }
   });
 
-  // project switch
-  const sel = $('appSwitchGlobal');
-  if (sel) sel.addEventListener('change', ()=>setTimeout(()=>{
-    activeUserId = null;
-    const btn = $('dlgSendBtn'); if (btn) btn.disabled = true;
-    const chat = $('dlgChat'); if (chat) chat.innerHTML = '';
-    loadUsers();
-  }, 50));
-
-  // start only if dialogs markup exists
+  // start only if exists
   window.addEventListener('DOMContentLoaded', ()=>{
     if ($('dlgUsers')) setTimeout(loadUsers, 200);
   });
 })();
 </script>
+
 
 
 </body>
