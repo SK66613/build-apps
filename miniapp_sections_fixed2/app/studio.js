@@ -2683,6 +2683,62 @@ srvInputs.forEach(inp => inp.addEventListener('input', syncServices));
 
 
 
+// === Спец-настройки sales_qr ===
+if (inst.key === 'sales_qr') {
+  if (!props) BP.blocks[inst.id] = (props = {});
+  const d = (window.BlockRegistry?.sales_qr?.defaults) || {};
+
+  // --- defaults (подхватываем из block.json) ---
+  if (props.title === undefined) props.title = d.title ?? 'Мой QR для кассы';
+  if (props.subtitle === undefined) props.subtitle = d.subtitle ?? 'Покажите кассиру при оплате';
+  if (props.description === undefined) props.description = d.description ?? '';
+
+  if (props.ttl_sec === undefined) props.ttl_sec = d.ttl_sec ?? 300;
+  if (props.refresh_sec === undefined) props.refresh_sec = d.refresh_sec ?? 60;
+  if (props.cashback_percent === undefined) props.cashback_percent = d.cashback_percent ?? 10;
+
+  // кассиры: список tg_id через запятую/пробелы/переносы
+  if (props.cashier_ids === undefined) props.cashier_ids = d.cashier_ids ?? '';
+
+  // кнопки: показывать/скрывать + подписи
+  if (props.show_refresh === undefined) props.show_refresh = (d.show_refresh ?? true);
+  if (props.show_copy === undefined) props.show_copy = (d.show_copy ?? true);
+
+  if (props.btn_refresh === undefined) props.btn_refresh = d.btn_refresh ?? 'Обновить';
+  if (props.btn_copy === undefined) props.btn_copy = d.btn_copy ?? 'Скопировать ссылку';
+
+  // --- fields UI ---
+  const esc = (s)=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+  addField('Заголовок', `<input type="text" data-f="title" value="${esc(props.title)}">`);
+  addField('Подзаголовок', `<input type="text" data-f="subtitle" value="${esc(props.subtitle)}">`);
+
+  addField(
+    'Описание (если пусто — не показываем)',
+    `<textarea rows="3" data-f="description" placeholder="Например: Кассир сканирует QR → вводит сумму → начислим кэшбэк.">${esc(props.description)}</textarea>`
+  );
+
+  addField('TTL токена (сек)', `<input type="number" min="60" max="600" step="10" data-f="ttl_sec" value="${Number(props.ttl_sec||300)}">`);
+  addField('Авто-обновление (сек)', `<input type="number" min="10" max="300" step="5" data-f="refresh_sec" value="${Number(props.refresh_sec||60)}">`);
+  addField('Кэшбек (%)', `<input type="number" min="0" max="100" step="1" data-f="cashback_percent" value="${Number(props.cashback_percent||10)}">`);
+
+  addField(
+    'TG ID кассиров (через запятую/пробел)',
+    `<textarea rows="2" data-f="cashier_ids" placeholder="12345678, 987654321">${esc(props.cashier_ids)}</textarea>`
+  );
+
+  addField(
+    'Кнопки',
+    `
+    <label class="chk"><input type="checkbox" data-f="show_refresh" ${props.show_refresh ? 'checked' : ''}> Показывать "Обновить"</label>
+    <div style="height:8px"></div>
+    <label class="chk"><input type="checkbox" data-f="show_copy" ${props.show_copy ? 'checked' : ''}> Показывать "Копировать"</label>
+    `
+  );
+
+  addField('Текст кнопки "Обновить"', `<input type="text" data-f="btn_refresh" value="${esc(props.btn_refresh)}">`);
+  addField('Текст кнопки "Копировать"', `<input type="text" data-f="btn_copy" value="${esc(props.btn_copy)}">`);
+}
 
 
     
