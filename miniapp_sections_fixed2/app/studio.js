@@ -2714,25 +2714,25 @@ if (inst.key === 'sales_qr') {
   if (props.btn_copy === undefined) props.btn_copy = d.btn_copy ?? 'Скопировать';
 
   // --- UI ---
-  addField('Заголовок (если пусто — скрыть)', `<input type="text" data-f="title" value="${esc(props.title)}">`);
-  addField('Подзаголовок (если пусто — скрыть)', `<input type="text" data-f="subtitle" value="${esc(props.subtitle)}">`);
+  const wTitle = addField('Заголовок (если пусто — скрыть)', `<input type="text" data-f="title" value="${esc(props.title)}">`);
+  const wSub   = addField('Подзаголовок (если пусто — скрыть)', `<input type="text" data-f="subtitle" value="${esc(props.subtitle)}">`);
 
-  addField(
+  const wDesc  = addField(
     'Описание (если пусто — не показываем)',
     `<textarea rows="3" data-f="description" placeholder="Например: Кассир сканирует QR → вводит сумму → начислим кэшбэк.">${esc(props.description)}</textarea>`
   );
 
-  addField('TTL QR-токена (сек)', `<input type="number" min="60" max="600" step="10" data-f="ttl_sec" value="${Number(props.ttl_sec||300)}">`);
-  addField('Авто-обновление (сек)', `<input type="number" min="10" max="300" step="5" data-f="refresh_sec" value="${Number(props.refresh_sec||60)}">`);
-  addField('Кэшбек (%)', `<input type="number" min="0" max="100" step="1" data-f="cashback_percent" value="${Number(props.cashback_percent||10)}">`);
+  const wTTL = addField('TTL QR-токена (сек)', `<input type="number" min="60" max="600" step="10" data-f="ttl_sec" value="${Number(props.ttl_sec||300)}">`);
+  const wRef = addField('Авто-обновление (сек)', `<input type="number" min="10" max="300" step="5" data-f="refresh_sec" value="${Number(props.refresh_sec||60)}">`);
+  const wCB  = addField('Кэшбек (%)', `<input type="number" min="0" max="100" step="1" data-f="cashback_percent" value="${Number(props.cashback_percent||10)}">`);
 
-  addField('Кассир #1 TG ID', `<input type="text" data-f="cashier1_tg_id" value="${esc(props.cashier1_tg_id)}" placeholder="12345678">`);
-  addField('Кассир #2 TG ID', `<input type="text" data-f="cashier2_tg_id" value="${esc(props.cashier2_tg_id)}" placeholder="12345678">`);
-  addField('Кассир #3 TG ID', `<input type="text" data-f="cashier3_tg_id" value="${esc(props.cashier3_tg_id)}" placeholder="12345678">`);
-  addField('Кассир #4 TG ID', `<input type="text" data-f="cashier4_tg_id" value="${esc(props.cashier4_tg_id)}" placeholder="12345678">`);
-  addField('Кассир #5 TG ID', `<input type="text" data-f="cashier5_tg_id" value="${esc(props.cashier5_tg_id)}" placeholder="12345678">`);
+  const wC1 = addField('Кассир #1 TG ID', `<input type="text" data-f="cashier1_tg_id" value="${esc(props.cashier1_tg_id)}" placeholder="12345678">`);
+  const wC2 = addField('Кассир #2 TG ID', `<input type="text" data-f="cashier2_tg_id" value="${esc(props.cashier2_tg_id)}" placeholder="12345678">`);
+  const wC3 = addField('Кассир #3 TG ID', `<input type="text" data-f="cashier3_tg_id" value="${esc(props.cashier3_tg_id)}" placeholder="12345678">`);
+  const wC4 = addField('Кассир #4 TG ID', `<input type="text" data-f="cashier4_tg_id" value="${esc(props.cashier4_tg_id)}" placeholder="12345678">`);
+  const wC5 = addField('Кассир #5 TG ID', `<input type="text" data-f="cashier5_tg_id" value="${esc(props.cashier5_tg_id)}" placeholder="12345678">`);
 
-  addField(
+  const wBtns = addField(
     'Кнопки',
     `
       <label class="chk"><input type="checkbox" data-f="show_refresh" ${props.show_refresh ? 'checked' : ''}> Показывать "Обновить"</label>
@@ -2741,9 +2741,74 @@ if (inst.key === 'sales_qr') {
     `
   );
 
-  addField('Текст кнопки "Обновить"', `<input type="text" data-f="btn_refresh" value="${esc(props.btn_refresh)}">`);
-  addField('Текст кнопки "Скопировать"', `<input type="text" data-f="btn_copy" value="${esc(props.btn_copy)}">`);
+  const wBR = addField('Текст кнопки "Обновить"', `<input type="text" data-f="btn_refresh" value="${esc(props.btn_refresh)}">`);
+  const wBC = addField('Текст кнопки "Скопировать"', `<input type="text" data-f="btn_copy" value="${esc(props.btn_copy)}">`);
+
+  // ============================================================
+  // FIX (ВАЖНО): локально привязываем слушатели,
+  // чтобы number/checkbox точно сохранялись в props (и улетали в D1).
+  // Без этого у тебя часто сохранялись только текстовые поля (кассиры),
+  // а ttl/кэшбэк/refresh оставались дефолтами.
+  // ============================================================
+
+  const qs = (wrap, key)=> wrap && wrap.querySelector ? wrap.querySelector(`[data-f="${key}"]`) : null;
+
+  const bindText = (wrap, key)=>{
+    const el = qs(wrap, key); if (!el) return;
+    const apply = ()=>{
+      pushHistory();
+      props[key] = String(el.value ?? '');
+      updatePreviewInline();
+    };
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  };
+
+  const bindNumber = (wrap, key, min, max, fallback)=>{
+    const el = qs(wrap, key); if (!el) return;
+    const apply = ()=>{
+      pushHistory();
+      let v = Number(el.value);
+      if (!Number.isFinite(v)) v = fallback;
+      if (min != null) v = Math.max(min, v);
+      if (max != null) v = Math.min(max, v);
+      props[key] = v;
+      updatePreviewInline();
+    };
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  };
+
+  const bindCheck = (wrap, key)=>{
+    const el = qs(wrap, key); if (!el) return;
+    el.addEventListener('change', ()=>{
+      pushHistory();
+      props[key] = !!el.checked;
+      updatePreviewInline();
+    });
+  };
+
+  bindText(wTitle, 'title');
+  bindText(wSub, 'subtitle');
+  bindText(wDesc, 'description');
+
+  bindNumber(wTTL, 'ttl_sec', 60, 600, 300);
+  bindNumber(wRef, 'refresh_sec', 10, 600, 60);
+  bindNumber(wCB,  'cashback_percent', 0, 100, 10);
+
+  bindText(wC1, 'cashier1_tg_id');
+  bindText(wC2, 'cashier2_tg_id');
+  bindText(wC3, 'cashier3_tg_id');
+  bindText(wC4, 'cashier4_tg_id');
+  bindText(wC5, 'cashier5_tg_id');
+
+  bindCheck(wBtns, 'show_refresh');
+  bindCheck(wBtns, 'show_copy');
+
+  bindText(wBR, 'btn_refresh');
+  bindText(wBC, 'btn_copy');
 }
+
 
 
 
