@@ -2688,123 +2688,61 @@ if (inst.key === 'sales_qr') {
   if (!props) BP.blocks[inst.id] = (props = {});
   const d = (window.BlockRegistry?.sales_qr?.defaults) || {};
 
-  // --- defaults (только если undefined) ---
-  if (props.title === undefined) props.title = d.title ?? 'Ваш QR для оплаты';
-  if (props.subtitle === undefined) props.subtitle = d.subtitle ?? 'Покажите кассиру при оплате';
+  const esc = (s)=>String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+  // тексты (храним в blueprint как обычно)
+  if (props.title === undefined) props.title = d.title ?? '';
+  if (props.subtitle === undefined) props.subtitle = d.subtitle ?? '';
   if (props.description === undefined) props.description = d.description ?? '';
 
+  // важные вещи (идут и в D1 через sync-on-save)
   if (props.ttl_sec === undefined) props.ttl_sec = d.ttl_sec ?? 300;
   if (props.refresh_sec === undefined) props.refresh_sec = d.refresh_sec ?? 60;
   if (props.cashback_percent === undefined) props.cashback_percent = d.cashback_percent ?? 10;
 
-  // 5 кассиров отдельными полями
+  // 5 кассиров — НОВЫЙ формат
   if (props.cashier1_tg_id === undefined) props.cashier1_tg_id = d.cashier1_tg_id ?? '';
   if (props.cashier2_tg_id === undefined) props.cashier2_tg_id = d.cashier2_tg_id ?? '';
   if (props.cashier3_tg_id === undefined) props.cashier3_tg_id = d.cashier3_tg_id ?? '';
   if (props.cashier4_tg_id === undefined) props.cashier4_tg_id = d.cashier4_tg_id ?? '';
   if (props.cashier5_tg_id === undefined) props.cashier5_tg_id = d.cashier5_tg_id ?? '';
 
-  // кнопки: показывать/скрывать + подписи
+  // кнопки/лейблы — только blueprint
   if (props.show_refresh === undefined) props.show_refresh = (d.show_refresh ?? true);
   if (props.show_copy === undefined) props.show_copy = (d.show_copy ?? true);
-
   if (props.btn_refresh === undefined) props.btn_refresh = d.btn_refresh ?? 'Обновить';
-  if (props.btn_copy === undefined) props.btn_copy = d.btn_copy ?? 'Скопировать ссылку';
-
-  const esc = (s)=>String(s||'')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/"/g,'&quot;');
+  if (props.btn_copy === undefined) props.btn_copy = d.btn_copy ?? 'Скопировать';
 
   // --- UI ---
-  const wTitle = addField('Заголовок (если пусто — скрываем)', `<input type="text" data-f="title" value="${esc(props.title)}">`);
-  const wSub   = addField('Подзаголовок (если пусто — скрываем)', `<input type="text" data-f="subtitle" value="${esc(props.subtitle)}">`);
+  addField('Заголовок (если пусто — скрыть)', `<input type="text" data-f="title" value="${esc(props.title)}">`);
+  addField('Подзаголовок (если пусто — скрыть)', `<input type="text" data-f="subtitle" value="${esc(props.subtitle)}">`);
 
-  const wDesc  = addField(
-    'Описание (если пусто — скрываем)',
+  addField(
+    'Описание (если пусто — не показываем)',
     `<textarea rows="3" data-f="description" placeholder="Например: Кассир сканирует QR → вводит сумму → начислим кэшбэк.">${esc(props.description)}</textarea>`
   );
 
-  const wTTL = addField('TTL токена (сек)', `<input type="number" min="60" max="600" step="10" data-f="ttl_sec" value="${Number(props.ttl_sec ?? 300)}">`);
-  const wRef = addField('Авто-обновление (сек)', `<input type="number" min="10" max="600" step="5" data-f="refresh_sec" value="${Number(props.refresh_sec ?? 60)}">`);
-  const wCB  = addField('Кэшбек (%)', `<input type="number" min="0" max="100" step="1" data-f="cashback_percent" value="${Number(props.cashback_percent ?? 10)}">`);
+  addField('TTL QR-токена (сек)', `<input type="number" min="60" max="600" step="10" data-f="ttl_sec" value="${Number(props.ttl_sec||300)}">`);
+  addField('Авто-обновление (сек)', `<input type="number" min="10" max="300" step="5" data-f="refresh_sec" value="${Number(props.refresh_sec||60)}">`);
+  addField('Кэшбек (%)', `<input type="number" min="0" max="100" step="1" data-f="cashback_percent" value="${Number(props.cashback_percent||10)}">`);
 
-  const wC1 = addField('Кассир #1 TG ID', `<input type="text" data-f="cashier1_tg_id" placeholder="12345678" value="${esc(props.cashier1_tg_id)}">`);
-  const wC2 = addField('Кассир #2 TG ID', `<input type="text" data-f="cashier2_tg_id" placeholder="12345678" value="${esc(props.cashier2_tg_id)}">`);
-  const wC3 = addField('Кассир #3 TG ID', `<input type="text" data-f="cashier3_tg_id" placeholder="12345678" value="${esc(props.cashier3_tg_id)}">`);
-  const wC4 = addField('Кассир #4 TG ID', `<input type="text" data-f="cashier4_tg_id" placeholder="12345678" value="${esc(props.cashier4_tg_id)}">`);
-  const wC5 = addField('Кассир #5 TG ID', `<input type="text" data-f="cashier5_tg_id" placeholder="12345678" value="${esc(props.cashier5_tg_id)}">`);
+  addField('Кассир #1 TG ID', `<input type="text" data-f="cashier1_tg_id" value="${esc(props.cashier1_tg_id)}" placeholder="12345678">`);
+  addField('Кассир #2 TG ID', `<input type="text" data-f="cashier2_tg_id" value="${esc(props.cashier2_tg_id)}" placeholder="12345678">`);
+  addField('Кассир #3 TG ID', `<input type="text" data-f="cashier3_tg_id" value="${esc(props.cashier3_tg_id)}" placeholder="12345678">`);
+  addField('Кассир #4 TG ID', `<input type="text" data-f="cashier4_tg_id" value="${esc(props.cashier4_tg_id)}" placeholder="12345678">`);
+  addField('Кассир #5 TG ID', `<input type="text" data-f="cashier5_tg_id" value="${esc(props.cashier5_tg_id)}" placeholder="12345678">`);
 
-  const wBtns = addField(
+  addField(
     'Кнопки',
     `
       <label class="chk"><input type="checkbox" data-f="show_refresh" ${props.show_refresh ? 'checked' : ''}> Показывать "Обновить"</label>
       <div style="height:8px"></div>
-      <label class="chk"><input type="checkbox" data-f="show_copy" ${props.show_copy ? 'checked' : ''}> Показывать "Копировать"</label>
+      <label class="chk"><input type="checkbox" data-f="show_copy" ${props.show_copy ? 'checked' : ''}> Показывать "Скопировать"</label>
     `
   );
 
-  const wBR = addField('Текст кнопки "Обновить"', `<input type="text" data-f="btn_refresh" value="${esc(props.btn_refresh)}">`);
-  const wBC = addField('Текст кнопки "Копировать"', `<input type="text" data-f="btn_copy" value="${esc(props.btn_copy)}">`);
-
-  // --- local binders (ВАЖНО: чтобы точно сохранялось) ---
-  const bindText = (wrap, key) => {
-    const el = wrap.querySelector(`[data-f="${key}"]`);
-    if (!el) return;
-    const apply = ()=>{
-      pushHistory();
-      props[key] = String(el.value ?? '');
-      updatePreviewInline();
-    };
-    el.addEventListener('input', apply);
-    el.addEventListener('change', apply);
-  };
-
-  const bindNumber = (wrap, key, min, max, fallback) => {
-    const el = wrap.querySelector(`[data-f="${key}"]`);
-    if (!el) return;
-    const apply = ()=>{
-      pushHistory();
-      let v = Number(el.value);
-      if (!Number.isFinite(v)) v = fallback;
-      if (min != null) v = Math.max(min, v);
-      if (max != null) v = Math.min(max, v);
-      props[key] = v; // храним числом (так надежнее)
-      updatePreviewInline();
-    };
-    el.addEventListener('input', apply);
-    el.addEventListener('change', apply);
-  };
-
-  const bindCheck = (wrap, key) => {
-    const el = wrap.querySelector(`[data-f="${key}"]`);
-    if (!el) return;
-    el.addEventListener('change', ()=>{
-      pushHistory();
-      props[key] = !!el.checked;
-      updatePreviewInline();
-    });
-  };
-
-  bindText(wTitle, 'title');
-  bindText(wSub, 'subtitle');
-  bindText(wDesc, 'description');
-
-  bindNumber(wTTL, 'ttl_sec', 60, 600, 300);
-  bindNumber(wRef, 'refresh_sec', 10, 600, 60);
-  bindNumber(wCB,  'cashback_percent', 0, 100, 10);
-
-  bindText(wC1, 'cashier1_tg_id');
-  bindText(wC2, 'cashier2_tg_id');
-  bindText(wC3, 'cashier3_tg_id');
-  bindText(wC4, 'cashier4_tg_id');
-  bindText(wC5, 'cashier5_tg_id');
-
-  bindCheck(wBtns, 'show_refresh');
-  bindCheck(wBtns, 'show_copy');
-
-  bindText(wBR, 'btn_refresh');
-  bindText(wBC, 'btn_copy');
+  addField('Текст кнопки "Обновить"', `<input type="text" data-f="btn_refresh" value="${esc(props.btn_refresh)}">`);
+  addField('Текст кнопки "Скопировать"', `<input type="text" data-f="btn_copy" value="${esc(props.btn_copy)}">`);
 }
 
 
