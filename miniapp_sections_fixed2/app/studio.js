@@ -2812,33 +2812,51 @@ if (inst.key === 'sales_qr') {
 
 
 
-// === Спец-настройки shop_stars_product ===
-if (inst.key === 'shop_stars_product') {
+// === Спец-настройки shop_stars_product (Stars / товары) ===
+if (inst.key === 'shop_stars_product' || inst.type === 'shop_stars_product') {
   if (!props) BP.blocks[inst.id] = (props = {});
   const d = (window.BlockRegistry?.shop_stars_product?.defaults) || {};
 
-  const esc = (s)=>String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  const qs = (wrap, key)=> wrap && wrap.querySelector ? wrap.querySelector(`[data-f="${key}"]`) : null;
+  // дефолты — только если undefined
+  if (props.title         === undefined) props.title         = d.title ?? 'Товар';
+  if (props.description   === undefined) props.description   = d.description ?? 'Описание товара';
+  if (props.photo_url     === undefined) props.photo_url     = d.photo_url ?? '';
+  if (props.product_id    === undefined) props.product_id    = d.product_id ?? '';
+  if (props.stars         === undefined) props.stars         = d.stars ?? 50;
+  if (props.qty           === undefined) props.qty           = d.qty ?? 1;
+  if (props.btn_text      === undefined) props.btn_text      = d.btn_text ?? 'Купить';
+  if (props.success_text  === undefined) props.success_text  = d.success_text ?? 'Оплата успешна ✅';
+  if (props.cancel_text   === undefined) props.cancel_text   = d.cancel_text ?? 'Платёж отменён';
+  if (props.fail_text     === undefined) props.fail_text     = d.fail_text ?? 'Ошибка оплаты';
 
-  // defaults merge (как у тебя в sales_qr)
-  if (props.title === undefined)        props.title = d.title ?? 'Товар';
-  if (props.description === undefined)  props.description = d.description ?? 'Оплата звёздами в Telegram';
-  if (props.product_id === undefined)   props.product_id = d.product_id ?? 'product_1';
-  if (props.photo_url === undefined)    props.photo_url = d.photo_url ?? '';
-  if (props.stars === undefined)        props.stars = d.stars ?? 50;
-  if (props.qty === undefined)          props.qty = d.qty ?? 1;
-  if (props.btn_text === undefined)     props.btn_text = d.btn_text ?? 'Купить за ⭐';
-  if (props.success_text === undefined) props.success_text = d.success_text ?? '✅ Оплачено!';
-  if (props.cancel_text === undefined)  props.cancel_text = d.cancel_text ?? 'Отменено';
-  if (props.fail_text === undefined)    props.fail_text = d.fail_text ?? 'Ошибка оплаты';
+  const escAttr = (v)=>{
+    return String(v ?? '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  };
 
-  // --- UI ---
-  const wTitle = addField('Название товара', `<input type="text" data-f="title" value="${esc(props.title)}">`);
-  const wDesc  = addField('Описание', `<textarea rows="3" data-f="description">${esc(props.description)}</textarea>`);
-  const wPid   = addField('Product ID (код)', `<input type="text" data-f="product_id" value="${esc(props.product_id)}" placeholder="product_1">`);
+  const addField = (label, html)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'be-field';
+    wrap.innerHTML = `
+      <div class="be-lab">${label}</div>
+      <div class="be-in">${html}</div>
+    `;
+    beBody.appendChild(wrap);
+    return wrap;
+  };
+
+  const qs = (wrap, key)=> wrap.querySelector(`[data-f="${key}"]`);
+
+  const wTitle = addField('Название', `<input type="text" data-f="title" value="${escAttr(props.title)}">`);
+  const wDesc  = addField('Описание', `<textarea data-f="description" rows="3">${escAttr(props.description)}</textarea>`);
+  const wPid   = addField('Product ID (внутренний)', `<input type="text" data-f="product_id" value="${escAttr(props.product_id)}" placeholder="sku_123">`);
 
   const wPhoto = addField('Фото (URL или загрузка)', `
-    <input type="text" data-f="photo_url" value="${esc(props.photo_url)}" placeholder="https://...">
+    <input type="text" data-f="photo_url" value="${escAttr(props.photo_url)}" placeholder="https://...">
     <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
       <input type="file" data-f="photo_upload" accept="image/*">
       <div data-f="photo_preview" style="width:64px;height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.16);overflow:hidden;background:rgba(255,255,255,.06)"></div>
@@ -2848,17 +2866,16 @@ if (inst.key === 'shop_stars_product') {
   const wStars = addField('Цена (Stars)', `<input type="number" min="1" step="1" data-f="stars" value="${Number(props.stars||1)}">`);
   const wQty   = addField('Количество (qty)', `<input type="number" min="1" step="1" data-f="qty" value="${Number(props.qty||1)}">`);
 
-  const wBtn   = addField('Текст кнопки', `<input type="text" data-f="btn_text" value="${esc(props.btn_text)}">`);
+  const wBtn   = addField('Текст кнопки', `<input type="text" data-f="btn_text" value="${escAttr(props.btn_text)}">`);
 
-  const wOk    = addField('Текст успеха', `<input type="text" data-f="success_text" value="${esc(props.success_text)}">`);
-  const wCan   = addField('Текст отмены', `<input type="text" data-f="cancel_text" value="${esc(props.cancel_text)}">`);
-  const wFail  = addField('Текст ошибки', `<input type="text" data-f="fail_text" value="${esc(props.fail_text)}">`);
+  const wOk    = addField('Текст успеха', `<input type="text" data-f="success_text" value="${escAttr(props.success_text)}">`);
+  const wCan   = addField('Текст отмены', `<input type="text" data-f="cancel_text" value="${escAttr(props.cancel_text)}">`);
+  const wFail  = addField('Текст ошибки', `<input type="text" data-f="fail_text" value="${escAttr(props.fail_text)}">`);
 
   addField('Подсказка', `<div class="mut" style="line-height:1.35">
     Оплата Stars выставляется от бота приложения (владельца мини-аппа), Stars зачисляются ему.
   </div>`);
 
-  // --- binds (в стиле sales_qr) ---
   const bindText = (wrap, key)=>{
     const el = qs(wrap, key); if (!el) return;
     const apply = ()=>{
@@ -2896,43 +2913,21 @@ if (inst.key === 'shop_stars_product') {
   bindNumber(wStars, 'stars', 1, 999999, 50);
   bindNumber(wQty, 'qty', 1, 999, 1);
 
-  // upload -> dataURL
-  {
-    const upload = qs(wPhoto, 'photo_upload');
-    const urlInp = qs(wPhoto, 'photo_url');
-    const prev   = qs(wPhoto, 'photo_preview');
-
-    const draw = ()=>{
-      const u = props.photo_url || '';
-      if (prev) prev.innerHTML = u ? `<img src="${u}" style="width:100%;height:100%;object-fit:cover">` : '';
-    };
-    draw();
-
-    if (urlInp){
-      urlInp.addEventListener('input', ()=>{
-        pushHistory();
-        props.photo_url = String(urlInp.value || '');
-        draw();
-        updatePreviewInline();
-      });
-    }
-
-    if (upload){
-      upload.addEventListener('change', (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ()=>{
-          pushHistory();
-          props.photo_url = String(reader.result || '');
-          if (urlInp) urlInp.value = props.photo_url;
-          draw();
-          updatePreviewInline();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+  // превью фото (URL)
+  const previewBox = wPhoto.querySelector('[data-f="photo_preview"]');
+  const urlInp = wPhoto.querySelector('input[data-f="photo_url"]');
+  const syncPreview = ()=>{
+    if (!previewBox) return;
+    const u = String(props.photo_url || '').trim();
+    previewBox.innerHTML = u ? `<img src="${escAttr(u)}" style="width:100%;height:100%;object-fit:cover">` : '';
+  };
+  if (urlInp){
+    urlInp.addEventListener('input', ()=>{ syncPreview(); });
+    urlInp.addEventListener('change', ()=>{ syncPreview(); });
   }
+  syncPreview();
+
+  // NOTE: загрузку файла можно прикрутить позже (в твоём студио уже есть пример под imgUpload / iconUpload).
 }
 
 
