@@ -2812,11 +2812,11 @@ if (inst.key === 'sales_qr') {
 
 
 
-// === Специальные настройки для Магазин: товар за Stars (shop_stars_product) ===
-if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_product')) {
+// === Специальные настройки: shop_stars_product ===
+if (inst.key === 'shop_stars_product') {
   if (!props) BP.blocks[inst.id] = props = {};
 
-  // дефолты (на всякий)
+  // дефолты
   if (props.title === undefined)        props.title = 'Товар';
   if (props.description === undefined)  props.description = 'Оплата звёздами в Telegram';
   if (props.product_id === undefined)   props.product_id = 'product_1';
@@ -2828,7 +2828,7 @@ if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_produc
   if (props.cancel_text === undefined)  props.cancel_text = 'Отменено';
   if (props.fail_text === undefined)    props.fail_text = 'Ошибка оплаты';
 
-  // Заголовок
+  // Название
   {
     const w = addField('Название товара', `<input type="text" value="${esc(props.title)}">`);
     const inp = w.querySelector('input');
@@ -2850,9 +2850,9 @@ if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_produc
     });
   }
 
-  // ID товара (важно для твоего API / логов / сверки)
+  // Product ID
   {
-    const w = addField('Product ID (внутренний код)', `<input type="text" value="${esc(props.product_id)}" placeholder="product_1">`);
+    const w = addField('Product ID (код товара)', `<input type="text" value="${esc(props.product_id)}" placeholder="product_1">`);
     const inp = w.querySelector('input');
     inp.addEventListener('input', ()=>{
       pushHistory();
@@ -2861,68 +2861,74 @@ if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_produc
     });
   }
 
-  // Картинка (URL + загрузка)
+  // Фото: URL + загрузка (без перерендера редактора)
   {
-    const previewImg = props.photo_url
-      ? `<img src="${props.photo_url}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.16);">`
-      : '';
-
     const w = addField('Фото товара', `
-      <input type="text" data-p-k="photo_url" value="${esc(props.photo_url)}" placeholder="URL или загрузка файлом">
+      <input type="text" data-ss-photo-url value="${esc(props.photo_url)}" placeholder="URL картинки">
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
-        <input type="file" data-p-upload accept="image/*">
-        ${previewImg}
+        <input type="file" data-ss-upload accept="image/*">
+        <div data-ss-preview style="width:64px;height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.16);overflow:hidden;background:rgba(255,255,255,.06)"></div>
       </div>
     `);
 
-    const urlInp = w.querySelector('[data-p-k="photo_url"]');
+    const urlInp = w.querySelector('[data-ss-photo-url]');
+    const prev = w.querySelector('[data-ss-preview]');
+
+    function drawPreview(){
+      if (!prev) return;
+      const u = props.photo_url || '';
+      prev.innerHTML = u ? `<img src="${u}" style="width:100%;height:100%;object-fit:cover">` : '';
+    }
+    drawPreview();
+
     urlInp.addEventListener('input', ()=>{
       pushHistory();
       props.photo_url = urlInp.value;
+      drawPreview();
       updatePreviewInline();
     });
 
-    const upload = w.querySelector('[data-p-upload]');
+    const upload = w.querySelector('[data-ss-upload]');
     upload.addEventListener('change', (e)=>{
       const file = e.target.files && e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = ()=>{
         pushHistory();
-        props.photo_url = reader.result; // base64 dataURL
-        // перерисуем редактор чтобы показать превьюшку
-        openBlockEditor(path, inst);
+        props.photo_url = reader.result; // dataURL
+        urlInp.value = props.photo_url;
+        drawPreview();
         updatePreviewInline();
       };
       reader.readAsDataURL(file);
     });
   }
 
-  // Цена в Stars
+  // Stars
   {
     const w = addField('Цена (Stars)', `<input type="number" min="1" step="1" value="${Number(props.stars||1)}">`);
     const inp = w.querySelector('input');
     inp.addEventListener('input', ()=>{
       pushHistory();
-      props.stars = Math.max(1, Number(inp.value||1));
+      props.stars = Math.max(1, Math.floor(Number(inp.value||1)));
       updatePreviewInline();
     });
   }
 
-  // Кол-во (qty)
+  // Qty
   {
     const w = addField('Количество (qty)', `<input type="number" min="1" step="1" value="${Number(props.qty||1)}">`);
     const inp = w.querySelector('input');
     inp.addEventListener('input', ()=>{
       pushHistory();
-      props.qty = Math.max(1, Number(inp.value||1));
+      props.qty = Math.max(1, Math.floor(Number(inp.value||1)));
       updatePreviewInline();
     });
   }
 
   // Текст кнопки
   {
-    const w = addField('Текст кнопки оплаты', `<input type="text" value="${esc(props.btn_text)}">`);
+    const w = addField('Текст кнопки', `<input type="text" value="${esc(props.btn_text)}">`);
     const inp = w.querySelector('input');
     inp.addEventListener('input', ()=>{
       pushHistory();
@@ -2955,15 +2961,13 @@ if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_produc
     });
   }
 
-  // Небольшая подсказка (чтобы не забывали что Stars идут в бот владельца)
-  {
-    const w = addField('Подсказка', `
-      <div class="mut" style="line-height:1.35">
-        Stars-оплата выставляет инвойс через бота приложения. Зачисление Stars идёт на этого бота (владельца мини-аппа).
-      </div>
-    `);
-  }
+  addField('Подсказка', `
+    <div class="mut" style="line-height:1.35">
+      Оплата Stars выставляется от бота приложения (владельца мини-аппа), Stars зачисляются ему.
+    </div>
+  `);
 }
+
 
     
 
