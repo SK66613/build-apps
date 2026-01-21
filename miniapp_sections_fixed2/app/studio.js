@@ -2812,161 +2812,129 @@ if (inst.key === 'sales_qr') {
 
 
 
-// === Специальные настройки: shop_stars_product ===
+// === Спец-настройки shop_stars_product ===
 if (inst.key === 'shop_stars_product') {
-  if (!props) BP.blocks[inst.id] = props = {};
+  if (!props) BP.blocks[inst.id] = (props = {});
+  const d = (window.BlockRegistry?.shop_stars_product?.defaults) || {};
 
-  // дефолты
-  if (props.title === undefined)        props.title = 'Товар';
-  if (props.description === undefined)  props.description = 'Оплата звёздами в Telegram';
-  if (props.product_id === undefined)   props.product_id = 'product_1';
-  if (props.photo_url === undefined)    props.photo_url = '';
-  if (props.stars === undefined)        props.stars = 50;
-  if (props.qty === undefined)          props.qty = 1;
-  if (props.btn_text === undefined)     props.btn_text = 'Купить за ⭐';
-  if (props.success_text === undefined) props.success_text = '✅ Оплачено!';
-  if (props.cancel_text === undefined)  props.cancel_text = 'Отменено';
-  if (props.fail_text === undefined)    props.fail_text = 'Ошибка оплаты';
+  const esc = (s)=>String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  const qs = (wrap, key)=> wrap && wrap.querySelector ? wrap.querySelector(`[data-f="${key}"]`) : null;
 
-  // Название
-  {
-    const w = addField('Название товара', `<input type="text" value="${esc(props.title)}">`);
-    const inp = w.querySelector('input');
-    inp.addEventListener('input', ()=>{
-      pushHistory();
-      props.title = inp.value;
-      updatePreviewInline();
-    });
-  }
+  // defaults merge (как у тебя в sales_qr)
+  if (props.title === undefined)        props.title = d.title ?? 'Товар';
+  if (props.description === undefined)  props.description = d.description ?? 'Оплата звёздами в Telegram';
+  if (props.product_id === undefined)   props.product_id = d.product_id ?? 'product_1';
+  if (props.photo_url === undefined)    props.photo_url = d.photo_url ?? '';
+  if (props.stars === undefined)        props.stars = d.stars ?? 50;
+  if (props.qty === undefined)          props.qty = d.qty ?? 1;
+  if (props.btn_text === undefined)     props.btn_text = d.btn_text ?? 'Купить за ⭐';
+  if (props.success_text === undefined) props.success_text = d.success_text ?? '✅ Оплачено!';
+  if (props.cancel_text === undefined)  props.cancel_text = d.cancel_text ?? 'Отменено';
+  if (props.fail_text === undefined)    props.fail_text = d.fail_text ?? 'Ошибка оплаты';
 
-  // Описание
-  {
-    const w = addField('Описание', `<textarea rows="3">${esc(props.description)}</textarea>`);
-    const ta = w.querySelector('textarea');
-    ta.addEventListener('input', ()=>{
-      pushHistory();
-      props.description = ta.value;
-      updatePreviewInline();
-    });
-  }
+  // --- UI ---
+  const wTitle = addField('Название товара', `<input type="text" data-f="title" value="${esc(props.title)}">`);
+  const wDesc  = addField('Описание', `<textarea rows="3" data-f="description">${esc(props.description)}</textarea>`);
+  const wPid   = addField('Product ID (код)', `<input type="text" data-f="product_id" value="${esc(props.product_id)}" placeholder="product_1">`);
 
-  // Product ID
-  {
-    const w = addField('Product ID (код товара)', `<input type="text" value="${esc(props.product_id)}" placeholder="product_1">`);
-    const inp = w.querySelector('input');
-    inp.addEventListener('input', ()=>{
-      pushHistory();
-      props.product_id = inp.value.trim();
-      updatePreviewInline();
-    });
-  }
-
-  // Фото: URL + загрузка (без перерендера редактора)
-  {
-    const w = addField('Фото товара', `
-      <input type="text" data-ss-photo-url value="${esc(props.photo_url)}" placeholder="URL картинки">
-      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
-        <input type="file" data-ss-upload accept="image/*">
-        <div data-ss-preview style="width:64px;height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.16);overflow:hidden;background:rgba(255,255,255,.06)"></div>
-      </div>
-    `);
-
-    const urlInp = w.querySelector('[data-ss-photo-url]');
-    const prev = w.querySelector('[data-ss-preview]');
-
-    function drawPreview(){
-      if (!prev) return;
-      const u = props.photo_url || '';
-      prev.innerHTML = u ? `<img src="${u}" style="width:100%;height:100%;object-fit:cover">` : '';
-    }
-    drawPreview();
-
-    urlInp.addEventListener('input', ()=>{
-      pushHistory();
-      props.photo_url = urlInp.value;
-      drawPreview();
-      updatePreviewInline();
-    });
-
-    const upload = w.querySelector('[data-ss-upload]');
-    upload.addEventListener('change', (e)=>{
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        pushHistory();
-        props.photo_url = reader.result; // dataURL
-        urlInp.value = props.photo_url;
-        drawPreview();
-        updatePreviewInline();
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // Stars
-  {
-    const w = addField('Цена (Stars)', `<input type="number" min="1" step="1" value="${Number(props.stars||1)}">`);
-    const inp = w.querySelector('input');
-    inp.addEventListener('input', ()=>{
-      pushHistory();
-      props.stars = Math.max(1, Math.floor(Number(inp.value||1)));
-      updatePreviewInline();
-    });
-  }
-
-  // Qty
-  {
-    const w = addField('Количество (qty)', `<input type="number" min="1" step="1" value="${Number(props.qty||1)}">`);
-    const inp = w.querySelector('input');
-    inp.addEventListener('input', ()=>{
-      pushHistory();
-      props.qty = Math.max(1, Math.floor(Number(inp.value||1)));
-      updatePreviewInline();
-    });
-  }
-
-  // Текст кнопки
-  {
-    const w = addField('Текст кнопки', `<input type="text" value="${esc(props.btn_text)}">`);
-    const inp = w.querySelector('input');
-    inp.addEventListener('input', ()=>{
-      pushHistory();
-      props.btn_text = inp.value;
-      updatePreviewInline();
-    });
-  }
-
-  // Тексты статусов
-  {
-    const w1 = addField('Текст успеха', `<input type="text" value="${esc(props.success_text)}">`);
-    w1.querySelector('input').addEventListener('input', (e)=>{
-      pushHistory();
-      props.success_text = e.target.value;
-      updatePreviewInline();
-    });
-
-    const w2 = addField('Текст отмены', `<input type="text" value="${esc(props.cancel_text)}">`);
-    w2.querySelector('input').addEventListener('input', (e)=>{
-      pushHistory();
-      props.cancel_text = e.target.value;
-      updatePreviewInline();
-    });
-
-    const w3 = addField('Текст ошибки', `<input type="text" value="${esc(props.fail_text)}">`);
-    w3.querySelector('input').addEventListener('input', (e)=>{
-      pushHistory();
-      props.fail_text = e.target.value;
-      updatePreviewInline();
-    });
-  }
-
-  addField('Подсказка', `
-    <div class="mut" style="line-height:1.35">
-      Оплата Stars выставляется от бота приложения (владельца мини-аппа), Stars зачисляются ему.
+  const wPhoto = addField('Фото (URL или загрузка)', `
+    <input type="text" data-f="photo_url" value="${esc(props.photo_url)}" placeholder="https://...">
+    <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+      <input type="file" data-f="photo_upload" accept="image/*">
+      <div data-f="photo_preview" style="width:64px;height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.16);overflow:hidden;background:rgba(255,255,255,.06)"></div>
     </div>
   `);
+
+  const wStars = addField('Цена (Stars)', `<input type="number" min="1" step="1" data-f="stars" value="${Number(props.stars||1)}">`);
+  const wQty   = addField('Количество (qty)', `<input type="number" min="1" step="1" data-f="qty" value="${Number(props.qty||1)}">`);
+
+  const wBtn   = addField('Текст кнопки', `<input type="text" data-f="btn_text" value="${esc(props.btn_text)}">`);
+
+  const wOk    = addField('Текст успеха', `<input type="text" data-f="success_text" value="${esc(props.success_text)}">`);
+  const wCan   = addField('Текст отмены', `<input type="text" data-f="cancel_text" value="${esc(props.cancel_text)}">`);
+  const wFail  = addField('Текст ошибки', `<input type="text" data-f="fail_text" value="${esc(props.fail_text)}">`);
+
+  addField('Подсказка', `<div class="mut" style="line-height:1.35">
+    Оплата Stars выставляется от бота приложения (владельца мини-аппа), Stars зачисляются ему.
+  </div>`);
+
+  // --- binds (в стиле sales_qr) ---
+  const bindText = (wrap, key)=>{
+    const el = qs(wrap, key); if (!el) return;
+    const apply = ()=>{
+      pushHistory();
+      props[key] = String(el.value ?? '');
+      updatePreviewInline();
+    };
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  };
+
+  const bindNumber = (wrap, key, min, max, fallback)=>{
+    const el = qs(wrap, key); if (!el) return;
+    const apply = ()=>{
+      pushHistory();
+      let v = Number(el.value);
+      if (!Number.isFinite(v)) v = fallback;
+      if (min != null) v = Math.max(min, v);
+      if (max != null) v = Math.min(max, v);
+      props[key] = Math.floor(v);
+      updatePreviewInline();
+    };
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  };
+
+  bindText(wTitle, 'title');
+  bindText(wDesc, 'description');
+  bindText(wPid, 'product_id');
+  bindText(wBtn, 'btn_text');
+  bindText(wOk, 'success_text');
+  bindText(wCan, 'cancel_text');
+  bindText(wFail, 'fail_text');
+
+  bindNumber(wStars, 'stars', 1, 999999, 50);
+  bindNumber(wQty, 'qty', 1, 999, 1);
+
+  // upload -> dataURL
+  {
+    const upload = qs(wPhoto, 'photo_upload');
+    const urlInp = qs(wPhoto, 'photo_url');
+    const prev   = qs(wPhoto, 'photo_preview');
+
+    const draw = ()=>{
+      const u = props.photo_url || '';
+      if (prev) prev.innerHTML = u ? `<img src="${u}" style="width:100%;height:100%;object-fit:cover">` : '';
+    };
+    draw();
+
+    if (urlInp){
+      urlInp.addEventListener('input', ()=>{
+        pushHistory();
+        props.photo_url = String(urlInp.value || '');
+        draw();
+        updatePreviewInline();
+      });
+    }
+
+    if (upload){
+      upload.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          pushHistory();
+          props.photo_url = String(reader.result || '');
+          if (urlInp) urlInp.value = props.photo_url;
+          draw();
+          updatePreviewInline();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }
 }
+
 
 
     
