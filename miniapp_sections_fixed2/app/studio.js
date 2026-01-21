@@ -2963,6 +2963,7 @@ if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_produc
       </div>
     `);
   }
+}
 
     
 
