@@ -2443,12 +2443,13 @@ beBody.innerHTML = '';
       return wrap;
     };
 
-    // Для инфо-карточек свой кастомный редактор ниже,
-    // поэтому базовые поля не рисуем, чтобы не было дублей.
-    const skipGeneric =
-    inst.key === 'infoCard' ||
-      inst.key === 'infoCardPlain' ||
-      inst.key === 'infoCardChevron';
+// Для блоков со спец-редактором ниже — базовые поля не рисуем (без дублей).
+const skipGeneric =
+  inst.key === 'infoCard' ||
+  inst.key === 'infoCardPlain' ||
+  inst.key === 'infoCardChevron' ||
+  inst.key === 'shop_stars_product';
+
 
     if (!skipGeneric && props.title!==undefined){
       addField('Заголовок', `<input type="text" data-f="title" value="${props.title||''}">`);
@@ -2811,6 +2812,157 @@ if (inst.key === 'sales_qr') {
 
 
 
+// === Специальные настройки для Магазин: товар за Stars (shop_stars_product) ===
+if (inst.key === 'shop_stars_product' || (reg && reg.type === 'shop_stars_product')) {
+  if (!props) BP.blocks[inst.id] = props = {};
+
+  // дефолты (на всякий)
+  if (props.title === undefined)        props.title = 'Товар';
+  if (props.description === undefined)  props.description = 'Оплата звёздами в Telegram';
+  if (props.product_id === undefined)   props.product_id = 'product_1';
+  if (props.photo_url === undefined)    props.photo_url = '';
+  if (props.stars === undefined)        props.stars = 50;
+  if (props.qty === undefined)          props.qty = 1;
+  if (props.btn_text === undefined)     props.btn_text = 'Купить за ⭐';
+  if (props.success_text === undefined) props.success_text = '✅ Оплачено!';
+  if (props.cancel_text === undefined)  props.cancel_text = 'Отменено';
+  if (props.fail_text === undefined)    props.fail_text = 'Ошибка оплаты';
+
+  // Заголовок
+  {
+    const w = addField('Название товара', `<input type="text" value="${esc(props.title)}">`);
+    const inp = w.querySelector('input');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      props.title = inp.value;
+      updatePreviewInline();
+    });
+  }
+
+  // Описание
+  {
+    const w = addField('Описание', `<textarea rows="3">${esc(props.description)}</textarea>`);
+    const ta = w.querySelector('textarea');
+    ta.addEventListener('input', ()=>{
+      pushHistory();
+      props.description = ta.value;
+      updatePreviewInline();
+    });
+  }
+
+  // ID товара (важно для твоего API / логов / сверки)
+  {
+    const w = addField('Product ID (внутренний код)', `<input type="text" value="${esc(props.product_id)}" placeholder="product_1">`);
+    const inp = w.querySelector('input');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      props.product_id = inp.value.trim();
+      updatePreviewInline();
+    });
+  }
+
+  // Картинка (URL + загрузка)
+  {
+    const previewImg = props.photo_url
+      ? `<img src="${props.photo_url}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.16);">`
+      : '';
+
+    const w = addField('Фото товара', `
+      <input type="text" data-p-k="photo_url" value="${esc(props.photo_url)}" placeholder="URL или загрузка файлом">
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+        <input type="file" data-p-upload accept="image/*">
+        ${previewImg}
+      </div>
+    `);
+
+    const urlInp = w.querySelector('[data-p-k="photo_url"]');
+    urlInp.addEventListener('input', ()=>{
+      pushHistory();
+      props.photo_url = urlInp.value;
+      updatePreviewInline();
+    });
+
+    const upload = w.querySelector('[data-p-upload]');
+    upload.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        pushHistory();
+        props.photo_url = reader.result; // base64 dataURL
+        // перерисуем редактор чтобы показать превьюшку
+        openBlockEditor(path, inst);
+        updatePreviewInline();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Цена в Stars
+  {
+    const w = addField('Цена (Stars)', `<input type="number" min="1" step="1" value="${Number(props.stars||1)}">`);
+    const inp = w.querySelector('input');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      props.stars = Math.max(1, Number(inp.value||1));
+      updatePreviewInline();
+    });
+  }
+
+  // Кол-во (qty)
+  {
+    const w = addField('Количество (qty)', `<input type="number" min="1" step="1" value="${Number(props.qty||1)}">`);
+    const inp = w.querySelector('input');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      props.qty = Math.max(1, Number(inp.value||1));
+      updatePreviewInline();
+    });
+  }
+
+  // Текст кнопки
+  {
+    const w = addField('Текст кнопки оплаты', `<input type="text" value="${esc(props.btn_text)}">`);
+    const inp = w.querySelector('input');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      props.btn_text = inp.value;
+      updatePreviewInline();
+    });
+  }
+
+  // Тексты статусов
+  {
+    const w1 = addField('Текст успеха', `<input type="text" value="${esc(props.success_text)}">`);
+    w1.querySelector('input').addEventListener('input', (e)=>{
+      pushHistory();
+      props.success_text = e.target.value;
+      updatePreviewInline();
+    });
+
+    const w2 = addField('Текст отмены', `<input type="text" value="${esc(props.cancel_text)}">`);
+    w2.querySelector('input').addEventListener('input', (e)=>{
+      pushHistory();
+      props.cancel_text = e.target.value;
+      updatePreviewInline();
+    });
+
+    const w3 = addField('Текст ошибки', `<input type="text" value="${esc(props.fail_text)}">`);
+    w3.querySelector('input').addEventListener('input', (e)=>{
+      pushHistory();
+      props.fail_text = e.target.value;
+      updatePreviewInline();
+    });
+  }
+
+  // Небольшая подсказка (чтобы не забывали что Stars идут в бот владельца)
+  {
+    const w = addField('Подсказка', `
+      <div class="mut" style="line-height:1.35">
+        Stars-оплата выставляет инвойс через бота приложения. Зачисление Stars идёт на этого бота (владельца мини-аппа).
+      </div>
+    `);
+  }
 
     
 
