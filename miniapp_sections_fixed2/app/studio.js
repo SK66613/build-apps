@@ -5020,7 +5020,7 @@ document.addEventListener('click', (e)=>{
   acc.classList.toggle('open');
 });
 
-<script>
+
   (function(){
     const btns = ['t_preset_dark','t_preset_light','t_preset_brand']
       .map(id=>document.getElementById(id))
@@ -5039,4 +5039,4 @@ document.addEventListener('click', (e)=>{
     // дефолт: Dark Pro активен
     setActive(document.getElementById('t_preset_dark') || btns[0]);
   })();
-</script>
+
