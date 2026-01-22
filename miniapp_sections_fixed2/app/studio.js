@@ -41,22 +41,6 @@ function setCtorMode(mode){
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 
-    // ✅ сбрасываем скролл и закрываем гармошки при смене вкладки
-  try{
-    const body = document.querySelector('.panel-left .body');
-    if (body) body.scrollTo({ top: 0, behavior: 'auto' });
-
-    // закрываем все страницы чтобы не было "раскрытия вверх"
-    const navList = document.querySelector('#nav_list');
-    if (navList){
-      navList.querySelectorAll('.acc').forEach(x=>x.classList.remove('open'));
-      navList.querySelectorAll('button[data-act="toggle"]').forEach(btn=>{
-        btn.textContent = '▸';
-      });
-    }
-  }catch(_){}
-
-
   try{ localStorage.setItem('ctor_mode', m); }catch(_){}
 }
 
