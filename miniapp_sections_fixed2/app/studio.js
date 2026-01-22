@@ -871,15 +871,6 @@ function initThemePanel(){
     });
   }
 }
-    if (themeFontEl){
-      themeFontEl.onchange = ()=>{
-        BP.app.themeTokens = BP.app.themeTokens || { ...DEFAULT_THEME_TOKENS };
-        BP.app.themeTokens.font = themeFontEl.value;
-        syncThemeCSS();
-        updatePreviewInline();
-      };
-    }
-  }
 
   /* ---------- History (undo/redo) ---------- */
   const HIST = {past:[], future:[]};
