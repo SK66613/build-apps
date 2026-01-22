@@ -2188,4 +2188,22 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
 }
 
 
+/* ================================
+   FIX: в design-аккордеонах themeGrid должен быть 1 колонкой
+   иначе themeGroup занимает только 50% и справа пусто
+   ================================ */
+.themeAccs .themeGrid{
+  display:block !important;          /* перебиваем grid */
+}
+
+/* на всякий случай — растягиваем всё по ширине */
+#ctorDesignSection,
+#ctorDesignSection .themeAccs,
+#ctorDesignSection .themeSubAcc,
+#ctorDesignSection .themeSubAcc > .acc-b,
+#ctorDesignSection .themeGrid,
+#ctorDesignSection .themeGroup{
+  width:100% !important;
+  max-width:none !important;
+}
 
