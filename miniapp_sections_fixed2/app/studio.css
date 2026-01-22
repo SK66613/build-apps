@@ -2084,4 +2084,26 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
   width:100%;
 }
 
+/* === FIX: header text must sit near icon (not on the right) === */
+.themeAccs .acc-h{
+  justify-content:flex-start !important;
+}
+
+.themeAccs .acc-h b{
+  margin-left:0 !important;
+  flex:0 0 auto !important;
+  text-align:left !important;
+}
+
+/* если где-то в проекте на b в acc-h навешано "margin-left:auto" */
+.themeAccs .acc-h > b{ 
+  margin-left:0 !important;
+}
+
+/* если у тебя в acc-h есть другие элементы, которые толкают b вправо */
+.themeAccs .acc-h > .badge,
+.themeAccs .acc-h > .mut,
+.themeAccs .acc-h > .right{
+  margin-left:auto;
+}
 
