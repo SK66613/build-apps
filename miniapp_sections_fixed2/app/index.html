@@ -183,40 +183,169 @@
         
 <div class="ctorSection" id="ctorDesignSection">
 
-        <div class="acc" id="themeAcc">
-          <div class="acc-h">
-            <b>Тема и цвета</b>
-          </div>
-          <div class="acc-b">
-            <label>
-              Цвет фона приложения
-              <input type="color" id="theme_bg" value="#0f1219">
-            </label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-              <label>
-                Акцентный цвет
-                <input type="color" id="theme_acc" value="#7C5CFF">
-              </label>
-              <label>
-                Фон нижнего меню
-                <input type="color" id="theme_tab" value="#0c0d12">
-              </label>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-              <label>
-                Цвет текста
-                <input type="color" id="theme_fg" value="#e8f0ff">
-              </label>
-              <label>
-                Шрифт
-                <select id="theme_font">
-                  <option value="Inter">Inter</option>
-                  <option value="Montserrat">Montserrat</option>
-                  <option value="system">System UI</option>
-                </select>
-              </label>
-            </div>
-          </div>
+<div class="acc open" id="themeAcc">
+  <div class="acc-h">
+    <b>Тема и стиль</b>
+    <span class="badge">Figma</span>
+  </div>
+
+  <div class="acc-b">
+    <!-- ===== Colors ===== -->
+    <div class="themeGrid">
+      <div class="themeGroup">
+        <div class="themeTitle">База</div>
+
+        <label>Background
+          <input type="color" id="t_bg" value="#0f1219">
+        </label>
+
+        <label>Surface
+          <input type="color" id="t_surface" value="#121a2a">
+        </label>
+
+        <label>Card
+          <input type="color" id="t_card" value="#101827">
+        </label>
+
+        <label>Border
+          <input type="color" id="t_border" value="#263048">
+        </label>
+
+        <label>Text
+          <input type="color" id="t_text" value="#e8f0ff">
+        </label>
+
+        <label>Muted
+          <input type="color" id="t_muted" value="#97aac4">
+        </label>
+      </div>
+
+      <div class="themeGroup">
+        <div class="themeTitle">Бренд</div>
+
+        <label>Brand / Accent
+          <input type="color" id="t_brand" value="#7C5CFF">
+        </label>
+
+        <label>Brand soft (подложки)
+          <input type="color" id="t_brandSoft" value="#2A2352">
+        </label>
+
+        <label>Success
+          <input type="color" id="t_success" value="#2dd4bf">
+        </label>
+
+        <label>Warning
+          <input type="color" id="t_warning" value="#fbbf24">
+        </label>
+
+        <label>Danger
+          <input type="color" id="t_danger" value="#fb7185">
+        </label>
+      </div>
+
+      <div class="themeGroup">
+        <div class="themeTitle">Кнопки</div>
+
+        <label>Primary BG
+          <input type="color" id="t_btnPrimaryBg" value="#7C5CFF">
+        </label>
+
+        <label>Primary Text
+          <input type="color" id="t_btnPrimaryText" value="#ffffff">
+        </label>
+
+        <label>Secondary BG
+          <input type="color" id="t_btnSecondaryBg" value="#1a2336">
+        </label>
+
+        <label>Secondary Text
+          <input type="color" id="t_btnSecondaryText" value="#e8f0ff">
+        </label>
+      </div>
+
+      <div class="themeGroup">
+        <div class="themeTitle">Навбар / Sheet</div>
+
+        <label>Tabbar BG
+          <input type="color" id="t_tabBg" value="#0c0d12">
+        </label>
+
+        <label>Tabbar Text
+          <input type="color" id="t_tabText" value="#97aac4">
+        </label>
+
+        <label>Tabbar Active
+          <input type="color" id="t_tabActive" value="#ffffff">
+        </label>
+
+        <label>Overlay (модалки)
+          <input type="color" id="t_overlay" value="#000000">
+        </label>
+      </div>
+
+      <div class="themeGroup">
+        <div class="themeTitle">Радиусы</div>
+
+        <label>Card radius
+          <input type="number" id="t_radiusCard" value="16" min="0" max="40" step="1">
+        </label>
+
+        <label>Button radius
+          <input type="number" id="t_radiusBtn" value="14" min="0" max="40" step="1">
+        </label>
+
+        <label>Input radius
+          <input type="number" id="t_radiusInput" value="12" min="0" max="40" step="1">
+        </label>
+      </div>
+
+      <div class="themeGroup">
+        <div class="themeTitle">Тени / Glow</div>
+
+        <label>Card shadow (0..1)
+          <input type="range" id="t_shadowCard" value="0.35" min="0" max="1" step="0.01">
+        </label>
+
+        <label>Focus glow (0..1)
+          <input type="range" id="t_glow" value="0.35" min="0" max="1" step="0.01">
+        </label>
+      </div>
+
+      <div class="themeGroup">
+        <div class="themeTitle">Типографика</div>
+
+        <label>Body font
+          <select id="t_fontBody">
+            <option value="Inter">Inter</option>
+            <option value="system">System UI</option>
+          </select>
+        </label>
+
+        <label>Heading font
+          <select id="t_fontHead">
+            <option value="Montserrat">Montserrat</option>
+            <option value="Inter">Inter</option>
+            <option value="system">System UI</option>
+          </select>
+        </label>
+
+        <label>Base font size
+          <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1">
+        </label>
+      </div>
+    </div>
+
+    <div class="themeRow">
+      <button class="btn" id="t_preset_dark">Preset: Dark Pro</button>
+      <button class="btn" id="t_preset_light">Preset: Light Pro</button>
+      <button class="btn" id="t_preset_brand">Preset: Brand Neon</button>
+    </div>
+
+    <div class="smallmut">Все блоки и UI должны использовать CSS-переменные (design tokens). Это “Figma-уровень” тема.</div>
+  </div>
+</div>
+
         </div>
   </div>
 
