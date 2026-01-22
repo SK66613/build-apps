@@ -1909,5 +1909,48 @@ html[data-theme="dark"] .lib-side-item{ border-color: rgba(255,255,255,0.08) !im
 }
 
 
+/* ===== Constructor Tabs (Design / Panel) ===== */
+.ctorTabs{display:flex;gap:8px}
+.ctorBtn{border-radius:999px}
+.ctorBtn.is-active{
+  background:rgba(124,92,255,.20);
+  border-color:rgba(124,92,255,.55);
+  box-shadow:0 0 0 2px rgba(124,92,255,.18);
+}
+.ctorSection{display:block}
+html[data-ctor-mode="design"] #ctorPanelSection{display:none}
+html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
+
+/* ===== Theme UI (Figma-level) ===== */
+.themeGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+@media (max-width:460px){
+  .themeGrid{grid-template-columns:1fr}
+}
+.themeGroup{
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+  border-radius:14px;
+  padding:10px;
+  display:grid;
+  gap:8px;
+}
+.themeTitle{
+  font-weight:900;
+  letter-spacing:.2px;
+  color:#e8f0ff;
+  font-size:12px;
+  opacity:.95;
+  margin-bottom:2px;
+}
+.themeRow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
 
 
