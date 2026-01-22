@@ -2207,3 +2207,55 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
   max-width:none !important;
 }
 
+/* FIX: не растягиваем последний контрол на всю строку автоматически */
+.themeAccs .themeGroup label:last-child{
+  grid-column:auto !important;
+}
+/* Общая сетка контролов внутри группы */
+.themeAccs .themeGroup{
+  display:grid !important;
+  grid-template-columns:repeat(3, minmax(0, 1fr)) !important;
+  gap:12px !important;
+}
+
+/* Адаптив */
+@media (max-width: 520px){
+  .themeAccs .themeGroup{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 360px){
+  .themeAccs .themeGroup{ grid-template-columns:1fr !important; }
+}
+
+/* Лейбл-контейнер */
+.themeAccs .themeGroup label{
+  display:grid !important;
+  gap:6px !important;
+  align-content:start;
+}
+
+/* Свотч — аккуратный, широкий, одинаковый */
+.themeAccs input[type="color"]{
+  width:100% !important;
+  height:34px !important;
+  padding:0 !important;
+  border-radius:12px !important;
+  border:1px solid rgba(148,163,184,.22) !important;
+  background:transparent !important;
+  overflow:hidden !important;
+}
+.themeAccs input[type="color"]::-webkit-color-swatch-wrapper{ padding:0 !important; }
+.themeAccs input[type="color"]::-webkit-color-swatch{ border:0 !important; border-radius:12px !important; }
+
+/* Select/number на всю ширину колонки */
+.themeAccs select,
+.themeAccs input[type="number"]{
+  width:100% !important;
+  box-sizing:border-box;
+}
+/* Light theme: активная вкладка должна быть серой */
+html[data-theme="light"] .ctorTabs .ctorBtn[aria-pressed="true"],
+html[data-theme="light"] .ctorTabs .ctorBtn.is-active{
+  background:rgba(15,23,42,.08) !important;
+  border-color:rgba(15,23,42,.16) !important;
+  color:#0b1220 !important;
+}
