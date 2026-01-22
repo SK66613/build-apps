@@ -2044,12 +2044,25 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
 }
 /* ===== Color controls layout ===== */
 
-/* 2 колонки внутри каждого themeGroup */
+/* 2-3 колонки внутри каждого themeGroup адаптивно */
 .themeAccs .themeGroup{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:12px;
 }
+
+@media (max-width: 520px){
+  .themeAccs .themeGroup{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 360px){
+  .themeAccs .themeGroup{ grid-template-columns:1fr; }
+}
+
+.themeAccs .themeGroup label:last-child{
+  grid-column:1 / -1;
+}
+
+
 
 /* label как контейнер: текст сверху, цвет снизу */
 .themeAccs .themeGroup label{
