@@ -2260,10 +2260,13 @@ html[data-theme="light"] .ctorTabs .ctorBtn.is-active{
   color:#0b1220 !important;
 }
 
-/* Резерв справа под ушко (если оно перекрывает) */
-.themeAccs .acc-b{
-  padding-right: 34px !important;  /* под ширину ушка */
+:root{ --ctor-safe-r: 34px; }
+
+#ctorDesignSection .themeSubAcc > .acc-b{
+  padding-right: var(--ctor-safe-r) !important;
+  box-sizing: border-box;
 }
+
 
 
 /* ===== Preset buttons in themeRow ===== */
