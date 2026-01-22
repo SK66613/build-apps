@@ -2137,8 +2137,55 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
   gap:12px !important;
 }
 
-#ctorDesignSection .themeGroup label:last-child{
-  grid-column: span 2;
+/* ============================
+   LAYOUT PER SECTION (fix full width)
+   ============================ */
+
+/* Общие: пусть сетка всегда тянется */
+#ctorDesignSection .themeGroup{ width:100%; }
+#ctorDesignSection .themeGroup label{ width:100%; }
+#ctorDesignSection .themeGroup label > *{ width:100%; }
+
+/* ---------- БРЕНД / БАЗА (цвета) : 3 колонки ---------- */
+#ctorDesignSection [data-theme-acc="base"] .themeGroup,
+#ctorDesignSection [data-theme-acc="brand"] .themeGroup{
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
 }
+
+/* ---------- КНОПКИ : 2 колонки (2x2) ---------- */
+#ctorDesignSection [data-theme-acc="buttons"] .themeGroup{
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+}
+
+/* ---------- ШРИФТЫ : 2 колонки + последний на всю ширину ---------- */
+#ctorDesignSection [data-theme-acc="fonts"] .themeGroup{
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+}
+
+/* Base font size (последний label) на всю ширину */
+#ctorDesignSection [data-theme-acc="fonts"] .themeGroup label:last-child{
+  grid-column: 1 / -1 !important;
+}
+
+/* ============================
+   CONTROL SIZES (make equal + full)
+   ============================ */
+
+/* Цвета одинаковые */
+#ctorDesignSection input[type="color"]{
+  height:34px !important;
+  border-radius:12px !important;
+}
+#ctorDesignSection input[type="color"]::-webkit-color-swatch{
+  border-radius:12px !important;
+}
+
+/* Селекты/инпуты шрифтов одинаковые по высоте */
+#ctorDesignSection select,
+#ctorDesignSection input[type="number"]{
+  height:38px;
+  border-radius:12px;
+}
+
 
 
