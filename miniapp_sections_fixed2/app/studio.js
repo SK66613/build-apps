@@ -5020,3 +5020,23 @@ document.addEventListener('click', (e)=>{
   acc.classList.toggle('open');
 });
 
+<script>
+  (function(){
+    const btns = ['t_preset_dark','t_preset_light','t_preset_brand']
+      .map(id=>document.getElementById(id))
+      .filter(Boolean);
+
+    if (!btns.length) return;
+
+    function setActive(btn){
+      btns.forEach(b=>b.classList.toggle('is-active', b===btn));
+    }
+
+    btns.forEach(btn=>{
+      btn.addEventListener('click', ()=>setActive(btn), true);
+    });
+
+    // дефолт: Dark Pro активен
+    setActive(document.getElementById('t_preset_dark') || btns[0]);
+  })();
+</script>
