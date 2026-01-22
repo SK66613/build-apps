@@ -186,20 +186,22 @@
 
   <div class="themeAccs">
 
-  <!-- PRESETS (первый аккордеон) -->
-  <div class="acc themeSubAcc open" data-theme-acc="presets">
-    <div class="acc-h">
-      <span class="acc-ico">🎨</span>
-      <b>Пресеты</b>
-    </div>
-    <div class="acc-b">
-      <div class="themePresetRow">
-        <button class="btn" id="t_preset_dark"  data-preset="dark">Preset: Dark Pro</button>
-        <button class="btn" id="t_preset_light" data-preset="light">Preset: Light Pro</button>
-        <button class="btn" id="t_preset_brand" data-preset="brand">Preset: Brand Neon</button>
-      </div>
-    </div>
+<!-- ===== PRESETS (самый первый) ===== -->
+<div class="acc themeSubAcc open" data-theme-acc="presets">
+  <div class="acc-h">
+    <span class="acc-ico">🎨</span>
+    <b>Темы</b>
   </div>
+  <div class="acc-b">
+    <div class="themeRow presetRow">
+      <button class="btn is-active" id="t_preset_dark"  type="button">Preset: Dark Pro</button>
+      <button class="btn"           id="t_preset_light" type="button">Preset: Light Pro</button>
+      <button class="btn"           id="t_preset_brand" type="button">Preset: Brand Neon</button>
+    </div>
+    <div class="smallmut" style="margin-top:8px">Выбери базовую тему, дальше докручивай цвета/шрифты ниже.</div>
+  </div>
+</div>
+
 
   <!-- БАЗА -->
   <div class="acc themeSubAcc" data-theme-acc="base">
