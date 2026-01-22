@@ -5003,3 +5003,20 @@ async function publishLive(){
   }
 }
   ====================================================================== */
+
+document.addEventListener('click', (e)=>{
+  const h = e.target.closest('.themeSubAcc > .acc-h');
+  if (!h) return;
+
+  const acc = h.parentElement;
+  const wrap = acc.closest('.themeAccs') || acc.parentElement;
+
+  // закрыть остальные
+  wrap.querySelectorAll('.themeSubAcc.open').forEach(x=>{
+    if (x !== acc) x.classList.remove('open');
+  });
+
+  // открыть/закрыть текущую
+  acc.classList.toggle('open');
+});
+
