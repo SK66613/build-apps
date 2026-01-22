@@ -2131,3 +2131,22 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
 .themeAccs .themeGroup{
   width:100% !important;
 }
+#ctorDesignSection,
+#ctorDesignSection .themeAccs,
+#ctorDesignSection .acc,
+#ctorDesignSection .acc-b,
+#ctorDesignSection .themeGrid,
+#ctorDesignSection .themeGroup{
+  width:100% !important;
+  max-width:none !important;
+}
+
+#ctorDesignSection .themeGroup{
+  display:grid !important;
+  grid-template-columns:repeat(3, minmax(0, 1fr)) !important;
+  gap:12px !important;
+}
+
+#ctorDesignSection .themeGroup label:last-child{
+  grid-column: span 2;
+}
