@@ -2162,6 +2162,11 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
   grid-template-columns: repeat(2, minmax(0,1fr)) !important;
 }
 
+/* ---------- ТЕНИ / GLOW : 1 колонка (во всю ширину) ---------- */
+#ctorDesignSection [data-theme-acc="shadows"] .themeGroup{
+  grid-template-columns: 1fr !important;
+}
+
 /* Base font size (последний label) на всю ширину */
 #ctorDesignSection [data-theme-acc="fonts"] .themeGroup label:last-child{
   grid-column: 1 / -1 !important;
