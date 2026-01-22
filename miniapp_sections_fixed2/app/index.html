@@ -1,6 +1,7 @@
 
 <!doctype html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="dark" data-ctor-mode="design">
+
 <head>
 
 
@@ -157,11 +158,11 @@
       <div class="hdr ctorHdr">
   
 
-  <div class="ctorHdr-actions">
-    <button class="btn smallbtn ctorBtn" data-ctor-act="a">Дизайн</button>
-    <button class="btn smallbtn ctorBtn" data-ctor-act="b">Панель</button>
+<div class="ctorHdr-actions ctorTabs">
+  <button class="btn smallbtn ctorBtn is-active" data-ctor-tab="design" aria-pressed="true">Дизайн</button>
+  <button class="btn smallbtn ctorBtn" data-ctor-tab="panel" aria-pressed="false">Панель</button>
+</div>
 
-  </div>
 
   <!-- оставляем элемент, чтобы ничего не ломалось, но скрываем через CSS -->
   <button id="panelHide" class="btn smallbtn" aria-hidden="true">⮜</button>
