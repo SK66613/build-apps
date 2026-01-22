@@ -141,17 +141,25 @@ html[data-ctor-mode="panel"]  #ctorPanelSection{display:block}
       }
 
       // Seamless embed mode (when constructor is mounted inside the Work Panel)
-      try{
-        const qs = new URLSearchParams(location.search);
-        if (qs.get('embed') === '1'){
-          document.documentElement.classList.add('embed-seamless');
-          // pass-through: host sidebar width (so the left studio panel can hide beneath it)
-          const hostW = qs.get('host_side_w');
-          if (hostW){
-            document.documentElement.style.setProperty('--host-side-w', hostW);
-          }
-        }
-      }catch(_){ }
+try{
+  const qs = new URLSearchParams(location.search);
+
+  // ✅ embed-seamless включаем если:
+  // 1) явно передали ?embed=1
+  // 2) или мы реально в iframe (панель)
+  const isEmbedded = (qs.get('embed') === '1') || (window.self !== window.top);
+
+  if (isEmbedded){
+    document.documentElement.classList.add('embed-seamless');
+
+    // pass-through: ширина хост-сайдбара (если прокидываешь)
+    const hostW = qs.get('host_side_w');
+    if (hostW){
+      document.documentElement.style.setProperty('--host-side-w', hostW);
+    }
+  }
+}catch(_){}
+
 
       window.addEventListener('message', function(e){
         const d = e && e.data;
