@@ -1976,4 +1976,112 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
   margin-top:10px;
 }
 
+/* ===== Tabs: Design / Panel (оставляем "как пресеты") ===== */
+.ctorTabs .ctorBtn{
+  border-radius:12px;
+  height:36px;
+  padding:0 14px;
+  border:1px solid rgba(148,163,184,.22);
+  background:rgba(255,255,255,.06);
+  font-weight:500;
+}
+.ctorTabs .ctorBtn.is-active,
+.ctorTabs .ctorBtn[aria-pressed="true"]{
+  background:rgba(148,163,184,.22);
+  border-color:rgba(148,163,184,.35);
+}
+
+/* ===== Accordion headers ONLY for theme sections ===== */
+.themeAccs .acc{
+  border:1px solid rgba(148,163,184,.16);
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  overflow:hidden;
+}
+
+/* header как "строка" из панели, а не кнопка */
+.themeAccs .acc-h{
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:transparent;
+  border:0;
+  cursor:pointer;
+}
+
+/* убираем любые button-like эффекты, если acc-h в проекте стилизован как .btn */
+.themeAccs .acc-h.btn{
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+/* Иконка + заголовок рядом */
+.themeAccs .acc-ico{
+  width:26px;height:26px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  border:1px solid rgba(148,163,184,.18);
+  background:rgba(255,255,255,.06);
+  flex:0 0 auto;
+}
+
+/* Заголовок рядом с иконкой */
+.themeAccs .acc-h b{
+  font-weight:700;           /* как заголовки в панели */
+  font-size:14px;
+  margin:0;
+}
+
+/* тело аккордеона */
+.themeAccs .acc-b{
+  padding:12px;
+  border-top:1px solid rgba(148,163,184,.12);
+  background:rgba(255,255,255,.02);
+}
+/* ===== Color controls layout ===== */
+
+/* 2 колонки внутри каждого themeGroup */
+.themeAccs .themeGroup{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+/* label как контейнер: текст сверху, цвет снизу */
+.themeAccs .themeGroup label{
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  color:#97aac4;
+}
+
+/* Свотч на всю ширину и скругление как у рамки */
+.themeAccs input[type="color"]{
+  width:100%;
+  height:44px;
+  padding:0;
+  border-radius:14px;                /* ✅ закруглённый как рамка */
+  border:1px solid rgba(148,163,184,.22);
+  background:transparent;
+  overflow:hidden;
+}
+
+/* Внутренности color input (Chromium) */
+.themeAccs input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+.themeAccs input[type="color"]::-webkit-color-swatch{
+  border:0;
+  border-radius:14px;                /* ✅ сам цвет тоже круглый */
+}
+
+/* Для number/range/select — можно оставить как есть, но чтобы не ломало сетку */
+.themeAccs select,
+.themeAccs input[type="number"],
+.themeAccs input[type="range"]{
+  width:100%;
+}
+
 
