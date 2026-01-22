@@ -2290,23 +2290,4 @@ html[data-theme="light"] .themeRow .btn.is-active{
 }
 
 
-/* =========================================
-   Shadows/Glow: слайдеры вертикально, на всю ширину
-   ========================================= */
-.themeAccs .themeSubAcc[data-theme-acc="shadows"] .themeGrid{
-  display:block !important;         /* вместо grid */
-}
 
-.themeAccs .themeSubAcc[data-theme-acc="shadows"] .themeGroup{
-  display:grid !important;
-  grid-template-columns: 1fr !important;  /* 1 колонка */
-  gap: 12px !important;
-}
-
-.themeAccs .themeSubAcc[data-theme-acc="shadows"] .themeGroup label{
-  width:100%;
-}
-
-.themeAccs .themeSubAcc[data-theme-acc="shadows"] input[type="range"]{
-  width:100% !important;
-}
