@@ -2259,3 +2259,52 @@ html[data-theme="light"] .ctorTabs .ctorBtn.is-active{
   border-color:rgba(15,23,42,.16) !important;
   color:#0b1220 !important;
 }
+
+/* ===== FIX: ничего не должно вылезать за карточку/панель ===== */
+.themeAccs .acc{
+  overflow:hidden;                 /* главное */
+}
+
+.themeAccs .acc-b{
+  overflow:hidden;                 /* чтобы grid не вылезал */
+}
+
+/* чтобы сетка не упиралась в край и не уезжала под ушко */
+.themeAccs .acc-b{
+  padding:12px 14px !important;    /* чуть шире по бокам */
+}
+
+/* grid + элементы не должны расширять контейнер */
+.themeAccs .themeGrid,
+.themeAccs .themeGroup{
+  min-width:0 !important;
+}
+.themeAccs .themeGroup label{
+  min-width:0 !important;
+}
+
+/* color input иногда "вылезает" из-за internal swatch — фикс */
+.themeAccs input[type="color"]{
+  box-sizing:border-box;
+  max-width:100% !important;
+}
+
+/* ===== Preset buttons in themeRow ===== */
+.themeRow .btn{
+  border-radius:12px;
+  height:34px;
+  padding:0 12px;
+}
+
+/* Active preset */
+.themeRow .btn.is-active{
+  background:rgba(148,163,184,.22) !important;
+  border-color:rgba(148,163,184,.40) !important;
+}
+
+/* Light theme active preset */
+html[data-theme="light"] .themeRow .btn.is-active{
+  background:rgba(15,23,42,.08) !important;
+  border-color:rgba(15,23,42,.16) !important;
+  color:#0b1220 !important;
+}
