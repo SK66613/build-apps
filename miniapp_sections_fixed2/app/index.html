@@ -1,32 +1,24 @@
-
 <!doctype html>
 <html lang="ru" data-theme="dark">
 <head>
-
-
   <!-- ... твои мета, стили и т.п. ... -->
 
   <!-- Настройки API для конструктора -->
   <script>
-    // говорим студии, куда слать запросы
     // Same-origin API via Worker Route: /api/*
     window.CTOR_API_BASE = '';
   </script>
 
-  <!-- studio.js подключается внизу после templates.js -->
-
-
-
-
-  
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Mini‑App Constructor — Studio v1.9.1-stable</title>
+  <title>Mini-App Constructor — Studio v1.9.1-stable</title>
+
   <link rel="stylesheet" href="studio.css"/>
+
   <!-- Fonts (Inter + Montserrat) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
@@ -47,65 +39,40 @@
     .edit input[type="text"]{width:100%;height:32px;border:1px solid #2a3346;background:#0c1320;border-radius:8px;padding:0 8px}
     .edit .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
-
+    /* =========================
+       Global Thin Scrollbars
+       ========================= */
+    *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+    *::-webkit-scrollbar{width:10px;height:10px}
+    *::-webkit-scrollbar-track{background:transparent}
+    *::-webkit-scrollbar-thumb{
+      background:rgba(255,255,255,.16);
+      border-radius:999px;
+      border:3px solid transparent;
+      background-clip:padding-box;
+    }
+    *::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.28);background-clip:padding-box}
+    *::-webkit-scrollbar-corner{background:transparent}
 
     /* =========================
-   Global Thin Scrollbars
-   (stylish, dark UI)
-   ========================= */
-
-/* Firefox */
-*{
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,.18) transparent;
-}
-
-/* Chromium / Safari */
-*::-webkit-scrollbar{
-  width: 10px;      /* вертикальный */
-  height: 10px;     /* горизонтальный */
-}
-
-*::-webkit-scrollbar-track{
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,.16);
-  border-radius: 999px;
-  border: 3px solid transparent;  /* делает thumb визуально тоньше */
-  background-clip: padding-box;
-}
-
-*::-webkit-scrollbar-thumb:hover{
-  background: rgba(255,255,255,.28);
-  background-clip: padding-box;
-}
-
-*::-webkit-scrollbar-corner{
-  background: transparent;
-}
-
-/* =========================
-   App switcher in header
-   ========================= */
-.appSwitchBox{display:flex;align-items:center;min-width:220px;max-width:420px}
-.appSwitch{
-  width:100%;
-  height:38px;
-  border-radius:12px;
-  border:1px solid rgba(148,163,184,.22);
-  background:rgba(255,255,255,.06);
-  color:inherit;
-  font-weight:900;
-  letter-spacing:.2px;
-  padding:0 10px;
-  outline:none;
-}
-.appSwitch:focus{border-color:rgba(99,102,241,.6)}
-.appSwitch option{background:#0f1522;color:#e5e7eb}
-
-</style>
+       App switcher in header
+       ========================= */
+    .appSwitchBox{display:flex;align-items:center;min-width:220px;max-width:420px}
+    .appSwitch{
+      width:100%;
+      height:38px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(255,255,255,.06);
+      color:inherit;
+      font-weight:900;
+      letter-spacing:.2px;
+      padding:0 10px;
+      outline:none;
+    }
+    .appSwitch:focus{border-color:rgba(99,102,241,.6)}
+    .appSwitch option{background:#0f1522;color:#e5e7eb}
+  </style>
 
   <style id="studioThemeOverrides">
     /* Light theme overrides for Studio embed */
@@ -122,6 +89,7 @@
     /* keep preview phone area on light */
     html[data-theme="light"] .phone{background:#0b0f16}
   </style>
+
   <script>
     (function(){
       function applyTheme(t){
@@ -133,237 +101,158 @@
         const qs = new URLSearchParams(location.search);
         if (qs.get('embed') === '1'){
           document.documentElement.classList.add('embed-seamless');
-          // pass-through: host sidebar width (so the left studio panel can hide beneath it)
           const hostW = qs.get('host_side_w');
           if (hostW){
             document.documentElement.style.setProperty('--host-side-w', hostW);
           }
         }
-      }catch(_){ }
+      }catch(_){}
 
       window.addEventListener('message', function(e){
         const d = e && e.data;
         if (!d || d.type!=='theme') return;
         applyTheme(d.theme);
       });
-      // initial: try read parent saved theme key (if same-origin)
+
       try{
         const t = localStorage.getItem('panel_theme');
         if (t) applyTheme(t);
       }catch(_){}
     })();
   </script>
-
 </head>
+
 <body>
   <div class="app">
     <!-- LEFT -->
     <div class="panel panel-left">
       <div class="hdr ctorHdr">
-  
+        <div class="ctorHdr-actions ctorTabs">
+          <button class="btn smallbtn ctorBtn is-active" data-ctor-tab="design" aria-pressed="true">Дизайн</button>
+          <button class="btn smallbtn ctorBtn" data-ctor-tab="panel" aria-pressed="false">Панель</button>
+        </div>
 
-<div class="ctorHdr-actions ctorTabs">
-  <button class="btn smallbtn ctorBtn is-active" data-ctor-tab="design" aria-pressed="true">Дизайн</button>
-  <button class="btn smallbtn ctorBtn" data-ctor-tab="panel" aria-pressed="false">Панель</button>
-</div>
+        <!-- оставляем элемент, чтобы ничего не ломалось, но скрываем через CSS -->
+        <button id="panelHide" class="btn smallbtn" aria-hidden="true">⮜</button>
+      </div>
 
-
-  <!-- оставляем элемент, чтобы ничего не ломалось, но скрываем через CSS -->
-  <button id="panelHide" class="btn smallbtn" aria-hidden="true">⮜</button>
-</div>
-
-      <!-- nav ear moved outside .panel-left so it can stay visible when the panel slides under the host sidebar -->
       <div class="body row">
-        
-<div class="help">Добавляй вкладки и страницы, редактируй блоки; превью обновляется сразу, сохраняется по кнопке.</div>
+        <div class="help">Добавляй вкладки и страницы, редактируй блоки; превью обновляется сразу, сохраняется по кнопке.</div>
+
         <div class="app-id-row">
           <label>App ID <small>ключ</small><input id="app_id" value="my_app"/></label>
         </div>
 
-        
-<div class="ctorSection" id="ctorDesignSection">
+        <!-- ===== DESIGN TAB ===== -->
+        <div class="ctorSection" id="ctorDesignSection">
 
-<div class="acc open" id="themeAcc">
-  <div class="acc-h">
-    <b>Тема и стиль</b>
-    <span class="badge">Figma</span>
-  </div>
+          <div class="acc open" id="themeAcc">
+            <div class="acc-h">
+              <b>Тема и стиль</b>
+              <span class="badge">Figma</span>
+            </div>
 
-  <div class="acc-b">
-    <!-- ===== Colors ===== -->
-    <div class="themeGrid">
-      <div class="themeGroup">
-        <div class="themeTitle">База</div>
+            <div class="acc-b">
+              <div class="themeGrid">
+                <div class="themeGroup">
+                  <div class="themeTitle">База</div>
+                  <label>Background <input type="color" id="t_bg" value="#0f1219"></label>
+                  <label>Surface    <input type="color" id="t_surface" value="#121a2a"></label>
+                  <label>Card       <input type="color" id="t_card" value="#101827"></label>
+                  <label>Border     <input type="color" id="t_border" value="#263048"></label>
+                  <label>Text       <input type="color" id="t_text" value="#e8f0ff"></label>
+                  <label>Muted      <input type="color" id="t_muted" value="#97aac4"></label>
+                </div>
 
-        <label>Background
-          <input type="color" id="t_bg" value="#0f1219">
-        </label>
+                <div class="themeGroup">
+                  <div class="themeTitle">Бренд</div>
+                  <label>Brand / Accent <input type="color" id="t_brand" value="#7C5CFF"></label>
+                  <label>Brand soft (подложки) <input type="color" id="t_brandSoft" value="#2A2352"></label>
+                  <label>Success <input type="color" id="t_success" value="#2dd4bf"></label>
+                  <label>Warning <input type="color" id="t_warning" value="#fbbf24"></label>
+                  <label>Danger  <input type="color" id="t_danger" value="#fb7185"></label>
+                </div>
 
-        <label>Surface
-          <input type="color" id="t_surface" value="#121a2a">
-        </label>
+                <div class="themeGroup">
+                  <div class="themeTitle">Кнопки</div>
+                  <label>Primary BG <input type="color" id="t_btnPrimaryBg" value="#7C5CFF"></label>
+                  <label>Primary Text <input type="color" id="t_btnPrimaryText" value="#ffffff"></label>
+                  <label>Secondary BG <input type="color" id="t_btnSecondaryBg" value="#1a2336"></label>
+                  <label>Secondary Text <input type="color" id="t_btnSecondaryText" value="#e8f0ff"></label>
+                </div>
 
-        <label>Card
-          <input type="color" id="t_card" value="#101827">
-        </label>
+                <div class="themeGroup">
+                  <div class="themeTitle">Навбар / Sheet</div>
+                  <label>Tabbar BG <input type="color" id="t_tabBg" value="#0c0d12"></label>
+                  <label>Tabbar Text <input type="color" id="t_tabText" value="#97aac4"></label>
+                  <label>Tabbar Active <input type="color" id="t_tabActive" value="#ffffff"></label>
+                  <label>Overlay (модалки) <input type="color" id="t_overlay" value="#000000"></label>
+                </div>
 
-        <label>Border
-          <input type="color" id="t_border" value="#263048">
-        </label>
+                <div class="themeGroup">
+                  <div class="themeTitle">Радиусы</div>
+                  <label>Card radius <input type="number" id="t_radiusCard" value="16" min="0" max="40" step="1"></label>
+                  <label>Button radius <input type="number" id="t_radiusBtn" value="14" min="0" max="40" step="1"></label>
+                  <label>Input radius <input type="number" id="t_radiusInput" value="12" min="0" max="40" step="1"></label>
+                </div>
 
-        <label>Text
-          <input type="color" id="t_text" value="#e8f0ff">
-        </label>
+                <div class="themeGroup">
+                  <div class="themeTitle">Тени / Glow</div>
+                  <label>Card shadow (0..1) <input type="range" id="t_shadowCard" value="0.35" min="0" max="1" step="0.01"></label>
+                  <label>Focus glow (0..1) <input type="range" id="t_glow" value="0.35" min="0" max="1" step="0.01"></label>
+                </div>
 
-        <label>Muted
-          <input type="color" id="t_muted" value="#97aac4">
-        </label>
-      </div>
+                <div class="themeGroup">
+                  <div class="themeTitle">Типографика</div>
+                  <label>Body font
+                    <select id="t_fontBody">
+                      <option value="Inter">Inter</option>
+                      <option value="system">System UI</option>
+                    </select>
+                  </label>
 
-      <div class="themeGroup">
-        <div class="themeTitle">Бренд</div>
+                  <label>Heading font
+                    <select id="t_fontHead">
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Inter">Inter</option>
+                      <option value="system">System UI</option>
+                    </select>
+                  </label>
 
-        <label>Brand / Accent
-          <input type="color" id="t_brand" value="#7C5CFF">
-        </label>
+                  <label>Base font size
+                    <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1">
+                  </label>
+                </div>
+              </div>
 
-        <label>Brand soft (подложки)
-          <input type="color" id="t_brandSoft" value="#2A2352">
-        </label>
+              <div class="themeRow">
+                <button class="btn" id="t_preset_dark">Preset: Dark Pro</button>
+                <button class="btn" id="t_preset_light">Preset: Light Pro</button>
+                <button class="btn" id="t_preset_brand">Preset: Brand Neon</button>
+              </div>
 
-        <label>Success
-          <input type="color" id="t_success" value="#2dd4bf">
-        </label>
+              <div class="smallmut">Все блоки и UI должны использовать CSS-переменные (design tokens). Это “Figma-уровень” тема.</div>
+            </div><!-- /.acc-b -->
+          </div><!-- /#themeAcc -->
 
-        <label>Warning
-          <input type="color" id="t_warning" value="#fbbf24">
-        </label>
+        </div><!-- /#ctorDesignSection -->
 
-        <label>Danger
-          <input type="color" id="t_danger" value="#fb7185">
-        </label>
-      </div>
+        <!-- ===== PANEL TAB ===== -->
+        <div class="ctorSection" id="ctorPanelSection">
 
-      <div class="themeGroup">
-        <div class="themeTitle">Кнопки</div>
+          <div class="sep"></div>
+          <div class="list" id="nav_list"></div>
 
-        <label>Primary BG
-          <input type="color" id="t_btnPrimaryBg" value="#7C5CFF">
-        </label>
+          <div class="sep"></div>
 
-        <label>Primary Text
-          <input type="color" id="t_btnPrimaryText" value="#ffffff">
-        </label>
+          <div class="grid2">
+            <input id="route_new" value="" placeholder="Название или путь"/>
+            <button id="route_add" class="btn">Добавить страницу</button>
+          </div><!-- /.grid2 -->
 
-        <label>Secondary BG
-          <input type="color" id="t_btnSecondaryBg" value="#1a2336">
-        </label>
+        </div><!-- /#ctorPanelSection -->
 
-        <label>Secondary Text
-          <input type="color" id="t_btnSecondaryText" value="#e8f0ff">
-        </label>
-      </div>
-
-      <div class="themeGroup">
-        <div class="themeTitle">Навбар / Sheet</div>
-
-        <label>Tabbar BG
-          <input type="color" id="t_tabBg" value="#0c0d12">
-        </label>
-
-        <label>Tabbar Text
-          <input type="color" id="t_tabText" value="#97aac4">
-        </label>
-
-        <label>Tabbar Active
-          <input type="color" id="t_tabActive" value="#ffffff">
-        </label>
-
-        <label>Overlay (модалки)
-          <input type="color" id="t_overlay" value="#000000">
-        </label>
-      </div>
-
-      <div class="themeGroup">
-        <div class="themeTitle">Радиусы</div>
-
-        <label>Card radius
-          <input type="number" id="t_radiusCard" value="16" min="0" max="40" step="1">
-        </label>
-
-        <label>Button radius
-          <input type="number" id="t_radiusBtn" value="14" min="0" max="40" step="1">
-        </label>
-
-        <label>Input radius
-          <input type="number" id="t_radiusInput" value="12" min="0" max="40" step="1">
-        </label>
-      </div>
-
-      <div class="themeGroup">
-        <div class="themeTitle">Тени / Glow</div>
-
-        <label>Card shadow (0..1)
-          <input type="range" id="t_shadowCard" value="0.35" min="0" max="1" step="0.01">
-        </label>
-
-        <label>Focus glow (0..1)
-          <input type="range" id="t_glow" value="0.35" min="0" max="1" step="0.01">
-        </label>
-      </div>
-
-      <div class="themeGroup">
-        <div class="themeTitle">Типографика</div>
-
-        <label>Body font
-          <select id="t_fontBody">
-            <option value="Inter">Inter</option>
-            <option value="system">System UI</option>
-          </select>
-        </label>
-
-        <label>Heading font
-          <select id="t_fontHead">
-            <option value="Montserrat">Montserrat</option>
-            <option value="Inter">Inter</option>
-            <option value="system">System UI</option>
-          </select>
-        </label>
-
-        <label>Base font size
-          <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1">
-        </label>
-      </div>
-    </div>
-
-    <div class="themeRow">
-      <button class="btn" id="t_preset_dark">Preset: Dark Pro</button>
-      <button class="btn" id="t_preset_light">Preset: Light Pro</button>
-      <button class="btn" id="t_preset_brand">Preset: Brand Neon</button>
-    </div>
-
-    <div class="smallmut">Все блоки и UI должны использовать CSS-переменные (design tokens). Это “Figma-уровень” тема.</div>
-  </div>
-</div>
-
-</div> <!-- /#themeAcc -->
-
-
-<div class="ctorSection" id="ctorPanelSection">
-
-  <div class="sep"></div>
-  <div class="list" id="nav_list"></div>
-
-  <div class="sep"></div>
-
-  <div class="grid2">
-    <input id="route_new" value="" placeholder="Название или путь"/>
-    <button id="route_add" class="btn">Добавить страницу</button>
-
-
-</div> <!-- /#ctorPanelSection -->
-
-
+      </div><!-- /.body.row -->
 
       <!-- Ушко как часть формы панели (не отдельный плавающий элемент) -->
       <button class="nav-ear" id="navEar" type="button" aria-label="Свернуть/развернуть меню">⮞</button>
@@ -387,27 +276,35 @@
         <button id="save" class="btn">Сохранить</button>
         <button id="publish" class="btn good">Опубликовать</button>
       </div>
+
       <div class="phoneArea">
-<div class="zoomRail" aria-label="Масштаб">
-  <div class="zr-label">Масштаб</div>
-  <input id="zoom" class="zr-slider" type="range" min="30" max="130" value="100"/>
-  <div id="zoom_val" class="zr-val mut">100%</div>
-</div>
+        <div class="zoomRail" aria-label="Масштаб">
+          <div class="zr-label">Масштаб</div>
+          <input id="zoom" class="zr-slider" type="range" min="30" max="130" value="100"/>
+          <div id="zoom_val" class="zr-val mut">100%</div>
+        </div>
 
         <div class="phoneDock" id="dock">
           <div class="phone" id="phone">
             <div class="notch"></div>
-            <div class="screen"><iframe id="frame" src="../preview/index.html?preview=draft&app_id=my_app"></iframe></div>
+            <div class="screen">
+              <iframe id="frame" src="../preview/index.html?preview=draft&app_id=my_app"></iframe>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </div><!-- /.centerWrap -->
+  </div><!-- /.app -->
 
   <!-- Blocks Library Modal -->
   <div class="modal" id="blocksModal">
     <div class="dlg">
-      <div class="dlg-h"><b>Библиотека блоков</b><span id="modalRoute" class="badge">/</span><div style="flex:1"></div><button id="mClose" class="btn">Закрыть</button></div>
+      <div class="dlg-h">
+        <b>Библиотека блоков</b>
+        <span id="modalRoute" class="badge">/</span>
+        <div style="flex:1"></div>
+        <button id="mClose" class="btn">Закрыть</button>
+      </div>
       <div class="dlg-b">
         <div class="grid2">
           <input id="mSearch" class="search" placeholder="Поиск блока..."/>
@@ -425,7 +322,12 @@
   <!-- Block Editor Modal -->
   <div class="modal" id="blockEditor">
     <div class="dlg">
-      <div class="dlg-h"><b>Редактор блока</b><span id="beTitle" class="badge"></span><div style="flex:1"></div><button id="beClose" class="btn">Закрыть</button></div>
+      <div class="dlg-h">
+        <b>Редактор блока</b>
+        <span id="beTitle" class="badge"></span>
+        <div style="flex:1"></div>
+        <button id="beClose" class="btn">Закрыть</button>
+      </div>
       <div class="dlg-b" id="beBody"></div>
       <div class="dlg-f">
         <button id="beDelete" class="btn danger">Удалить блок</button>
@@ -457,16 +359,22 @@
   <!-- Icon Picker Modal -->
   <div class="modal" id="iconPicker">
     <div class="dlg">
-      <div class="dlg-h"><b>Иконка вкладки</b><div style="flex:1"></div><button class="btn" data-close>Закрыть</button></div>
+      <div class="dlg-h">
+        <b>Иконка вкладки</b>
+        <div style="flex:1"></div>
+        <button class="btn" data-close>Закрыть</button>
+      </div>
       <div class="dlg-b" id="iconGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:10px"></div>
       <div class="dlg-f">
-        <label class="btn"><input type="file" id="iconUpload" accept="image/*" style="display:none">Загрузить свою</label>
+        <label class="btn">
+          <input type="file" id="iconUpload" accept="image/*" style="display:none">Загрузить свою
+        </label>
         <button class="btn primary" data-close>Готово</button>
       </div>
     </div>
   </div>
 
-    <!-- New Page Modal -->
+  <!-- New Page Modal -->
   <div class="modal" id="routeNameModal">
     <div class="dlg">
       <div class="dlg-h">
@@ -482,7 +390,6 @@
       </div>
     </div>
   </div>
-
 
   <script src="templates.js?v=step21"></script>
   <script src="studio.js?v=step21"></script>
