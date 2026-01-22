@@ -101,24 +101,6 @@
 .appSwitch:focus{border-color:rgba(99,102,241,.6)}
 .appSwitch option{background:#0f1522;color:#e5e7eb}
 
-
-
-/* ===== Theme sub-accordions (Figma panels) ===== */
-.themeAccs{display:grid;gap:10px}
-#themeAcc .acc-h{display:flex;align-items:center;gap:10px}
-.acc-ico{
-  width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
-  border-radius:8px;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(148,163,184,.18);
-  font-size:14px;
-  flex:0 0 auto;
-}
-.acc-titleRow{display:flex;align-items:center;gap:8px;min-width:0}
-.acc-titleRow b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-
-
 </style>
 
   <style id="studioThemeOverrides">
@@ -200,124 +182,113 @@
   <!-- ===================== TAB: DESIGN ===================== -->
   <div class="ctorSection" id="ctorDesignSection">
 
-  <!-- ВОТ ОНА: правильная обёртка аккордеона как у тебя в проекте -->
-  <div class="acc open" id="themeAcc">
-    <div class="acc-h">
-      <b>Тема и стиль</b>
-      <span class="badge">Figma</span>
-    </div>
-
-    <!-- Внутри acc-b уже можно делать под-гармошки -->
     <div class="acc-b">
 
-      <div class="themeAccs">
+  <div class="themeAccs">
 
-        <!-- БАЗА -->
-        <div class="acc open themeSubAcc" data-acc="base">
-          <div class="acc-h">
-            <span class="acc-ico">🎛️</span>
-            <div class="acc-titleRow"><b>База</b></div>
-            <div style="flex:1"></div>
-          </div>
-          <div class="acc-b">
-            <div class="themeGrid">
-              <div class="themeGroup">
-                <label>Background <input type="color" id="t_bg" value="#0f1219"></label>
-                <label>Surface    <input type="color" id="t_surface" value="#121a2a"></label>
-                <label>Card       <input type="color" id="t_card" value="#101827"></label>
-                <label>Border     <input type="color" id="t_border" value="#263048"></label>
-                <label>Text       <input type="color" id="t_text" value="#e8f0ff"></label>
-                <label>Muted      <input type="color" id="t_muted" value="#97aac4"></label>
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- ====== SUB ACCORDIONS: Base / Brand / Buttons / Fonts ... ====== -->
 
-        <!-- БРЕНД -->
-        <div class="acc themeSubAcc" data-acc="brand">
-          <div class="acc-h">
-            <span class="acc-ico">✨</span>
-            <div class="acc-titleRow"><b>Бренд</b></div>
-            <div style="flex:1"></div>
-          </div>
-          <div class="acc-b">
-            <div class="themeGrid">
-              <div class="themeGroup">
-                <label>Brand / Accent       <input type="color" id="t_brand" value="#7C5CFF"></label>
-                <label>Brand soft (подложки)<input type="color" id="t_brandSoft" value="#2A2352"></label>
-                <label>Success             <input type="color" id="t_success" value="#2dd4bf"></label>
-                <label>Warning             <input type="color" id="t_warning" value="#fbbf24"></label>
-                <label>Danger              <input type="color" id="t_danger" value="#fb7185"></label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- КНОПКИ -->
-        <div class="acc themeSubAcc" data-acc="buttons">
-          <div class="acc-h">
-            <span class="acc-ico">🔘</span>
-            <div class="acc-titleRow"><b>Кнопки</b></div>
-            <div style="flex:1"></div>
-          </div>
-          <div class="acc-b">
-            <div class="themeGrid">
-              <div class="themeGroup">
-                <label>Primary BG   <input type="color" id="t_btnPrimaryBg" value="#7C5CFF"></label>
-                <label>Primary Text <input type="color" id="t_btnPrimaryText" value="#ffffff"></label>
-                <label>Secondary BG <input type="color" id="t_btnSecondaryBg" value="#1a2336"></label>
-                <label>Secondary Text<input type="color" id="t_btnSecondaryText" value="#e8f0ff"></label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ТИПОГРАФИКА -->
-        <div class="acc themeSubAcc" data-acc="fonts">
-          <div class="acc-h">
-            <span class="acc-ico">Aa</span>
-            <div class="acc-titleRow"><b>Типографика</b></div>
-            <div style="flex:1"></div>
-          </div>
-          <div class="acc-b">
-            <div class="themeGrid">
-              <div class="themeGroup">
-                <label>Body font
-                  <select id="t_fontBody">
-                    <option value="Inter">Inter</option>
-                    <option value="system">System UI</option>
-                  </select>
-                </label>
-                <label>Heading font
-                  <select id="t_fontHead">
-                    <option value="Montserrat">Montserrat</option>
-                    <option value="Inter">Inter</option>
-                    <option value="system">System UI</option>
-                  </select>
-                </label>
-                <label>Base font size <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1"></label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /.themeAccs -->
-
-      <div class="themeRow" style="margin-top:10px">
-        <button class="btn" id="t_preset_dark">Preset: Dark Pro</button>
-        <button class="btn" id="t_preset_light">Preset: Light Pro</button>
-        <button class="btn" id="t_preset_brand">Preset: Brand Neon</button>
+<!-- БАЗА -->
+<div class="acc themeSubAcc" data-theme-acc="base">
+  <div class="acc-h">
+    <span class="acc-ico">🎛️</span>
+    <b>База</b>
+  </div>
+  <div class="acc-b">
+    <div class="themeGrid">
+      <div class="themeGroup">
+        <label>Background <input type="color" id="t_bg" value="#0f1219"></label>
+        <label>Surface    <input type="color" id="t_surface" value="#121a2a"></label>
+        <label>Card       <input type="color" id="t_card" value="#101827"></label>
+        <label>Border     <input type="color" id="t_border" value="#263048"></label>
+        <label>Text       <input type="color" id="t_text" value="#e8f0ff"></label>
+        <label>Muted      <input type="color" id="t_muted" value="#97aac4"></label>
       </div>
+    </div>
+  </div>
+</div>
 
-      <div class="smallmut">Все блоки и UI должны использовать CSS-переменные (design tokens). Это “Figma-уровень” тема.</div>
+<!-- БРЕНД -->
+<div class="acc themeSubAcc" data-theme-acc="brand">
+  <div class="acc-h">
+    <span class="acc-ico">✨</span>
+    <b>Бренд</b>
+  </div>
+  <div class="acc-b">
+    <div class="themeGrid">
+      <div class="themeGroup">
+        <label>Brand / Accent <input type="color" id="t_brand" value="#7C5CFF"></label>
+        <label>Brand soft (подложки) <input type="color" id="t_brandSoft" value="#2A2352"></label>
+        <label>Success <input type="color" id="t_success" value="#2dd4bf"></label>
+        <label>Warning <input type="color" id="t_warning" value="#fbbf24"></label>
+        <label>Danger  <input type="color" id="t_danger" value="#fb7185"></label>
+      </div>
+    </div>
+  </div>
+</div>
 
-    </div><!-- /.acc-b -->
-  </div><!-- /#themeAcc -->
+<!-- КНОПКИ -->
+<div class="acc themeSubAcc" data-theme-acc="buttons">
+  <div class="acc-h">
+    <span class="acc-ico">🔘</span>
+    <b>Кнопки</b>
+  </div>
+  <div class="acc-b">
+    <div class="themeGrid">
+      <div class="themeGroup">
+        <label>Primary BG   <input type="color" id="t_btnPrimaryBg" value="#7C5CFF"></label>
+        <label>Primary Text <input type="color" id="t_btnPrimaryText" value="#ffffff"></label>
+        <label>Secondary BG <input type="color" id="t_btnSecondaryBg" value="#1a2336"></label>
+        <label>Secondary Text <input type="color" id="t_btnSecondaryText" value="#e8f0ff"></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ШРИФТЫ -->
+<div class="acc themeSubAcc" data-theme-acc="fonts">
+  <div class="acc-h">
+    <span class="acc-ico">Aa</span>
+    <b>Шрифты</b>
+  </div>
+  <div class="acc-b">
+    <div class="themeGrid">
+      <div class="themeGroup">
+        <label>Body font
+          <select id="t_fontBody">
+            <option value="Inter">Inter</option>
+            <option value="system">System UI</option>
+          </select>
+        </label>
+
+        <label>Heading font
+          <select id="t_fontHead">
+            <option value="Montserrat">Montserrat</option>
+            <option value="Inter">Inter</option>
+            <option value="system">System UI</option>
+          </select>
+        </label>
+
+        <label>Base font size <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1"></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="themeRow" style="margin-top:10px">
+  <button class="btn" id="t_preset_dark">Preset: Dark Pro</button>
+  <button class="btn" id="t_preset_light">Preset: Light Pro</button>
+  <button class="btn" id="t_preset_brand">Preset: Brand Neon</button>
+</div>
+
+<div class="smallmut">Все блоки и UI должны использовать CSS-переменные (design tokens).</div>
+
 
 </div>
 
+    </div>
 
-
+  </div>
 
   <!-- ===================== TAB: PANEL ===================== -->
   <div class="ctorSection" id="ctorPanelSection">
