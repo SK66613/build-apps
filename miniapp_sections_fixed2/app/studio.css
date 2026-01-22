@@ -2295,5 +2295,30 @@ html[data-theme="light"] .themeRow .btn.is-active{
 }
 
 
+/* ============================
+   SAFE RIGHT: отступ от правого края для всех контролов в Design
+   ============================ */
+
+:root{ --ctor-safe-r: 22px; }  /* подгони 18..28px как нравится */
+
+/* сам контент в аккордеоне */
+#ctorDesignSection .themeSubAcc > .acc-b{
+  padding-right: var(--ctor-safe-r) !important;
+  box-sizing: border-box;
+}
+
+/* чтобы 100% не вылезал за padding */
+#ctorDesignSection .themeSubAcc,
+#ctorDesignSection .themeSubAcc *{
+  box-sizing: border-box;
+}
+
+/* range/селекты/инпуты — не упираться в край */
+#ctorDesignSection .themeSubAcc input[type="range"],
+#ctorDesignSection .themeSubAcc select,
+#ctorDesignSection .themeSubAcc input[type="number"],
+#ctorDesignSection .themeSubAcc input[type="color"]{
+  max-width: 100% !important;
+}
 
 
