@@ -2290,17 +2290,5 @@ html[data-theme="light"] .themeRow .btn.is-active{
 }
 
 
-/* Тени/GLOW: вертикально, на всю ширину */
-.themeAccs .themeGroup.themeGroup-stack{
-  grid-template-columns: 1fr !important;
-}
 
-.themeAccs .themeGroup.themeGroup-stack label{
-  width:100% !important;
-}
-
-.themeAccs .themeGroup.themeGroup-stack input[type="range"]{
-  width:100% !important;
-  display:block;
-}
 
