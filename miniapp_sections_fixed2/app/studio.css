@@ -2179,17 +2179,17 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
 /* Цвета одинаковые */
 #ctorDesignSection input[type="color"]{
   height:34px !important;
-  border-radius:12px !important;
+  border-radius:10px !important;
 }
 #ctorDesignSection input[type="color"]::-webkit-color-swatch{
-  border-radius:12px !important;
+  border-radius:10px !important;
 }
 
 /* Селекты/инпуты шрифтов одинаковые по высоте */
 #ctorDesignSection select,
 #ctorDesignSection input[type="number"]{
-  height:38px;
-  border-radius:12px;
+  height:34px;
+  border-radius:10px;
 }
 
 
