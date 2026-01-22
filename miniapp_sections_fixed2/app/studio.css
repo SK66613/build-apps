@@ -1911,15 +1911,36 @@ html[data-theme="dark"] .lib-side-item{ border-color: rgba(255,255,255,0.08) !im
 
 /* ===== Constructor Tabs (Design / Panel) ===== */
 .ctorTabs{display:flex;gap:8px}
-.ctorBtn{border-radius:999px}
-.ctorBtn.is-active{
-  background:rgba(124,92,255,.20);
-  border-color:rgba(124,92,255,.55);
-  box-shadow:0 0 0 2px rgba(124,92,255,.18);
+
+/* базовая кнопка вкладки — как "iPhone 13" */
+.ctorBtn{
+  border-radius:12px;             /* как у верхних кнопок */
+  height:36px;
+  padding:0 14px;
+  border:1px solid rgba(148,163,184,.22);
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  font-weight:700;
+  box-shadow:none;
 }
+
+/* hover чуть темнее */
+.ctorBtn:hover{
+  background:rgba(255,255,255,.09);
+}
+
+/* ✅ активная — серая заливка, без фиолетового свечения */
+.ctorBtn.is-active{
+  background:rgba(148,163,184,.18);     /* "серый active" */
+  border-color:rgba(148,163,184,.30);
+  box-shadow:none;
+}
+
+/* секции */
 .ctorSection{display:block}
 html[data-ctor-mode="design"] #ctorPanelSection{display:none}
 html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
+
 
 /* ===== Theme UI (Figma-level) ===== */
 .themeGrid{
