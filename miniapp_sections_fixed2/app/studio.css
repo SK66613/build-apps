@@ -1915,7 +1915,7 @@ html[data-theme="dark"] .lib-side-item{ border-color: rgba(255,255,255,0.08) !im
 /* базовая кнопка вкладки */
 .ctorTabs .ctorBtn{
   border-radius:12px;
-  height:84px;
+  height:34px;
   padding:0 14px;
   border:1px solid rgba(148,163,184,.22);
   background:rgba(255,255,255,.06);
@@ -1979,7 +1979,7 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
 /* ===== Tabs: Design / Panel (оставляем "как пресеты") ===== */
 .ctorTabs .ctorBtn{
   border-radius:10px;
-  height:84px;
+  height:34px;
   padding:0 12px;
   border:1px solid rgba(148,163,184,.22);
   background:rgba(255,255,255,.06);
