@@ -29,6 +29,34 @@ console.log("[studio] build step21");
   const ctxMenu = $('#ctxMenu');
   const navList = $('#nav_list');
 
+  // ===== Design / Panel tabs =====
+function setCtorMode(mode){
+  const m = (mode === 'panel') ? 'panel' : 'design';
+  document.documentElement.setAttribute('data-ctor-mode', m);
+
+  const btns = document.querySelectorAll('[data-ctor-tab]');
+  btns.forEach(b=>{
+    const on = (b.getAttribute('data-ctor-tab') === m);
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  try{ localStorage.setItem('ctor_mode', m); }catch(_){}
+}
+
+(function initCtorMode(){
+  let m = 'design';
+  try{ m = localStorage.getItem('ctor_mode') || 'design'; }catch(_){}
+  setCtorMode(m);
+
+  document.querySelectorAll('[data-ctor-tab]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      setCtorMode(b.getAttribute('data-ctor-tab'));
+    });
+  });
+})();
+
+
   // ====== Cloudflare Worker API base ======
   // По умолчанию берём origin страницы (кабинет).
   // Можно переопределить сверху в HTML:
@@ -396,20 +424,89 @@ console.log("[studio] build step21");
     }
   }catch(_){ }
 
-  const themeBgEl   = $('#theme_bg');
-  const themeAccEl  = $('#theme_acc');
-  const themeTabEl  = $('#theme_tab');
-  const themeFgEl   = $('#theme_fg');
-  const themeFontEl = $('#theme_font');
+// Figma-level theme inputs
+const T = {
+  bg: $('#t_bg'),
+  surface: $('#t_surface'),
+  card: $('#t_card'),
+  border: $('#t_border'),
+  text: $('#t_text'),
+  muted: $('#t_muted'),
 
-  const DEFAULT_THEME_TOKENS = {
-    bg: '#0f1219',
-    fg: '#e8f0ff',
-    sub: '#97aac4',
-    acc: '#7C5CFF',
-    tab: '#0c0d12',
-    font: 'Inter'
-  };
+  brand: $('#t_brand'),
+  brandSoft: $('#t_brandSoft'),
+  success: $('#t_success'),
+  warning: $('#t_warning'),
+  danger: $('#t_danger'),
+
+  btnPrimaryBg: $('#t_btnPrimaryBg'),
+  btnPrimaryText: $('#t_btnPrimaryText'),
+  btnSecondaryBg: $('#t_btnSecondaryBg'),
+  btnSecondaryText: $('#t_btnSecondaryText'),
+
+  tabBg: $('#t_tabBg'),
+  tabText: $('#t_tabText'),
+  tabActive: $('#t_tabActive'),
+  overlay: $('#t_overlay'),
+
+  radiusCard: $('#t_radiusCard'),
+  radiusBtn: $('#t_radiusBtn'),
+  radiusInput: $('#t_radiusInput'),
+
+  shadowCard: $('#t_shadowCard'),
+  glow: $('#t_glow'),
+
+  fontBody: $('#t_fontBody'),
+  fontHead: $('#t_fontHead'),
+  fontSize: $('#t_fontSize'),
+
+  presetDark: $('#t_preset_dark'),
+  presetLight: $('#t_preset_light'),
+  presetBrand: $('#t_preset_brand'),
+};
+
+const DEFAULT_THEME_TOKENS = {
+  // Colors
+  bg:'#0f1219',
+  surface:'#121a2a',
+  card:'#101827',
+  border:'#263048',
+  text:'#e8f0ff',
+  muted:'#97aac4',
+
+  brand:'#7C5CFF',
+  brandSoft:'#2A2352',
+  success:'#2dd4bf',
+  warning:'#fbbf24',
+  danger:'#fb7185',
+
+  // Buttons
+  btnPrimaryBg:'#7C5CFF',
+  btnPrimaryText:'#ffffff',
+  btnSecondaryBg:'#1a2336',
+  btnSecondaryText:'#e8f0ff',
+
+  // Nav / overlay
+  tabBg:'#0c0d12',
+  tabText:'#97aac4',
+  tabActive:'#ffffff',
+  overlay:'#000000',
+
+  // Radius
+  radiusCard:16,
+  radiusBtn:14,
+  radiusInput:12,
+
+  // Shadows (0..1)
+  shadowCard:0.35,
+  glow:0.35,
+
+  // Typography
+  fontBody:'Inter',
+  fontHead:'Montserrat',
+  fontSize:14,
+};
+
 
   // Modals
   const modal = $('#blocksModal');
@@ -516,44 +613,265 @@ BP.routes.forEach(r=>{
 
   BP.app.theme = BP.app.theme || { css: '' };
 
-  function syncThemeCSS(){
-    const t = BP.app.themeTokens || DEFAULT_THEME_TOKENS;
-    const fontFamily = t.font === 'system' ? 'system-ui' : `${t.font}, system-ui`;
-    const css = `
-    :root{
-      --bg:${t.bg};
-      --fg:${t.fg};
-      --sub:${t.sub};
-      --line:rgba(255,255,255,.1);
-      --acc:${t.acc};
-    }
-    body{
-      background:var(--bg);
-      color:var(--fg);
-      font:14px/1.5 ${fontFamily};
-    }
-    .tabbar{
-      background:${t.tab};
-    }
-    .tab{
-      color:${t.fg};
-    }
-    .tab.active{
-      color:${t.acc};
-    }
-    `;
-    BP.app.theme.css = css;
+function fontFamily(v){
+  if (v === 'system') return 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+  return `${v}, system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif`;
+}
+
+function clamp01(x){
+  const n = Number(x);
+  if (!isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+function syncThemeCSS(){
+  const t = BP.app.themeTokens || DEFAULT_THEME_TOKENS;
+
+  const shadowA = clamp01(t.shadowCard);
+  const glowA   = clamp01(t.glow);
+
+  // IMPORTANT: we keep legacy vars (--bg/--fg/--sub/--acc/--line) for existing CSS
+  const css = `
+:root{
+  /* === Figma tokens === */
+  --color-bg:${t.bg};
+  --color-surface:${t.surface};
+  --color-card:${t.card};
+  --color-border:${t.border};
+  --color-text:${t.text};
+  --color-muted:${t.muted};
+
+  --color-brand:${t.brand};
+  --color-brand-soft:${t.brandSoft};
+  --color-success:${t.success};
+  --color-warning:${t.warning};
+  --color-danger:${t.danger};
+
+  --btn-primary-bg:${t.btnPrimaryBg};
+  --btn-primary-text:${t.btnPrimaryText};
+  --btn-secondary-bg:${t.btnSecondaryBg};
+  --btn-secondary-text:${t.btnSecondaryText};
+
+  --tabbar-bg:${t.tabBg};
+  --tabbar-text:${t.tabText};
+  --tabbar-active:${t.tabActive};
+  --overlay:${t.overlay};
+
+  --radius-card:${Number(t.radiusCard)||16}px;
+  --radius-btn:${Number(t.radiusBtn)||14}px;
+  --radius-input:${Number(t.radiusInput)||12}px;
+
+  --shadow-card: 0 16px 40px rgba(0,0,0,${(0.28*shadowA).toFixed(3)});
+  --shadow-soft: 0 8px 24px rgba(0,0,0,${(0.18*shadowA).toFixed(3)});
+  --glow: 0 0 0 2px rgba(124,92,255,${(0.35*glowA).toFixed(3)}); /* fallback */
+  --glow-brand: 0 0 0 2px rgba(124,92,255,${(0.55*glowA).toFixed(3)}), 0 0 24px rgba(124,92,255,${(0.32*glowA).toFixed(3)});
+
+  --font-body:${fontFamily(t.fontBody)};
+  --font-head:${fontFamily(t.fontHead)};
+  --font-size:${Number(t.fontSize)||14}px;
+
+  /* === legacy mapping (old CSS + some blocks) === */
+  --bg: var(--color-bg);
+  --fg: var(--color-text);
+  --sub: var(--color-muted);
+  --acc: var(--color-brand);
+  --line: rgba(255,255,255,.10);
+}
+
+html,body{
+  background:var(--color-bg);
+  color:var(--color-text);
+  font: var(--font-size)/1.55 var(--font-body);
+}
+
+h1,h2,h3,.h1,.h2,.h3{
+  font-family: var(--font-head);
+}
+
+.tabbar{
+  background: color-mix(in srgb, var(--tabbar-bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.tab{ color: var(--tabbar-text); }
+.tab.active{ color: var(--tabbar-active); }
+
+.card{
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+button:focus, .btn:focus, input:focus, select:focus{
+  outline:none;
+  box-shadow: var(--glow-brand);
+}
+`;
+
+  BP.app.theme.css = css;
+}
+
+
+function ensureTheme(){
+  BP.app.themeTokens = BP.app.themeTokens || { ...DEFAULT_THEME_TOKENS };
+  // подтягиваем недостающие ключи при апдейтах
+  for (const k in DEFAULT_THEME_TOKENS){
+    if (BP.app.themeTokens[k] === undefined) BP.app.themeTokens[k] = DEFAULT_THEME_TOKENS[k];
   }
+  return BP.app.themeTokens;
+}
 
-  function initThemePanel(){
-    if (!themeBgEl) return;
-    const t = BP.app.themeTokens || DEFAULT_THEME_TOKENS;
+function setVal(el, v){
+  if (!el) return;
+  if (el.type === 'range' || el.type === 'number') el.value = String(v);
+  else el.value = String(v);
+}
 
-    themeBgEl.value   = t.bg;
-    if (themeAccEl)  themeAccEl.value  = t.acc;
-    if (themeTabEl)  themeTabEl.value  = t.tab;
-    if (themeFgEl)   themeFgEl.value   = t.fg;
-    if (themeFontEl) themeFontEl.value = t.font;
+function bind(el, key, kind){
+  if (!el) return;
+  const ev = (kind === 'change') ? 'change' : 'input';
+  el.addEventListener(ev, ()=>{
+    const t = ensureTheme();
+    if (el.type === 'number' || el.type === 'range'){
+      t[key] = Number(el.value);
+    } else {
+      t[key] = el.value;
+    }
+    syncThemeCSS();
+    updatePreviewInline();
+  });
+}
+
+function applyPreset(p){
+  const t = ensureTheme();
+  Object.assign(t, p);
+  // sync UI
+  for (const k in T){
+    if (!T[k]) continue;
+  }
+  syncThemeUI();
+  syncThemeCSS();
+  updatePreviewInline();
+}
+
+function syncThemeUI(){
+  const t = ensureTheme();
+
+  setVal(T.bg, t.bg);
+  setVal(T.surface, t.surface);
+  setVal(T.card, t.card);
+  setVal(T.border, t.border);
+  setVal(T.text, t.text);
+  setVal(T.muted, t.muted);
+
+  setVal(T.brand, t.brand);
+  setVal(T.brandSoft, t.brandSoft);
+  setVal(T.success, t.success);
+  setVal(T.warning, t.warning);
+  setVal(T.danger, t.danger);
+
+  setVal(T.btnPrimaryBg, t.btnPrimaryBg);
+  setVal(T.btnPrimaryText, t.btnPrimaryText);
+  setVal(T.btnSecondaryBg, t.btnSecondaryBg);
+  setVal(T.btnSecondaryText, t.btnSecondaryText);
+
+  setVal(T.tabBg, t.tabBg);
+  setVal(T.tabText, t.tabText);
+  setVal(T.tabActive, t.tabActive);
+  setVal(T.overlay, t.overlay);
+
+  setVal(T.radiusCard, t.radiusCard);
+  setVal(T.radiusBtn, t.radiusBtn);
+  setVal(T.radiusInput, t.radiusInput);
+
+  setVal(T.shadowCard, t.shadowCard);
+  setVal(T.glow, t.glow);
+
+  setVal(T.fontBody, t.fontBody);
+  setVal(T.fontHead, t.fontHead);
+  setVal(T.fontSize, t.fontSize);
+}
+
+function initThemePanel(){
+  // если нет новых инпутов — выходим
+  if (!T.bg) return;
+
+  ensureTheme();
+  syncThemeUI();
+
+  // bind colors
+  bind(T.bg, 'bg');
+  bind(T.surface, 'surface');
+  bind(T.card, 'card');
+  bind(T.border, 'border');
+  bind(T.text, 'text');
+  bind(T.muted, 'muted');
+
+  bind(T.brand, 'brand');
+  bind(T.brandSoft, 'brandSoft');
+  bind(T.success, 'success');
+  bind(T.warning, 'warning');
+  bind(T.danger, 'danger');
+
+  bind(T.btnPrimaryBg, 'btnPrimaryBg');
+  bind(T.btnPrimaryText, 'btnPrimaryText');
+  bind(T.btnSecondaryBg, 'btnSecondaryBg');
+  bind(T.btnSecondaryText, 'btnSecondaryText');
+
+  bind(T.tabBg, 'tabBg');
+  bind(T.tabText, 'tabText');
+  bind(T.tabActive, 'tabActive');
+  bind(T.overlay, 'overlay');
+
+  bind(T.radiusCard, 'radiusCard');
+  bind(T.radiusBtn, 'radiusBtn');
+  bind(T.radiusInput, 'radiusInput');
+
+  bind(T.shadowCard, 'shadowCard');
+  bind(T.glow, 'glow');
+
+  bind(T.fontBody, 'fontBody', 'change');
+  bind(T.fontHead, 'fontHead', 'change');
+  bind(T.fontSize, 'fontSize');
+
+  // presets
+  if (T.presetDark){
+    T.presetDark.onclick = ()=>applyPreset({
+      bg:'#0b0f16', surface:'#101a2c', card:'#0f1626', border:'#263048',
+      text:'#e8f0ff', muted:'#93a4bf',
+      brand:'#7C5CFF', brandSoft:'#2A2352',
+      tabBg:'#0b0f16', tabText:'#93a4bf', tabActive:'#ffffff',
+      btnPrimaryBg:'#7C5CFF', btnPrimaryText:'#ffffff',
+      btnSecondaryBg:'#18233a', btnSecondaryText:'#e8f0ff',
+      radiusCard:18, radiusBtn:16, radiusInput:14,
+      shadowCard:0.45, glow:0.45,
+      fontBody:'Inter', fontHead:'Montserrat', fontSize:14
+    });
+  }
+  if (T.presetLight){
+    T.presetLight.onclick = ()=>applyPreset({
+      bg:'#f6f8fc', surface:'#ffffff', card:'#ffffff', border:'#d9e2ef',
+      text:'#0b1220', muted:'#51627a',
+      brand:'#4F7CFF', brandSoft:'#EAF0FF',
+      tabBg:'#ffffff', tabText:'#51627a', tabActive:'#0b1220',
+      btnPrimaryBg:'#4F7CFF', btnPrimaryText:'#ffffff',
+      btnSecondaryBg:'#EEF2FF', btnSecondaryText:'#0b1220',
+      radiusCard:18, radiusBtn:16, radiusInput:14,
+      shadowCard:0.25, glow:0.35,
+      fontBody:'Inter', fontHead:'Montserrat', fontSize:14
+    });
+  }
+  if (T.presetBrand){
+    T.presetBrand.onclick = ()=>applyPreset({
+      brand:'#00E5FF',
+      brandSoft:'#00313A',
+      btnPrimaryBg:'#00E5FF',
+      btnPrimaryText:'#001016',
+      glow:0.65
+    });
+  }
+}
+
 
     function bindColor(el, key){
       if (!el) return;
