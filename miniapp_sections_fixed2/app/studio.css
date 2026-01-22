@@ -2340,26 +2340,4 @@ html[data-theme="dark"] .themeAccs .acc-ico{
   display:block;
 }
 
-/* ===== unify button sizing (like device preset buttons) ===== */
-:root{
-  --btn-h: 34px;     /* как .btn */
-  --btn-r: 12px;     /* если хочешь ровно как в хедере - поставь 8px */
-  --btn-px: 12px;
-}
 
-/* Дизайн/Панель: не даём smallbtn уменьшать */
-.ctorTabs .ctorBtn,
-.ctorTabs .ctorBtn.smallbtn{
-  height: var(--btn-h) !important;
-  border-radius: var(--btn-r) !important;
-  padding: 0 var(--btn-px) !important;
-  font-weight: 500 !important;
-}
-
-/* Preset-кнопки: делаем такими же */
-.themeRow .btn{
-  height: var(--btn-h) !important;
-  border-radius: var(--btn-r) !important;
-  padding: 0 var(--btn-px) !important;
-  font-weight: 500 !important;
-}
