@@ -2276,7 +2276,7 @@ html[data-theme="light"] .ctorTabs .ctorBtn.is-active{
 
 /* ===== Preset buttons in themeRow ===== */
 .themeRow .btn{
-  border-radius:12px;
+  border-radius:10px;
   height:34px;
   padding:0 12px;
 }
