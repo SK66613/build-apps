@@ -2107,3 +2107,14 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
   margin-left:auto;
 }
 
+.themeAccs input[type="color"]{
+  height:34px !important;     /* было ~44 */
+  border-radius:12px !important;
+}
+.themeAccs input[type="color"]::-webkit-color-swatch{
+  border-radius:12px !important;
+}
+.themeAccs .themeGrid,
+.themeAccs .themeGroup{
+  width:100% !important;
+}
