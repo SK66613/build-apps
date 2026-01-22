@@ -50,7 +50,14 @@ body{
 h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
 
 .container{padding:16px 16px 84px}
-.card{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:12px}
+.card{
+  background: color-mix(in srgb, var(--color-card) 92%, transparent);
+  border:1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: var(--radius-card);
+  padding:12px;
+  box-shadow: var(--shadow-soft);
+}
+
 
 /* Section container ("Раздел") */
 .sec{padding:12px}
