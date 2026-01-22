@@ -1979,7 +1979,7 @@ html[data-ctor-mode="panel"]  #ctorDesignSection{display:none}
 /* ===== Tabs: Design / Panel (оставляем "как пресеты") ===== */
 .ctorTabs .ctorBtn{
   border-radius:12px;
-  height:36px;
+  height:34px;
   padding:0 14px;
   border:1px solid rgba(148,163,184,.22);
   background:rgba(255,255,255,.06);
