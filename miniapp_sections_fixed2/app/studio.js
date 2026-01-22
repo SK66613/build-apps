@@ -871,23 +871,6 @@ function initThemePanel(){
     });
   }
 }
-
-
-    function bindColor(el, key){
-      if (!el) return;
-      el.oninput = ()=>{
-        BP.app.themeTokens = BP.app.themeTokens || { ...DEFAULT_THEME_TOKENS };
-        BP.app.themeTokens[key] = el.value;
-        syncThemeCSS();
-        updatePreviewInline();
-      };
-    }
-
-    bindColor(themeBgEl,  'bg');
-    bindColor(themeAccEl, 'acc');
-    bindColor(themeTabEl, 'tab');
-    bindColor(themeFgEl,  'fg');
-
     if (themeFontEl){
       themeFontEl.onchange = ()=>{
         BP.app.themeTokens = BP.app.themeTokens || { ...DEFAULT_THEME_TOKENS };
