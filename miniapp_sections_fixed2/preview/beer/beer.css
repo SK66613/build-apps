@@ -1,13 +1,4 @@
-
-    :root{
-      --tabH: 64px;
-      --navGap: 12px;
-      --bg:#0b0c15; --text:#f4f6fa; --border:rgba(255,255,255,.10);
-      --amber:#f9b24d; --green:#37d67a; --red:#ff6b6b; --blue:#3d7eff;
-      --appW: 428px;
-      --wrapPadX: 14px;
-      --wrapPadTop: 16px;
-    }
+/* NOTE: defaults moved to preview/app.css so Studio theme can override */
     *{ box-sizing:border-box }
     img{ max-width:100%; display:block }
     html,body{ height:100% }
