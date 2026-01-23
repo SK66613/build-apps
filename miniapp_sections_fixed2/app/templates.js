@@ -246,17 +246,358 @@ const STYLES_PASSPORT_CSS = `
 
 window.BlockRegistry = Object.assign(window.BlockRegistry || {}, {
  
+promo:{
+  type:'htmlEmbed',
+  title:'Промо слайдер',
+  defaults:{
+    interval:4000,
+    slides:[
+      { img:'', action:'link',      link:'#play',       sheet_id:'', sheet_path:'' },
+      { img:'', action:'link',      link:'#bonuses',    sheet_id:'', sheet_path:'' },
+      { img:'', action:'link',      link:'#tournament', sheet_id:'', sheet_path:'' }
+    ]
+  },
+  preview:(p={})=>{
+    const interval = Number(p.interval) || 4000;
+    const slides = Array.isArray(p.slides) && p.slides.length ? p.slides : [
+      { img:'', action:'link', link:'#play',       sheet_id:'', sheet_path:'' },
+      { img:'', action:'link', link:'#bonuses',    sheet_id:'', sheet_path:'' },
+      { img:'', action:'link', link:'#tournament', sheet_id:'', sheet_path:'' }
+    ];
+
+    return `
+      <section class="promo promo--slider" data-interval="${interval}">
+        <div class="promo-slides">
+          ${slides.map((s, i)=>{
+            const img        = s.img || '';
+            const action     = s.action || 'none';
+            const link       = s.link || '';
+            const sheet_id   = s.sheet_id || '';
+            const sheet_path = s.sheet_path || '';
+
+            let attr = '';
+            if (action === 'sheet' && sheet_id){
+              attr = ` data-open-sheet="${sheet_id}"`;
+            } else if (action === 'sheet_page' && sheet_path){
+              attr = ` data-open-sheet-page="${sheet_path}"`;
+            } else if (action === 'link' && link){
+              attr = ` data-link="${link}"`;
+            }
+
+            return `
+              <div class="promo-slide${i===0 ? ' is-active' : ''}">
+                <button class="promo-slide__btn" type="button"${attr}>
+                  ${img
+                    ? `<img class="promo-img" src="${img}" alt="">`
+                    : `<div class="promo-img promo-img--placeholder"></div>`
+                  }
+                </button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="promo-dots">
+          ${slides.map((_,i)=>`<span class="promo-dot${i===0 ? ' is-active' : ''}"></span>`).join('')}
+        </div>
+      </section>
+    `;
+  },
+  init:(el, props={})=>{
+    const slides = el.querySelectorAll('.promo-slide');
+    const dots   = el.querySelectorAll('.promo-dot');
+    if (!slides.length || slides.length === 1) return;
+
+    let idx = 0;
+    let timer = null;
+    const interval = Number(props.interval) || 4000;
+
+    const go = (next)=>{
+      slides[idx].classList.remove('is-active');
+      if (dots[idx]) dots[idx].classList.remove('is-active');
+      idx = next;
+      slides[idx].classList.add('is-active');
+      if (dots[idx]) dots[idx].classList.add('is-active');
+    };
+
+    const tick = ()=>{
+      const next = (idx + 1) % slides.length;
+      go(next);
+    };
+
+    timer = setInterval(tick, interval);
+
+    // клик по точкам
+    dots.forEach((d, i)=>{
+      d.addEventListener('click', ()=>{
+        go(i);
+      });
+    });
+  }
+},
 
 
+
+
+
+
+  infoCardPlain:{
+    type:'htmlEmbed',
+    title:'Инфо карточка (кликабельное изображение)',
+    defaults:{
+      icon:'beer/img/beer_hero.jpg',
+      title:'Craft Beer',
+      sub:'Кто мы, где мы',
+      imgSide:'left',   // left | right
+      action:'none',    // none | link | sheet | sheet_page
+      link:'',
+      sheet_id:'',
+      sheet_path:''
+    },
+    preview:(p={})=>{
+      const icon    = p.icon  || '';
+      const t       = p.title || 'Craft Beer';
+      const sub     = p.sub   || 'Кто мы, где мы';
+      const imgSide = (p.imgSide === 'right' ? 'right' : 'left');
+
+      const action     = p.action     || 'none';
+      const link       = p.link       || '';
+      const sheet_id   = p.sheet_id   || '';
+      const sheet_path = p.sheet_path || '';
+
+      let attr = '';
+      if (action === 'sheet' && sheet_id){
+        attr = ` data-open-sheet="${sheet_id}"`;
+      } else if (action === 'sheet_page' && sheet_path){
+        attr = ` data-open-sheet-page="${sheet_path}"`;
+      } else if (action === 'link' && link){
+        attr = ` data-link="${link}"`;
+      }
+
+      const sideClass = imgSide === 'right' ? ' info-card--plain-right' : '';
+
+      return `
+        <section class="card info-card info-card--plain${sideClass}">
+          <div class="info-card__inner">
+            <button class="info-card__icon-btn" type="button"${attr}>
+              ${icon ? `<img src="${icon}" alt="">` : ''}
+            </button>
+            <div class="info-card__text">
+              <div class="info-card__title">${t}</div>
+              <div class="info-card__sub">${sub}</div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+  },
+
+
+
+
+  gamesList:{
+    type:'htmlEmbed',
+    title:'Игры: список с кнопками',
+    defaults:{
+      title:'Игры',
+      cards:[
+        {
+          icon:'beer/img/game1.png',
+          title:'Bumblebee',
+          sub:'Долети до нас и получи приз',
+          btn:'Играть',
+          action:'link',
+          link:'#play_bumble',
+          sheet_id:'',
+          sheet_path:''
+        },
+        {
+          icon:'beer/img/game2.png',
+          title:'Night Racing',
+          sub:'Катайся и прокачивай тачку',
+          btn:'Скоро',
+          action:'none',
+          link:'',
+          sheet_id:'',
+          sheet_path:''
+        },
+        {
+          icon:'beer/img/game3.png',
+          title:'Memory cards',
+          sub:'Найди все спрятанные карточки быстрее',
+          btn:'Скоро',
+          action:'none',
+          link:'',
+          sheet_id:'',
+          sheet_path:''
+        }
+      ]
+    },
+    preview:(p={})=>{
+      const title = p.title || 'Игры';
+      const def   = (window.BlockRegistry.gamesList && window.BlockRegistry.gamesList.defaults) || {};
+      const cards = Array.isArray(p.cards) && p.cards.length ? p.cards : (def.cards || []);
+
+      return `
+        <section class="card list-card games tight">
+          <div class="list-head">${title}</div>
+          <div class="list">
+            ${cards.map((c)=>{
+              const icon       = c.icon || '';
+              const ct         = c.title || '';
+              const sub        = c.sub   || '';
+              const btn        = c.btn   || 'Играть';
+              const action     = c.action || 'none';
+              const link       = c.link || '';
+              const sheet_id   = c.sheet_id || '';
+              const sheet_path = c.sheet_path || '';
+
+              let attr = '';
+              if (action === 'sheet' && sheet_id){
+                attr = ` data-open-sheet="${sheet_id}"`;
+              } else if (action === 'sheet_page' && sheet_path){
+                attr = ` data-open-sheet-page="${sheet_path}"`;
+              } else if (action === 'link' && link){
+                attr = ` data-link="${link}"`;
+              }
+
+              return `
+                <div class="list__item">
+                  <div class="list__icon">
+                    ${icon ? `<img src="${icon}" alt="">` : ''}
+                  </div>
+                  <div class="list__text">
+                    <div class="list__title">${ct}</div>
+                    <div class="list__sub">${sub}</div>
+                  </div>
+                  <button class="btn game-list-btn" type="button"${attr}>${btn}</button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `;
+    }
+  },
+
+
+
+
+    infoCardChevron:{
+    type:'htmlEmbed',
+    title:'Инфо карточка со стрелкой',
+    defaults:{
+      icon:'beer/img/beer_hero.jpg',
+      title:'Craft Beer',
+      sub:'Кто мы, где мы',
+      action:'link',     // none | link | sheet | sheet_page
+      link:'#about',     // для link
+      sheet_id:'',       // для sheet
+      sheet_path:''      // для sheet_page
+    },
+    preview:(p={})=>{
+      const icon       = p.icon || '';
+      const t          = p.title || 'Craft Beer';
+      const sub        = p.sub   || 'Кто мы, где мы';
+      const action     = p.action || 'none';
+      const link       = p.link || '';
+      const sheet_id   = p.sheet_id || '';
+      const sheet_path = p.sheet_path || '';
+
+      let attr = '';
+      if (action === 'sheet' && sheet_id){
+        attr = ` data-open-sheet="${sheet_id}"`;
+      } else if (action === 'sheet_page' && sheet_path){
+        attr = ` data-open-sheet-page="${sheet_path}"`;
+      } else if (action === 'link' && link){
+        attr = ` data-link="${link}"`;
+      }
+
+      return `
+        <section class="card info-card info-card--chevron">
+          <div class="info-card__inner">
+            <div class="info-card__icon">
+              ${icon ? `<img src="${icon}" alt="">` : ''}
+            </div>
+            <div class="info-card__text">
+              <div class="info-card__title">${t}</div>
+              <div class="info-card__sub">${sub}</div>
+            </div>
+            <button class="list__chev-btn" type="button"${attr}>›</button>
+          </div>
+        </section>
+      `;
+    }
+  },
 
 
 
   
 
+    infoCard:{
+    type:'htmlEmbed',
+    title:'Инфо карточка с кнопкой',
+    defaults:{
+      icon:'beer/img/beer_hero.jpg',
+      title:'Craft Beer',
+      sub:'Кто мы, где мы',
+      btn:'О нас',
+      action:'link',     // none | link | sheet | sheet_page
+      link:'#about',     // для link
+      sheet_id:'',       // для sheet
+      sheet_path:''      // для sheet_page
+    },
+    preview:(p={})=>{
+      const icon       = p.icon || '';
+      const t          = p.title || 'Craft Beer';
+      const sub        = p.sub   || 'Кто мы, где мы';
+      const btn        = p.btn   || 'О нас';
+      const action     = p.action || 'none';
+      const link       = p.link || '';
+      const sheet_id   = p.sheet_id || '';
+      const sheet_path = p.sheet_path || '';
+
+      let attr = '';
+      if (action === 'sheet' && sheet_id){
+        attr = ` data-open-sheet="${sheet_id}"`;
+      } else if (action === 'sheet_page' && sheet_path){
+        attr = ` data-open-sheet-page="${sheet_path}"`;
+      } else if (action === 'link' && link){
+        attr = ` data-link="${link}"`;
+      }
+
+      return `
+        <section class="card info-card">
+          <div class="info-card__inner">
+            <div class="info-card__icon">
+              ${icon ? `<img src="${icon}" alt="">` : ''}
+            </div>
+            <div class="info-card__text">
+              <div class="info-card__title">${t}</div>
+              <div class="info-card__sub">${sub}</div>
+            </div>
+            <div class="info-card__btn-wrap">
+              <button class="btn info-card__btn" type="button"${attr}>${btn}</button>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+  },
 
 
 
-    
+
+  spacer:{
+    type:'htmlEmbed',
+    title:'Отступ',
+    defaults:{ size:16 }, // высота в пикселях
+    preview:(p={})=>{
+      const h = Number(p.size) || 16;
+      return `
+        <div class="blk-spacer" style="height:${h}px;"></div>
+      `;
+    }
+  },
 
 
 
@@ -1527,9 +1868,149 @@ leaderboard:{
 
 
 
-  
+  profile_header:{
+    type:'htmlEmbed',
+    title:'Профиль — шапка',
+    defaults:{ title:'Dem Demov', text:'@Demov_Dem' },
+    init:(el, p, ctx)=>{
+      // Telegram user + coins from D1 via api('state')
+      const q = (sel)=> el.querySelector(sel);
+      const img = q('.pf-ava img');
+      const nameEl = q('.pf-name');
+      const userEl = q('.pf-username');
+      const coinsEl = q('#pf-coins');
 
-  
+      const tg = (window.getTgUserSafe && window.getTgUserSafe())
+        || (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user)
+        || null;
+
+      if (tg){
+        const full = ((tg.first_name||'') + ' ' + (tg.last_name||'')).trim();
+        if (nameEl) nameEl.textContent = full || (p.title||'');
+        if (userEl){
+          const un = tg.username ? ('@' + tg.username) : '';
+          userEl.textContent = un || (p.text||'');
+          if(!un && !p.text) userEl.style.display='none';
+        }
+        if (img && tg.photo_url){ img.src = tg.photo_url; }
+      }
+
+      let alive = true;
+      (async()=>{
+        try{
+          if(!window.api) return;
+          const r = await window.api('state', {});
+          if(!alive) return;
+          const st = (r && (r.state || r.data || r)) || {};
+          const coins = (st.user && (st.user.coins ?? st.user.balance ?? st.user.total_coins))
+            ?? (st.coins ?? st.balance ?? st.total_coins)
+            ?? 0;
+          if (coinsEl) coinsEl.textContent = String(coins);
+        }catch(_){}
+      })();
+
+      return ()=>{ alive = false; };
+    },
+
+    preview:(p={})=>`
+      <section class="profile-block">
+        <div class="pf-hero">
+          <div class="pf-ava">
+            <img src="https://via.placeholder.com/56x56" alt="avatar">
+          </div>
+          <div class="pf-about">
+            <div class="pf-name">${p.title||'Dem Demov'}</div>
+            <div class="pf-username">${p.text||'@Demov_Dem'}</div>
+          </div>
+          <div class="metric metric--balance">
+            <div class="metric__val">
+              <span id="pf-coins">-100</span><span class="coin-ico"></span>
+            </div>
+            <div class="metric__lbl">Монеты</div>
+          </div>
+        </div>
+      </section>`
+  },
+
+  profile_achievements:{
+    type:'htmlEmbed',
+    title:'Профиль — достижения',
+    defaults:{
+      title:'🎯 Мои достижения',
+      best_label:'Шмель — лучший счёт',
+      pass_label:'Паспорт — штампы',
+      last_label:'Последний штамп',
+      refs_label:'Мои рефералы'
+    },
+    preview:(p={})=>`
+      <section class="profile-block">
+        <div class="section-title">${p.title || '🎯 Мои достижения'}</div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric__val" id="pf-best-score">94</div>
+            <div class="metric__lbl">${p.best_label || 'Шмель — лучший счёт'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric__val" id="pf-pass-count">2/6</div>
+            <div class="metric__lbl">${p.pass_label || 'Паспорт — штампы'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric__val" id="pf-last-stamp">Weizen</div>
+            <div class="metric__lbl">${p.last_label || 'Последний штамп'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric__val" id="pf-referrals-count">1</div>
+            <div class="metric__lbl">${p.refs_label || 'Мои рефералы'}</div>
+          </div>
+        </div>
+      </section>`
+  },
+
+
+
+
+
+  profile_tournament:{
+    type:'htmlEmbed',
+    title:'Профиль — турнир',
+    defaults:{ title:'🏆 Турнир', text:'' },
+    preview:(p={})=>`
+      <section class="profile-block">
+        <div class="section-title">${p.title||'🏆 Турнир'}</div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric__val" id="pf-rank-today">—</div>
+            <div class="metric__lbl">Место сегодня</div>
+          </div>
+          <div class="metric">
+            <div class="metric__val" id="pf-rank-alltime">1</div>
+            <div class="metric__lbl">All-time</div>
+          </div>
+        </div>
+      </section>`
+  },
+
+  profile_recent_prizes:{
+    type:'htmlEmbed',
+    title:'Профиль — последние призы',
+    defaults:{ title:'🎁 Последние призы', text:'' },
+    preview:(p={})=>`
+      <section class="profile-block">
+        <div class="section-title">${p.title||'🎁 Последние призы'}</div>
+        <div class="chips">
+          <div class="chip">
+            <span>🍺 Бесплатный бокал</span>
+          </div>
+          <div class="chip">
+            <span>🎟 Билет в турнир</span>
+          </div>
+          <div class="chip chip--muted">
+            <span>Новые призы будут здесь</span>
+          </div>
+        </div>
+      </section>`
+  },
+});
 
 window.PagePresets = {
   home: [],
