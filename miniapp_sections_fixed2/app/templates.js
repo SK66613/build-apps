@@ -244,8 +244,7 @@ const STYLES_PASSPORT_CSS = `
 })();
 `;
 
-window.BlockRegistry = Object.assign(window.BlockRegistry || {}, {
- 
+
 
 
 window.PagePresets = {
