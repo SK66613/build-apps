@@ -4748,315 +4748,229 @@ if (inst.key === 'cta') {
       }
     }
 
-    // === Специальные настройки для Flappy ===
-if (inst.key === 'game_flappy'){
-  // --- дефолты, если не заданы ---
-  if (props.difficulty === undefined)         props.difficulty = 'normal';
+// === Специальные настройки для Flappy ===
+    if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
+      // ------- дефолты
+      if (props.difficulty        === undefined) props.difficulty         = 'normal';   // easy | normal | hard
+      if (props.bird_mode         === undefined) props.bird_mode          = 'default';  // default | custom
+      if (props.bird_img          === undefined) props.bird_img           = '';
+      if (props.shield_img        === undefined) props.shield_img         = '';
 
-  if (props.bird_mode === undefined)          props.bird_mode  = 'default';
-  if (props.bird_img === undefined)           props.bird_img   = '';
+      // новые спрайты
+      if (props.coin_img          === undefined) props.coin_img           = '';
+      if (props.pipe_top_img      === undefined) props.pipe_top_img       = '';
+      if (props.pipe_bottom_img   === undefined) props.pipe_bottom_img    = '';
 
-  if (props.shield_mode === undefined)        props.shield_mode = 'default';
-  if (props.shield_img === undefined)         props.shield_img  = '';
-  if (props.shield_w === undefined)           props.shield_w    = 34;
-  if (props.shield_h === undefined)           props.shield_h    = 34;
+      // HUD переключатели (если нужны)
+      if (props.show_coin_bar     === undefined) props.show_coin_bar      = true;
+      if (props.show_shield_bar   === undefined) props.show_shield_bar    = true;
 
-  if (props.coin_mode === undefined)          props.coin_mode   = 'default';
-  if (props.coin_img === undefined)           props.coin_img    = '';
-  if (props.coin_w === undefined)             props.coin_w      = 32;
-  if (props.coin_h === undefined)             props.coin_h      = 32;
-  if (props.coin_value === undefined)         props.coin_value  = 5;
-
-  if (props.pipes_mode === undefined)         props.pipes_mode  = 'default';
-  if (props.pipes_top_img === undefined)      props.pipes_top_img = '';
-  if (props.pipes_bottom_img === undefined)   props.pipes_bottom_img = '';
-  if (props.pipe_width === undefined)         props.pipe_width  = 54;
-
-  // ---------- Уровень сложности ----------
-  {
-    const w = addField('Уровень сложности', `<select data-f="difficultySel">
-      <option value="easy">Легко</option>
-      <option value="normal">Норма</option>
-      <option value="hard">Жёстко</option>
-    </select>`);
-    const sel = w.querySelector('[data-f="difficultySel"]');
-    sel.value = props.difficulty || 'normal';
-    sel.addEventListener('change', ()=>{
-      pushHistory();
-      props.difficulty = sel.value;
-      updatePreviewInline();
-    });
-  }
-
-  // ---------- Птица (режим + загрузка) ----------
-  {
-    const w = addField('Спрайт птицы', `
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <select data-f="bird_mode">
-          <option value="default">Стандартный шмель</option>
-          <option value="custom">Своя картинка</option>
-        </select>
-        <div data-row style="display:flex;gap:6px;align-items:center">
-          <input type="text" data-f="bird_img" placeholder="URL или data:image" style="flex:1">
-          <input type="file" data-f="birdUpload" accept="image/*">
-        </div>
-      </div>`);
-    const modeSel   = w.querySelector('[data-f="bird_mode"]');
-    const row       = w.querySelector('[data-row]');
-    const urlInput  = w.querySelector('[data-f="bird_img"]');
-    const fileInput = w.querySelector('[data-f="birdUpload"]');
-
-    modeSel.value = props.bird_mode || 'default';
-    urlInput.value = props.bird_img || '';
-    const sync = ()=>{ row.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
-    sync();
-
-    modeSel.addEventListener('change', ()=>{
-      pushHistory();
-      props.bird_mode = modeSel.value;
-      sync();
-      updatePreviewInline();
-    });
-    urlInput.addEventListener('input', ()=>{
-      pushHistory();
-      props.bird_img = urlInput.value.trim();
-      updatePreviewInline();
-    });
-    fileInput.addEventListener('change', (e)=>{
-      const file = e.target.files && e.target.files[0];
-      if(!file) return;
-      const fr = new FileReader();
-      fr.onload = ()=>{
-        pushHistory();
-        props.bird_img = fr.result;
-        urlInput.value = props.bird_img;
-        modeSel.value = 'custom';
-        sync();
-        updatePreviewInline();
-      };
-      fr.readAsDataURL(file);
-    });
-  }
-
-  // ---------- Щит (режим + загрузка + размеры) ----------
-  {
-    const w = addField('Спрайт щита', `
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <select data-f="shield_mode">
-          <option value="default">Стандартный</option>
-          <option value="custom">Своя картинка</option>
-        </select>
-        <div data-row style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center">
-          <input type="text" data-f="shield_img" placeholder="URL или data:image">
-          <input type="file" data-f="shieldUpload" accept="image/*">
-          <span style="white-space:nowrap;opacity:.8;font-size:12px">Ш×В</span>
-          <input type="number" data-f="shield_w" min="8" style="width:84px" placeholder="W">
-          <input type="number" data-f="shield_h" min="8" style="width:84px" placeholder="H">
-        </div>
-      </div>`);
-    const modeSel   = w.querySelector('[data-f="shield_mode"]');
-    const row       = w.querySelector('[data-row]');
-    const urlInput  = w.querySelector('[data-f="shield_img"]');
-    const fileInput = w.querySelector('[data-f="shieldUpload"]');
-    const wInp      = w.querySelector('[data-f="shield_w"]');
-    const hInp      = w.querySelector('[data-f="shield_h"]');
-
-    modeSel.value = props.shield_mode || 'default';
-    urlInput.value = props.shield_img || '';
-    wInp.value = +props.shield_w || 34;
-    hInp.value = +props.shield_h || 34;
-
-    const sync = ()=>{ row.style.display = (modeSel.value === 'custom') ? 'grid' : 'none'; };
-    sync();
-
-    modeSel.addEventListener('change', ()=>{
-      pushHistory();
-      props.shield_mode = modeSel.value;
-      sync();
-      updatePreviewInline();
-    });
-    urlInput.addEventListener('input', ()=>{
-      pushHistory();
-      props.shield_img = urlInput.value.trim();
-      updatePreviewInline();
-    });
-    wInp.addEventListener('input', ()=>{
-      pushHistory();
-      props.shield_w = Math.max(8, +wInp.value|0);
-      updatePreviewInline();
-    });
-    hInp.addEventListener('input', ()=>{
-      pushHistory();
-      props.shield_h = Math.max(8, +hInp.value|0);
-      updatePreviewInline();
-    });
-    fileInput.addEventListener('change', (e)=>{
-      const file = e.target.files && e.target.files[0];
-      if(!file) return;
-      const fr = new FileReader();
-      fr.onload = ()=>{
-        pushHistory();
-        props.shield_img = fr.result;
-        urlInput.value = props.shield_img;
-        modeSel.value = 'custom';
-        sync();
-        updatePreviewInline();
-      };
-      fr.readAsDataURL(file);
-    });
-  }
-
-  // ---------- Монета (режим + загрузка + размеры + value) ----------
-  {
-    const w = addField('Монета', `
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <select data-f="coin_mode">
-          <option value="default">Стандартная</option>
-          <option value="custom">Своя картинка</option>
-        </select>
-        <div data-row style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center">
-          <input type="text" data-f="coin_img" placeholder="URL или data:image">
-          <input type="file" data-f="coinUpload" accept="image/*">
-          <span style="white-space:nowrap;opacity:.8;font-size:12px">Ш×В</span>
-          <input type="number" data-f="coin_w" min="8" style="width:72px" placeholder="W">
-          <input type="number" data-f="coin_h" min="8" style="width:72px" placeholder="H">
-          <span style="white-space:nowrap;opacity:.8;font-size:12px">Value</span>
-          <input type="number" data-f="coin_value" min="1" style="width:84px" placeholder="5">
-        </div>
-      </div>`);
-    const modeSel   = w.querySelector('[data-f="coin_mode"]');
-    const row       = w.querySelector('[data-row]');
-    const urlInput  = w.querySelector('[data-f="coin_img"]');
-    const fileInput = w.querySelector('[data-f="coinUpload"]');
-    const wInp      = w.querySelector('[data-f="coin_w"]');
-    const hInp      = w.querySelector('[data-f="coin_h"]');
-    const valInp    = w.querySelector('[data-f="coin_value"]');
-
-    modeSel.value = props.coin_mode || 'default';
-    urlInput.value = props.coin_img || '';
-    wInp.value = +props.coin_w || 32;
-    hInp.value = +props.coin_h || 32;
-    valInp.value = +props.coin_value || 5;
-
-    const sync = ()=>{ row.style.display = (modeSel.value === 'custom') ? 'grid' : 'none'; };
-    sync();
-
-    modeSel.addEventListener('change', ()=>{
-      pushHistory();
-      props.coin_mode = modeSel.value;
-      sync();
-      updatePreviewInline();
-    });
-    urlInput.addEventListener('input', ()=>{
-      pushHistory();
-      props.coin_img = urlInput.value.trim();
-      updatePreviewInline();
-    });
-    [wInp,hInp,valInp].forEach(inp=>{
-      inp.addEventListener('input', ()=>{
-        pushHistory();
-        props.coin_w = Math.max(8, +wInp.value|0);
-        props.coin_h = Math.max(8, +hInp.value|0);
-        props.coin_value = Math.max(1, +valInp.value|0);
-        updatePreviewInline();
-      });
-    });
-    fileInput.addEventListener('change', (e)=>{
-      const file = e.target.files && e.target.files[0];
-      if(!file) return;
-      const fr = new FileReader();
-      fr.onload = ()=>{
-        pushHistory();
-        props.coin_img = fr.result;
-        urlInput.value = props.coin_img;
-        modeSel.value = 'custom';
-        sync();
-        updatePreviewInline();
-      };
-      fr.readAsDataURL(file);
-    });
-  }
-
-  // ---------- Трубы (режим + 2 изображения + ширина) ----------
-  {
-    const w = addField('Трубы', `
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <select data-f="pipes_mode">
-          <option value="default">Стандартные</option>
-          <option value="custom">Свои картинки</option>
-        </select>
-        <div data-row style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center">
-          <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center">
-            <input type="text" data-f="pipes_top_img" placeholder="Top: URL или data:image">
-            <input type="file" data-f="pipesTopUpload" accept="image/*">
-          </div>
-          <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center">
-            <input type="text" data-f="pipes_bottom_img" placeholder="Bottom: URL или data:image">
-            <input type="file" data-f="pipesBottomUpload" accept="image/*">
-          </div>
-          <span style="white-space:nowrap;opacity:.8;font-size:12px">Ширина</span>
-          <input type="number" data-f="pipe_width" min="20" style="width:100px" placeholder="54">
-        </div>
-      </div>`);
-    const modeSel   = w.querySelector('[data-f="pipes_mode"]');
-    const row       = w.querySelector('[data-row]');
-    const topUrl    = w.querySelector('[data-f="pipes_top_img"]');
-    const botUrl    = w.querySelector('[data-f="pipes_bottom_img"]');
-    const topUp     = w.querySelector('[data-f="pipesTopUpload"]');
-    const botUp     = w.querySelector('[data-f="pipesBottomUpload"]');
-    const widthInp  = w.querySelector('[data-f="pipe_width"]');
-
-    modeSel.value = props.pipes_mode || 'default';
-    topUrl.value  = props.pipes_top_img || '';
-    botUrl.value  = props.pipes_bottom_img || '';
-    widthInp.value = +props.pipe_width || 54;
-
-    const sync = ()=>{ row.style.display = (modeSel.value === 'custom') ? 'grid' : 'none'; };
-    sync();
-
-    modeSel.addEventListener('change', ()=>{
-      pushHistory();
-      props.pipes_mode = modeSel.value;
-      sync();
-      updatePreviewInline();
-    });
-    topUrl.addEventListener('input', ()=>{
-      pushHistory();
-      props.pipes_top_img = topUrl.value.trim();
-      updatePreviewInline();
-    });
-    botUrl.addEventListener('input', ()=>{
-      pushHistory();
-      props.pipes_bottom_img = botUrl.value.trim();
-      updatePreviewInline();
-    });
-    widthInp.addEventListener('input', ()=>{
-      pushHistory();
-      props.pipe_width = Math.max(20, +widthInp.value|0);
-      updatePreviewInline();
-    });
-
-    const fileToData = (inputEl, setter)=>{
-      inputEl.addEventListener('change', (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if(!file) return;
-        const fr = new FileReader();
-        fr.onload = ()=>{
+      // ------- сложность
+      {
+        const w = addField('Уровень сложности', `<select data-f="difficultySel">
+          <option value="easy">Легко</option>
+          <option value="normal">Норма</option>
+          <option value="hard">Жёстко</option>
+        </select>`);
+        const sel = w.querySelector('select[data-f="difficultySel"]');
+        sel.value = props.difficulty || 'normal';
+        sel.addEventListener('change', ()=>{
           pushHistory();
-          setter(fr.result);
+          props.difficulty = sel.value;
           updatePreviewInline();
-        };
-        fr.readAsDataURL(file);
-      });
-    };
-    fileToData(topUp, (v)=>{ props.pipes_top_img = v; topUrl.value = v; modeSel.value='custom'; sync(); });
-    fileToData(botUp, (v)=>{ props.pipes_bottom_img = v; botUrl.value = v; modeSel.value='custom'; sync(); });
-  }
-}
+        });
+      }
 
+      // ------- Спрайт птицы
+      {
+        const w = addField('Спрайт птицы', `
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <select data-f="bird_mode">
+              <option value="default">Стандартный шмель</option>
+              <option value="custom">Своя картинка</option>
+            </select>
+            <div data-bird-custom style="display:flex;gap:6px">
+              <input type="text" data-f="bird_img" placeholder="URL или data:image" value="${props.bird_img||''}">
+              <input type="file" data-f="birdUpload" accept="image/*">
+            </div>
+          </div>`);
+        const modeSel   = w.querySelector('select[data-f="bird_mode"]');
+        const customRow = w.querySelector('[data-bird-custom]');
+        const imgInput  = w.querySelector('input[data-f="bird_img"]');
+        const fileInput = w.querySelector('input[data-f="birdUpload"]');
 
+        const syncCustom = ()=>{ customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
+        modeSel.value = props.bird_mode || 'default';
+        syncCustom();
 
+        modeSel.addEventListener('change', ()=>{
+          pushHistory();
+          props.bird_mode = modeSel.value;
+          syncCustom();
+          updatePreviewInline();
+        });
+
+        if (fileInput){
+          fileInput.addEventListener('change', (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ()=>{
+              pushHistory();
+              props.bird_img = reader.result;
+              imgInput.value = props.bird_img;
+              updatePreviewInline();
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+      }
+
+      // ------- Спрайт щита
+      {
+        const w = addField('Спрайт щита', `
+          <div style="display:flex;gap:6px">
+            <input type="text" data-f="shield_img" placeholder="URL или data:image" value="${props.shield_img||''}">
+            <input type="file" data-f="shieldUpload" accept="image/*">
+          </div>`);
+        const imgInput  = w.querySelector('input[data-f="shield_img"]');
+        const fileInput = w.querySelector('input[data-f="shieldUpload"]');
+
+        if (imgInput){
+          imgInput.addEventListener('change', ()=>{
+            pushHistory();
+            props.shield_img = imgInput.value.trim();
+            updatePreviewInline();
+          });
+        }
+        if (fileInput){
+          fileInput.addEventListener('change', (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ()=>{
+              pushHistory();
+              props.shield_img = reader.result;
+              if (imgInput) imgInput.value = props.shield_img;
+              updatePreviewInline();
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+      }
+
+      // ------- Монета
+      {
+        const w = addField('Спрайт монеты', `
+          <div style="display:flex;gap:6px">
+            <input type="text" data-f="coin_img" placeholder="URL или data:image" value="${props.coin_img||''}">
+            <input type="file" data-f="coinUpload" accept="image/*">
+          </div>`);
+        const imgInput  = w.querySelector('input[data-f="coin_img"]');
+        const fileInput = w.querySelector('input[data-f="coinUpload"]');
+
+        if (imgInput){
+          imgInput.addEventListener('change', ()=>{
+            pushHistory();
+            props.coin_img = imgInput.value.trim();
+            updatePreviewInline();
+          });
+        }
+        if (fileInput){
+          fileInput.addEventListener('change', (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ()=>{
+              pushHistory();
+              props.coin_img = reader.result;
+              if (imgInput) imgInput.value = props.coin_img;
+              updatePreviewInline();
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+      }
+
+      // ------- Трубы (верх/низ)
+      {
+        const w = addField('Спрайты труб', `
+          <div style="display:grid;gap:8px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="mut" style="min-width:74px">Верх</span>
+              <input type="text" data-f="pipe_top_img" placeholder="URL или data:image" value="${props.pipe_top_img||''}">
+              <input type="file" data-f="pipeTopUpload" accept="image/*">
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="mut" style="min-width:74px">Низ</span>
+              <input type="text" data-f="pipe_bottom_img" placeholder="URL или data:image" value="${props.pipe_bottom_img||''}">
+              <input type="file" data-f="pipeBottomUpload" accept="image/*">
+            </div>
+          </div>`);
+
+        const topInp  = w.querySelector('input[data-f="pipe_top_img"]');
+        const botInp  = w.querySelector('input[data-f="pipe_bottom_img"]');
+        const topUp   = w.querySelector('input[data-f="pipeTopUpload"]');
+        const botUp   = w.querySelector('input[data-f="pipeBottomUpload"]');
+
+        const onText = (inp, key)=> inp.addEventListener('change', ()=>{
+          pushHistory();
+          props[key] = inp.value.trim();
+          updatePreviewInline();
+        });
+
+        onText(topInp, 'pipe_top_img');
+        onText(botInp, 'pipe_bottom_img');
+
+        function handleUpload(upEl, key, textEl){
+          if(!upEl) return;
+          upEl.addEventListener('change', (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ()=>{
+              pushHistory();
+              props[key] = reader.result;
+              if (textEl) textEl.value = props[key];
+              updatePreviewInline();
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        handleUpload(topUp, 'pipe_top_img', topInp);
+        handleUpload(botUp, 'pipe_bottom_img', botInp);
+      }
+
+      // ------- HUD (по желанию)
+      {
+        const w = addField('HUD элементы', `
+          <label style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" data-f="show_coin_bar"${props.show_coin_bar ? ' checked':''}>
+            <span>Показывать монетную плашку</span>
+          </label>
+          <label style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" data-f="show_shield_bar"${props.show_shield_bar ? ' checked':''}>
+            <span>Показывать индикатор щита</span>
+          </label>
+        `);
+
+        const coinCb   = w.querySelector('input[data-f="show_coin_bar"]');
+        const shieldCb = w.querySelector('input[data-f="show_shield_bar"]');
+
+        coinCb.addEventListener('change', ()=>{
+          pushHistory();
+          props.show_coin_bar = !!coinCb.checked;
+          updatePreviewInline();
+        });
+        shieldCb.addEventListener('change', ()=>{
+          pushHistory();
+          props.show_shield_bar = !!shieldCb.checked;
+          updatePreviewInline();
+        });
+      }
     }
+
 
     beBody.querySelectorAll('input[type=text]').forEach(inp=>{
       inp.addEventListener('input', ()=>{
