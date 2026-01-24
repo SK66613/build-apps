@@ -496,20 +496,31 @@ if (reg.type === 'htmlEmbed'){
 }
 
 
-    // init hook from runtime mount/unmount
-    if (mf.__runtime && (mf.__runtime.mount || mf.__runtime.unmount)){
-      reg.init = function(el, props, ctx){
-        try{
-          if (mf.__runtime.mount){
-            const ret = mf.__runtime.mount(el, props||{}, ctx||{});
-            if (typeof ret === 'function') return ret;
-          }
-        }catch(e){ console.warn('Block mount failed', mf.id, e); }
-        return function(){
-          try{ mf.__runtime && mf.__runtime.unmount && mf.__runtime.unmount(el, ctx||{}); }catch(_){}
-        };
-      };
-    }
+   
+// init hook from runtime mount/unmount
+if (mf.__runtime && (mf.__runtime.mount || mf.__runtime.unmount)){
+  reg.init = function(el, props, ctx){
+    // формируем финальный контекст: гарантируем base_url/public_id/tg
+    const ctxFinal = Object.assign({}, ctx || {}, {
+      base_url: (ctx && ctx.base_url) || mf.__base,                                   // /.../blocks/game_flappy/
+      public_id: (ctx && ctx.public_id) || (window.currentPublicId || ''),            // превью может быть пустым — ок
+      tg: (ctx && ctx.tg) || (window.Telegram && window.Telegram.WebApp) || null      // для хаптик/сабмита в проде
+    });
+
+    try{
+      if (mf.__runtime.mount){
+        const ret = mf.__runtime.mount(el, props || {}, ctxFinal);
+        if (typeof ret === 'function') return ret;
+      }
+    }catch(e){ console.warn('Block mount failed', mf.id, e); }
+
+    // безопасный unmount (даже если mount упал)
+    return function(){
+      try{ mf.__runtime && mf.__runtime.unmount && mf.__runtime.unmount(el, ctxFinal); }catch(_){}
+    };
+  };
+}
+
 
     return mf;
   }
