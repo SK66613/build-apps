@@ -1146,7 +1146,7 @@ function navigatePreview(path){ try{ frame.contentWindow.postMessage({type:'nav:
     // Fallback: kind-based presets (kept for backward compatibility)
     const map = {
       home:['hero','features','promo','grid','cta','sheet','hero_image','media_row_cta','beer_home_hero','beer_home_promo','beer_home_start_list','beer_home_games_list'],
-      play:['gamesPicker','game_flappy','cta','sheet'],
+      play:['gamesPicker','flappyGame','cta','sheet'],
       tournament:['leaderboard','cta','sheet'],
       bonuses:['bonusWheel','stampShelf','cta','sheet'],
       profile:['profile','cta','sheet'],
@@ -4748,8 +4748,7 @@ if (inst.key === 'cta') {
       }
     }
 
-
-// === Специальные настройки для Flappy ===
+    // === Специальные настройки для Flappy ===
 if (inst.key === 'game_flappy'){
   // --- дефолты, если не заданы ---
   if (props.difficulty === undefined)         props.difficulty = 'normal';
@@ -5056,7 +5055,7 @@ if (inst.key === 'game_flappy'){
 }
 
 
-      }
+
     }
 
     beBody.querySelectorAll('input[type=text]').forEach(inp=>{
@@ -5245,4 +5244,3 @@ document.addEventListener('click', (e)=>{
     // дефолт: Dark Pro активен
     setActive(document.getElementById('t_preset_dark') || btns[0]);
   })();
-
