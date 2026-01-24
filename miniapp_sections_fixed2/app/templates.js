@@ -488,12 +488,11 @@ window.SG_BLOCKS_INDEX_URL = INDEX_URL;
     reg.defaults = mf.defaults || reg.defaults || {};
     reg.__mf = mf;
 
-if (reg.type === 'htmlEmbed'){
-  reg.html = tpl;
-  // ВАЖНО: в конструкторе превью рисуем реальный шаблон,
-  // чтобы не было «пустой карточки» с заголовком.
-  reg.preview = reg.preview || ((p)=> applyTpl(tpl, p||{}));
-}
+// Всегда подставляем шаблон в превью, независимо от типа блока
+reg.html = tpl;
+// Превью: возвращаем разметку блока с подстановкой пропсов
+reg.preview = reg.preview || ((p)=> applyTpl(tpl, p || {}));
+
 
 
    
