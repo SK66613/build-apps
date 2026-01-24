@@ -4749,227 +4749,293 @@ if (inst.key === 'cta') {
     }
 
 // === Специальные настройки для Flappy ===
-    if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
-      // ------- дефолты
-      if (props.difficulty        === undefined) props.difficulty         = 'normal';   // easy | normal | hard
-      if (props.bird_mode         === undefined) props.bird_mode          = 'default';  // default | custom
-      if (props.bird_img          === undefined) props.bird_img           = '';
-      if (props.shield_img        === undefined) props.shield_img         = '';
+if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
+  // ------- дефолты
+  if (props.difficulty        === undefined) props.difficulty         = 'normal';   // easy | normal | hard
+  if (props.bird_mode         === undefined) props.bird_mode          = 'default';  // default | custom
+  if (props.bird_img          === undefined) props.bird_img           = '';
+  if (props.shield_img        === undefined) props.shield_img         = '';
 
-      // новые спрайты
-      if (props.coin_img          === undefined) props.coin_img           = '';
-      if (props.pipe_top_img      === undefined) props.pipe_top_img       = '';
-      if (props.pipe_bottom_img   === undefined) props.pipe_bottom_img    = '';
+  // новые спрайты
+  if (props.coin_img          === undefined) props.coin_img           = '';
+  if (props.pipe_top_img      === undefined) props.pipe_top_img       = '';
+  if (props.pipe_bottom_img   === undefined) props.pipe_bottom_img    = '';
 
-      // HUD переключатели (если нужны)
-      if (props.show_coin_bar     === undefined) props.show_coin_bar      = true;
-      if (props.show_shield_bar   === undefined) props.show_shield_bar    = true;
+  // HUD переключатели
+  if (props.show_coin_bar     === undefined) props.show_coin_bar      = true;
+  if (props.show_shield_bar   === undefined) props.show_shield_bar    = true;
 
-      // ------- сложность
-      {
-        const w = addField('Уровень сложности', `<select data-f="difficultySel">
-          <option value="easy">Легко</option>
-          <option value="normal">Норма</option>
-          <option value="hard">Жёстко</option>
-        </select>`);
-        const sel = w.querySelector('select[data-f="difficultySel"]');
-        sel.value = props.difficulty || 'normal';
-        sel.addEventListener('change', ()=>{
+  // Лимиты (пустое = без лимита)
+  if (props.limit_attempts_per_day === undefined) props.limit_attempts_per_day = '';
+  if (props.limit_coins_per_day   === undefined) props.limit_coins_per_day   = '';
+
+  // Длина раунда (мс)
+  if (props.session_ms === undefined) props.session_ms = 45000;
+
+  // ------- сложность
+  {
+    const w = addField('Уровень сложности', `<select data-f="difficultySel">
+      <option value="easy">Легко</option>
+      <option value="normal">Норма</option>
+      <option value="hard">Жёстко</option>
+    </select>`);
+    const sel = w.querySelector('select[data-f="difficultySel"]');
+    sel.value = props.difficulty || 'normal';
+    sel.addEventListener('change', ()=>{
+      pushHistory();
+      props.difficulty = sel.value;
+      updatePreviewInline();
+    });
+  }
+
+  // ------- Длина раунда (сек)
+  {
+    const curSec = Math.max(5, Math.round((props.session_ms || 45000)/1000));
+    const w = addField('Длина раунда (сек)', `
+      <input type="number" min="5" step="5" data-f="sessionSec" value="${curSec}" style="width:120px">
+    `);
+    const inp = w.querySelector('input[data-f="sessionSec"]');
+    inp.addEventListener('input', ()=>{
+      let v = parseInt(inp.value, 10);
+      if (!Number.isFinite(v) || v < 5) v = 5;
+      pushHistory();
+      props.session_ms = v * 1000;   // храним в мс
+      updatePreviewInline();
+    });
+  }
+
+  // ------- Лимит попыток в сутки
+  {
+    const val = (props.limit_attempts_per_day === '' || props.limit_attempts_per_day == null)
+      ? '' : String(props.limit_attempts_per_day);
+    const w = addField('Лимит попыток в сутки', `
+      <input type="number" min="1" step="1" data-f="limitAttempts" value="${val}" placeholder="пусто — без лимита" style="width:160px">
+    `);
+    const inp = w.querySelector('input[data-f="limitAttempts"]');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      const raw = inp.value.trim();
+      if (raw === '') {
+        props.limit_attempts_per_day = '';
+      } else {
+        const n = parseInt(raw, 10);
+        props.limit_attempts_per_day = Number.isFinite(n) && n > 0 ? n : '';
+      }
+      updatePreviewInline();
+    });
+  }
+
+  // ------- Лимит монет в сутки
+  {
+    const val = (props.limit_coins_per_day === '' || props.limit_coins_per_day == null)
+      ? '' : String(props.limit_coins_per_day);
+    const w = addField('Лимит монет в сутки', `
+      <input type="number" min="1" step="1" data-f="limitCoins" value="${val}" placeholder="пусто — без лимита" style="width:160px">
+    `);
+    const inp = w.querySelector('input[data-f="limitCoins"]');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      const raw = inp.value.trim();
+      if (raw === '') {
+        props.limit_coins_per_day = '';
+      } else {
+        const n = parseInt(raw, 10);
+        props.limit_coins_per_day = Number.isFinite(n) && n > 0 ? n : '';
+      }
+      updatePreviewInline();
+    });
+  }
+
+  // ------- Спрайт птицы
+  {
+    const w = addField('Спрайт птицы', `
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <select data-f="bird_mode">
+          <option value="default">Стандартный шмель</option>
+          <option value="custom">Своя картинка</option>
+        </select>
+        <div data-bird-custom style="display:flex;gap:6px">
+          <input type="text" data-f="bird_img" placeholder="URL или data:image" value="${props.bird_img||''}">
+          <input type="file" data-f="birdUpload" accept="image/*">
+        </div>
+      </div>`);
+    const modeSel   = w.querySelector('select[data-f="bird_mode"]');
+    const customRow = w.querySelector('[data-bird-custom]');
+    const imgInput  = w.querySelector('input[data-f="bird_img"]');
+    const fileInput = w.querySelector('input[data-f="birdUpload"]');
+
+    const syncCustom = ()=>{ customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
+    modeSel.value = props.bird_mode || 'default';
+    syncCustom();
+
+    modeSel.addEventListener('change', ()=>{
+      pushHistory();
+      props.bird_mode = modeSel.value;
+      syncCustom();
+      updatePreviewInline();
+    });
+
+    if (fileInput){
+      fileInput.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
           pushHistory();
-          props.difficulty = sel.value;
+          props.bird_img = reader.result;
+          imgInput.value = props.bird_img;
           updatePreviewInline();
-        });
-      }
-
-      // ------- Спрайт птицы
-      {
-        const w = addField('Спрайт птицы', `
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <select data-f="bird_mode">
-              <option value="default">Стандартный шмель</option>
-              <option value="custom">Своя картинка</option>
-            </select>
-            <div data-bird-custom style="display:flex;gap:6px">
-              <input type="text" data-f="bird_img" placeholder="URL или data:image" value="${props.bird_img||''}">
-              <input type="file" data-f="birdUpload" accept="image/*">
-            </div>
-          </div>`);
-        const modeSel   = w.querySelector('select[data-f="bird_mode"]');
-        const customRow = w.querySelector('[data-bird-custom]');
-        const imgInput  = w.querySelector('input[data-f="bird_img"]');
-        const fileInput = w.querySelector('input[data-f="birdUpload"]');
-
-        const syncCustom = ()=>{ customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
-        modeSel.value = props.bird_mode || 'default';
-        syncCustom();
-
-        modeSel.addEventListener('change', ()=>{
-          pushHistory();
-          props.bird_mode = modeSel.value;
-          syncCustom();
-          updatePreviewInline();
-        });
-
-        if (fileInput){
-          fileInput.addEventListener('change', (e)=>{
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ()=>{
-              pushHistory();
-              props.bird_img = reader.result;
-              imgInput.value = props.bird_img;
-              updatePreviewInline();
-            };
-            reader.readAsDataURL(file);
-          });
-        }
-      }
-
-      // ------- Спрайт щита
-      {
-        const w = addField('Спрайт щита', `
-          <div style="display:flex;gap:6px">
-            <input type="text" data-f="shield_img" placeholder="URL или data:image" value="${props.shield_img||''}">
-            <input type="file" data-f="shieldUpload" accept="image/*">
-          </div>`);
-        const imgInput  = w.querySelector('input[data-f="shield_img"]');
-        const fileInput = w.querySelector('input[data-f="shieldUpload"]');
-
-        if (imgInput){
-          imgInput.addEventListener('change', ()=>{
-            pushHistory();
-            props.shield_img = imgInput.value.trim();
-            updatePreviewInline();
-          });
-        }
-        if (fileInput){
-          fileInput.addEventListener('change', (e)=>{
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ()=>{
-              pushHistory();
-              props.shield_img = reader.result;
-              if (imgInput) imgInput.value = props.shield_img;
-              updatePreviewInline();
-            };
-            reader.readAsDataURL(file);
-          });
-        }
-      }
-
-      // ------- Монета
-      {
-        const w = addField('Спрайт монеты', `
-          <div style="display:flex;gap:6px">
-            <input type="text" data-f="coin_img" placeholder="URL или data:image" value="${props.coin_img||''}">
-            <input type="file" data-f="coinUpload" accept="image/*">
-          </div>`);
-        const imgInput  = w.querySelector('input[data-f="coin_img"]');
-        const fileInput = w.querySelector('input[data-f="coinUpload"]');
-
-        if (imgInput){
-          imgInput.addEventListener('change', ()=>{
-            pushHistory();
-            props.coin_img = imgInput.value.trim();
-            updatePreviewInline();
-          });
-        }
-        if (fileInput){
-          fileInput.addEventListener('change', (e)=>{
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ()=>{
-              pushHistory();
-              props.coin_img = reader.result;
-              if (imgInput) imgInput.value = props.coin_img;
-              updatePreviewInline();
-            };
-            reader.readAsDataURL(file);
-          });
-        }
-      }
-
-      // ------- Трубы (верх/низ)
-      {
-        const w = addField('Спрайты труб', `
-          <div style="display:grid;gap:8px">
-            <div style="display:flex;gap:6px;align-items:center">
-              <span class="mut" style="min-width:74px">Верх</span>
-              <input type="text" data-f="pipe_top_img" placeholder="URL или data:image" value="${props.pipe_top_img||''}">
-              <input type="file" data-f="pipeTopUpload" accept="image/*">
-            </div>
-            <div style="display:flex;gap:6px;align-items:center">
-              <span class="mut" style="min-width:74px">Низ</span>
-              <input type="text" data-f="pipe_bottom_img" placeholder="URL или data:image" value="${props.pipe_bottom_img||''}">
-              <input type="file" data-f="pipeBottomUpload" accept="image/*">
-            </div>
-          </div>`);
-
-        const topInp  = w.querySelector('input[data-f="pipe_top_img"]');
-        const botInp  = w.querySelector('input[data-f="pipe_bottom_img"]');
-        const topUp   = w.querySelector('input[data-f="pipeTopUpload"]');
-        const botUp   = w.querySelector('input[data-f="pipeBottomUpload"]');
-
-        const onText = (inp, key)=> inp.addEventListener('change', ()=>{
-          pushHistory();
-          props[key] = inp.value.trim();
-          updatePreviewInline();
-        });
-
-        onText(topInp, 'pipe_top_img');
-        onText(botInp, 'pipe_bottom_img');
-
-        function handleUpload(upEl, key, textEl){
-          if(!upEl) return;
-          upEl.addEventListener('change', (e)=>{
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ()=>{
-              pushHistory();
-              props[key] = reader.result;
-              if (textEl) textEl.value = props[key];
-              updatePreviewInline();
-            };
-            reader.readAsDataURL(file);
-          });
-        }
-
-        handleUpload(topUp, 'pipe_top_img', topInp);
-        handleUpload(botUp, 'pipe_bottom_img', botInp);
-      }
-
-      // ------- HUD (по желанию)
-      {
-        const w = addField('HUD элементы', `
-          <label style="display:flex;gap:8px;align-items:center">
-            <input type="checkbox" data-f="show_coin_bar"${props.show_coin_bar ? ' checked':''}>
-            <span>Показывать монетную плашку</span>
-          </label>
-          <label style="display:flex;gap:8px;align-items:center">
-            <input type="checkbox" data-f="show_shield_bar"${props.show_shield_bar ? ' checked':''}>
-            <span>Показывать индикатор щита</span>
-          </label>
-        `);
-
-        const coinCb   = w.querySelector('input[data-f="show_coin_bar"]');
-        const shieldCb = w.querySelector('input[data-f="show_shield_bar"]');
-
-        coinCb.addEventListener('change', ()=>{
-          pushHistory();
-          props.show_coin_bar = !!coinCb.checked;
-          updatePreviewInline();
-        });
-        shieldCb.addEventListener('change', ()=>{
-          pushHistory();
-          props.show_shield_bar = !!shieldCb.checked;
-          updatePreviewInline();
-        });
-      }
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  }
+
+  // ------- Спрайт щита
+  {
+    const w = addField('Спрайт щита', `
+      <div style="display:flex;gap:6px">
+        <input type="text" data-f="shield_img" placeholder="URL или data:image" value="${props.shield_img||''}">
+        <input type="file" data-f="shieldUpload" accept="image/*">
+      </div>`);
+    const imgInput  = w.querySelector('input[data-f="shield_img"]');
+    const fileInput = w.querySelector('input[data-f="shieldUpload"]');
+
+    if (imgInput){
+      imgInput.addEventListener('change', ()=>{
+        pushHistory();
+        props.shield_img = imgInput.value.trim();
+        updatePreviewInline();
+      });
+    }
+    if (fileInput){
+      fileInput.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          pushHistory();
+          props.shield_img = reader.result;
+          if (imgInput) imgInput.value = props.shield_img;
+          updatePreviewInline();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+
+  // ------- Монета
+  {
+    const w = addField('Спрайт монеты', `
+      <div style="display:flex;gap:6px">
+        <input type="text" data-f="coin_img" placeholder="URL или data:image" value="${props.coin_img||''}">
+        <input type="file" data-f="coinUpload" accept="image/*">
+      </div>`);
+    const imgInput  = w.querySelector('input[data-f="coin_img"]');
+    const fileInput = w.querySelector('input[data-f="coinUpload"]');
+
+    if (imgInput){
+      imgInput.addEventListener('change', ()=>{
+        pushHistory();
+        props.coin_img = imgInput.value.trim();
+        updatePreviewInline();
+      });
+    }
+    if (fileInput){
+      fileInput.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          pushHistory();
+          props.coin_img = reader.result;
+          if (imgInput) imgInput.value = props.coin_img;
+          updatePreviewInline();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+
+  // ------- Трубы (верх/низ)
+  {
+    const w = addField('Спрайты труб', `
+      <div style="display:grid;gap:8px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="mut" style="min-width:74px">Верх</span>
+          <input type="text" data-f="pipe_top_img" placeholder="URL или data:image" value="${props.pipe_top_img||''}">
+          <input type="file" data-f="pipeTopUpload" accept="image/*">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="mut" style="min-width:74px">Низ</span>
+          <input type="text" data-f="pipe_bottom_img" placeholder="URL или data:image" value="${props.pipe_bottom_img||''}">
+          <input type="file" data-f="pipeBottomUpload" accept="image/*">
+        </div>
+      </div>`);
+
+    const topInp  = w.querySelector('input[data-f="pipe_top_img"]');
+    const botInp  = w.querySelector('input[data-f="pipe_bottom_img"]');
+    const topUp   = w.querySelector('input[data-f="pipeTopUpload"]');
+    const botUp   = w.querySelector('input[data-f="pipeBottomUpload"]');
+
+    const onText = (inp, key)=> inp.addEventListener('change', ()=>{
+      pushHistory();
+      props[key] = inp.value.trim();
+      updatePreviewInline();
+    });
+
+    onText(topInp, 'pipe_top_img');
+    onText(botInp, 'pipe_bottom_img');
+
+    function handleUpload(upEl, key, textEl){
+      if(!upEl) return;
+      upEl.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          pushHistory();
+          props[key] = reader.result;
+          if (textEl) textEl.value = props[key];
+          updatePreviewInline();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    handleUpload(topUp, 'pipe_top_img', topInp);
+    handleUpload(botUp, 'pipe_bottom_img', botInp);
+  }
+
+  // ------- HUD (по желанию)
+  {
+    const w = addField('HUD элементы', `
+      <label style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" data-f="show_coin_bar"${props.show_coin_bar ? ' checked':''}>
+        <span>Показывать монетную плашку</span>
+      </label>
+      <label style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" data-f="show_shield_bar"${props.show_shield_bar ? ' checked':''}>
+        <span>Показывать индикатор щита</span>
+      </label>
+    `);
+
+    const coinCb   = w.querySelector('input[data-f="show_coin_bar"]');
+    const shieldCb = w.querySelector('input[data-f="show_shield_bar"]');
+
+    coinCb.addEventListener('change', ()=>{
+      pushHistory();
+      props.show_coin_bar = !!coinCb.checked;
+      updatePreviewInline();
+    });
+    shieldCb.addEventListener('change', ()=>{
+      pushHistory();
+      props.show_shield_bar = !!shieldCb.checked;
+      updatePreviewInline();
+    });
+  }
+}
+
 
 
     beBody.querySelectorAll('input[type=text]').forEach(inp=>{
