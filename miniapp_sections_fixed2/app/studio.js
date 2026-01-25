@@ -4749,7 +4749,7 @@ if (inst.key === 'cta') {
     }
 
 // === Специальные настройки для Flappy ===
-if (inst.key === 'game_flappy' || inst.key === 'flappyGame') {
+if (inst.key === 'game_flappy' || inst.key === 'game_flappy_one') {
   // ------- дефолты
   if (props.difficulty === undefined) props.difficulty = 'normal';   // easy | normal | hard
 
