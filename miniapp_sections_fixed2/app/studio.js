@@ -4749,28 +4749,71 @@ if (inst.key === 'cta') {
     }
 
 // === Специальные настройки для Flappy ===
-if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
+if (inst.key === 'game_flappy' || inst.key === 'flappyGame') {
   // ------- дефолты
-  if (props.difficulty        === undefined) props.difficulty         = 'normal';   // easy | normal | hard
-  if (props.bird_mode         === undefined) props.bird_mode          = 'default';  // default | custom
-  if (props.bird_img          === undefined) props.bird_img           = '';
-  if (props.shield_img        === undefined) props.shield_img         = '';
+  if (props.difficulty === undefined) props.difficulty = 'normal';   // easy | normal | hard
 
-  // новые спрайты
-  if (props.coin_img          === undefined) props.coin_img           = '';
-  if (props.pipe_top_img      === undefined) props.pipe_top_img       = '';
-  if (props.pipe_bottom_img   === undefined) props.pipe_bottom_img    = '';
+  // режимы
+  if (props.bird_mode   === undefined) props.bird_mode   = 'default'; // default | custom
+  if (props.shield_mode === undefined) props.shield_mode = 'default'; // default | custom
+  if (props.coin_mode   === undefined) props.coin_mode   = 'default'; // default | custom
+  if (props.pipes_mode  === undefined) props.pipes_mode  = 'default'; // default | custom
+
+  // картинки
+  if (props.bird_img        === undefined) props.bird_img        = '';
+  if (props.shield_img      === undefined) props.shield_img      = '';
+  if (props.coin_img        === undefined) props.coin_img        = '';
+  if (props.pipe_top_img    === undefined) props.pipe_top_img    = '';
+  if (props.pipe_bottom_img === undefined) props.pipe_bottom_img = '';
 
   // HUD переключатели
-  if (props.show_coin_bar     === undefined) props.show_coin_bar      = true;
-  if (props.show_shield_bar   === undefined) props.show_shield_bar    = true;
+  if (props.show_coin_bar   === undefined) props.show_coin_bar   = true;
+  if (props.show_shield_bar === undefined) props.show_shield_bar = true;
 
   // Лимиты (пустое = без лимита)
   if (props.limit_attempts_per_day === undefined) props.limit_attempts_per_day = '';
-  if (props.limit_coins_per_day   === undefined) props.limit_coins_per_day   = '';
+  if (props.limit_coins_per_day    === undefined) props.limit_coins_per_day    = '';
 
   // Длина раунда (мс)
   if (props.session_ms === undefined) props.session_ms = 45000;
+
+  // ------- helpers
+  const setModeAuto = (modeKey, imgVal, emptyToDefault = true) => {
+    if (!modeKey) return;
+    const has = !!(imgVal && String(imgVal).trim());
+    if (has) props[modeKey] = 'custom';
+    else if (emptyToDefault) props[modeKey] = 'default';
+  };
+
+  const bindTextInput = (inp, onChange) => {
+    if (!inp) return;
+    inp.addEventListener('input', () => {
+      pushHistory();
+      onChange();
+      updatePreviewInline();
+    });
+    // на blur тоже (чтоб не терять историю если у тебя input не пушит часто)
+    inp.addEventListener('change', () => {
+      pushHistory();
+      onChange();
+      updatePreviewInline();
+    });
+  };
+
+  const bindUpload = (fileInput, onDataUrl) => {
+    if (!fileInput) return;
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        pushHistory();
+        onDataUrl(reader.result);
+        updatePreviewInline();
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   // ------- сложность
   {
@@ -4781,7 +4824,7 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
     </select>`);
     const sel = w.querySelector('select[data-f="difficultySel"]');
     sel.value = props.difficulty || 'normal';
-    sel.addEventListener('change', ()=>{
+    sel.addEventListener('change', () => {
       pushHistory();
       props.difficulty = sel.value;
       updatePreviewInline();
@@ -4790,16 +4833,16 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
 
   // ------- Длина раунда (сек)
   {
-    const curSec = Math.max(5, Math.round((props.session_ms || 45000)/1000));
+    const curSec = Math.max(5, Math.round((props.session_ms || 45000) / 1000));
     const w = addField('Длина раунда (сек)', `
       <input type="number" min="5" step="5" data-f="sessionSec" value="${curSec}" style="width:120px">
     `);
     const inp = w.querySelector('input[data-f="sessionSec"]');
-    inp.addEventListener('input', ()=>{
+    inp.addEventListener('input', () => {
       let v = parseInt(inp.value, 10);
       if (!Number.isFinite(v) || v < 5) v = 5;
       pushHistory();
-      props.session_ms = v * 1000;   // храним в мс
+      props.session_ms = v * 1000;
       updatePreviewInline();
     });
   }
@@ -4809,15 +4852,15 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
     const val = (props.limit_attempts_per_day === '' || props.limit_attempts_per_day == null)
       ? '' : String(props.limit_attempts_per_day);
     const w = addField('Лимит попыток в сутки', `
-      <input type="number" min="1" step="1" data-f="limitAttempts" value="${val}" placeholder="пусто — без лимита" style="width:160px">
+      <input type="number" min="1" step="1" data-f="limitAttempts" value="${val}"
+        placeholder="пусто — без лимита" style="width:160px">
     `);
     const inp = w.querySelector('input[data-f="limitAttempts"]');
-    inp.addEventListener('input', ()=>{
+    inp.addEventListener('input', () => {
       pushHistory();
       const raw = inp.value.trim();
-      if (raw === '') {
-        props.limit_attempts_per_day = '';
-      } else {
+      if (raw === '') props.limit_attempts_per_day = '';
+      else {
         const n = parseInt(raw, 10);
         props.limit_attempts_per_day = Number.isFinite(n) && n > 0 ? n : '';
       }
@@ -4830,15 +4873,15 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
     const val = (props.limit_coins_per_day === '' || props.limit_coins_per_day == null)
       ? '' : String(props.limit_coins_per_day);
     const w = addField('Лимит монет в сутки', `
-      <input type="number" min="1" step="1" data-f="limitCoins" value="${val}" placeholder="пусто — без лимита" style="width:160px">
+      <input type="number" min="1" step="1" data-f="limitCoins" value="${val}"
+        placeholder="пусто — без лимита" style="width:160px">
     `);
     const inp = w.querySelector('input[data-f="limitCoins"]');
-    inp.addEventListener('input', ()=>{
+    inp.addEventListener('input', () => {
       pushHistory();
       const raw = inp.value.trim();
-      if (raw === '') {
-        props.limit_coins_per_day = '';
-      } else {
+      if (raw === '') props.limit_coins_per_day = '';
+      else {
         const n = parseInt(raw, 10);
         props.limit_coins_per_day = Number.isFinite(n) && n > 0 ? n : '';
       }
@@ -4846,7 +4889,7 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
     });
   }
 
-  // ------- Спрайт птицы
+  // ------- Спрайт птицы (с выбором режима)
   {
     const w = addField('Спрайт птицы', `
       <div style="display:flex;flex-direction:column;gap:6px">
@@ -4855,167 +4898,228 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
           <option value="custom">Своя картинка</option>
         </select>
         <div data-bird-custom style="display:flex;gap:6px">
-          <input type="text" data-f="bird_img" placeholder="URL или data:image" value="${props.bird_img||''}">
+          <input type="text" data-f="bird_img" placeholder="URL или data:image" value="${props.bird_img || ''}">
           <input type="file" data-f="birdUpload" accept="image/*">
         </div>
-      </div>`);
+      </div>
+    `);
+
     const modeSel   = w.querySelector('select[data-f="bird_mode"]');
     const customRow = w.querySelector('[data-bird-custom]');
     const imgInput  = w.querySelector('input[data-f="bird_img"]');
     const fileInput = w.querySelector('input[data-f="birdUpload"]');
 
-    const syncCustom = ()=>{ customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
+    const sync = () => { customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
     modeSel.value = props.bird_mode || 'default';
-    syncCustom();
+    sync();
 
-    modeSel.addEventListener('change', ()=>{
+    modeSel.addEventListener('change', () => {
       pushHistory();
       props.bird_mode = modeSel.value;
-      syncCustom();
+      // если ушли в default — можно очистить, но не обязательно. Я не чищу.
+      sync();
       updatePreviewInline();
     });
 
-    if (fileInput){
-      fileInput.addEventListener('change', (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ()=>{
-          pushHistory();
-          props.bird_img = reader.result;
-          imgInput.value = props.bird_img;
-          updatePreviewInline();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+    bindTextInput(imgInput, () => {
+      props.bird_img = (imgInput.value || '').trim();
+      // авто: если юзер вставил url — включаем custom
+      if (props.bird_img) props.bird_mode = 'custom';
+      else if (props.bird_mode === 'custom') props.bird_mode = 'default';
+      modeSel.value = props.bird_mode;
+      sync();
+    });
+
+    bindUpload(fileInput, (dataUrl) => {
+      props.bird_img = dataUrl;
+      props.bird_mode = 'custom';
+      imgInput.value = props.bird_img;
+      modeSel.value = props.bird_mode;
+      sync();
+    });
   }
 
-  // ------- Спрайт щита
+  // ------- Спрайт щита (режим + url/upload)
   {
     const w = addField('Спрайт щита', `
-      <div style="display:flex;gap:6px">
-        <input type="text" data-f="shield_img" placeholder="URL или data:image" value="${props.shield_img||''}">
-        <input type="file" data-f="shieldUpload" accept="image/*">
-      </div>`);
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <select data-f="shield_mode">
+          <option value="default">Стандартный</option>
+          <option value="custom">Своя картинка</option>
+        </select>
+        <div data-shield-custom style="display:flex;gap:6px">
+          <input type="text" data-f="shield_img" placeholder="URL или data:image" value="${props.shield_img || ''}">
+          <input type="file" data-f="shieldUpload" accept="image/*">
+        </div>
+      </div>
+    `);
+
+    const modeSel   = w.querySelector('select[data-f="shield_mode"]');
+    const customRow = w.querySelector('[data-shield-custom]');
     const imgInput  = w.querySelector('input[data-f="shield_img"]');
     const fileInput = w.querySelector('input[data-f="shieldUpload"]');
 
-    if (imgInput){
-      imgInput.addEventListener('change', ()=>{
-        pushHistory();
-        props.shield_img = imgInput.value.trim();
-        updatePreviewInline();
-      });
-    }
-    if (fileInput){
-      fileInput.addEventListener('change', (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ()=>{
-          pushHistory();
-          props.shield_img = reader.result;
-          if (imgInput) imgInput.value = props.shield_img;
-          updatePreviewInline();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  }
+    const sync = () => { customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
+    modeSel.value = props.shield_mode || 'default';
+    sync();
 
-  // ------- Монета
-  {
-    const w = addField('Спрайт монеты', `
-      <div style="display:flex;gap:6px">
-        <input type="text" data-f="coin_img" placeholder="URL или data:image" value="${props.coin_img||''}">
-        <input type="file" data-f="coinUpload" accept="image/*">
-      </div>`);
-    const imgInput  = w.querySelector('input[data-f="coin_img"]');
-    const fileInput = w.querySelector('input[data-f="coinUpload"]');
-
-    if (imgInput){
-      imgInput.addEventListener('change', ()=>{
-        pushHistory();
-        props.coin_img = imgInput.value.trim();
-        updatePreviewInline();
-      });
-    }
-    if (fileInput){
-      fileInput.addEventListener('change', (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ()=>{
-          pushHistory();
-          props.coin_img = reader.result;
-          if (imgInput) imgInput.value = props.coin_img;
-          updatePreviewInline();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  }
-
-  // ------- Трубы (верх/низ)
-  {
-    const w = addField('Спрайты труб', `
-      <div style="display:grid;gap:8px">
-        <div style="display:flex;gap:6px;align-items:center">
-          <span class="mut" style="min-width:74px">Верх</span>
-          <input type="text" data-f="pipe_top_img" placeholder="URL или data:image" value="${props.pipe_top_img||''}">
-          <input type="file" data-f="pipeTopUpload" accept="image/*">
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span class="mut" style="min-width:74px">Низ</span>
-          <input type="text" data-f="pipe_bottom_img" placeholder="URL или data:image" value="${props.pipe_bottom_img||''}">
-          <input type="file" data-f="pipeBottomUpload" accept="image/*">
-        </div>
-      </div>`);
-
-    const topInp  = w.querySelector('input[data-f="pipe_top_img"]');
-    const botInp  = w.querySelector('input[data-f="pipe_bottom_img"]');
-    const topUp   = w.querySelector('input[data-f="pipeTopUpload"]');
-    const botUp   = w.querySelector('input[data-f="pipeBottomUpload"]');
-
-    const onText = (inp, key)=> inp.addEventListener('change', ()=>{
+    modeSel.addEventListener('change', () => {
       pushHistory();
-      props[key] = inp.value.trim();
+      props.shield_mode = modeSel.value;
+      // если ушли в default — не обязаны чистить URL, но можно:
+      // if (props.shield_mode === 'default') props.shield_img = '';
+      sync();
       updatePreviewInline();
     });
 
-    onText(topInp, 'pipe_top_img');
-    onText(botInp, 'pipe_bottom_img');
+    bindTextInput(imgInput, () => {
+      props.shield_img = (imgInput.value || '').trim();
+      setModeAuto('shield_mode', props.shield_img, true);
+      modeSel.value = props.shield_mode;
+      sync();
+    });
 
-    function handleUpload(upEl, key, textEl){
-      if(!upEl) return;
-      upEl.addEventListener('change', (e)=>{
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ()=>{
-          pushHistory();
-          props[key] = reader.result;
-          if (textEl) textEl.value = props[key];
-          updatePreviewInline();
-        };
-        reader.readAsDataURL(file);
-      });
+    bindUpload(fileInput, (dataUrl) => {
+      props.shield_img = dataUrl;
+      props.shield_mode = 'custom';
+      imgInput.value = props.shield_img;
+      modeSel.value = props.shield_mode;
+      sync();
+    });
+  }
+
+  // ------- Монета (режим + url/upload)
+  {
+    const w = addField('Спрайт монеты', `
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <select data-f="coin_mode">
+          <option value="default">Стандартная</option>
+          <option value="custom">Своя картинка</option>
+        </select>
+        <div data-coin-custom style="display:flex;gap:6px">
+          <input type="text" data-f="coin_img" placeholder="URL или data:image" value="${props.coin_img || ''}">
+          <input type="file" data-f="coinUpload" accept="image/*">
+        </div>
+      </div>
+    `);
+
+    const modeSel   = w.querySelector('select[data-f="coin_mode"]');
+    const customRow = w.querySelector('[data-coin-custom]');
+    const imgInput  = w.querySelector('input[data-f="coin_img"]');
+    const fileInput = w.querySelector('input[data-f="coinUpload"]');
+
+    const sync = () => { customRow.style.display = (modeSel.value === 'custom') ? 'flex' : 'none'; };
+    modeSel.value = props.coin_mode || 'default';
+    sync();
+
+    modeSel.addEventListener('change', () => {
+      pushHistory();
+      props.coin_mode = modeSel.value;
+      sync();
+      updatePreviewInline();
+    });
+
+    bindTextInput(imgInput, () => {
+      props.coin_img = (imgInput.value || '').trim();
+      setModeAuto('coin_mode', props.coin_img, true);
+      modeSel.value = props.coin_mode;
+      sync();
+    });
+
+    bindUpload(fileInput, (dataUrl) => {
+      props.coin_img = dataUrl;
+      props.coin_mode = 'custom';
+      imgInput.value = props.coin_img;
+      modeSel.value = props.coin_mode;
+      sync();
+    });
+  }
+
+  // ------- Трубы (режим + верх/низ)
+  {
+    const w = addField('Спрайты труб', `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <select data-f="pipes_mode" style="max-width:220px">
+          <option value="default">Стандартные трубы</option>
+          <option value="custom">Свои спрайты</option>
+        </select>
+
+        <div data-pipes-custom style="display:grid;gap:8px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="mut" style="min-width:74px">Верх</span>
+            <input type="text" data-f="pipe_top_img" placeholder="URL или data:image" value="${props.pipe_top_img || ''}">
+            <input type="file" data-f="pipeTopUpload" accept="image/*">
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="mut" style="min-width:74px">Низ</span>
+            <input type="text" data-f="pipe_bottom_img" placeholder="URL или data:image" value="${props.pipe_bottom_img || ''}">
+            <input type="file" data-f="pipeBottomUpload" accept="image/*">
+          </div>
+        </div>
+      </div>
+    `);
+
+    const modeSel  = w.querySelector('select[data-f="pipes_mode"]');
+    const box      = w.querySelector('[data-pipes-custom]');
+    const topInp   = w.querySelector('input[data-f="pipe_top_img"]');
+    const botInp   = w.querySelector('input[data-f="pipe_bottom_img"]');
+    const topUp    = w.querySelector('input[data-f="pipeTopUpload"]');
+    const botUp    = w.querySelector('input[data-f="pipeBottomUpload"]');
+
+    const sync = () => { box.style.display = (modeSel.value === 'custom') ? 'grid' : 'none'; };
+
+    // авто: если уже есть url'ы — считаем custom
+    if ((props.pipe_top_img || props.pipe_bottom_img) && props.pipes_mode !== 'custom') {
+      props.pipes_mode = 'custom';
     }
+    modeSel.value = props.pipes_mode || 'default';
+    sync();
 
-    handleUpload(topUp, 'pipe_top_img', topInp);
-    handleUpload(botUp, 'pipe_bottom_img', botInp);
+    modeSel.addEventListener('change', () => {
+      pushHistory();
+      props.pipes_mode = modeSel.value;
+      sync();
+      updatePreviewInline();
+    });
+
+    const setPipesModeFromFields = () => {
+      const has = !!((props.pipe_top_img && String(props.pipe_top_img).trim()) ||
+                     (props.pipe_bottom_img && String(props.pipe_bottom_img).trim()));
+      props.pipes_mode = has ? 'custom' : 'default';
+      modeSel.value = props.pipes_mode;
+      sync();
+    };
+
+    bindTextInput(topInp, () => {
+      props.pipe_top_img = (topInp.value || '').trim();
+      setPipesModeFromFields();
+    });
+    bindTextInput(botInp, () => {
+      props.pipe_bottom_img = (botInp.value || '').trim();
+      setPipesModeFromFields();
+    });
+
+    bindUpload(topUp, (dataUrl) => {
+      props.pipe_top_img = dataUrl;
+      topInp.value = props.pipe_top_img;
+      setPipesModeFromFields();
+    });
+    bindUpload(botUp, (dataUrl) => {
+      props.pipe_bottom_img = dataUrl;
+      botInp.value = props.pipe_bottom_img;
+      setPipesModeFromFields();
+    });
   }
 
   // ------- HUD (по желанию)
   {
     const w = addField('HUD элементы', `
       <label style="display:flex;gap:8px;align-items:center">
-        <input type="checkbox" data-f="show_coin_bar"${props.show_coin_bar ? ' checked':''}>
+        <input type="checkbox" data-f="show_coin_bar"${props.show_coin_bar ? ' checked' : ''}>
         <span>Показывать монетную плашку</span>
       </label>
       <label style="display:flex;gap:8px;align-items:center">
-        <input type="checkbox" data-f="show_shield_bar"${props.show_shield_bar ? ' checked':''}>
+        <input type="checkbox" data-f="show_shield_bar"${props.show_shield_bar ? ' checked' : ''}>
         <span>Показывать индикатор щита</span>
       </label>
     `);
@@ -5023,18 +5127,19 @@ if (inst.key === 'game_flappy' || inst.key === 'flappyGame'){
     const coinCb   = w.querySelector('input[data-f="show_coin_bar"]');
     const shieldCb = w.querySelector('input[data-f="show_shield_bar"]');
 
-    coinCb.addEventListener('change', ()=>{
+    coinCb.addEventListener('change', () => {
       pushHistory();
       props.show_coin_bar = !!coinCb.checked;
       updatePreviewInline();
     });
-    shieldCb.addEventListener('change', ()=>{
+    shieldCb.addEventListener('change', () => {
       pushHistory();
       props.show_shield_bar = !!shieldCb.checked;
       updatePreviewInline();
     });
   }
 }
+
 
 
 
