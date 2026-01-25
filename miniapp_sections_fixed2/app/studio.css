@@ -2341,44 +2341,4 @@ html[data-theme="dark"] .themeAccs .acc-ico{
 }
 
 
-/* =========================================
-   SG THEME TOKENS BRIDGE (Design Tokens → Blocks)
-   Подключается один раз в глобальном CSS миниаппа
-   ========================================= */
 
-:root{
-  /* --- core tokens (твоя "Figma" тема) --- */
-  /* ожидаемые: --bg --surface --card --border --text --muted --brand --brandSoft
-     также: --btnPrimaryBg --btnPrimaryText --btnSecondaryBg --btnSecondaryText
-     --radiusCard --radiusBtn --radiusInput --shadowCard --glow
-  */
-
-  /* --- bridge: legacy → new --- */
-  --accent:      var(--brand);
-  --onAccent:    var(--btnPrimaryText, #fff);
-
-  /* иногда блоки используют surface2 / chipBg */
-  --surface2:    var(--surface);
-
-  /* card compat для блоков, которые ждут card-bg/card-border */
-  --card-bg:     color-mix(in srgb, var(--card) 92%, transparent);
-  --card-border: color-mix(in srgb, var(--border) 65%, transparent);
-
-  /* кнопки (если блоки ждут такие имена) */
-  --btn-bg:      var(--btnPrimaryBg, var(--brand));
-  --btn-text:    var(--btnPrimaryText, #fff);
-
-  /* радиусы совместимости */
-  --r-card:      calc(var(--radiusCard, 16) * 1px);
-  --r-btn:       calc(var(--radiusBtn, 14) * 1px);
-  --r-input:     calc(var(--radiusInput, 12) * 1px);
-
-  /* тени совместимости */
-  --shadow-card: 0 10px 30px color-mix(in srgb, #000 16%, transparent);
-}
-
-/* если у тебя светлая тема: (не обязательно, но полезно) */
-html[data-theme="light"]{
-  --card-bg:     color-mix(in srgb, var(--card) 100%, transparent);
-  --card-border: color-mix(in srgb, var(--border) 75%, transparent);
-}
