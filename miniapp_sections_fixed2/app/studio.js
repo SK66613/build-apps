@@ -2832,7 +2832,7 @@ const skipGeneric =
 
 
 // === Спец-настройки calendar_booking v1.3 ===
-if (inst.key === 'calendar_booking') {
+if (inst.key === 'calendar_booking_one') {
   if (!props) BP.blocks[inst.id] = (props = {});
   const d = (window.BlockRegistry?.calendar_booking?.defaults) || {};
 
@@ -2979,7 +2979,7 @@ srvInputs.forEach(inp => inp.addEventListener('input', syncServices));
 
 
 // === Спец-настройки sales_qr ===
-if (inst.key === 'sales_qr') {
+if (inst.key === 'sales_qr_one') {
   if (!props) BP.blocks[inst.id] = (props = {});
   const d = (window.BlockRegistry?.sales_qr?.defaults) || {};
 
@@ -3107,7 +3107,7 @@ if (inst.key === 'sales_qr') {
 
 
 // === Спец-настройки shop_stars_product (Stars / товары) ===
-if (inst.key === 'shop_stars_product' || inst.type === 'shop_stars_product') {
+if (inst.key === 'shop_stars_product_one' || inst.type === 'shop_stars_product') {
   if (!props) BP.blocks[inst.id] = (props = {});
   const d = (window.BlockRegistry?.shop_stars_product?.defaults) || {};
 
