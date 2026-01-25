@@ -678,28 +678,6 @@ function syncThemeCSS(){
   --line: rgba(255,255,255,.10);
 }
 
-  /* === aliases for blocks (sg-blocks) === */
-  --accent: var(--color-brand);
-  --onAccent: var(--btn-primary-text);
-  --brand: var(--color-brand);
-
-  --text: var(--color-text);
-  --muted: var(--color-muted);
-
-  --surface: var(--color-surface);
-  --surface2: var(--color-card);
-
-  --card-bg: var(--color-card);
-  --card-border: var(--color-border);
-
-  --r-card: var(--radius-card);
-  --r-btn: var(--radius-btn);
-
-  /* camelCase aliases (some blocks) */
-  --btnPrimaryBg: var(--btn-primary-bg);
-  --btnPrimaryText: var(--btn-primary-text);
-  --btnSecondaryBg: var(--btn-secondary-bg);
-  --btnSecondaryText: var(--btn-secondary-text);
 
 
 html,body{
