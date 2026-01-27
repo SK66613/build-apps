@@ -73,13 +73,7 @@
 }
 
 /* Включаем “красивые” color-mix только если поддерживается */
-@supports (background: color-mix(in srgb, #000 50%, transparent)){
-  :root{
-    --surface2: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg));
-    --card-bg: color-mix(in srgb, var(--color-card) 92%, transparent);
-    --card-border: color-mix(in srgb, var(--color-border) 72%, transparent);
-  }
-}
+
 
 html,body{height:100%}
 body{
@@ -105,13 +99,7 @@ h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
   box-shadow: var(--shadow-soft);
 }
 
-/* Modern only */
-@supports (background: color-mix(in srgb, #000 50%, transparent)){
-  .card{
-    background: color-mix(in srgb, var(--color-card) 92%, transparent);
-    border:1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
-  }
-}
+
 
 /* Section container ("Раздел") */
 .sec{padding:12px}
@@ -139,13 +127,7 @@ h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
   z-index:10;
 }
 
-/* Modern only */
-@supports (background: color-mix(in srgb, #000 50%, transparent)){
-  .tabbar{
-    background: color-mix(in srgb, var(--tabbar-bg) 86%, transparent);
-    border-top:1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
-  }
-}
+
 
 .tab{
   display:grid;
