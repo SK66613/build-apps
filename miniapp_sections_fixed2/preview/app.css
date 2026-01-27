@@ -38,6 +38,29 @@
   --sub: var(--color-muted);
   --acc: var(--color-brand);
   --line: rgba(255,255,255,.10);
+/* === aliases for blocks (bridge) === */
+--accent: var(--color-brand);
+--onAccent: var(--btn-primary-text);
+--text: var(--color-text);
+--muted: var(--color-muted);
+--surface: var(--color-surface);
+--surface2: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg));
+--card: var(--color-card);
+--card-bg: color-mix(in srgb, var(--color-card) 92%, transparent);
+--card-border: color-mix(in srgb, var(--color-border) 72%, transparent);
+
+--brand: var(--color-brand);
+--btnPrimaryBg: var(--btn-primary-bg);
+--btnPrimaryText: var(--btn-primary-text);
+
+--r-card: var(--radius-card);
+--r-btn: var(--radius-btn);
+--r-input: var(--radius-input);
+
+/* numeric strengths (0..1) for blocks calculations */
+--shadow-a: .35;
+--glow-a: .35;
+
 }
 
 html,body{height:100%}
@@ -73,9 +96,6 @@ h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
 .tab{display:grid;gap:3px;place-items:center;color:var(--tabbar-text);font-size:12px;cursor:pointer}
 .tab.active{color:var(--tabbar-active)}
 
-  border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;z-index:10}
-.tab{display:grid;gap:3px;place-items:center;color:var(--sub);font-size:12px;cursor:pointer}
-.tab.active{color:#fff}
 .sys{border:1px dashed var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.03)}
 .sys h4{margin:0 0 8px}
 
