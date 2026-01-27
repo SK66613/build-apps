@@ -712,11 +712,13 @@ h1,h2,h3,.h1,.h2,.h3{
   font-family: var(--font-head);
 }
 
+/* ===== Tabbar (TG-safe) ===== */
 .tabbar{
-  background: color-mix(in srgb, var(--tabbar-bg) 86%, transparent);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-}
+  /* fallback (боевой) */
+  background: var(--tabbar-bg);
+  border-top: 0;
+  box-shadow: 0 -10px 24px rgba(0,0,0,.22);
+
 
 .tab{ color: var(--tabbar-text); }
 .tab.active{ color: var(--tabbar-active); }
