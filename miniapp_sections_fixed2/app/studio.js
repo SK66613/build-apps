@@ -666,6 +666,10 @@ function syncThemeCSS(){
   --glow: 0 0 0 2px rgba(124,92,255,${(0.35*glowA).toFixed(3)}); /* fallback */
   --glow-brand: 0 0 0 2px rgba(124,92,255,${(0.55*glowA).toFixed(3)}), 0 0 24px rgba(124,92,255,${(0.32*glowA).toFixed(3)});
 
+  /* numeric strengths (0..1) for blocks calculations */
+  --shadow-a:${shadowA.toFixed(3)};
+  --glow-a:${glowA.toFixed(3)};
+
   --font-body:${fontFamily(t.fontBody)};
   --font-head:${fontFamily(t.fontHead)};
   --font-size:${Number(t.fontSize)||14}px;
@@ -676,6 +680,24 @@ function syncThemeCSS(){
   --sub: var(--color-muted);
   --acc: var(--color-brand);
   --line: rgba(255,255,255,.10);
+/* === aliases for older/newer blocks (bridge) === */
+--accent: var(--color-brand);
+--onAccent: var(--btn-primary-text);
+--text: var(--color-text);
+--muted: var(--color-muted);
+--surface: var(--color-surface);
+--surface2: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg));
+--card: var(--color-card);
+--card-bg: color-mix(in srgb, var(--color-card) 92%, transparent);
+--card-border: color-mix(in srgb, var(--color-border) 72%, transparent);
+
+--brand: var(--color-brand);
+--btnPrimaryBg: var(--btn-primary-bg);
+--btnPrimaryText: var(--btn-primary-text);
+
+--r-card: var(--radius-card);
+--r-btn: var(--radius-btn);
+--r-input: var(--radius-input);
 }
 
 
