@@ -1,14 +1,14 @@
 /* ===== Local fonts (Telegram-safe) ===== */
 @font-face{
   font-family: "Inter";
-  src: url("/fonts/Inter-roman.var.woff2") format("woff2");
+  src: url("miniapp_sections_fixed2/preview/fonts/Inter-roman.var.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 @font-face{
   font-family: "Montserrat";
-  src: url("/fonts/Montserrat-roman.var.woff2") format("woff2");
+  src: url("miniapp_sections_fixed2/preview/fonts/Montserrat-Regular.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
