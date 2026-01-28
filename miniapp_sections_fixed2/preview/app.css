@@ -14,9 +14,6 @@
   font-display: swap;
 }
 
-
-
-
 :root{
   /* Figma tokens (default fallback) */
   --color-bg:#0f1219;
@@ -46,6 +43,7 @@
   --shadow-soft:0 8px 24px rgba(0,0,0,.12);
   --glow-brand:0 0 0 2px rgba(124,92,255,.35), 0 0 24px rgba(124,92,255,.22);
 
+  /* Typography tokens */
   --font-body: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   --font-head: Montserrat, Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   --font-size:14px;
@@ -91,59 +89,76 @@
   --glow-a: .35;
 }
 
-/* Включаем “красивые” color-mix только если поддерживается */
-
-
+/* ===== Global typography bridge (FORCE blocks to inherit) ===== */
 html,body{height:100%}
+html, body{
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+}
+
 body{
   margin:0;
   background:var(--color-bg);
   color:var(--color-text);
-  font: var(--font-size)/1.55 var(--font-body);
+  line-height:1.55;
 }
-h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
 
+/* headings */
+h1,h2,h3,h4,h5,h6,
+.h1,.h2,.h3{
+  font-family: var(--font-head);
+}
+
+/* Force inheritance inside blocks */
+.blk, .block, [data-block], [data-key], [data-block-id]{
+  font-family: inherit;
+}
+.blk *, .block *, [data-block] *, [data-key] *, [data-block-id] *{
+  font-family: inherit;
+}
+
+/* Layout */
 .container{
   padding:16px 16px calc(var(--tabbar-h) + var(--safe-bottom) + 20px);
 }
 
-/* ===== Cards (safe fallback + modern mix) ===== */
+/* ===== Cards ===== */
 .card{
-  /* fallback (TG WebView safe) */
   background: var(--color-card);
   border:1px solid var(--color-border);
-
   border-radius: var(--radius-card);
   padding:12px;
   box-shadow: var(--shadow-soft);
 }
 
-
-
-/* Section container ("Раздел") */
-.sec{padding:12px}
-.sec__hd{font-weight:800;font-size:18px;margin:2px 2px 10px;opacity:.95}
-.sec__bd{display:flex;flex-direction:column;gap:10px}
-
-/* Section container ("Раздел") */
+/* ===== Section container ("Раздел") ===== */
 .sec{
   padding:12px;
   background: var(--color-surface);
   border-radius: var(--radius-card);
 }
+.sec__hd{
+  font-weight:800;
+  font-size:18px;
+  margin:2px 2px 10px;
+  opacity:.95;
+}
+.sec__bd{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
 
-/* ===== Tabbar (safe fallback + modern mix) ===== */
+/* ===== Tabbar ===== */
 .tabbar{
   position:fixed;
   left:0; right:0; bottom:0;
   height: calc(var(--tabbar-h) + var(--safe-bottom));
   padding-bottom: max(0px, calc(var(--safe-bottom) - 16px));
 
-  /* fallback */
   background: var(--tabbar-bg);
   border-top:1px solid var(--color-border);
 
-  /* optional blur (if supported it's ok; if not, ignored) */
   backdrop-filter:blur(16px);
   -webkit-backdrop-filter:blur(16px);
 
@@ -152,8 +167,6 @@ h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
   align-items:center;
   z-index:10;
 }
-
-
 
 .tab{
   display:grid;
@@ -165,6 +178,7 @@ h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
 }
 .tab.active{color:var(--tabbar-active)}
 
+/* System box */
 .sys{
   border:1px dashed var(--line);
   border-radius:14px;
