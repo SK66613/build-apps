@@ -463,6 +463,15 @@ const T = {
   presetDark: $('#t_preset_dark'),
   presetLight: $('#t_preset_light'),
   presetBrand: $('#t_preset_brand'),
+
+    // Opacity sliders
+  bgA: $('#t_bgA'),
+  surfaceA: $('#t_surfaceA'),
+  cardA: $('#t_cardA'),
+  borderA: $('#t_borderA'),
+  tabBgA: $('#t_tabBgA'),
+  overlayA: $('#t_overlayA'),
+
 };
 
 const DEFAULT_THEME_TOKENS = {
@@ -492,10 +501,17 @@ const DEFAULT_THEME_TOKENS = {
   tabActive:'#ffffff',
   overlay:'#000000',
 
-    // Opacity (0..1) — TG-safe прозрачность без color-mix
-  tabBgA: 0.86,     // прозрачность нижнего меню
-  cardA: 0.92,      // прозрачность карточек (если захочешь)
-  surface2A: 0.88,  // для --surface2 (если захочешь)
+  // Opacity (0..1) — TG-safe прозрачность
+  bgA: 1,
+  surfaceA: 1,
+  cardA: 0.92,
+  borderA: 0.72,
+  tabBgA: 0.86,
+  overlayA: 0.60,
+
+  // (оставь если используешь как отдельный слой/алиас)
+  surface2A: 0.88,
+
 
   // Radius
   radiusCard:16,
@@ -655,20 +671,36 @@ function rgbaFromHex(hex, a){
 function syncThemeCSS(){
   const t = BP.app.themeTokens || DEFAULT_THEME_TOKENS;
 
-
   const shadowA = clamp01(t.shadowCard);
   const glowA   = clamp01(t.glow);
 
-  // IMPORTANT: we keep legacy vars (--bg/--fg/--sub/--acc/--line) for existing CSS
+  // alpha helpers (если токенов ещё нет — фолбэки)
+  const bgA      = clamp01(t.bgA ?? 1);
+  const surfaceA = clamp01(t.surfaceA ?? 1);
+  const cardA    = clamp01(t.cardA ?? 0.92);
+  const borderA  = clamp01(t.borderA ?? 0.72);
+  const tabBgA   = clamp01(t.tabBgA ?? 0.86);
+  const overlayA = clamp01(t.overlayA ?? 0.60);
+  const surface2A= clamp01(t.surface2A ?? 0.88);
+
+  // IMPORTANT:
+  // 1) оставляем HEX версии (…-hex) для совместимости со старыми блоками
+  // 2) основные --color-* делаем уже RGBA, чтобы вся система подхватила прозрачность
   const css = `
 :root{
-  /* === Figma tokens === */
-  --color-bg:${t.bg};
-  --color-surface:${t.surface};
-  --color-card:${t.card};
-  --color-border:${t.border};
+  /* === Figma tokens (HEX raw for compatibility) === */
+  --color-bg-hex:${t.bg};
+  --color-surface-hex:${t.surface};
+  --color-card-hex:${t.card};
+  --color-border-hex:${t.border};
   --color-text:${t.text};
   --color-muted:${t.muted};
+
+  /* === Figma tokens (RGBA result / TG-safe) === */
+  --color-bg:${rgbaFromHex(t.bg, bgA)};
+  --color-surface:${rgbaFromHex(t.surface, surfaceA)};
+  --color-card:${rgbaFromHex(t.card, cardA)};
+  --color-border:${rgbaFromHex(t.border, borderA)};
 
   --color-brand:${t.brand};
   --color-brand-soft:${t.brandSoft};
@@ -681,11 +713,11 @@ function syncThemeCSS(){
   --btn-secondary-bg:${t.btnSecondaryBg};
   --btn-secondary-text:${t.btnSecondaryText};
 
-  --tabbar-bg:${rgbaFromHex(t.tabBg, t.tabBgA)};
-
+  /* Nav / overlay (TG-safe) */
+  --tabbar-bg:${rgbaFromHex(t.tabBg, tabBgA)};
   --tabbar-text:${t.tabText};
   --tabbar-active:${t.tabActive};
-  --overlay:${t.overlay};
+  --overlay:${rgbaFromHex(t.overlay, overlayA)};
 
   --radius-card:${Number(t.radiusCard)||16}px;
   --radius-btn:${Number(t.radiusBtn)||14}px;
@@ -710,29 +742,31 @@ function syncThemeCSS(){
   --sub: var(--color-muted);
   --acc: var(--color-brand);
   --line: rgba(255,255,255,.10);
-/* === aliases for older/newer blocks (bridge) === */
---accent: var(--color-brand);
---onAccent: var(--btn-primary-text);
---text: var(--color-text);
---muted: var(--color-muted);
---surface: var(--color-surface);
 
---card: var(--color-card);
---surface2: ${rgbaFromHex(t.surface, t.surface2A)};
---card-bg: ${rgbaFromHex(t.card, t.cardA)};
---card-border: ${rgbaFromHex(t.border, 0.72)};  // или тоже сделать токеном если надо
+  /* === aliases for older/newer blocks (bridge) === */
+  --accent: var(--color-brand);
+  --onAccent: var(--btn-primary-text);
+  --text: var(--color-text);
+  --muted: var(--color-muted);
+  --surface: var(--color-surface);
 
+  --card: var(--color-card);
 
---brand: var(--color-brand);
---btnPrimaryBg: var(--btn-primary-bg);
---btnPrimaryText: var(--btn-primary-text);
+  /* если тебе нужен второй слой поверхности */
+  --surface2: ${rgbaFromHex(t.surface, surface2A)};
 
---r-card: var(--radius-card);
---r-btn: var(--radius-btn);
---r-input: var(--radius-input);
+  /* для блоков, которые ждут card-bg/border */
+  --card-bg: var(--color-card);
+  --card-border: var(--color-border);
+
+  --brand: var(--color-brand);
+  --btnPrimaryBg: var(--btn-primary-bg);
+  --btnPrimaryText: var(--btn-primary-text);
+
+  --r-card: var(--radius-card);
+  --r-btn: var(--radius-btn);
+  --r-input: var(--radius-input);
 }
-
-
 
 html,body{
   background:var(--color-bg);
@@ -746,7 +780,6 @@ h1,h2,h3,.h1,.h2,.h3{
 
 /* ===== Tabbar (TG-safe) ===== */
 .tabbar{
-  /* fallback (боевой) */
   background: var(--tabbar-bg);
   border-top: 0;
   box-shadow: 0 -10px 24px rgba(0,0,0,.22);
@@ -768,6 +801,7 @@ button:focus, .btn:focus, input:focus, select:focus{
 
   BP.app.theme.css = css;
 }
+
 
 
 function ensureTheme(){
@@ -845,6 +879,14 @@ function syncThemeUI(){
   setVal(T.shadowCard, t.shadowCard);
   setVal(T.glow, t.glow);
 
+  setVal(T.bgA, t.bgA);
+  setVal(T.surfaceA, t.surfaceA);
+  setVal(T.cardA, t.cardA);
+  setVal(T.borderA, t.borderA);
+  setVal(T.tabBgA, t.tabBgA);
+  setVal(T.overlayA, t.overlayA);
+
+
   setVal(T.fontBody, t.fontBody);
   setVal(T.fontHead, t.fontHead);
   setVal(T.fontSize, t.fontSize);
@@ -891,6 +933,12 @@ function initThemePanel(){
   bind(T.glow, 'glow');
   bind(T.cardA, 'cardA');       // NEW
   bind(T.surface2A, 'surface2A'); // NEW
+
+  bind(T.bgA, 'bgA');  // NEW
+  bind(T.borderA, 'borderA');  // NEW
+  bind(T.tabBgA, 'tabBgA');  // NEW
+  bind(T.overlayA, 'overlayA');  // NEW
+
 
 
   bind(T.fontBody, 'fontBody', 'change');
