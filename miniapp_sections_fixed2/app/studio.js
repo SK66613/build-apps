@@ -464,6 +464,13 @@ const T = {
   presetLight: $('#t_preset_light'),
   presetBrand: $('#t_preset_brand'),
 
+  // opacity sliders (buttons)
+btnPrimaryA: $('#t_btnPrimaryA'),
+btnSecondaryA: $('#t_btnSecondaryA'),
+btnPrimaryTextA: $('#t_btnPrimaryTextA'),
+btnSecondaryTextA: $('#t_btnSecondaryTextA'),
+
+
     // Opacity sliders
   bgA: $('#t_bgA'),
   surfaceA: $('#t_surfaceA'),
@@ -526,6 +533,15 @@ const DEFAULT_THEME_TOKENS = {
   fontBody:'Inter',
   fontHead:'Montserrat',
   fontSize:14,
+
+  // Buttons opacity (0..1)
+btnPrimaryA: 1,
+btnSecondaryA: 1,
+
+// Buttons text opacity (0..1)
+btnPrimaryTextA: 1,
+btnSecondaryTextA: 1,
+
 };
 
 
@@ -683,6 +699,12 @@ function syncThemeCSS(){
   const overlayA = clamp01(t.overlayA ?? 0.60);
   const surface2A= clamp01(t.surface2A ?? 0.88);
 
+  const btnPrimaryA       = clamp01(t.btnPrimaryA ?? 1);
+const btnSecondaryA     = clamp01(t.btnSecondaryA ?? 1);
+const btnPrimaryTextA   = clamp01(t.btnPrimaryTextA ?? 1);
+const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
+
+
   // IMPORTANT:
   // 1) оставляем HEX версии (…-hex) для совместимости со старыми блоками
   // 2) основные --color-* делаем уже RGBA, чтобы вся система подхватила прозрачность
@@ -708,10 +730,24 @@ function syncThemeCSS(){
   --color-warning:${t.warning};
   --color-danger:${t.danger};
 
-  --btn-primary-bg:${t.btnPrimaryBg};
-  --btn-primary-text:${t.btnPrimaryText};
-  --btn-secondary-bg:${t.btnSecondaryBg};
-  --btn-secondary-text:${t.btnSecondaryText};
+/* Buttons HEX (compat) */
+--btn-primary-bg-hex:${t.btnPrimaryBg};
+--btn-secondary-bg-hex:${t.btnSecondaryBg};
+--btn-primary-text-hex:${t.btnPrimaryText};
+--btn-secondary-text-hex:${t.btnSecondaryText};
+
+/* Buttons RGBA (TG-safe) */
+--btn-primary-bg:${rgbaFromHex(t.btnPrimaryBg, btnPrimaryA)};
+--btn-secondary-bg:${rgbaFromHex(t.btnSecondaryBg, btnSecondaryA)};
+--btn-primary-text:${rgbaFromHex(t.btnPrimaryText, btnPrimaryTextA)};
+--btn-secondary-text:${rgbaFromHex(t.btnSecondaryText, btnSecondaryTextA)};
+
+/* Aliases for blocks (если кто-то ждёт camelCase) */
+--btnPrimaryBg: var(--btn-primary-bg);
+--btnSecondaryBg: var(--btn-secondary-bg);
+--btnPrimaryText: var(--btn-primary-text);
+--btnSecondaryText: var(--btn-secondary-text);
+
 
   /* Nav / overlay (TG-safe) */
   --tabbar-bg:${rgbaFromHex(t.tabBg, tabBgA)};
@@ -890,6 +926,12 @@ function syncThemeUI(){
   setVal(T.fontBody, t.fontBody);
   setVal(T.fontHead, t.fontHead);
   setVal(T.fontSize, t.fontSize);
+
+  setVal(T.btnPrimaryA, t.btnPrimaryA);
+setVal(T.btnSecondaryA, t.btnSecondaryA);
+setVal(T.btnPrimaryTextA, t.btnPrimaryTextA);
+setVal(T.btnSecondaryTextA, t.btnSecondaryTextA);
+
 }
 
 function initThemePanel(){
@@ -938,6 +980,12 @@ function initThemePanel(){
   bind(T.borderA, 'borderA');  // NEW
   bind(T.tabBgA, 'tabBgA');  // NEW
   bind(T.overlayA, 'overlayA');  // NEW
+
+  bind(T.btnPrimaryA, 'btnPrimaryA');
+bind(T.btnSecondaryA, 'btnSecondaryA');
+bind(T.btnPrimaryTextA, 'btnPrimaryTextA');
+bind(T.btnSecondaryTextA, 'btnSecondaryTextA');
+
 
 
 
