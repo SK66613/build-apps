@@ -1184,11 +1184,8 @@ bind(T.btnSecondaryTextA, 'btnSecondaryTextA');
 
 
 
-  bind(T.fontBody, 'fontBody', 'change');
-  bind(T.fontHead, 'fontHead', 'change');
-  bind(T.fontSize, 'fontSize');
 
-  bind(T.fontBtn, 'fontBtn', 'change');
+bind(T.fontBtn, 'fontBtn', 'change');
 
 bind(T.fwBody, 'fwBody');
 bind(T.fwHead, 'fwHead');
