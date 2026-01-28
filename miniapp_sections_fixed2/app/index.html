@@ -470,19 +470,52 @@
       <div class="themeGrid">
         <div class="themeGroup">
           <label>Body font
-            <select id="t_fontBody">
-              <option value="Inter">Inter</option>
-              <option value="system">System UI</option>
-            </select>
-          </label>
+  <select id="t_fontBody">
+    <option value="system">System</option>
+    <option value="Inter">Inter</option>
+    <option value="Montserrat">Montserrat</option>
+  </select>
+</label>
 
-          <label>Heading font
-            <select id="t_fontHead">
-              <option value="Montserrat">Montserrat</option>
-              <option value="Inter">Inter</option>
-              <option value="system">System UI</option>
-            </select>
-          </label>
+<label>Head font
+  <select id="t_fontHead">
+    <option value="system">System</option>
+    <option value="Montserrat">Montserrat</option>
+    <option value="Inter">Inter</option>
+  </select>
+</label>
+
+<label>Button font
+  <select id="t_fontBtn">
+    <option value="system">System</option>
+    <option value="Inter">Inter</option>
+    <option value="Montserrat">Montserrat</option>
+  </select>
+</label>
+
+
+          <label>Body weight
+  <input type="range" id="t_fwBody" min="100" max="900" step="50" value="400">
+</label>
+
+<label>Head weight
+  <input type="range" id="t_fwHead" min="100" max="900" step="50" value="800">
+</label>
+
+<label>Button weight
+  <input type="range" id="t_fwBtn" min="100" max="900" step="50" value="800">
+</label>
+
+
+          <label><input type="checkbox" id="t_itBody"> Body italic</label>
+<label><input type="checkbox" id="t_ulBody"> Body underline</label>
+
+<label><input type="checkbox" id="t_itHead"> Head italic</label>
+<label><input type="checkbox" id="t_ulHead"> Head underline</label>
+
+<label><input type="checkbox" id="t_itBtn"> Button italic</label>
+<label><input type="checkbox" id="t_ulBtn"> Button underline</label>
+
 
           <label>Base font size <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1"></label>
         </div>
