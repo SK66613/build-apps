@@ -754,7 +754,7 @@ function syncThemeCSS(){
   const btnPrimaryTextA   = clamp01(t.btnPrimaryTextA ?? 1);
   const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
 
-  const css = `
+const css = `
 :root{
   /* === Figma tokens (HEX raw for compatibility) === */
   --color-bg-hex:${t.bg};
@@ -886,15 +886,16 @@ html,body{
   font-style: var(--it-body);
 }
 
-/* underline body — НЕ глобально на всё, а только на текстовые элементы */
-p, span, small, em, strong, li, label, .text, .muted{
+/* underline body — НЕ глобально на всё, а только на текстовые элементы (+ ссылки) */
+p, span, small, em, strong, li, label, .text, .muted, a{
   text-decoration: var(--ul-body);
 }
 
-/* ===== Head levels ===== */
+/* ===== Head levels (with tuned line-height) ===== */
 h1, .h1{
   font-family: var(--font-head);
   font-size: var(--fs-h1);
+  line-height: 1.15;
   font-weight: var(--fw-head);
   font-style: var(--it-head);
   text-decoration: var(--ul-head);
@@ -902,6 +903,7 @@ h1, .h1{
 h2, .h2{
   font-family: var(--font-head);
   font-size: var(--fs-h2);
+  line-height: 1.20;
   font-weight: var(--fw-head);
   font-style: var(--it-head);
   text-decoration: var(--ul-head);
@@ -909,13 +911,14 @@ h2, .h2{
 h3, .h3{
   font-family: var(--font-head);
   font-size: var(--fs-h3);
+  line-height: 1.25;
   font-weight: var(--fw-head);
   font-style: var(--it-head);
   text-decoration: var(--ul-head);
 }
 
 /* ===== Buttons ===== */
-button, .btn, [role="button"]{
+button, .btn, [role="button"], input[type="button"], input[type="submit"]{
   font-family: var(--font-btn);
   font-size: var(--fs-btn);
   font-weight: var(--fw-btn);
@@ -923,12 +926,19 @@ button, .btn, [role="button"]{
   text-decoration: var(--ul-btn);
 }
 
-/* ===== Menu / Tabbar typography (separate!) ===== */
+/* ===== Menu / Tabbar typography (separate!)
+   underline — только на текст, не на контейнер/иконки */
 .tabbar, .tabbar *{
   font-family: var(--font-menu) !important;
   font-size: var(--fs-menu) !important;
   font-weight: var(--fw-menu) !important;
   font-style: var(--it-menu) !important;
+  text-decoration: none !important;
+}
+.tabbar .tab,
+.tabbar .tab .label,
+.tabbar .tab .txt,
+.tabbar .tab span{
   text-decoration: var(--ul-menu) !important;
 }
 
@@ -952,8 +962,9 @@ button:focus, .btn:focus, input:focus, select:focus{
 }
 `;
 
-  BP.app.theme.css = css;
+BP.app.theme.css = css;
 }
+
 
 
 
