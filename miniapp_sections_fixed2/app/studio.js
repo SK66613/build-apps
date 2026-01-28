@@ -480,6 +480,20 @@ btnSecondaryTextA: $('#t_btnSecondaryTextA'),
   overlayA: $('#t_overlayA'),
   surface2A: $('#t_surface2A'),
 
+  fontBtn: $('#t_fontBtn'),
+
+fwBody: $('#t_fwBody'),
+fwHead: $('#t_fwHead'),
+fwBtn:  $('#t_fwBtn'),
+
+itBody: $('#t_itBody'),
+ulBody: $('#t_ulBody'),
+itHead: $('#t_itHead'),
+ulHead: $('#t_ulHead'),
+itBtn:  $('#t_itBtn'),
+ulBtn:  $('#t_ulBtn'),
+
+
 
 };
 
@@ -543,6 +557,21 @@ btnSecondaryA: 1,
 // Buttons text opacity (0..1)
 btnPrimaryTextA: 1,
 btnSecondaryTextA: 1,
+
+  // Typography extended
+fontBtn: 'Inter',
+
+fwBody: 400,
+fwHead: 800,
+fwBtn:  800,
+
+itBody: 0,
+ulBody: 0,
+itHead: 0,
+ulHead: 0,
+itBtn:  0,
+ulBtn:  0,
+
 
 };
 
@@ -804,25 +833,46 @@ const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
   --r-card: var(--radius-card);
   --r-btn: var(--radius-btn);
   --r-input: var(--radius-input);
+
+  --font-btn:${fontFamily(t.fontBtn || t.fontBody)};
+--fw-body:${Number(t.fwBody)||400};
+--fw-head:${Number(t.fwHead)||800};
+--fw-btn:${Number(t.fwBtn)||800};
+
+--it-body:${t.itBody ? 'italic' : 'normal'};
+--it-head:${t.itHead ? 'italic' : 'normal'};
+--it-btn:${t.itBtn ? 'italic' : 'normal'};
+
+--ul-body:${t.ulBody ? 'underline' : 'none'};
+--ul-head:${t.ulHead ? 'underline' : 'none'};
+--ul-btn:${t.ulBtn ? 'underline' : 'none'};
+
 }
 
 html,body{
   background:var(--color-bg);
   color:var(--color-text);
   font: var(--font-size)/1.55 var(--font-body);
+  font-weight: var(--fw-body);
+  font-style: var(--it-body);
+  text-decoration: var(--ul-body);
 }
 
 h1,h2,h3,.h1,.h2,.h3{
   font-family: var(--font-head);
+  font-weight: var(--fw-head);
+  font-style: var(--it-head);
+  text-decoration: var(--ul-head);
 }
 
-/* ===== Force blocks to inherit typography ===== */
-.blk, .block, [data-block], [data-key], [data-block-id]{
-  font-family: inherit;
+/* Buttons (global) */
+button, .btn{
+  font-family: var(--font-btn);
+  font-weight: var(--fw-btn);
+  font-style: var(--it-btn);
+  text-decoration: var(--ul-btn);
 }
-.blk *, .block *, [data-block] *, [data-key] *, [data-block-id] *{
-  font-family: inherit;
-}
+
 
 
 /* ===== Tabbar (TG-safe) ===== */
@@ -862,7 +912,7 @@ function ensureTheme(){
 
 function setVal(el, v){
   if (!el) return;
-  if (el.type === 'range' || el.type === 'number') el.value = String(v);
+  if (el.type === 'checkbox') el.checked = !!v;
   else el.value = String(v);
 }
 
@@ -871,16 +921,18 @@ function bind(el, key, kind){
   const ev = (kind === 'change') ? 'change' : 'input';
   el.addEventListener(ev, ()=>{
     const t = ensureTheme();
-    if (el.type === 'number' || el.type === 'range'){
-      let v = Number(el.value);
-if (key.endsWith('A')) v = Math.max(0.05, Math.min(1, v));      // opacity safe
-if (key.endsWith('TextA')) v = Math.max(0.15, Math.min(1, v));  // text opacity safe
-t[key] = v;
 
+    if (el.type === 'checkbox'){
+      t[key] = el.checked ? 1 : 0;
+    } else if (el.type === 'number' || el.type === 'range'){
+      let v = Number(el.value);
+      t[key] = v;
     } else {
       t[key] = el.value;
     }
+
     syncThemeCSS();
+    syncThemeUI();
     updatePreviewInline();
   });
 }
@@ -949,6 +1001,18 @@ setVal(T.btnSecondaryTextA, t.btnSecondaryTextA);
 
   setVal(T.surface2A, t.surface2A);
 
+setVal(T.fontBtn, t.fontBtn);
+
+setVal(T.fwBody, t.fwBody);
+setVal(T.fwHead, t.fwHead);
+setVal(T.fwBtn,  t.fwBtn);
+
+setVal(T.itBody, t.itBody);
+setVal(T.ulBody, t.ulBody);
+setVal(T.itHead, t.itHead);
+setVal(T.ulHead, t.ulHead);
+setVal(T.itBtn,  t.itBtn);
+setVal(T.ulBtn,  t.ulBtn);
 
 }
 
@@ -1013,6 +1077,20 @@ bind(T.btnSecondaryTextA, 'btnSecondaryTextA');
   bind(T.fontBody, 'fontBody', 'change');
   bind(T.fontHead, 'fontHead', 'change');
   bind(T.fontSize, 'fontSize');
+
+  bind(T.fontBtn, 'fontBtn', 'change');
+
+bind(T.fwBody, 'fwBody');
+bind(T.fwHead, 'fwHead');
+bind(T.fwBtn,  'fwBtn');
+
+bind(T.itBody, 'itBody', 'change');
+bind(T.ulBody, 'ulBody', 'change');
+bind(T.itHead, 'itHead', 'change');
+bind(T.ulHead, 'ulHead', 'change');
+bind(T.itBtn,  'itBtn',  'change');
+bind(T.ulBtn,  'ulBtn',  'change');
+
 
   // presets
   if (T.presetDark){
