@@ -106,6 +106,13 @@ h1,h2,h3,.h1,.h2,.h3{font-family:var(--font-head)}
 .sec__hd{font-weight:800;font-size:18px;margin:2px 2px 10px;opacity:.95}
 .sec__bd{display:flex;flex-direction:column;gap:10px}
 
+/* Section container ("Раздел") */
+.sec{
+  padding:12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+}
+
 /* ===== Tabbar (safe fallback + modern mix) ===== */
 .tabbar{
   position:fixed;
