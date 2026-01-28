@@ -7,32 +7,17 @@
   <title>Mini‑App Preview</title>
   <link rel="stylesheet" href="app.css"/>
 
-  <!-- Fonts (Inter + Montserrat) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-
+  
   <script src="../app/templates.js"></script>
 
 
   <style id="theme"></style>
-  <style>
-    .blk{position:relative}
-    .blk:hover{outline:2px dashed rgba(124,92,255,.6); outline-offset:4px; cursor:pointer}
-    .blk.focus{outline:2px solid rgba(124,92,255,.9); outline-offset:4px}
-    .blk.dragging{opacity:.55}
-    .blk.drop-before{outline:2px solid rgba(124,92,255,.6); outline-offset:4px}
-    .blk.drop-after{outline:2px solid rgba(124,92,255,.6); outline-offset:4px}
-    body.reordering .blk:hover{cursor:grab}
-    /* prevent uploaded icons from stretching/squishing */
-    .tabbar img{display:block;object-fit:contain}
-  </style>
+
 </head>
 <body>
   <div id="root">Загрузка…</div>
   <div id="tabbar" class="tabbar"></div>
   
-  </div>
 
   <script>
   (function(){
