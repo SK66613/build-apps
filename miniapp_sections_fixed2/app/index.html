@@ -455,79 +455,143 @@
 
 
     
-  <!-- ШРИФТЫ -->
-  <div class="acc themeSubAcc" data-theme-acc="fonts">
-    <div class="acc-h">
-      <span class="acc-ico" aria-hidden="true">
-  <svg viewBox="0 0 24 24" fill="none">
-    <path d="M4 6h16M9 6v14M15 6v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  </svg>
-</span>
-
-      <b>Шрифты</b>
-    </div>
-    <div class="acc-b">
-      <div class="themeGrid">
-        <div class="themeGroup">
-          <label>Body font
-  <select id="t_fontBody">
-    <option value="system">System</option>
-    <option value="Inter">Inter</option>
-    <option value="Montserrat">Montserrat</option>
-  </select>
-</label>
-
-<label>Head font
-  <select id="t_fontHead">
-    <option value="system">System</option>
-    <option value="Montserrat">Montserrat</option>
-    <option value="Inter">Inter</option>
-  </select>
-</label>
-
-<label>Button font
-  <select id="t_fontBtn">
-    <option value="system">System</option>
-    <option value="Inter">Inter</option>
-    <option value="Montserrat">Montserrat</option>
-  </select>
-</label>
-
-
-          <label>Body weight
-  <input type="range" id="t_fwBody" min="100" max="900" step="50" value="400">
-</label>
-
-<label>Head weight
-  <input type="range" id="t_fwHead" min="100" max="900" step="50" value="800">
-</label>
-
-<label>Button weight
-  <input type="range" id="t_fwBtn" min="100" max="900" step="50" value="800">
-</label>
-
-
-          <label><input type="checkbox" id="t_itBody"> Body italic</label>
-<label><input type="checkbox" id="t_ulBody"> Body underline</label>
-
-<label><input type="checkbox" id="t_itHead"> Head italic</label>
-<label><input type="checkbox" id="t_ulHead"> Head underline</label>
-
-<label><input type="checkbox" id="t_itBtn"> Button italic</label>
-<label><input type="checkbox" id="t_ulBtn"> Button underline</label>
-
-
-          <label>Base font size <input type="number" id="t_fontSize" value="14" min="12" max="18" step="1"></label>
-        </div>
-      </div>
-    </div>
+<!-- ===================== TYPOGRAPHY / FONTS ===================== -->
+<div class="acc themeSubAcc" data-theme-acc="fonts">
+  <div class="acc-h">
+    <span class="acc-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 6h16M9 6v14M15 6v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <b>Шрифты</b>
   </div>
 
+  <div class="acc-b">
+    <div class="themeGrid">
 
+      <!-- ===== HEADINGS ===== -->
+      <div class="themeGroup">
+        <div class="themeGroupTitle">Заголовки</div>
 
-</div>
+        <label>Head font
+          <select id="t_fontHead">
+            <option value="system">System</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Inter">Inter</option>
+          </select>
+        </label>
+
+        <label>Head weight
+          <input type="range" id="t_fwHead" min="100" max="900" step="50" value="800">
+        </label>
+
+        <div class="themeRow">
+          <label class="chk"><input type="checkbox" id="t_itHead"> Italic</label>
+          <label class="chk"><input type="checkbox" id="t_ulHead"> Underline</label>
+        </div>
+
+        <label>H1 size
+          <input type="range" id="t_fsH1" min="14" max="40" step="1" value="22">
+        </label>
+
+        <label>H2 size
+          <input type="range" id="t_fsH2" min="12" max="34" step="1" value="18">
+        </label>
+
+        <label>H3 size
+          <input type="range" id="t_fsH3" min="12" max="28" step="1" value="16">
+        </label>
+      </div>
+
+      <!-- ===== BODY ===== -->
+      <div class="themeGroup">
+        <div class="themeGroupTitle">Текст (Body)</div>
+
+        <label>Body font
+          <select id="t_fontBody">
+            <option value="system">System</option>
+            <option value="Inter">Inter</option>
+            <option value="Montserrat">Montserrat</option>
+          </select>
+        </label>
+
+        <label>Body size
+          <input type="range" id="t_fsBody" min="10" max="22" step="1" value="14">
+        </label>
+
+        <label>Body weight
+          <input type="range" id="t_fwBody" min="100" max="900" step="50" value="400">
+        </label>
+
+        <div class="themeRow">
+          <label class="chk"><input type="checkbox" id="t_itBody"> Italic</label>
+          <label class="chk"><input type="checkbox" id="t_ulBody"> Underline</label>
+        </div>
+      </div>
+
+      <!-- ===== BUTTONS ===== -->
+      <div class="themeGroup">
+        <div class="themeGroupTitle">Кнопки</div>
+
+        <label>Button font
+          <select id="t_fontBtn">
+            <option value="system">System</option>
+            <option value="Inter">Inter</option>
+            <option value="Montserrat">Montserrat</option>
+          </select>
+        </label>
+
+        <label>Button size
+          <input type="range" id="t_fsBtn" min="10" max="22" step="1" value="14">
+        </label>
+
+        <label>Button weight
+          <input type="range" id="t_fwBtn" min="100" max="900" step="50" value="800">
+        </label>
+
+        <div class="themeRow">
+          <label class="chk"><input type="checkbox" id="t_itBtn"> Italic</label>
+          <label class="chk"><input type="checkbox" id="t_ulBtn"> Underline</label>
+        </div>
+
+        <div class="themeNote">
+          Настройки применяются ко всем <code>button</code>, <code>.btn</code> и <code>[role="button"]</code>
+        </div>
+      </div>
+
+      <!-- ===== MENU / TABBAR ===== -->
+      <div class="themeGroup">
+        <div class="themeGroupTitle">Меню (Tabbar)</div>
+
+        <label>Menu font
+          <select id="t_fontMenu">
+            <option value="system">System</option>
+            <option value="Inter">Inter</option>
+            <option value="Montserrat">Montserrat</option>
+          </select>
+        </label>
+
+        <label>Menu size
+          <input type="range" id="t_fsMenu" min="10" max="18" step="1" value="12">
+        </label>
+
+        <label>Menu weight
+          <input type="range" id="t_fwMenu" min="100" max="900" step="50" value="600">
+        </label>
+
+        <div class="themeRow">
+          <label class="chk"><input type="checkbox" id="t_itMenu"> Italic</label>
+          <label class="chk"><input type="checkbox" id="t_ulMenu"> Underline</label>
+        </div>
+
+        <div class="themeNote">
+          Отдельно от Body. Не “липнет” к основному тексту.
+        </div>
+      </div>
 
     </div>
+  </div>
+</div>
 
 
 
