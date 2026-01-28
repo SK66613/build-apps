@@ -492,6 +492,11 @@ const DEFAULT_THEME_TOKENS = {
   tabActive:'#ffffff',
   overlay:'#000000',
 
+    // Opacity (0..1) — TG-safe прозрачность без color-mix
+  tabBgA: 0.86,     // прозрачность нижнего меню
+  cardA: 0.92,      // прозрачность карточек (если захочешь)
+  surface2A: 0.88,  // для --surface2 (если захочешь)
+
   // Radius
   radiusCard:16,
   radiusBtn:14,
@@ -624,8 +629,32 @@ function clamp01(x){
   return Math.max(0, Math.min(1, n));
 }
 
+// hex -> "r,g,b"
+function hex2rgbTuple(hex){
+  const h = String(hex || '').trim().replace('#','');
+  if (h.length === 3){
+    const r = parseInt(h[0]+h[0], 16);
+    const g = parseInt(h[1]+h[1], 16);
+    const b = parseInt(h[2]+h[2], 16);
+    return `${r},${g},${b}`;
+  }
+  if (h.length === 6){
+    const r = parseInt(h.slice(0,2), 16);
+    const g = parseInt(h.slice(2,4), 16);
+    const b = parseInt(h.slice(4,6), 16);
+    return `${r},${g},${b}`;
+  }
+  // fallback
+  return `15,18,25`;
+}
+function rgbaFromHex(hex, a){
+  const A = clamp01(a);
+  return `rgba(${hex2rgbTuple(hex)},${A.toFixed(3)})`;
+}
+
 function syncThemeCSS(){
   const t = BP.app.themeTokens || DEFAULT_THEME_TOKENS;
+
 
   const shadowA = clamp01(t.shadowCard);
   const glowA   = clamp01(t.glow);
@@ -652,7 +681,8 @@ function syncThemeCSS(){
   --btn-secondary-bg:${t.btnSecondaryBg};
   --btn-secondary-text:${t.btnSecondaryText};
 
-  --tabbar-bg:${t.tabBg};
+  --tabbar-bg:${rgbaFromHex(t.tabBg, t.tabBgA)};
+
   --tabbar-text:${t.tabText};
   --tabbar-active:${t.tabActive};
   --overlay:${t.overlay};
@@ -686,10 +716,12 @@ function syncThemeCSS(){
 --text: var(--color-text);
 --muted: var(--color-muted);
 --surface: var(--color-surface);
---surface2: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg));
+
 --card: var(--color-card);
---card-bg: color-mix(in srgb, var(--color-card) 92%, transparent);
---card-border: color-mix(in srgb, var(--color-border) 72%, transparent);
+--surface2: ${rgbaFromHex(t.surface, t.surface2A)};
+--card-bg: ${rgbaFromHex(t.card, t.cardA)};
+--card-border: ${rgbaFromHex(t.border, 0.72)};  // или тоже сделать токеном если надо
+
 
 --brand: var(--color-brand);
 --btnPrimaryBg: var(--btn-primary-bg);
@@ -845,9 +877,11 @@ function initThemePanel(){
   bind(T.btnSecondaryText, 'btnSecondaryText');
 
   bind(T.tabBg, 'tabBg');
+  bind(T.tabBgA, 'tabBgA');     // NEW: opacity
   bind(T.tabText, 'tabText');
   bind(T.tabActive, 'tabActive');
   bind(T.overlay, 'overlay');
+
 
   bind(T.radiusCard, 'radiusCard');
   bind(T.radiusBtn, 'radiusBtn');
@@ -855,6 +889,9 @@ function initThemePanel(){
 
   bind(T.shadowCard, 'shadowCard');
   bind(T.glow, 'glow');
+  bind(T.cardA, 'cardA');       // NEW
+  bind(T.surface2A, 'surface2A'); // NEW
+
 
   bind(T.fontBody, 'fontBody', 'change');
   bind(T.fontHead, 'fontHead', 'change');
@@ -872,6 +909,10 @@ function initThemePanel(){
       radiusCard:18, radiusBtn:16, radiusInput:14,
       shadowCard:0.45, glow:0.45,
       fontBody:'Inter', fontHead:'Montserrat', fontSize:14
+      tabBgA: 0.86,
+      cardA: 0.92,
+      surface2A: 0.88,
+
     });
   }
   if (T.presetLight){
