@@ -456,22 +456,17 @@ const T = {
   shadowCard: $('#t_shadowCard'),
   glow: $('#t_glow'),
 
-  fontBody: $('#t_fontBody'),
-  fontHead: $('#t_fontHead'),
-  fontSize: $('#t_fontSize'),
-
   presetDark: $('#t_preset_dark'),
   presetLight: $('#t_preset_light'),
   presetBrand: $('#t_preset_brand'),
 
   // opacity sliders (buttons)
-btnPrimaryA: $('#t_btnPrimaryA'),
-btnSecondaryA: $('#t_btnSecondaryA'),
-btnPrimaryTextA: $('#t_btnPrimaryTextA'),
-btnSecondaryTextA: $('#t_btnSecondaryTextA'),
+  btnPrimaryA: $('#t_btnPrimaryA'),
+  btnSecondaryA: $('#t_btnSecondaryA'),
+  btnPrimaryTextA: $('#t_btnPrimaryTextA'),
+  btnSecondaryTextA: $('#t_btnSecondaryTextA'),
 
-
-    // Opacity sliders
+  // Opacity sliders
   bgA: $('#t_bgA'),
   surfaceA: $('#t_surfaceA'),
   cardA: $('#t_cardA'),
@@ -480,22 +475,41 @@ btnSecondaryTextA: $('#t_btnSecondaryTextA'),
   overlayA: $('#t_overlayA'),
   surface2A: $('#t_surface2A'),
 
-  fontBtn: $('#t_fontBtn'),
+  // ===== Typography fonts
+  fontBody: $('#t_fontBody'),
+  fontHead: $('#t_fontHead'),
+  fontBtn:  $('#t_fontBtn'),
 
-fwBody: $('#t_fwBody'),
-fwHead: $('#t_fwHead'),
-fwBtn:  $('#t_fwBtn'),
+  // ===== Menu typography (separate!)
+  fontMenu: $('#t_fontMenu'),
 
-itBody: $('#t_itBody'),
-ulBody: $('#t_ulBody'),
-itHead: $('#t_itHead'),
-ulHead: $('#t_ulHead'),
-itBtn:  $('#t_itBtn'),
-ulBtn:  $('#t_ulBtn'),
+  // ===== Typography sizes (separate)
+  fsBody: $('#t_fsBody'),
+  fsBtn:  $('#t_fsBtn'),
+  fsMenu: $('#t_fsMenu'),
 
+  // ===== Head sizes per level (H1/H2/H3)
+  fsH1: $('#t_fsH1'),
+  fsH2: $('#t_fsH2'),
+  fsH3: $('#t_fsH3'),
 
+  // ===== Typography weights
+  fwBody: $('#t_fwBody'),
+  fwHead: $('#t_fwHead'),
+  fwBtn:  $('#t_fwBtn'),
+  fwMenu: $('#t_fwMenu'),
 
+  // ===== Italic / Underline
+  itBody: $('#t_itBody'),
+  ulBody: $('#t_ulBody'),
+  itHead: $('#t_itHead'),
+  ulHead: $('#t_ulHead'),
+  itBtn:  $('#t_itBtn'),
+  ulBtn:  $('#t_ulBtn'),
+  itMenu: $('#t_itMenu'),
+  ulMenu: $('#t_ulMenu'),
 };
+
 
 const DEFAULT_THEME_TOKENS = {
   // Colors
@@ -524,17 +538,14 @@ const DEFAULT_THEME_TOKENS = {
   tabActive:'#ffffff',
   overlay:'#000000',
 
-  // Opacity (0..1) — TG-safe прозрачность
+  // Opacity (0..1)
   bgA: 1,
   surfaceA: 1,
   cardA: 0.92,
   borderA: 0.72,
   tabBgA: 0.86,
   overlayA: 0.60,
-
-  // (оставь если используешь как отдельный слой/алиас)
   surface2A: 0.88,
-
 
   // Radius
   radiusCard:16,
@@ -545,35 +556,43 @@ const DEFAULT_THEME_TOKENS = {
   shadowCard:0.35,
   glow:0.35,
 
-  // Typography
+  // Buttons opacity (0..1)
+  btnPrimaryA: 1,
+  btnSecondaryA: 1,
+  btnPrimaryTextA: 1,
+  btnSecondaryTextA: 1,
+
+  // ===== Typography fonts
   fontBody:'Inter',
   fontHead:'Montserrat',
-  fontSize:14,
+  fontBtn: 'Inter',
 
-  // Buttons opacity (0..1)
-btnPrimaryA: 1,
-btnSecondaryA: 1,
+  // ===== Menu typography (separate!)
+  fontMenu:'Inter',
 
-// Buttons text opacity (0..1)
-btnPrimaryTextA: 1,
-btnSecondaryTextA: 1,
+  // ===== Typography weights
+  fwBody: 400,
+  fwHead: 800,
+  fwBtn:  800,
+  fwMenu: 600,
 
-  // Typography extended
-fontBtn: 'Inter',
+  // ===== Italic/Underline (0/1)
+  itBody: 0, ulBody: 0,
+  itHead: 0, ulHead: 0,
+  itBtn:  0, ulBtn:  0,
+  itMenu: 0, ulMenu: 0,
 
-fwBody: 400,
-fwHead: 800,
-fwBtn:  800,
+  // ===== Sizes (separate)
+  fsBody: 14,
+  fsBtn:  14,
+  fsMenu: 12,
 
-itBody: 0,
-ulBody: 0,
-itHead: 0,
-ulHead: 0,
-itBtn:  0,
-ulBtn:  0,
-
-
+  // ===== Head sizes per level
+  fsH1: 22,
+  fsH2: 18,
+  fsH3: 16,
 };
+
 
 
   // Modals
@@ -721,7 +740,7 @@ function syncThemeCSS(){
   const shadowA = clamp01(t.shadowCard);
   const glowA   = clamp01(t.glow);
 
-  // alpha helpers (если токенов ещё нет — фолбэки)
+  // alpha helpers
   const bgA      = clamp01(t.bgA ?? 1);
   const surfaceA = clamp01(t.surfaceA ?? 1);
   const cardA    = clamp01(t.cardA ?? 0.92);
@@ -731,14 +750,10 @@ function syncThemeCSS(){
   const surface2A= clamp01(t.surface2A ?? 0.88);
 
   const btnPrimaryA       = clamp01(t.btnPrimaryA ?? 1);
-const btnSecondaryA     = clamp01(t.btnSecondaryA ?? 1);
-const btnPrimaryTextA   = clamp01(t.btnPrimaryTextA ?? 1);
-const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
+  const btnSecondaryA     = clamp01(t.btnSecondaryA ?? 1);
+  const btnPrimaryTextA   = clamp01(t.btnPrimaryTextA ?? 1);
+  const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
 
-
-  // IMPORTANT:
-  // 1) оставляем HEX версии (…-hex) для совместимости со старыми блоками
-  // 2) основные --color-* делаем уже RGBA, чтобы вся система подхватила прозрачность
   const css = `
 :root{
   /* === Figma tokens (HEX raw for compatibility) === */
@@ -761,26 +776,25 @@ const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
   --color-warning:${t.warning};
   --color-danger:${t.danger};
 
-/* Buttons HEX (compat) */
---btn-primary-bg-hex:${t.btnPrimaryBg};
---btn-secondary-bg-hex:${t.btnSecondaryBg};
---btn-primary-text-hex:${t.btnPrimaryText};
---btn-secondary-text-hex:${t.btnSecondaryText};
+  /* Buttons HEX (compat) */
+  --btn-primary-bg-hex:${t.btnPrimaryBg};
+  --btn-secondary-bg-hex:${t.btnSecondaryBg};
+  --btn-primary-text-hex:${t.btnPrimaryText};
+  --btn-secondary-text-hex:${t.btnSecondaryText};
 
-/* Buttons RGBA (TG-safe) */
---btn-primary-bg:${rgbaFromHex(t.btnPrimaryBg, btnPrimaryA)};
---btn-secondary-bg:${rgbaFromHex(t.btnSecondaryBg, btnSecondaryA)};
---btn-primary-text:${rgbaFromHex(t.btnPrimaryText, btnPrimaryTextA)};
---btn-secondary-text:${rgbaFromHex(t.btnSecondaryText, btnSecondaryTextA)};
+  /* Buttons RGBA */
+  --btn-primary-bg:${rgbaFromHex(t.btnPrimaryBg, btnPrimaryA)};
+  --btn-secondary-bg:${rgbaFromHex(t.btnSecondaryBg, btnSecondaryA)};
+  --btn-primary-text:${rgbaFromHex(t.btnPrimaryText, btnPrimaryTextA)};
+  --btn-secondary-text:${rgbaFromHex(t.btnSecondaryText, btnSecondaryTextA)};
 
-/* Aliases for blocks (если кто-то ждёт camelCase) */
---btnPrimaryBg: var(--btn-primary-bg);
---btnSecondaryBg: var(--btn-secondary-bg);
---btnPrimaryText: var(--btn-primary-text);
---btnSecondaryText: var(--btn-secondary-text);
+  /* Aliases */
+  --btnPrimaryBg: var(--btn-primary-bg);
+  --btnSecondaryBg: var(--btn-secondary-bg);
+  --btnPrimaryText: var(--btn-primary-text);
+  --btnSecondaryText: var(--btn-secondary-text);
 
-
-  /* Nav / overlay (TG-safe) */
+  /* Nav / overlay */
   --tabbar-bg:${rgbaFromHex(t.tabBg, tabBgA)};
   --tabbar-text:${t.tabText};
   --tabbar-active:${t.tabActive};
@@ -792,88 +806,131 @@ const btnSecondaryTextA = clamp01(t.btnSecondaryTextA ?? 1);
 
   --shadow-card: 0 16px 40px rgba(0,0,0,${(0.28*shadowA).toFixed(3)});
   --shadow-soft: 0 8px 24px rgba(0,0,0,${(0.18*shadowA).toFixed(3)});
-  --glow: 0 0 0 2px rgba(124,92,255,${(0.35*glowA).toFixed(3)}); /* fallback */
+  --glow: 0 0 0 2px rgba(124,92,255,${(0.35*glowA).toFixed(3)});
   --glow-brand: 0 0 0 2px rgba(124,92,255,${(0.55*glowA).toFixed(3)}), 0 0 24px rgba(124,92,255,${(0.32*glowA).toFixed(3)});
 
-  /* numeric strengths (0..1) for blocks calculations */
+  /* numeric strengths */
   --shadow-a:${shadowA.toFixed(3)};
   --glow-a:${glowA.toFixed(3)};
 
-  --font-body:${fontFamily(t.fontBody)};
-  --font-head:${fontFamily(t.fontHead)};
-  --font-size:${Number(t.fontSize)||14}px;
-
-  /* === legacy mapping (old CSS + some blocks) === */
+  /* legacy mapping */
   --bg: var(--color-bg);
   --fg: var(--color-text);
   --sub: var(--color-muted);
   --acc: var(--color-brand);
   --line: rgba(255,255,255,.10);
 
-  /* === aliases for older/newer blocks (bridge) === */
   --accent: var(--color-brand);
   --onAccent: var(--btn-primary-text);
   --text: var(--color-text);
   --muted: var(--color-muted);
   --surface: var(--color-surface);
-
   --card: var(--color-card);
 
-  /* если тебе нужен второй слой поверхности */
   --surface2: ${rgbaFromHex(t.surface, surface2A)};
-
-  /* для блоков, которые ждут card-bg/border */
   --card-bg: var(--color-card);
   --card-border: var(--color-border);
 
   --brand: var(--color-brand);
-  --btnPrimaryBg: var(--btn-primary-bg);
-  --btnPrimaryText: var(--btn-primary-text);
 
   --r-card: var(--radius-card);
   --r-btn: var(--radius-btn);
   --r-input: var(--radius-input);
 
-  --font-btn:${fontFamily(t.fontBtn || t.fontBody)};
---fw-body:${Number(t.fwBody)||400};
---fw-head:${Number(t.fwHead)||800};
---fw-btn:${Number(t.fwBtn)||800};
+  /* ===== Typography fonts */
+  --font-body:${fontFamily(t.fontBody || 'system')};
+  --font-head:${fontFamily(t.fontHead || t.fontBody || 'system')};
+  --font-btn:${fontFamily(t.fontBtn || t.fontBody || 'system')};
 
---it-body:${t.itBody ? 'italic' : 'normal'};
---it-head:${t.itHead ? 'italic' : 'normal'};
---it-btn:${t.itBtn ? 'italic' : 'normal'};
+  /* ===== Menu typography (separate) */
+  --font-menu:${fontFamily(t.fontMenu || t.fontBody || 'system')};
 
---ul-body:${t.ulBody ? 'underline' : 'none'};
---ul-head:${t.ulHead ? 'underline' : 'none'};
---ul-btn:${t.ulBtn ? 'underline' : 'none'};
+  /* ===== Weights */
+  --fw-body:${Number(t.fwBody)||400};
+  --fw-head:${Number(t.fwHead)||800};
+  --fw-btn:${Number(t.fwBtn)||800};
+  --fw-menu:${Number(t.fwMenu)||600};
 
+  /* ===== Italic */
+  --it-body:${t.itBody ? 'italic' : 'normal'};
+  --it-head:${t.itHead ? 'italic' : 'normal'};
+  --it-btn:${t.itBtn ? 'italic' : 'normal'};
+  --it-menu:${t.itMenu ? 'italic' : 'normal'};
+
+  /* ===== Underline */
+  --ul-body:${t.ulBody ? 'underline' : 'none'};
+  --ul-head:${t.ulHead ? 'underline' : 'none'};
+  --ul-btn:${t.ulBtn ? 'underline' : 'none'};
+  --ul-menu:${t.ulMenu ? 'underline' : 'none'};
+
+  /* ===== Sizes */
+  --fs-body:${Number(t.fsBody)||14}px;
+  --fs-btn:${Number(t.fsBtn)||14}px;
+  --fs-menu:${Number(t.fsMenu)||12}px;
+
+  --fs-h1:${Number(t.fsH1)||22}px;
+  --fs-h2:${Number(t.fsH2)||18}px;
+  --fs-h3:${Number(t.fsH3)||16}px;
 }
 
+/* ===== Base ===== */
 html,body{
   background:var(--color-bg);
   color:var(--color-text);
-  font: var(--font-size)/1.55 var(--font-body);
+
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+
   font-weight: var(--fw-body);
   font-style: var(--it-body);
+}
+
+/* underline body — НЕ глобально на всё, а только на текстовые элементы */
+p, span, small, em, strong, li, label, .text, .muted{
   text-decoration: var(--ul-body);
 }
 
-h1,h2,h3,.h1,.h2,.h3{
+/* ===== Head levels ===== */
+h1, .h1{
   font-family: var(--font-head);
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-head);
+  font-style: var(--it-head);
+  text-decoration: var(--ul-head);
+}
+h2, .h2{
+  font-family: var(--font-head);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-head);
+  font-style: var(--it-head);
+  text-decoration: var(--ul-head);
+}
+h3, .h3{
+  font-family: var(--font-head);
+  font-size: var(--fs-h3);
   font-weight: var(--fw-head);
   font-style: var(--it-head);
   text-decoration: var(--ul-head);
 }
 
-/* Buttons (global) */
-button, .btn{
+/* ===== Buttons ===== */
+button, .btn, [role="button"]{
   font-family: var(--font-btn);
+  font-size: var(--fs-btn);
   font-weight: var(--fw-btn);
   font-style: var(--it-btn);
   text-decoration: var(--ul-btn);
 }
 
-
+/* ===== Menu / Tabbar typography (separate!) ===== */
+.tabbar, .tabbar *{
+  font-family: var(--font-menu) !important;
+  font-size: var(--fs-menu) !important;
+  font-weight: var(--fw-menu) !important;
+  font-style: var(--it-menu) !important;
+  text-decoration: var(--ul-menu) !important;
+}
 
 /* ===== Tabbar (TG-safe) ===== */
 .tabbar{
@@ -881,7 +938,6 @@ button, .btn{
   border-top: 0;
   box-shadow: 0 -10px 24px rgba(0,0,0,.22);
 }
-
 .tab{ color: var(--tabbar-text); }
 .tab.active{ color: var(--tabbar-active); }
 
@@ -915,6 +971,28 @@ function setVal(el, v){
   if (el.type === 'checkbox') el.checked = !!v;
   else el.value = String(v);
 }
+
+function bind(el, key, kind){
+  if (!el) return;
+  const ev = (kind === 'change') ? 'change' : 'input';
+
+  el.addEventListener(ev, ()=>{
+    const t = ensureTheme();
+
+    if (el.type === 'checkbox'){
+      t[key] = el.checked ? 1 : 0;
+    } else if (el.type === 'number' || el.type === 'range'){
+      t[key] = Number(el.value);
+    } else {
+      t[key] = el.value;
+    }
+
+    syncThemeCSS();
+    syncThemeUI();
+    updatePreviewInline();
+  });
+}
+
 
 function bind(el, key, kind){
   if (!el) return;
@@ -1014,6 +1092,38 @@ setVal(T.ulHead, t.ulHead);
 setVal(T.itBtn,  t.itBtn);
 setVal(T.ulBtn,  t.ulBtn);
 
+  // fonts
+setVal(T.fontBody, t.fontBody);
+setVal(T.fontHead, t.fontHead);
+setVal(T.fontBtn,  t.fontBtn);
+setVal(T.fontMenu, t.fontMenu);
+
+// sizes
+setVal(T.fsBody, t.fsBody);
+setVal(T.fsBtn,  t.fsBtn);
+setVal(T.fsMenu, t.fsMenu);
+
+setVal(T.fsH1, t.fsH1);
+setVal(T.fsH2, t.fsH2);
+setVal(T.fsH3, t.fsH3);
+
+// weights
+setVal(T.fwBody, t.fwBody);
+setVal(T.fwHead, t.fwHead);
+setVal(T.fwBtn,  t.fwBtn);
+setVal(T.fwMenu, t.fwMenu);
+
+// italic / underline
+setVal(T.itBody, t.itBody);
+setVal(T.ulBody, t.ulBody);
+setVal(T.itHead, t.itHead);
+setVal(T.ulHead, t.ulHead);
+setVal(T.itBtn,  t.itBtn);
+setVal(T.ulBtn,  t.ulBtn);
+setVal(T.itMenu, t.itMenu);
+setVal(T.ulMenu, t.ulMenu);
+
+
 }
 
 function initThemePanel(){
@@ -1090,6 +1200,35 @@ bind(T.itHead, 'itHead', 'change');
 bind(T.ulHead, 'ulHead', 'change');
 bind(T.itBtn,  'itBtn',  'change');
 bind(T.ulBtn,  'ulBtn',  'change');
+
+  // ===== Typography binds
+bind(T.fontBody, 'fontBody', 'change');
+bind(T.fontHead, 'fontHead', 'change');
+bind(T.fontBtn,  'fontBtn',  'change');
+bind(T.fontMenu, 'fontMenu', 'change');
+
+bind(T.fsBody, 'fsBody');
+bind(T.fsBtn,  'fsBtn');
+bind(T.fsMenu, 'fsMenu');
+
+bind(T.fsH1, 'fsH1');
+bind(T.fsH2, 'fsH2');
+bind(T.fsH3, 'fsH3');
+
+bind(T.fwBody, 'fwBody');
+bind(T.fwHead, 'fwHead');
+bind(T.fwBtn,  'fwBtn');
+bind(T.fwMenu, 'fwMenu');
+
+bind(T.itBody, 'itBody', 'change');
+bind(T.ulBody, 'ulBody', 'change');
+bind(T.itHead, 'itHead', 'change');
+bind(T.ulHead, 'ulHead', 'change');
+bind(T.itBtn,  'itBtn',  'change');
+bind(T.ulBtn,  'ulBtn',  'change');
+bind(T.itMenu, 'itMenu', 'change');
+bind(T.ulMenu, 'ulMenu', 'change');
+
 
 
   // presets
