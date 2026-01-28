@@ -981,6 +981,9 @@ function initThemePanel(){
   bind(T.tabBgA, 'tabBgA');  // NEW
   bind(T.overlayA, 'overlayA');  // NEW
 
+  bind(T.surfaceA, 'surfaceA');
+
+
   bind(T.btnPrimaryA, 'btnPrimaryA');
 bind(T.btnSecondaryA, 'btnSecondaryA');
 bind(T.btnPrimaryTextA, 'btnPrimaryTextA');
