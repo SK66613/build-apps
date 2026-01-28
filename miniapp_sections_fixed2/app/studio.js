@@ -699,6 +699,12 @@ BP.routes.forEach(r=>{
   BP.app.themeTokens = BP.app.themeTokens || { ...DEFAULT_THEME_TOKENS };
 
   BP.app.theme = BP.app.theme || { css: '' };
+  // гарантируем, что CSS токены пересобраны из themeTokens
+try{
+  ensureTheme();
+  syncThemeCSS();
+}catch(_){}
+
 
 function fontFamily(v){
   if (v === 'system') return 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
@@ -983,6 +989,9 @@ function setVal(el, v){
   else el.value = String(v);
 }
 
+
+
+
 function bind(el, key, kind){
   if (!el) return;
   const ev = (kind === 'change') ? 'change' : 'input';
@@ -1004,27 +1013,6 @@ function bind(el, key, kind){
   });
 }
 
-
-function bind(el, key, kind){
-  if (!el) return;
-  const ev = (kind === 'change') ? 'change' : 'input';
-  el.addEventListener(ev, ()=>{
-    const t = ensureTheme();
-
-    if (el.type === 'checkbox'){
-      t[key] = el.checked ? 1 : 0;
-    } else if (el.type === 'number' || el.type === 'range'){
-      let v = Number(el.value);
-      t[key] = v;
-    } else {
-      t[key] = el.value;
-    }
-
-    syncThemeCSS();
-    syncThemeUI();
-    updatePreviewInline();
-  });
-}
 
 function applyPreset(p){
   const t = ensureTheme();
@@ -1081,7 +1069,7 @@ function syncThemeUI(){
 
   setVal(T.fontBody, t.fontBody);
   setVal(T.fontHead, t.fontHead);
-  setVal(T.fontSize, t.fontSize);
+  
 
   setVal(T.btnPrimaryA, t.btnPrimaryA);
 setVal(T.btnSecondaryA, t.btnSecondaryA);
@@ -1195,20 +1183,6 @@ bind(T.btnSecondaryTextA, 'btnSecondaryTextA');
 
 
 
-
-bind(T.fontBtn, 'fontBtn', 'change');
-
-bind(T.fwBody, 'fwBody');
-bind(T.fwHead, 'fwHead');
-bind(T.fwBtn,  'fwBtn');
-
-bind(T.itBody, 'itBody', 'change');
-bind(T.ulBody, 'ulBody', 'change');
-bind(T.itHead, 'itHead', 'change');
-bind(T.ulHead, 'ulHead', 'change');
-bind(T.itBtn,  'itBtn',  'change');
-bind(T.ulBtn,  'ulBtn',  'change');
-
   // ===== Typography binds
 bind(T.fontBody, 'fontBody', 'change');
 bind(T.fontHead, 'fontHead', 'change');
@@ -1250,7 +1224,10 @@ bind(T.ulMenu, 'ulMenu', 'change');
       btnSecondaryBg:'#18233a', btnSecondaryText:'#e8f0ff',
       radiusCard:18, radiusBtn:16, radiusInput:14,
       shadowCard:0.45, glow:0.45,
-      fontBody:'Inter', fontHead:'Montserrat', fontSize:14,
+      fontBody:'Inter', fontHead:'Montserrat',
+fsBody:14, fsBtn:14, fsMenu:12,
+fsH1:22, fsH2:18, fsH3:16,
+
       tabBgA: 0.86,
       cardA: 0.92,
       surface2A: 0.88,
@@ -1267,7 +1244,10 @@ bind(T.ulMenu, 'ulMenu', 'change');
       btnSecondaryBg:'#EEF2FF', btnSecondaryText:'#0b1220',
       radiusCard:18, radiusBtn:16, radiusInput:14,
       shadowCard:0.25, glow:0.35,
-      fontBody:'Inter', fontHead:'Montserrat', fontSize:14,
+      fontBody:'Inter', fontHead:'Montserrat',
+fsBody:14, fsBtn:14, fsMenu:12,
+fsH1:22, fsH2:18, fsH3:16,
+
 tabBgA: 0.86,
 cardA: 0.92,
 surface2A: 0.88,
