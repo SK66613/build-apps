@@ -377,6 +377,64 @@
   </div>
 
 
+
+
+
+<!-- ПРОЗРАЧНОСТЬ -->
+<div class="acc themeSubAcc" data-theme-acc="opacity">
+  <div class="acc-h">
+    <span class="acc-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 12a8 8 0 0 1 16 0c0 4.4-3.6 8-8 8s-8-3.6-8-8Z" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 4v16" stroke="currentColor" stroke-width="2" opacity=".5"/>
+      </svg>
+    </span>
+    <b>Прозрачность</b>
+  </div>
+
+  <div class="acc-b">
+    <div class="themeGrid">
+      <div class="themeGroup">
+
+        <label>Background opacity (0..1)
+          <input type="range" id="t_bgA" value="1" min="0" max="1" step="0.01">
+        </label>
+
+        <label>Surface opacity (0..1)
+          <input type="range" id="t_surfaceA" value="1" min="0" max="1" step="0.01">
+        </label>
+
+        <label>Card opacity (0..1)
+          <input type="range" id="t_cardA" value="0.92" min="0" max="1" step="0.01">
+        </label>
+
+        <label>Border opacity (0..1)
+          <input type="range" id="t_borderA" value="0.72" min="0" max="1" step="0.01">
+        </label>
+
+        <label>Tabbar BG opacity (0..1)
+          <input type="range" id="t_tabBgA" value="0.86" min="0" max="1" step="0.01">
+        </label>
+
+        <label>Overlay opacity (0..1)
+          <input type="range" id="t_overlayA" value="0.60" min="0" max="1" step="0.01">
+        </label>
+
+      </div>
+    </div>
+
+    <div class="smallmut" style="margin-top:8px">
+      Прозрачность применяется TG-safe через rgba(), без color-mix.
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+    
   <!-- ШРИФТЫ -->
   <div class="acc themeSubAcc" data-theme-acc="fonts">
     <div class="acc-h">
