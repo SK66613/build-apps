@@ -908,7 +908,7 @@ function initThemePanel(){
       btnSecondaryBg:'#18233a', btnSecondaryText:'#e8f0ff',
       radiusCard:18, radiusBtn:16, radiusInput:14,
       shadowCard:0.45, glow:0.45,
-      fontBody:'Inter', fontHead:'Montserrat', fontSize:14
+      fontBody:'Inter', fontHead:'Montserrat', fontSize:14,
       tabBgA: 0.86,
       cardA: 0.92,
       surface2A: 0.88,
@@ -925,8 +925,12 @@ function initThemePanel(){
       btnSecondaryBg:'#EEF2FF', btnSecondaryText:'#0b1220',
       radiusCard:18, radiusBtn:16, radiusInput:14,
       shadowCard:0.25, glow:0.35,
-      fontBody:'Inter', fontHead:'Montserrat', fontSize:14
-    });
+      fontBody:'Inter', fontHead:'Montserrat', fontSize:14,
+tabBgA: 0.86,
+cardA: 0.92,
+surface2A: 0.88,
+});
+
   }
   if (T.presetBrand){
     T.presetBrand.onclick = ()=>applyPreset({
