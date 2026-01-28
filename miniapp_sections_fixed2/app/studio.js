@@ -478,6 +478,8 @@ btnSecondaryTextA: $('#t_btnSecondaryTextA'),
   borderA: $('#t_borderA'),
   tabBgA: $('#t_tabBgA'),
   overlayA: $('#t_overlayA'),
+  surface2A: $('#t_surface2A'),
+
 
 };
 
@@ -814,6 +816,15 @@ h1,h2,h3,.h1,.h2,.h3{
   font-family: var(--font-head);
 }
 
+/* ===== Force blocks to inherit typography ===== */
+.blk, .block, [data-block], [data-key], [data-block-id]{
+  font-family: inherit;
+}
+.blk *, .block *, [data-block] *, [data-key] *, [data-block-id] *{
+  font-family: inherit;
+}
+
+
 /* ===== Tabbar (TG-safe) ===== */
 .tabbar{
   background: var(--tabbar-bg);
@@ -861,7 +872,11 @@ function bind(el, key, kind){
   el.addEventListener(ev, ()=>{
     const t = ensureTheme();
     if (el.type === 'number' || el.type === 'range'){
-      t[key] = Number(el.value);
+      let v = Number(el.value);
+if (key.endsWith('A')) v = Math.max(0.05, Math.min(1, v));      // opacity safe
+if (key.endsWith('TextA')) v = Math.max(0.15, Math.min(1, v));  // text opacity safe
+t[key] = v;
+
     } else {
       t[key] = el.value;
     }
@@ -932,6 +947,9 @@ setVal(T.btnSecondaryA, t.btnSecondaryA);
 setVal(T.btnPrimaryTextA, t.btnPrimaryTextA);
 setVal(T.btnSecondaryTextA, t.btnSecondaryTextA);
 
+  setVal(T.surface2A, t.surface2A);
+
+
 }
 
 function initThemePanel(){
@@ -978,7 +996,7 @@ function initThemePanel(){
 
   bind(T.bgA, 'bgA');  // NEW
   bind(T.borderA, 'borderA');  // NEW
-  bind(T.tabBgA, 'tabBgA');  // NEW
+  
   bind(T.overlayA, 'overlayA');  // NEW
 
   bind(T.surfaceA, 'surfaceA');
