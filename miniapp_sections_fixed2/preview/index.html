@@ -379,9 +379,6 @@ function blockHTMLInst(inst){
         if(el){
           try{ el.scrollIntoView({block:'center', behavior:'smooth'});
 
-// --- Live sync from localStorage draft (на случай если postMessage не долетает) ---
-let __lastDraftVer = 0;
-
  }catch(_){ el.scrollIntoView(); }
           el.classList.add('focus');
           setTimeout(()=>el.classList.remove('focus'), 900);
