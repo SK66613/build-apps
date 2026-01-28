@@ -699,11 +699,7 @@ BP.routes.forEach(r=>{
   BP.app.themeTokens = BP.app.themeTokens || { ...DEFAULT_THEME_TOKENS };
 
   BP.app.theme = BP.app.theme || { css: '' };
-  // гарантируем, что CSS токены пересобраны из themeTokens
-try{
-  ensureTheme();
-  syncThemeCSS();
-}catch(_){}
+
 
 
 function fontFamily(v){
@@ -971,6 +967,11 @@ button:focus, .btn:focus, input:focus, select:focus{
 BP.app.theme.css = css;
 }
 
+// гарантируем, что CSS токены пересобраны из themeTokens (после объявления всех helpers)
+try{
+  ensureTheme();
+  syncThemeCSS();
+}catch(_){}
 
 
 
@@ -1076,20 +1077,9 @@ setVal(T.btnSecondaryA, t.btnSecondaryA);
 setVal(T.btnPrimaryTextA, t.btnPrimaryTextA);
 setVal(T.btnSecondaryTextA, t.btnSecondaryTextA);
 
-  setVal(T.surface2A, t.surface2A);
+setVal(T.surface2A, t.surface2A);
 
-setVal(T.fontBtn, t.fontBtn);
 
-setVal(T.fwBody, t.fwBody);
-setVal(T.fwHead, t.fwHead);
-setVal(T.fwBtn,  t.fwBtn);
-
-setVal(T.itBody, t.itBody);
-setVal(T.ulBody, t.ulBody);
-setVal(T.itHead, t.itHead);
-setVal(T.ulHead, t.ulHead);
-setVal(T.itBtn,  t.itBtn);
-setVal(T.ulBtn,  t.ulBtn);
 
   // fonts
 setVal(T.fontBody, t.fontBody);
