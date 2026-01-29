@@ -4081,7 +4081,7 @@ if (inst.key === 'game_flappy_one') {
     });
   };
 
-  addField('Геймплей', `<div class="hint">Физика, спавн, очки, магнит монет</div>`);
+addField('Геймплей', `<div class="hint">Физика, спавн, очки, магнит монет</div>`);
 
 addNum('Спавн труб каждые (ms)', 'spawn_each_ms', 1300, { min: 600, step: 50 });
 
@@ -4091,7 +4091,8 @@ addNum('Сила прыжка (отриц.)', 'flap_velocity', -520, { max: -50,
 addNum('Очков за трубу', 'score_per_pipe', 1, { min: 0, step: 1 });
 addNum('Очков за монету', 'score_per_coin', 1, { min: 0, step: 1 });
 
-addBool('Магнит монет при щите', 'magnet_enabled', true);
+addNum('Начислять за 1 монету', 'coin_value', 5, { min: 1, step: 1 });
+
 addNum('Радиус магнита (px)', 'magnet_radius', 120, { min: 0, step: 10 });
 addNum('Сила магнита (px/s)', 'magnet_strength', 900, { min: 0, step: 50 });
 
