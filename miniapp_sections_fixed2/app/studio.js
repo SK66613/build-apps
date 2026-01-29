@@ -4004,6 +4004,98 @@ if (inst.key === 'game_flappy_one') {
   field('Кнопка "Ещё раз"',          'play_again',    'Ещё раз');
 }
 
+    // === Специальные настройки для блока Flappy (game_flappy_one) ===
+if (inst.key === 'game_flappy_one') {
+  if (!props) BP.blocks[inst.id] = props = {};
+  const reg = window.BlockRegistry.game_flappy_one || {};
+  const def = (reg && reg.defaults) ? reg.defaults : {};
+
+  // ---------- helpers ----------
+  const esc = (s)=> String(s ?? '').replace(/"/g,'&quot;');
+  const numv = (v, d)=>{
+    const n = Number(v);
+    return Number.isFinite(n) ? n : d;
+  };
+
+  const addNum = (label, key, dflt, opts={})=>{
+    if (props[key] === undefined) props[key] = (def[key] !== undefined) ? def[key] : dflt;
+    const min = (opts.min !== undefined) ? `min="${opts.min}"` : '';
+    const max = (opts.max !== undefined) ? `max="${opts.max}"` : '';
+    const step= (opts.step!== undefined) ? `step="${opts.step}"`: '';
+    const w = addField(label, `
+      <input type="number" ${min} ${max} ${step} data-flnum="${key}" value="${esc(props[key])}">
+    `);
+    const inp = w.querySelector(`[data-flnum="${key}"]`);
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      props[key] = numv(inp.value, dflt);
+      updatePreviewInline();
+    });
+  };
+
+  const addBool = (label, key, dflt)=>{
+    if (props[key] === undefined) props[key] = (def[key] !== undefined) ? def[key] : dflt;
+    const w = addField(label, `
+      <label style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" data-flbool="${key}" ${props[key] ? 'checked':''}>
+        <span>${label}</span>
+      </label>
+    `);
+    const cb = w.querySelector(`[data-flbool="${key}"]`);
+    cb.addEventListener('change', ()=>{
+      pushHistory();
+      props[key] = !!cb.checked;
+      updatePreviewInline();
+    });
+  };
+
+  const addSel = (label, key, dflt, options)=>{
+    if (props[key] === undefined) props[key] = (def[key] !== undefined) ? def[key] : dflt;
+    const w = addField(label, `
+      <select data-flsel="${key}">
+        ${options.map(o=>`<option value="${esc(o.value)}"${String(props[key])===String(o.value)?' selected':''}>${o.label}</option>`).join('')}
+      </select>
+    `);
+    const sel = w.querySelector(`[data-flsel="${key}"]`);
+    sel.addEventListener('change', ()=>{
+      pushHistory();
+      props[key] = sel.value;
+      updatePreviewInline();
+    });
+  };
+
+  const addText = (label, key, placeholder='')=>{
+    if (!props.i18n) props.i18n = JSON.parse(JSON.stringify(def.i18n || {}));
+    const i18n = props.i18n;
+
+    if (i18n[key] === undefined) i18n[key] = (def.i18n && def.i18n[key] !== undefined) ? def.i18n[key] : '';
+
+    const w = addField(label, `
+      <input type="text" data-fltxt="${key}" value="${esc(i18n[key])}" placeholder="${esc(placeholder)}">
+    `);
+    const inp = w.querySelector(`[data-fltxt="${key}"]`);
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      i18n[key] = inp.value;
+      updatePreviewInline();
+    });
+  };
+
+  addField('Геймплей', `<div class="hint">Физика, спавн, очки, магнит монет</div>`);
+
+addNum('Спавн труб каждые (ms)', 'spawn_each_ms', 1300, { min: 600, step: 50 });
+
+addNum('Гравитация', 'gravity', 1800, { min: 200, step: 50 });
+addNum('Сила прыжка (отриц.)', 'flap_velocity', -520, { max: -50, step: 10 });
+
+addNum('Очков за трубу', 'score_per_pipe', 1, { min: 0, step: 1 });
+addNum('Очков за монету', 'score_per_coin', 1, { min: 0, step: 1 });
+
+addBool('Магнит монет при щите', 'magnet_enabled', true);
+addNum('Радиус магнита (px)', 'magnet_radius', 120, { min: 0, step: 10 });
+addNum('Сила магнита (px/s)', 'magnet_strength', 900, { min: 0, step: 50 });
+
+ }
 
 
         // === Специальные настройки для инфо-карточки с кнопкой (infoCard) ===
