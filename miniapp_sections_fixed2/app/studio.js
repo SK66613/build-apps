@@ -4109,6 +4109,15 @@ addNum('Начислять за 1 монету', 'coin_value', 5, { min: 1, step
 addNum('Радиус магнита (px)', 'magnet_radius', 120, { min: 0, step: 10 });
 addNum('Сила магнита (px/s)', 'magnet_strength', 900, { min: 0, step: 50 });
 
+  addField('Скорость и расстояние', `<div class="hint">Как быстро летят трубы и насколько широкий проём</div>`);
+
+addNum('Скорость труб (px/сек)', 'speed_x', 220, { min: 60, max: 600, step: 10 });
+
+addNum('Минимальный проём (gap_min)', 'gap_min', 140, { min: 60, max: 400, step: 10 });
+
+addNum('Максимальный проём (gap_max)', 'gap_max', 220, { min: 80, max: 500, step: 10 });
+
+
 
  }
 
@@ -5337,21 +5346,6 @@ if (inst.key === 'game_flappy' || inst.key === 'game_flappy_one') {
     });
   };
 
-  // ------- сложность
-  {
-    const w = addField('Уровень сложности', `<select data-f="difficultySel">
-      <option value="easy">Легко</option>
-      <option value="normal">Норма</option>
-      <option value="hard">Жёстко</option>
-    </select>`);
-    const sel = w.querySelector('select[data-f="difficultySel"]');
-    sel.value = props.difficulty || 'normal';
-    sel.addEventListener('change', () => {
-      pushHistory();
-      props.difficulty = sel.value;
-      updatePreviewInline();
-    });
-  }
 
   // ------- Длина раунда (сек)
   {
