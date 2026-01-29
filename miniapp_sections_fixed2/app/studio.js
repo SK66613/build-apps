@@ -3969,6 +3969,39 @@ if (inst.key === 'shop_stars_product_one' || inst.type === 'shop_stars_product')
         updatePreviewInline();
       });
 
+      // === Специальные настройки для блока Flappy ===
+if (inst.key === 'game_flappy_one') {
+  if (!props) BP.blocks[inst.id] = props = {};
+  const reg = window.BlockRegistry.game_flappy_one || {};
+
+  // тексты
+  if (!props.i18n) props.i18n = JSON.parse(JSON.stringify((reg.defaults && reg.defaults.i18n) || {}));
+
+  const i18n = props.i18n;
+
+  const field = (label, key, placeholder='')=>{
+    const w = addField(label, `
+      <input type="text" data-fltxt="${key}" value="${(i18n[key]||'').replace(/"/g,'&quot;')}" placeholder="${placeholder}">
+    `);
+    const inp = w.querySelector(`[data-fltxt="${key}"]`);
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      i18n[key] = inp.value;
+      updatePreviewInline();
+    });
+  };
+
+  // поля
+  field('Подпись "счет:"',          'score',          'счет:');
+  field('Текст "тапни чтобы начать"', 'tap_to_start', 'Тапни чтобы начать');
+  field('Лимит попыток (сообщение)',  'limit_attempts','Достигнут дневной лимит попыток');
+  field('Лимит монет (сообщение)',    'limit_coins',  'Достигнут дневной лимит монет');
+  field('Подпись "Лучший"',         'best',           'Лучший');
+  field('Подпись "Мир"',            'world',          'Мир');
+  field('Кнопка "Ещё раз"',          'play_again',    'Ещё раз');
+}
+
+
       renderGamesList();
     }
 
