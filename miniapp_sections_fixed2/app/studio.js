@@ -3969,7 +3969,10 @@ if (inst.key === 'shop_stars_product_one' || inst.type === 'shop_stars_product')
         updatePreviewInline();
       });
 
-      // === Специальные настройки для блока Flappy ===
+      renderGamesList();
+    }
+
+          // === Специальные настройки для блока Flappy ===
 if (inst.key === 'game_flappy_one') {
   if (!props) BP.blocks[inst.id] = props = {};
   const reg = window.BlockRegistry.game_flappy_one || {};
@@ -4000,10 +4003,6 @@ if (inst.key === 'game_flappy_one') {
   field('Подпись "Мир"',            'world',          'Мир');
   field('Кнопка "Ещё раз"',          'play_again',    'Ещё раз');
 }
-
-
-      renderGamesList();
-    }
 
 
 
