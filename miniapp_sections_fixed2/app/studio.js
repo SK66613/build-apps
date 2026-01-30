@@ -4601,17 +4601,31 @@ addNum('Максимальный проём (gap_max)', 'gap_max', 220, { min: 8
       makeLabelField('refs_label', 'Лейбл «Мои рефералы»');
     }
 
-    // === Специальные настройки для Колеса бонусов (beer_bonus_wheel) ===
+// === Специальные настройки для Колеса бонусов (beer_bonus_wheel) ===
 if (inst.key === 'bonus_wheel_one') {
   if (!props) BP.blocks[inst.id] = props = {};
   const reg = window.BlockRegistry[inst.key] || {};
 
+  // prizes: init + defaults from registry (НЕ ломаем твои уже сохранённые props)
   if (!Array.isArray(props.prizes)) props.prizes = [];
   if (!props.prizes.length && reg.defaults && Array.isArray(reg.defaults.prizes)){
-  props.prizes = JSON.parse(JSON.stringify(reg.defaults.prizes));
-}
+    props.prizes = JSON.parse(JSON.stringify(reg.defaults.prizes));
+  }
+  // ensure each prize has weight (default = 1)
+  props.prizes = props.prizes.map(pr=>{
+    const o = pr && typeof pr === 'object' ? pr : {};
+    if (o.weight === undefined || o.weight === null || !Number.isFinite(Number(o.weight))){
+      o.weight = 1;
+    } else {
+      o.weight = Math.max(0, Math.round(Number(o.weight)));
+    }
+    return o;
+  });
 
-  if (props.spin_cost === undefined) props.spin_cost = (reg.defaults && reg.defaults.spin_cost !== undefined) ? reg.defaults.spin_cost : 10;
+  // spin cost: init
+  if (props.spin_cost === undefined) {
+    props.spin_cost = (reg.defaults && reg.defaults.spin_cost !== undefined) ? reg.defaults.spin_cost : 10;
+  }
 
   // Стоимость прокрутки
   {
@@ -4640,51 +4654,66 @@ if (inst.key === 'bonus_wheel_one') {
 
   function renderPrizes(){
     const prizes = Array.isArray(props.prizes) ? props.prizes : [];
-    listEl.innerHTML = prizes.map((pr, idx)=>`
-      <div class="card" style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <b>Приз #${idx+1}</b>
-          <button class="btn smallbtn" type="button" data-prize-del="${idx}">Удалить</button>
-        </div>
+    listEl.innerHTML = prizes.map((pr, idx)=>{
+      const code   = (pr && pr.code) ? String(pr.code).replace(/"/g,'&quot;') : '';
+      const name   = (pr && pr.name) ? String(pr.name).replace(/"/g,'&quot;') : '';
+      const img    = (pr && pr.img)  ? String(pr.img).replace(/"/g,'&quot;')  : '';
+      const weight = Number.isFinite(Number(pr && pr.weight)) ? Math.max(0, Math.round(Number(pr.weight))) : 1;
 
-        <div class="grid2" style="margin-top:8px">
-          <div class="edit" style="margin:0">
-            <label>Код</label>
-            <input type="text" data-prize-idx="${idx}" data-k="code"
-              value="${(pr && pr.code) ? String(pr.code).replace(/"/g,'&quot;') : ''}"
-              placeholder="coins_5">
+      return `
+        <div class="card" style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <b>Приз #${idx+1}</b>
+            <button class="btn smallbtn" type="button" data-prize-del="${idx}">Удалить</button>
           </div>
-          <div class="edit" style="margin:0">
-            <label>Название</label>
-            <input type="text" data-prize-idx="${idx}" data-k="name"
-              value="${(pr && pr.name) ? String(pr.name).replace(/"/g,'&quot;') : ''}"
-              placeholder="5 🪙">
+
+          <div class="grid2" style="margin-top:8px">
+            <div class="edit" style="margin:0">
+              <label>Код</label>
+              <input type="text" data-prize-idx="${idx}" data-k="code" value="${code}" placeholder="coins_5">
+            </div>
+            <div class="edit" style="margin:0">
+              <label>Название</label>
+              <input type="text" data-prize-idx="${idx}" data-k="name" value="${name}" placeholder="5 🪙">
+            </div>
+          </div>
+
+          <div class="edit" style="margin:0;margin-top:8px">
+            <label>Вес / шанс (чем больше — тем чаще)</label>
+            <input type="number" min="0" step="1" data-prize-idx="${idx}" data-k="weight" value="${weight}">
+            <div class="mut" style="margin-top:6px">Пример: 1, 2, 5. Ноль = никогда.</div>
+          </div>
+
+          <div class="edit" style="margin:0;margin-top:8px">
+            <label>Картинка (URL или dataURL)</label>
+            <input type="text" data-prize-idx="${idx}" data-k="img" value="${img}" placeholder="https://... или data:image/...">
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+              <input type="file" data-prize-upload="${idx}" accept="image/*">
+              <img src="${(pr && pr.img) ? pr.img : ''}" alt=""
+                style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)">
+            </div>
           </div>
         </div>
+      `;
+    }).join('');
 
-        <div class="edit" style="margin:0;margin-top:8px">
-          <label>Картинка (URL или dataURL)</label>
-          <input type="text" data-prize-idx="${idx}" data-k="img"
-            value="${(pr && pr.img) ? String(pr.img).replace(/"/g,'&quot;') : ''}"
-            placeholder="https://... или data:image/...">
-          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-            <input type="file" data-prize-upload="${idx}" accept="image/*">
-            <img src="${(pr && pr.img) ? pr.img : ''}" alt=""
-              style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)">
-          </div>
-        </div>
-      </div>
-    `).join('');
-
-    // bind text inputs
-    listEl.querySelectorAll('input[type=text][data-prize-idx]').forEach(inp=>{
+    // bind ALL inputs (text + number) by data-prize-idx
+    listEl.querySelectorAll('input[data-prize-idx]').forEach(inp=>{
       inp.addEventListener('input', ()=>{
         const i = Number(inp.dataset.prizeIdx);
         const k = inp.dataset.k;
         if (!Number.isFinite(i) || !k) return;
+
         pushHistory();
         props.prizes[i] = props.prizes[i] || {};
-        props.prizes[i][k] = inp.value;
+
+        if (k === 'weight'){
+          const v = Number(inp.value);
+          props.prizes[i].weight = Number.isFinite(v) ? Math.max(0, Math.round(v)) : 1;
+        } else {
+          props.prizes[i][k] = inp.value;
+        }
+
         updatePreviewInline();
       });
     });
@@ -4696,6 +4725,7 @@ if (inst.key === 'bonus_wheel_one') {
         if(!file) return;
         const i = Number(up.dataset.prizeUpload);
         if(!Number.isFinite(i)) return;
+
         const reader = new FileReader();
         reader.onload = ()=>{
           pushHistory();
@@ -4714,6 +4744,7 @@ if (inst.key === 'bonus_wheel_one') {
         const i = Number(btn.dataset.prizeDel);
         if(!Number.isFinite(i)) return;
         if(!confirm('Удалить этот приз?')) return;
+
         pushHistory();
         props.prizes.splice(i,1);
         renderPrizes();
@@ -4724,7 +4755,8 @@ if (inst.key === 'bonus_wheel_one') {
 
   addBtn.addEventListener('click', ()=>{
     pushHistory();
-    props.prizes.push({code:'', name:'', img:''});
+    // добавляем новый приз с дефолтным weight=1
+    props.prizes.push({code:'', name:'', img:'', weight: 1});
     renderPrizes();
     updatePreviewInline();
   });
