@@ -4607,6 +4607,10 @@ if (inst.key === 'bonus_wheel_one') {
   const reg = window.BlockRegistry[inst.key] || {};
 
   if (!Array.isArray(props.prizes)) props.prizes = [];
+  if (!props.prizes.length && reg.defaults && Array.isArray(reg.defaults.prizes)){
+  props.prizes = JSON.parse(JSON.stringify(reg.defaults.prizes));
+}
+
   if (props.spin_cost === undefined) props.spin_cost = (reg.defaults && reg.defaults.spin_cost !== undefined) ? reg.defaults.spin_cost : 10;
 
   // Стоимость прокрутки
@@ -4729,130 +4733,7 @@ if (inst.key === 'bonus_wheel_one') {
 }
 
 
-    // === Специальные настройки для Колеса бонусов ===
-    if (inst.key === 'bonusWheel' || (reg && reg.type==='bonusWheel')) {
-      if (!Array.isArray(props.prizes)) props.prizes = [];
-      if (props.spin_cost === undefined) props.spin_cost = 10;
 
-
-          
-
-
-
-    // === Специальные настройки для Колеса бонусов ===
-
-
-      // Стоимость прокрутки
-      {
-        const w = addField('Стоимость прокрутки (монеты)', `<input type="number" min="0" step="1" data-f="spin_cost" value="${Number(props.spin_cost||0)}">`);
-        const inp = w.querySelector('input[data-f="spin_cost"]');
-        inp.addEventListener('input', ()=>{
-          pushHistory();
-          const v = Number(inp.value||0);
-          props.spin_cost = isFinite(v) ? Math.max(0, Math.round(v)) : 0;
-          updatePreviewInline();
-        });
-      }
-
-      // Призы (сектора)
-      const w = addField('Сектора / призы', `
-        <div class="prizeEditor" style="display:grid;gap:10px">
-          <div data-prize-list style="display:grid;gap:10px"></div>
-          <button class="btn" type="button" data-prize-add>+ Добавить приз</button>
-          <div class="mut">Подсказка: картинки можно вставить ссылкой или загрузить файлом (конвертируется в dataURL).</div>
-        </div>
-      `);
-      const listEl = w.querySelector('[data-prize-list]');
-      const addBtn = w.querySelector('[data-prize-add]');
-
-      function renderPrizes(){
-        const prizes = Array.isArray(props.prizes) ? props.prizes : [];
-        listEl.innerHTML = prizes.map((pr, idx)=>`
-          <div class="card" style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
-            <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-              <b>Приз #${idx+1}</b>
-              <button class="btn smallbtn" type="button" data-prize-del="${idx}">Удалить</button>
-            </div>
-            <div class="grid2" style="margin-top:8px">
-              <div class="edit" style="margin:0">
-                <label>Код</label>
-                <input type="text" data-prize-idx="${idx}" data-k="code" value="${(pr && pr.code) ? String(pr.code).replace(/"/g,'&quot;') : ''}" placeholder="coins_5">
-              </div>
-              <div class="edit" style="margin:0">
-                <label>Название</label>
-                <input type="text" data-prize-idx="${idx}" data-k="name" value="${(pr && pr.name) ? String(pr.name).replace(/"/g,'&quot;') : ''}" placeholder="5 🪙">
-              </div>
-            </div>
-            <div class="edit" style="margin:0;margin-top:8px">
-              <label>Картинка (URL или dataURL)</label>
-              <input type="text" data-prize-idx="${idx}" data-k="img" value="${(pr && pr.img) ? String(pr.img).replace(/"/g,'&quot;') : ''}" placeholder="https://... или data:image/...">
-              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-                <input type="file" data-prize-upload="${idx}" accept="image/*">
-                <img src="${(pr && pr.img) ? pr.img : ''}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)">
-              </div>
-            </div>
-          </div>
-        `).join('');
-
-        // bind text inputs
-        listEl.querySelectorAll('input[type=text][data-prize-idx]').forEach(inp=>{
-          inp.addEventListener('input', ()=>{
-            const i = Number(inp.dataset.prizeIdx);
-            const k = inp.dataset.k;
-            if (!isFinite(i) || !k) return;
-            pushHistory();
-            props.prizes[i] = props.prizes[i] || {};
-            props.prizes[i][k] = inp.value;
-            updatePreviewInline();
-          });
-        });
-
-        // bind uploads
-        listEl.querySelectorAll('input[type=file][data-prize-upload]').forEach(up=>{
-          up.addEventListener('change', (e)=>{
-            const file = e.target.files && e.target.files[0];
-            if(!file) return;
-            const i = Number(up.dataset.prizeUpload);
-            const reader = new FileReader();
-            reader.onload = ()=>{
-              pushHistory();
-              props.prizes[i] = props.prizes[i] || {};
-              props.prizes[i].img = reader.result;
-              renderPrizes();
-              updatePreviewInline();
-            };
-            reader.readAsDataURL(file);
-          });
-        });
-
-        // bind delete buttons
-        listEl.querySelectorAll('[data-prize-del]').forEach(btn=>{
-          btn.addEventListener('click', ()=>{
-            const i = Number(btn.dataset.prizeDel);
-            if(!confirm('Удалить этот приз?')) return;
-            pushHistory();
-            props.prizes.splice(i,1);
-            renderPrizes();
-            updatePreviewInline();
-          });
-        });
-      }
-
-      addBtn.addEventListener('click', ()=>{
-        pushHistory();
-        props.prizes.push({code:'', name:'', img:''});
-        renderPrizes();
-        updatePreviewInline();
-      });
-
-      renderPrizes();
-    }
-
-
-    // 
-    
-    
-    // 
 
     /// === Специальные настройки для слайдера Beer (beerIntroSlider) ===
     if (inst.key === 'beerIntroSlider') {
