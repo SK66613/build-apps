@@ -5088,6 +5088,296 @@ if (inst.key === 'bonus_wheel_one') {
     }
 
 
+    // === Специальные настройки для Паспорта (stylesPassport v2) ===
+if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_one')) {
+  if (!props) BP.blocks[inst.id] = props = {};
+  if (!Array.isArray(props.styles)) props.styles = [];
+
+  if (props.grid_cols === undefined) props.grid_cols = 3;
+  if (props.require_pin === undefined) props.require_pin = true;
+  if (props.collect_mode === undefined) props.collect_mode = 'bot_pin'; // bot_pin | direct_pin
+
+  if (props.title === undefined) props.title = 'Паспорт';
+  if (props.subtitle === undefined) props.subtitle = '';
+  if (props.cover_url === undefined) props.cover_url = '';
+
+  if (props.btn_collect === undefined) props.btn_collect = 'Отметить';
+  if (props.btn_done === undefined) props.btn_done = 'Получено';
+
+  if (props.reward_enabled === undefined) props.reward_enabled = true;
+  if (props.reward_title === undefined) props.reward_title = '🎁 Приз';
+  if (props.reward_text === undefined) props.reward_text = 'Покажите кассиру этот экран, чтобы получить подарок.';
+  if (props.reward_code_prefix === undefined) props.reward_code_prefix = 'PASS-';
+
+  // Title
+  {
+    const w = addField('Заголовок', `<input type="text" data-f="title" value="${String(props.title||'').replace(/"/g,'&quot;')}">`);
+    w.querySelector('input').addEventListener('input', (e)=>{
+      pushHistory(); props.title = e.target.value; updatePreviewInline();
+    });
+  }
+
+  // Subtitle
+  {
+    const w = addField('Подзаголовок', `<input type="text" data-f="subtitle" value="${String(props.subtitle||'').replace(/"/g,'&quot;')}">`);
+    w.querySelector('input').addEventListener('input', (e)=>{
+      pushHistory(); props.subtitle = e.target.value; updatePreviewInline();
+    });
+  }
+
+  // Cover (URL + upload)
+  {
+    const w = addField('Картинка (обложка)', `
+      <div class="row" style="gap:10px;align-items:center">
+        <input type="text" placeholder="https://..." value="${String(props.cover_url||'').replace(/"/g,'&quot;')}" style="flex:1">
+        <label class="btn smallbtn" style="cursor:pointer">
+          Загрузить<input type="file" accept="image/*" style="display:none">
+        </label>
+      </div>
+      <div class="mut" style="margin-top:6px">Можно вставить ссылку или загрузить файлом (конвертируется в dataURL).</div>
+    `);
+    const urlInp = w.querySelector('input[type=text]');
+    const fileInp = w.querySelector('input[type=file]');
+    urlInp.addEventListener('input', ()=>{
+      pushHistory(); props.cover_url = urlInp.value; updatePreviewInline();
+    });
+    fileInp.addEventListener('change', ()=>{
+      const file = fileInp.files && fileInp.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        pushHistory();
+        props.cover_url = reader.result;
+        urlInp.value = props.cover_url;
+        updatePreviewInline();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Grid cols
+  {
+    const w = addField('Колонки сетки', `<input type="number" min="1" max="6" step="1" value="${Number(props.grid_cols||3)}">`);
+    w.querySelector('input').addEventListener('input', (e)=>{
+      pushHistory();
+      props.grid_cols = Math.max(1, Math.min(6, Number(e.target.value||3)));
+      updatePreviewInline();
+    });
+  }
+
+  // Require PIN
+  {
+    const w = addField('Требовать PIN', `<label style="display:flex;gap:10px;align-items:center;margin-top:6px">
+      <input type="checkbox" ${props.require_pin ? 'checked' : ''}>
+      <span class="mut">подтверждать получение штампа PIN-кодом</span>
+    </label>`);
+    const cb = w.querySelector('input[type=checkbox]');
+    cb.addEventListener('change', ()=>{
+      pushHistory(); props.require_pin = !!cb.checked; updatePreviewInline();
+    });
+  }
+
+  // Collect mode
+  {
+    const w = addField('Способ ввода PIN', `
+      <select>
+        <option value="bot_pin">Через бота (бот попросит PIN в чате)</option>
+        <option value="direct_pin">В мини-аппе (модалка ввода PIN)</option>
+      </select>
+      <div class="mut" style="margin-top:6px">Рекомендуется “Через бота”.</div>
+    `);
+    const sel = w.querySelector('select');
+    sel.value = String(props.collect_mode||'bot_pin');
+    sel.addEventListener('change', ()=>{
+      pushHistory(); props.collect_mode = sel.value; updatePreviewInline();
+    });
+  }
+
+  // Buttons text
+  {
+    const w = addField('Тексты кнопок', `
+      <div class="grid2">
+        <div class="edit" style="margin:0">
+          <label>Кнопка “Отметить”</label>
+          <input type="text" data-k="btn_collect" value="${String(props.btn_collect||'').replace(/"/g,'&quot;')}">
+        </div>
+        <div class="edit" style="margin:0">
+          <label>Кнопка “Получено”</label>
+          <input type="text" data-k="btn_done" value="${String(props.btn_done||'').replace(/"/g,'&quot;')}">
+        </div>
+      </div>
+    `);
+    w.querySelectorAll('input[data-k]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        pushHistory(); props[inp.dataset.k] = inp.value; updatePreviewInline();
+      });
+    });
+  }
+
+  // Reward
+  {
+    const w = addField('Приз за завершение', `
+      <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
+        <input type="checkbox" ${props.reward_enabled ? 'checked' : ''}>
+        <span class="mut">показывать блок приза, когда все штампы собраны</span>
+      </label>
+      <div class="grid2" style="margin-top:10px">
+        <div class="edit" style="margin:0">
+          <label>Заголовок приза</label>
+          <input type="text" data-r="reward_title" value="${String(props.reward_title||'').replace(/"/g,'&quot;')}">
+        </div>
+        <div class="edit" style="margin:0">
+          <label>Префикс кода (визуально)</label>
+          <input type="text" data-r="reward_code_prefix" value="${String(props.reward_code_prefix||'').replace(/"/g,'&quot;')}">
+        </div>
+      </div>
+      <div class="edit" style="margin-top:10px">
+        <label>Текст</label>
+        <textarea data-r="reward_text" rows="3">${String(props.reward_text||'')}</textarea>
+      </div>
+    `);
+    const cb = w.querySelector('input[type=checkbox]');
+    cb.addEventListener('change', ()=>{
+      pushHistory(); props.reward_enabled = !!cb.checked; updatePreviewInline();
+    });
+    w.querySelectorAll('[data-r]').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        pushHistory(); props[el.dataset.r] = el.value; updatePreviewInline();
+      });
+    });
+  }
+
+  // Styles / stamps repeater
+  const w = addField('Карточки / штампы', `
+    <div style="display:grid;gap:10px">
+      <div data-style-list style="display:grid;gap:10px"></div>
+      <button class="btn" type="button" data-style-add>+ Добавить карточку</button>
+      <div class="mut">code — ID для D1/API. name — заголовок. desc — описание. image — URL или upload.</div>
+    </div>
+  `);
+  const listEl = w.querySelector('[data-style-list]');
+  const addBtn = w.querySelector('[data-style-add]');
+
+  function renderStyles(){
+    const arr = Array.isArray(props.styles) ? props.styles : [];
+    listEl.innerHTML = arr.map((st, idx)=>`
+      <div class="card" style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
+        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <b>Карточка #${idx+1}</b>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn smallbtn" type="button" data-style-up="${idx}" title="Вверх">↑</button>
+            <button class="btn smallbtn" type="button" data-style-down="${idx}" title="Вниз">↓</button>
+            <button class="btn smallbtn" type="button" data-style-del="${idx}">Удалить</button>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:8px">
+          <div class="edit" style="margin:0">
+            <label>code</label>
+            <input type="text" data-style-idx="${idx}" data-k="code" value="${(st && st.code) ? String(st.code).replace(/"/g,'&quot;') : ''}" placeholder="day1">
+          </div>
+          <div class="edit" style="margin:0">
+            <label>name</label>
+            <input type="text" data-style-idx="${idx}" data-k="name" value="${(st && st.name) ? String(st.name).replace(/"/g,'&quot;') : ''}" placeholder="День 1">
+          </div>
+        </div>
+
+        <div class="edit" style="margin-top:8px">
+          <label>desc</label>
+          <input type="text" data-style-idx="${idx}" data-k="desc" value="${(st && st.desc) ? String(st.desc).replace(/"/g,'&quot;') : ''}" placeholder="Сделайте покупку">
+        </div>
+
+        <div class="edit" style="margin-top:8px">
+          <label>image</label>
+          <div class="row" style="gap:10px;align-items:center">
+            <input type="text" data-style-idx="${idx}" data-k="image" placeholder="https://..." value="${(st && st.image) ? String(st.image).replace(/"/g,'&quot;') : ''}" style="flex:1">
+            <label class="btn smallbtn" style="cursor:pointer">
+              Upload<input type="file" accept="image/*" data-style-img="${idx}" style="display:none">
+            </label>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    listEl.querySelectorAll('input[type=text][data-style-idx]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const i = Number(inp.dataset.styleIdx);
+        const k = inp.dataset.k;
+        if (!isFinite(i) || !k) return;
+        pushHistory();
+        props.styles[i] = props.styles[i] || {};
+        props.styles[i][k] = inp.value;
+        updatePreviewInline();
+      });
+    });
+
+    listEl.querySelectorAll('input[type=file][data-style-img]').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const i = Number(inp.dataset.styleImg);
+        const file = inp.files && inp.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          pushHistory();
+          props.styles[i] = props.styles[i] || {};
+          props.styles[i].image = reader.result;
+          renderStyles();
+          updatePreviewInline();
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    listEl.querySelectorAll('[data-style-del]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = Number(btn.dataset.styleDel);
+        if(!confirm('Удалить эту карточку?')) return;
+        pushHistory();
+        props.styles.splice(i,1);
+        renderStyles();
+        updatePreviewInline();
+      });
+    });
+
+    listEl.querySelectorAll('[data-style-up]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = Number(btn.dataset.styleUp);
+        if(i<=0) return;
+        pushHistory();
+        const tmp = props.styles[i-1];
+        props.styles[i-1]=props.styles[i];
+        props.styles[i]=tmp;
+        renderStyles();
+        updatePreviewInline();
+      });
+    });
+
+    listEl.querySelectorAll('[data-style-down]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = Number(btn.dataset.styleDown);
+        if(i>=props.styles.length-1) return;
+        pushHistory();
+        const tmp = props.styles[i+1];
+        props.styles[i+1]=props.styles[i];
+        props.styles[i]=tmp;
+        renderStyles();
+        updatePreviewInline();
+      });
+    });
+  }
+
+  addBtn.addEventListener('click', ()=>{
+    pushHistory();
+    props.styles.push({code:'', name:'', desc:'', image:''});
+    renderStyles();
+    updatePreviewInline();
+  });
+
+  renderStyles();
+}
+
+
+
 // === Специальные настройки для Паспорта стилей ===
     if (inst.key === 'stylesPassport' || (reg && reg.type==='stylesPassport')) {
       if (!Array.isArray(props.styles)) props.styles = [];
