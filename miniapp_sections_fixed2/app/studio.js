@@ -4606,37 +4606,73 @@ if (inst.key === 'bonus_wheel_one') {
   if (!props) BP.blocks[inst.id] = props = {};
   const reg = window.BlockRegistry[inst.key] || {};
 
-  // prizes: init + defaults from registry (НЕ ломаем твои уже сохранённые props)
+  // --- ensure app_config.wheel exists (это то, что читает воркер)
+  BP.app_config = BP.app_config && typeof BP.app_config === 'object' ? BP.app_config : {};
+  BP.app_config.wheel = BP.app_config.wheel && typeof BP.app_config.wheel === 'object' ? BP.app_config.wheel : {};
+
+  function normPrize(pr){
+    const o = pr && typeof pr === 'object' ? pr : {};
+    o.code = (o.code === undefined || o.code === null) ? '' : String(o.code);
+    o.name = (o.name === undefined || o.name === null) ? '' : String(o.name);
+    o.img  = (o.img  === undefined || o.img  === null) ? '' : String(o.img);
+
+    // coins
+    const c = Number(o.coins);
+    o.coins = Number.isFinite(c) ? Math.max(0, Math.round(c)) : 0;
+
+    // weight
+    const w = Number(o.weight);
+    o.weight = Number.isFinite(w) ? Math.max(0, Math.round(w)) : 1;
+
+    return o;
+  }
+
+  function syncWheelCfg(){
+    // spin cost
+    const sc = Number(props.spin_cost);
+    BP.app_config.wheel.spin_cost = Number.isFinite(sc) ? Math.max(0, Math.round(sc)) : 0;
+
+    // prizes -> в cfg лучше хранить как title/code/coins/weight/img
+    const arr = Array.isArray(props.prizes) ? props.prizes.map(normPrize) : [];
+    BP.app_config.wheel.prizes = arr.map(p=>({
+      code: p.code,
+      title: p.name,     // <=== воркер/сервер чаще ожидают title
+      coins: p.coins,
+      weight: p.weight,
+      img: p.img
+    }));
+  }
+
+  // prizes: init + defaults from registry (НЕ ломаем уже сохранённые props)
   if (!Array.isArray(props.prizes)) props.prizes = [];
   if (!props.prizes.length && reg.defaults && Array.isArray(reg.defaults.prizes)){
     props.prizes = JSON.parse(JSON.stringify(reg.defaults.prizes));
   }
-  // ensure each prize has weight (default = 1)
-  props.prizes = props.prizes.map(pr=>{
-    const o = pr && typeof pr === 'object' ? pr : {};
-    if (o.weight === undefined || o.weight === null || !Number.isFinite(Number(o.weight))){
-      o.weight = 1;
-    } else {
-      o.weight = Math.max(0, Math.round(Number(o.weight)));
-    }
-    return o;
-  });
+  props.prizes = props.prizes.map(normPrize);
 
   // spin cost: init
   if (props.spin_cost === undefined) {
     props.spin_cost = (reg.defaults && reg.defaults.spin_cost !== undefined) ? reg.defaults.spin_cost : 10;
   }
+  props.spin_cost = Math.max(0, Math.round(Number(props.spin_cost || 0)));
+
+  // первоначальная синхронизация в app_config
+  syncWheelCfg();
 
   // Стоимость прокрутки
   {
     const w = addField('Стоимость прокрутки (монеты)', `
       <input type="number" min="0" step="1" data-f="spin_cost" value="${Number(props.spin_cost||0)}">
+      <div class="mut" style="margin-top:6px">
+        Важно: стоимость используется воркером из <b>app_config.wheel.spin_cost</b>. Мы синхронизируем автоматически.
+      </div>
     `);
     const inp = w.querySelector('input[data-f="spin_cost"]');
     inp.addEventListener('input', ()=>{
       pushHistory();
       const v = Number(inp.value||0);
       props.spin_cost = Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0;
+      syncWheelCfg();
       updatePreviewInline();
     });
   }
@@ -4647,6 +4683,7 @@ if (inst.key === 'bonus_wheel_one') {
       <div data-prize-list style="display:grid;gap:10px"></div>
       <button class="btn" type="button" data-prize-add>+ Добавить приз</button>
       <div class="mut">Подсказка: картинки можно вставить ссылкой или загрузить файлом (конвертируется в dataURL).</div>
+      <div class="mut">Монеты: если coins &gt; 0 — воркер начислит монеты сразу и отметит prize как claimed.</div>
     </div>
   `);
   const listEl = w.querySelector('[data-prize-list]');
@@ -4655,10 +4692,13 @@ if (inst.key === 'bonus_wheel_one') {
   function renderPrizes(){
     const prizes = Array.isArray(props.prizes) ? props.prizes : [];
     listEl.innerHTML = prizes.map((pr, idx)=>{
-      const code   = (pr && pr.code) ? String(pr.code).replace(/"/g,'&quot;') : '';
-      const name   = (pr && pr.name) ? String(pr.name).replace(/"/g,'&quot;') : '';
-      const img    = (pr && pr.img)  ? String(pr.img).replace(/"/g,'&quot;')  : '';
-      const weight = Number.isFinite(Number(pr && pr.weight)) ? Math.max(0, Math.round(Number(pr.weight))) : 1;
+      pr = normPrize(pr);
+
+      const code   = String(pr.code || '').replace(/"/g,'&quot;');
+      const name   = String(pr.name || '').replace(/"/g,'&quot;');
+      const img    = String(pr.img  || '').replace(/"/g,'&quot;');
+      const weight = Number.isFinite(Number(pr.weight)) ? Math.max(0, Math.round(Number(pr.weight))) : 1;
+      const coins  = Number.isFinite(Number(pr.coins))  ? Math.max(0, Math.round(Number(pr.coins)))  : 0;
 
       return `
         <div class="card" style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
@@ -4671,6 +4711,7 @@ if (inst.key === 'bonus_wheel_one') {
             <div class="edit" style="margin:0">
               <label>Код</label>
               <input type="text" data-prize-idx="${idx}" data-k="code" value="${code}" placeholder="coins_5">
+              <div class="mut" style="margin-top:6px">Код должен совпадать с тем, что вернёт сервер (prize.code).</div>
             </div>
             <div class="edit" style="margin:0">
               <label>Название</label>
@@ -4678,10 +4719,17 @@ if (inst.key === 'bonus_wheel_one') {
             </div>
           </div>
 
-          <div class="edit" style="margin:0;margin-top:8px">
-            <label>Вес / шанс (чем больше — тем чаще)</label>
-            <input type="number" min="0" step="1" data-prize-idx="${idx}" data-k="weight" value="${weight}">
-            <div class="mut" style="margin-top:6px">Пример: 1, 2, 5. Ноль = никогда.</div>
+          <div class="grid2" style="margin-top:8px">
+            <div class="edit" style="margin:0">
+              <label>Монеты (coins)</label>
+              <input type="number" min="0" step="1" data-prize-idx="${idx}" data-k="coins" value="${coins}">
+              <div class="mut" style="margin-top:6px">0 = не монеты (физ/скидка/что угодно). &gt;0 = начисление монет.</div>
+            </div>
+            <div class="edit" style="margin:0">
+              <label>Вес / шанс</label>
+              <input type="number" min="0" step="1" data-prize-idx="${idx}" data-k="weight" value="${weight}">
+              <div class="mut" style="margin-top:6px">Ноль = никогда.</div>
+            </div>
           </div>
 
           <div class="edit" style="margin:0;margin-top:8px">
@@ -4705,15 +4753,15 @@ if (inst.key === 'bonus_wheel_one') {
         if (!Number.isFinite(i) || !k) return;
 
         pushHistory();
-        props.prizes[i] = props.prizes[i] || {};
-
-        if (k === 'weight'){
+        props.prizes[i] = normPrize(props.prizes[i] || {});
+        if (k === 'weight' || k === 'coins'){
           const v = Number(inp.value);
-          props.prizes[i].weight = Number.isFinite(v) ? Math.max(0, Math.round(v)) : 1;
+          props.prizes[i][k] = Number.isFinite(v) ? Math.max(0, Math.round(v)) : (k==='weight'?1:0);
         } else {
           props.prizes[i][k] = inp.value;
         }
 
+        syncWheelCfg();
         updatePreviewInline();
       });
     });
@@ -4729,8 +4777,9 @@ if (inst.key === 'bonus_wheel_one') {
         const reader = new FileReader();
         reader.onload = ()=>{
           pushHistory();
-          props.prizes[i] = props.prizes[i] || {};
+          props.prizes[i] = normPrize(props.prizes[i] || {});
           props.prizes[i].img = reader.result;
+          syncWheelCfg();
           renderPrizes();
           updatePreviewInline();
         };
@@ -4747,6 +4796,7 @@ if (inst.key === 'bonus_wheel_one') {
 
         pushHistory();
         props.prizes.splice(i,1);
+        syncWheelCfg();
         renderPrizes();
         updatePreviewInline();
       });
@@ -4755,8 +4805,8 @@ if (inst.key === 'bonus_wheel_one') {
 
   addBtn.addEventListener('click', ()=>{
     pushHistory();
-    // добавляем новый приз с дефолтным weight=1
-    props.prizes.push({code:'', name:'', img:'', weight: 1});
+    props.prizes.push(normPrize({code:'', name:'', img:'', coins:0, weight: 1}));
+    syncWheelCfg();
     renderPrizes();
     updatePreviewInline();
   });
