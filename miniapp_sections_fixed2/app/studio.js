@@ -5089,13 +5089,16 @@ if (inst.key === 'bonus_wheel_one') {
 
 
 // === Специальные настройки для Паспорта (stylesPassport v2) ===
-if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_one')) {
+if (inst.key === 'styles_passport_one' || (reg && reg.type === 'styles_passport_one')) {
   if (!props) BP.blocks[inst.id] = props = {};
   if (!Array.isArray(props.styles)) props.styles = [];
 
   // layout + pin
   if (props.grid_cols === undefined) props.grid_cols = 3;
   if (props.require_pin === undefined) props.require_pin = true;
+
+  // server-side coins for each stamp (optional)
+  if (props.collect_coins === undefined) props.collect_coins = 0;
 
   // texts
   if (props.title === undefined) props.title = 'Паспорт';
@@ -5108,27 +5111,35 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
   // reward block (UI) + server reward config (wheel prize_code)
   if (props.reward_enabled === undefined) props.reward_enabled = true;
   if (props.reward_title === undefined) props.reward_title = '🎁 Приз';
-  if (props.reward_text === undefined) props.reward_text = 'Покажите кассиру этот экран, чтобы получить подарок.';
+  if (props.reward_text === undefined) props.reward_text = 'Приз будет отправлен вам в бот после завершения паспорта.';
+  // legacy (we keep for backwards compatibility; UI no longer uses it)
   if (props.reward_code_prefix === undefined) props.reward_code_prefix = 'PASS-';
-  if (props.reward_prize_code === undefined) props.reward_prize_code = ''; // <<< NEW
+  // IMPORTANT: this is the real mapping to wheel_prizes.code
+  if (props.reward_prize_code === undefined) props.reward_prize_code = '';
 
-  // Title
+  // ---------- Title
   {
-    const w = addField('Заголовок', `<input type="text" data-f="title" value="${String(props.title||'').replace(/"/g,'&quot;')}">`);
+    const w = addField(
+      'Заголовок',
+      `<input type="text" data-f="title" value="${String(props.title || '').replace(/"/g,'&quot;')}">`
+    );
     w.querySelector('input').addEventListener('input', (e)=>{
       pushHistory(); props.title = e.target.value; updatePreviewInline();
     });
   }
 
-  // Subtitle
+  // ---------- Subtitle
   {
-    const w = addField('Подзаголовок', `<input type="text" data-f="subtitle" value="${String(props.subtitle||'').replace(/"/g,'&quot;')}">`);
+    const w = addField(
+      'Подзаголовок',
+      `<input type="text" data-f="subtitle" value="${String(props.subtitle || '').replace(/"/g,'&quot;')}">`
+    );
     w.querySelector('input').addEventListener('input', (e)=>{
       pushHistory(); props.subtitle = e.target.value; updatePreviewInline();
     });
   }
 
-  // Cover (URL + upload)
+  // ---------- Cover (URL + upload)
   {
     const w = addField('Картинка (обложка)', `
       <div class="row" style="gap:10px;align-items:center">
@@ -5158,9 +5169,12 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
     });
   }
 
-  // Grid cols
+  // ---------- Grid cols
   {
-    const w = addField('Колонки сетки', `<input type="number" min="1" max="6" step="1" value="${Number(props.grid_cols||3)}">`);
+    const w = addField(
+      'Колонки сетки',
+      `<input type="number" min="1" max="6" step="1" value="${Number(props.grid_cols||3)}">`
+    );
     w.querySelector('input').addEventListener('input', (e)=>{
       pushHistory();
       props.grid_cols = Math.max(1, Math.min(6, Number(e.target.value||3)));
@@ -5168,16 +5182,13 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
     });
   }
 
-  // Require PIN (modal only)
+  // ---------- PIN requirement
   {
     const w = addField('PIN подтверждение', `
       <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
         <input type="checkbox" ${props.require_pin ? 'checked' : ''}>
         <span class="mut">подтверждать получение штампа PIN-кодом (ввод в модалке в мини-аппе)</span>
       </label>
-      <div class="mut" style="margin-top:6px">
-        В этой версии PIN вводится только в мини-аппе (без запроса через бота).
-      </div>
     `);
     const cb = w.querySelector('input[type=checkbox]');
     cb.addEventListener('change', ()=>{
@@ -5185,7 +5196,28 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
     });
   }
 
-  // Buttons text
+  // ---------- Coins per stamp (server-side)
+  {
+    const w = addField('Монеты за штамп', `
+      <div class="edit" style="margin:0">
+        <label>collect_coins</label>
+        <input type="number" min="0" step="1" value="${Number(props.collect_coins||0)}">
+        <div class="mut" style="margin-top:6px">
+          Сколько монет начислять за каждый отмеченный штамп (опционально).<br>
+          Начисление происходит на сервере в обработчике style.collect.
+        </div>
+      </div>
+    `);
+    const inp = w.querySelector('input[type=number]');
+    inp.addEventListener('input', ()=>{
+      pushHistory();
+      const v = Number(inp.value || 0);
+      props.collect_coins = Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0;
+      updatePreviewInline();
+    });
+  }
+
+  // ---------- Buttons text
   {
     const w = addField('Тексты кнопок', `
       <div class="grid2">
@@ -5206,12 +5238,12 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
     });
   }
 
-  // Reward (UI + server prize mapping)
+  // ---------- Reward (UI + server prize mapping)
   {
     const w = addField('Приз за завершение', `
       <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
         <input type="checkbox" ${props.reward_enabled ? 'checked' : ''}>
-        <span class="mut">показывать блок приза, когда все штампы собраны</span>
+        <span class="mut">выдавать приз, когда все штампы собраны (по коду приза из колеса)</span>
       </label>
 
       <div class="grid2" style="margin-top:10px">
@@ -5220,8 +5252,8 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
           <input type="text" data-r="reward_title" value="${String(props.reward_title||'').replace(/"/g,'&quot;')}">
         </div>
         <div class="edit" style="margin:0">
-          <label>Префикс кода (визуально)</label>
-          <input type="text" data-r="reward_code_prefix" value="${String(props.reward_code_prefix||'').replace(/"/g,'&quot;')}">
+          <label>Текст</label>
+          <input type="text" data-r="reward_text" value="${String(props.reward_text||'').replace(/"/g,'&quot;')}">
         </div>
       </div>
 
@@ -5232,29 +5264,39 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
           value="${String(props.reward_prize_code||'').replace(/"/g,'&quot;')}">
         <div class="mut" style="margin-top:6px">
           Берётся из таблицы призов колеса (wheel_prizes.code).<br>
-          Если у приза coins &gt; 0 — начислим монеты, иначе выдадим redeem-код и отправим в бот, как “физический приз”.
+          Если у приза coins &gt; 0 — начислим монеты, иначе выдадим redeem-код и отправим в бот.
         </div>
-      </div>
-
-      <div class="edit" style="margin-top:10px">
-        <label>Текст</label>
-        <textarea data-r="reward_text" rows="3">${String(props.reward_text||'')}</textarea>
+        <div class="mut" data-reward-warn style="margin-top:8px;display:none;color:#ffcc66">
+          Включена выдача приза, но не указан reward_prize_code — приз не будет выдан.
+        </div>
       </div>
     `);
 
     const cb = w.querySelector('input[type=checkbox]');
+    const warn = w.querySelector('[data-reward-warn]');
+
+    function updateWarn(){
+      const en = !!props.reward_enabled;
+      const code = String(props.reward_prize_code||'').trim();
+      if (warn) warn.style.display = (en && !code) ? 'block' : 'none';
+    }
+
     cb.addEventListener('change', ()=>{
-      pushHistory(); props.reward_enabled = !!cb.checked; updatePreviewInline();
+      pushHistory(); props.reward_enabled = !!cb.checked; updateWarn(); updatePreviewInline();
     });
 
     w.querySelectorAll('[data-r]').forEach(el=>{
       el.addEventListener('input', ()=>{
-        pushHistory(); props[el.dataset.r] = el.value; updatePreviewInline();
+        pushHistory(); props[el.dataset.r] = el.value;
+        updateWarn();
+        updatePreviewInline();
       });
     });
+
+    updateWarn();
   }
 
-  // Styles / stamps repeater
+  // ---------- Styles / stamps repeater
   const w = addField('Карточки / штампы', `
     <div style="display:grid;gap:10px">
       <div data-style-list style="display:grid;gap:10px"></div>
