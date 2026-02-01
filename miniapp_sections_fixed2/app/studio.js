@@ -5214,38 +5214,55 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
     });
   }
 
-  // Reward
-  {
-    const w = addField('Приз за завершение', `
-      <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
-        <input type="checkbox" ${props.reward_enabled ? 'checked' : ''}>
-        <span class="mut">показывать блок приза, когда все штампы собраны</span>
-      </label>
-      <div class="grid2" style="margin-top:10px">
-        <div class="edit" style="margin:0">
-          <label>Заголовок приза</label>
-          <input type="text" data-r="reward_title" value="${String(props.reward_title||'').replace(/"/g,'&quot;')}">
-        </div>
-        <div class="edit" style="margin:0">
-          <label>Префикс кода (визуально)</label>
-          <input type="text" data-r="reward_code_prefix" value="${String(props.reward_code_prefix||'').replace(/"/g,'&quot;')}">
-        </div>
+// Reward
+{
+  const w = addField('Приз за завершение', `
+    <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
+      <input type="checkbox" ${props.reward_enabled ? 'checked' : ''}>
+      <span class="mut">показывать блок приза, когда все штампы собраны</span>
+    </label>
+
+    <div class="grid2" style="margin-top:10px">
+      <div class="edit" style="margin:0">
+        <label>Заголовок приза</label>
+        <input type="text" data-r="reward_title" value="${String(props.reward_title||'').replace(/"/g,'&quot;')}">
       </div>
-      <div class="edit" style="margin-top:10px">
-        <label>Текст</label>
-        <textarea data-r="reward_text" rows="3">${String(props.reward_text||'')}</textarea>
+      <div class="edit" style="margin:0">
+        <label>Префикс кода (визуально)</label>
+        <input type="text" data-r="reward_code_prefix" value="${String(props.reward_code_prefix||'').replace(/"/g,'&quot;')}">
       </div>
-    `);
-    const cb = w.querySelector('input[type=checkbox]');
-    cb.addEventListener('change', ()=>{
-      pushHistory(); props.reward_enabled = !!cb.checked; updatePreviewInline();
+    </div>
+
+    <div class="edit" style="margin-top:10px">
+      <label>Код приза (из колеса)</label>
+      <input type="text" data-r="reward_prize_code"
+        placeholder="например: free_coffee_6"
+        value="${String(props.reward_prize_code||'').replace(/"/g,'&quot;')}">
+      <div class="mut" style="margin-top:6px">
+        Должен существовать в wheel_prizes (таблица призов колеса).<br>
+        Если у приза coins&gt;0 — начислим монеты, иначе пришлём redeem-код как “физический приз”.
+      </div>
+    </div>
+
+    <div class="edit" style="margin-top:10px">
+      <label>Текст</label>
+      <textarea data-r="reward_text" rows="3">${String(props.reward_text||'')}</textarea>
+    </div>
+  `);
+
+  const cb = w.querySelector('input[type=checkbox]');
+  cb.addEventListener('change', ()=>{
+    pushHistory(); props.reward_enabled = !!cb.checked; updatePreviewInline();
+  });
+
+  // IMPORTANT: теперь data-r включает reward_prize_code тоже
+  w.querySelectorAll('[data-r]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      pushHistory(); props[el.dataset.r] = el.value; updatePreviewInline();
     });
-    w.querySelectorAll('[data-r]').forEach(el=>{
-      el.addEventListener('input', ()=>{
-        pushHistory(); props[el.dataset.r] = el.value; updatePreviewInline();
-      });
-    });
-  }
+  });
+}
+
 
   // Styles / stamps repeater
   const w = addField('Карточки / штампы', `
