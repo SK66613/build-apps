@@ -3627,7 +3627,7 @@ if (inst.key === 'shop_stars_product_one' || inst.type === 'shop_stars_product')
     }
 
 
-        // === иальные настройки для инфо-карточки без кнопки (infoCardPlain) ===
+        // === Специальные настройки для инфо-карточки без кнопки (infoCardPlain) ===
     if (inst.key === 'infoCardPlain') {
       if (!props) BP.blocks[inst.id] = props = {};
 
@@ -5214,55 +5214,38 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
     });
   }
 
-// Reward
-{
-  const w = addField('Приз за завершение', `
-    <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
-      <input type="checkbox" ${props.reward_enabled ? 'checked' : ''}>
-      <span class="mut">показывать блок приза, когда все штампы собраны</span>
-    </label>
-
-    <div class="grid2" style="margin-top:10px">
-      <div class="edit" style="margin:0">
-        <label>Заголовок приза</label>
-        <input type="text" data-r="reward_title" value="${String(props.reward_title||'').replace(/"/g,'&quot;')}">
+  // Reward
+  {
+    const w = addField('Приз за завершение', `
+      <label style="display:flex;gap:10px;align-items:center;margin-top:6px">
+        <input type="checkbox" ${props.reward_enabled ? 'checked' : ''}>
+        <span class="mut">показывать блок приза, когда все штампы собраны</span>
+      </label>
+      <div class="grid2" style="margin-top:10px">
+        <div class="edit" style="margin:0">
+          <label>Заголовок приза</label>
+          <input type="text" data-r="reward_title" value="${String(props.reward_title||'').replace(/"/g,'&quot;')}">
+        </div>
+        <div class="edit" style="margin:0">
+          <label>Префикс кода (визуально)</label>
+          <input type="text" data-r="reward_code_prefix" value="${String(props.reward_code_prefix||'').replace(/"/g,'&quot;')}">
+        </div>
       </div>
-      <div class="edit" style="margin:0">
-        <label>Префикс кода (визуально)</label>
-        <input type="text" data-r="reward_code_prefix" value="${String(props.reward_code_prefix||'').replace(/"/g,'&quot;')}">
+      <div class="edit" style="margin-top:10px">
+        <label>Текст</label>
+        <textarea data-r="reward_text" rows="3">${String(props.reward_text||'')}</textarea>
       </div>
-    </div>
-
-    <div class="edit" style="margin-top:10px">
-      <label>Код приза (из колеса)</label>
-      <input type="text" data-r="reward_prize_code"
-        placeholder="например: free_coffee_6"
-        value="${String(props.reward_prize_code||'').replace(/"/g,'&quot;')}">
-      <div class="mut" style="margin-top:6px">
-        Должен существовать в wheel_prizes (таблица призов колеса).<br>
-        Если у приза coins&gt;0 — начислим монеты, иначе пришлём redeem-код как “физический приз”.
-      </div>
-    </div>
-
-    <div class="edit" style="margin-top:10px">
-      <label>Текст</label>
-      <textarea data-r="reward_text" rows="3">${String(props.reward_text||'')}</textarea>
-    </div>
-  `);
-
-  const cb = w.querySelector('input[type=checkbox]');
-  cb.addEventListener('change', ()=>{
-    pushHistory(); props.reward_enabled = !!cb.checked; updatePreviewInline();
-  });
-
-  // IMPORTANT: теперь data-r включает reward_prize_code тоже
-  w.querySelectorAll('[data-r]').forEach(el=>{
-    el.addEventListener('input', ()=>{
-      pushHistory(); props[el.dataset.r] = el.value; updatePreviewInline();
+    `);
+    const cb = w.querySelector('input[type=checkbox]');
+    cb.addEventListener('change', ()=>{
+      pushHistory(); props.reward_enabled = !!cb.checked; updatePreviewInline();
     });
-  });
-}
-
+    w.querySelectorAll('[data-r]').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        pushHistory(); props[el.dataset.r] = el.value; updatePreviewInline();
+      });
+    });
+  }
 
   // Styles / stamps repeater
   const w = addField('Карточки / штампы', `
@@ -5395,6 +5378,173 @@ if (inst.key === 'styles_passport_one' || (reg && reg.type==='styles_passport_on
 
 
 
+// === Специальные настройки для Паспорта стилей ===
+    if (inst.key === 'stylesPassport' || (reg && reg.type==='stylesPassport')) {
+      if (!Array.isArray(props.styles)) props.styles = [];
+      if (props.grid_cols === undefined) props.grid_cols = 3;
+      if (props.require_pin === undefined) props.require_pin = true;
+      if (props.subtitle === undefined) props.subtitle = '';
+
+      // Подзаголовок
+      {
+        const w = addField('Подзаголовок', `<input type="text" data-f="subtitle" value="${String(props.subtitle||'').replace(/"/g,'&quot;')}">`);
+        w.querySelector('input').addEventListener('input', (e)=>{
+          pushHistory();
+          props.subtitle = e.target.value;
+          updatePreviewInline();
+        });
+      }
+
+      // Колонки сетки
+      {
+        const w = addField('Колонки сетки', `<input type="number" min="1" max="6" step="1" value="${Number(props.grid_cols||3)}">`);
+        w.querySelector('input').addEventListener('input', (e)=>{
+          pushHistory();
+          props.grid_cols = Math.max(1, Math.min(6, Number(e.target.value||3)));
+          updatePreviewInline();
+        });
+      }
+
+      // PIN required
+      {
+        const w = addField('Требовать PIN', `<label style="display:flex;gap:10px;align-items:center;margin-top:6px">
+          <input type="checkbox" ${props.require_pin ? 'checked' : ''}>
+          <span class="mut">спрашивать PIN при получении штампа</span>
+        </label>`);
+        const cb = w.querySelector('input[type=checkbox]');
+        cb.addEventListener('change', ()=>{
+          pushHistory();
+          props.require_pin = !!cb.checked;
+          updatePreviewInline();
+        });
+      }
+
+      // Обложка (URL + upload)
+      {
+        const w = addField('Картинка (обложка)', `
+          <div class="row" style="gap:10px;align-items:center">
+            <input type="text" placeholder="https://..." value="${String(props.cover_url||'').replace(/"/g,'&quot;')}" style="flex:1">
+            <label class="btn smallbtn" style="cursor:pointer">
+              Загрузить<input type="file" accept="image/*" style="display:none">
+            </label>
+          </div>
+          <div class="mut" style="margin-top:6px">Можно вставить ссылку или загрузить файлом (конвертируется в dataURL).</div>
+        `);
+        const urlInp = w.querySelector('input[type=text]');
+        const fileInp = w.querySelector('input[type=file]');
+        urlInp.addEventListener('input', ()=>{
+          pushHistory();
+          props.cover_url = urlInp.value;
+          updatePreviewInline();
+        });
+        fileInp.addEventListener('change', ()=>{
+          const file = fileInp.files && fileInp.files[0];
+          if(!file) return;
+          const reader = new FileReader();
+          reader.onload = ()=>{
+            pushHistory();
+            props.cover_url = reader.result;
+            urlInp.value = props.cover_url;
+            updatePreviewInline();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Стили (repeater)
+      const w = addField('Стили / штампы', `
+        <div style="display:grid;gap:10px">
+          <div data-style-list style="display:grid;gap:10px"></div>
+          <button class="btn" type="button" data-style-add>+ Добавить стиль</button>
+          <div class="mut">code — идентификатор (для API), name — отображаемое имя.</div>
+        </div>
+      `);
+      const listEl = w.querySelector('[data-style-list]');
+      const addBtn = w.querySelector('[data-style-add]');
+
+      function renderStyles(){
+        const arr = Array.isArray(props.styles) ? props.styles : [];
+        listEl.innerHTML = arr.map((st, idx)=>`
+          <div class="card" style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03)">
+            <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+              <b>Стиль #${idx+1}</b>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn smallbtn" type="button" data-style-up="${idx}" title="Вверх">↑</button>
+                <button class="btn smallbtn" type="button" data-style-down="${idx}" title="Вниз">↓</button>
+                <button class="btn smallbtn" type="button" data-style-del="${idx}">Удалить</button>
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:8px">
+              <div class="edit" style="margin:0">
+                <label>code</label>
+                <input type="text" data-style-idx="${idx}" data-k="code" value="${(st && st.code) ? String(st.code).replace(/"/g,'&quot;') : ''}" placeholder="lager">
+              </div>
+              <div class="edit" style="margin:0">
+                <label>name</label>
+                <input type="text" data-style-idx="${idx}" data-k="name" value="${(st && st.name) ? String(st.name).replace(/"/g,'&quot;') : ''}" placeholder="Lager">
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        listEl.querySelectorAll('input[type=text][data-style-idx]').forEach(inp=>{
+          inp.addEventListener('input', ()=>{
+            const i = Number(inp.dataset.styleIdx);
+            const k = inp.dataset.k;
+            if (!isFinite(i) || !k) return;
+            pushHistory();
+            props.styles[i] = props.styles[i] || {};
+            props.styles[i][k] = inp.value;
+            updatePreviewInline();
+          });
+        });
+
+        listEl.querySelectorAll('[data-style-del]').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            const i = Number(btn.dataset.styleDel);
+            if(!confirm('Удалить этот стиль?')) return;
+            pushHistory();
+            props.styles.splice(i,1);
+            renderStyles();
+            updatePreviewInline();
+          });
+        });
+
+        listEl.querySelectorAll('[data-style-up]').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            const i = Number(btn.dataset.styleUp);
+            if(i<=0) return;
+            pushHistory();
+            const tmp = props.styles[i-1];
+            props.styles[i-1]=props.styles[i];
+            props.styles[i]=tmp;
+            renderStyles();
+            updatePreviewInline();
+          });
+        });
+        listEl.querySelectorAll('[data-style-down]').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            const i = Number(btn.dataset.styleDown);
+            if(i>=props.styles.length-1) return;
+            pushHistory();
+            const tmp = props.styles[i+1];
+            props.styles[i+1]=props.styles[i];
+            props.styles[i]=tmp;
+            renderStyles();
+            updatePreviewInline();
+          });
+        });
+      }
+
+      addBtn.addEventListener('click', ()=>{
+        pushHistory();
+        props.styles.push({code:'', name:''});
+        renderStyles();
+        updatePreviewInline();
+      });
+
+      renderStyles();
+    }
 
 // === Специальные настройки для CTA / шторок ===
 if (inst.key === 'cta') {
