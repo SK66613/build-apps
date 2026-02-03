@@ -1,0 +1,7 @@
+{
+  "name": "salesgenius-cabinet-site",
+  "private": true,
+  "scripts": {
+    "build": "bash ./build_pages.sh"
+  }
+}
