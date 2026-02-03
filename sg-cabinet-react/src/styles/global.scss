@@ -1,0 +1,162 @@
+:root{
+  --bg: #f4f6ff;
+  --bg2: #eef2ff;
+  --card: rgba(255,255,255,.92);
+  --border: rgba(15,23,42,.12);
+  --text: #0b1220;
+  --muted: rgba(15,23,42,.65);
+  --accent: #22d3ee;
+  --accent2: #3b82f6;
+  --accentSoft: rgba(34,211,238,.16);
+  --shadow: 0 18px 52px rgba(2,6,23,.10);
+  --r: 18px;
+  --r2: 14px;
+}
+
+html[data-theme='dark']{
+  --bg: #020617;
+  --bg2: #111827;
+  --card: rgba(15,23,42,.66);
+  --border: rgba(148,163,184,.22);
+  --text: #e5e7eb;
+  --muted: rgba(226,232,240,.70);
+  --accentSoft: rgba(34,211,238,.14);
+  --shadow: 0 18px 52px rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+body{
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 10% 0, #ffffff 0, var(--bg) 55%, var(--bg2) 100%);
+}
+
+a{color:inherit; text-decoration:none}
+button, input, select, textarea{font:inherit}
+
+/* utility */
+.sg-card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+
+.sg-btn{
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 800;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.86);
+  cursor: pointer;
+}
+.sg-btn.primary{
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #001018;
+  border: none;
+}
+
+.sg-input{
+  width: 100%;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.92);
+  border-radius: 999px;
+  padding: 12px 14px;
+}
+html[data-theme='dark'] .sg-input{background: rgba(2,6,23,.5)}
+
+.sg-btn{
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 850;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.9);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform .08s ease, filter .15s ease;
+}
+.sg-btn:active{ transform: translateY(1px) scale(.99); }
+.sg-btn:hover{ filter: brightness(1.02); }
+
+.sg-btn--primary{
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #001018;
+  border: none;
+}
+.sg-btn--ghost{
+  background: transparent;
+}
+
+.sg-input{
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.86);
+  color: var(--text);
+}
+html[data-theme='dark'] .sg-input{
+  background: rgba(2,6,23,.55);
+}
+
+.sg-label{font-size:12px; font-weight:800; color: var(--muted)}
+.sg-pill{padding:8px 12px; border-radius:999px; border:1px solid var(--border); font-weight:800}
+
+.sg-shell{
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+.sg-sidebar{
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 18px;
+  border-right: 1px solid var(--border);
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+html[data-theme='dark'] .sg-sidebar{ background: rgba(2,6,23,.55); }
+
+.sg-main{
+  padding: 18px 22px 42px;
+  max-width: 1320px;
+}
+
+.sg-topbar{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 14px 0;
+}
+
+.sg-grid{display:grid; gap:16px}
+.sg-grid.kpi{grid-template-columns: repeat(4, minmax(0,1fr));}
+@media (max-width: 1100px){ .sg-grid.kpi{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 640px){ .sg-shell{grid-template-columns:1fr;} .sg-sidebar{position:relative;height:auto;} .sg-grid.kpi{grid-template-columns:1fr;} }
+
+.sg-h1{font-size: 22px; font-weight: 950; margin: 0}
+.sg-sub{color: var(--muted); font-weight: 700; margin-top: 4px}
+
+.sg-nav{
+  display:flex; flex-direction: column; gap: 8px; margin-top: 14px;
+}
+.sg-nav a{
+  display:flex; align-items:center; gap:10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-weight: 900;
+}
+.sg-nav a.is-active{
+  background: var(--accentSoft);
+  border-color: rgba(34,211,238,.55);
+}
+
+.sg-section-title{display:flex; align-items:end; justify-content:space-between; gap:12px; margin-top: 10px}
+
+.sg-table{width:100%; border-collapse: collapse; font-size: 13px}
+.sg-table th{ text-align:left; padding: 10px 10px; color: var(--muted); font-weight: 900; border-bottom: 1px solid var(--border); }
+.sg-table td{ padding: 12px 10px; border-bottom: 1px solid var(--border); font-weight: 700; }
