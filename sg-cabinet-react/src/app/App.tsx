@@ -12,6 +12,9 @@ import { ProfitPage } from '../pages/ProfitPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { RequireAuth } from './RequireAuth';
 
+import Constructor from './pages/Constructor';
+
+
 export default function App(){
   return (
     <Routes>
@@ -35,6 +38,9 @@ export default function App(){
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="profit" element={<ProfitPage />} />
         <Route path="settings" element={<SettingsPage />} />
+
+        <Route path="constructor" element={<Constructor />} />
+
       </Route>
 
       <Route path="*" element={<Navigate to="/overview" replace />} />
