@@ -20,8 +20,9 @@ tar -cf - \
   . | (cd "$OUT" && tar -xf -)
 
 # 2) Build React app
-npm ci --prefix "$ROOT_DIR/sg-cabinet-react"
+npm install --prefix "$ROOT_DIR/sg-cabinet-react"
 npm run build --prefix "$ROOT_DIR/sg-cabinet-react"
+
 
 # 3) Copy React build into /panel-react/ (subfolder)
 mkdir -p "$OUT/panel-react"
