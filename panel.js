@@ -133,12 +133,25 @@
 
       // pass current app id into React via ?app_id=...
       const appId = resolveCabAppId() || '';
-      let next = href;
-      if (appId && !/[?&]app_id=/.test(next)){
-        next += (next.includes('?') ? '&' : '?') + 'app_id=' + encodeURIComponent(appId);
-      }
-      window.location.href = next;
-      return;
+let next = href;
+
+if (appId && !/[?&]app_id=/.test(next)) {
+  // если есть # — app_id должен быть ДО # (иначе React не увидит в search)
+  const hashPos = next.indexOf('#');
+  if (hashPos >= 0) {
+    const base = next.slice(0, hashPos);   // "/panel-react/"
+    const hash = next.slice(hashPos);      // "#/calendar"
+    const sep  = base.includes('?') ? '&' : '?';
+    next = base + sep + 'app_id=' + encodeURIComponent(appId) + hash;
+  } else {
+    const sep = next.includes('?') ? '&' : '?';
+    next = next + sep + 'app_id=' + encodeURIComponent(appId);
+  }
+}
+
+window.location.href = next;
+return;
+
     }
 
     const id = btn.dataset.view;
