@@ -1,0 +1,3 @@
+# React app lives under /panel-react/ (subfolder of the cabinet)
+# HashRouter doesn't require rewrites, but keep this for direct refreshes if you ever switch to BrowserRouter.
+/panel-react/*  /panel-react/index.html  200
