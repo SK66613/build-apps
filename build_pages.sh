@@ -17,8 +17,10 @@ tar -cf - \
   --exclude='./dist_site' \
   --exclude='./sg-cabinet-react' \
   --exclude='./miniapp' \
+  --exclude='./functions' \
   --exclude='./node_modules' \
   . | (cd "$OUT" && tar -xf -)
+
 
 # 2) Build React app
 # Prefer npm ci for deterministic builds (requires sg-cabinet-react/package-lock.json)
