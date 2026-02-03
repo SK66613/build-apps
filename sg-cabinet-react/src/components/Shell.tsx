@@ -86,6 +86,9 @@ export default function Shell(){
           <NavLink to="/calendar" className={({isActive})=>isActive? 'is-active': ''}>📅 Calendar</NavLink>
           <NavLink to="/profit" className={({isActive})=>isActive? 'is-active': ''}>💰 Profit / ROI</NavLink>
           <NavLink to="/settings" className={({isActive})=>isActive? 'is-active': ''}>⚙️ Settings</NavLink>
+
+          <NavLink to="/constructor" className={({isActive})=>isActive? 'is-active': ''}>🛠️ Конструктор</NavLink>
+
         </nav>
       </aside>
 
