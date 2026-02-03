@@ -10,7 +10,7 @@ import { PassportPage } from '../pages/PassportPage';
 import { CalendarPage } from '../pages/CalendarPage';
 import { ProfitPage } from '../pages/ProfitPage';
 import { SettingsPage } from '../pages/SettingsPage';
-import { ConstructorPage } from '../pages/ConstructorPage'; // ✅ add
+import { ConstructorPage } from '../pages/ConstructorPage';
 import { RequireAuth } from './RequireAuth';
 
 export default function App(){
@@ -36,7 +36,7 @@ export default function App(){
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="profit" element={<ProfitPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="constructor" element={<ConstructorPage />} /> {/* ✅ add */}
+        <Route path="constructor" element={<ConstructorPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/overview" replace />} />
