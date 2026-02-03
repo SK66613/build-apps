@@ -28,5 +28,12 @@ npm run build --prefix "$ROOT_DIR/sg-cabinet-react"
 mkdir -p "$OUT/panel-react"
 cp -R "$ROOT_DIR/sg-cabinet-react/dist/"* "$OUT/panel-react/"
 
+# 4) Copy constructor (miniapp) into panel-react/miniapp so React can load it without relying on legacy root paths
+mkdir -p "$OUT/panel-react/miniapp"
+
+# Если ты реально переименовал в miniapp 
+cp -R "$ROOT_DIR/miniapp/"* "$OUT/panel-react/miniapp/"
+
+
 # Done.
 echo "Built combined site into: $OUT"
