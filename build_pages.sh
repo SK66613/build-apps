@@ -29,3 +29,5 @@ mkdir -p "$OUT/panel-react"
 cp -R "$ROOT_DIR/sg-cabinet-react/dist/"* "$OUT/panel-react/"
 
 echo "Built combined site into: $OUT"
+
+
