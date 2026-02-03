@@ -1,0 +1,6 @@
+# React app lives under /panel-react/ (subfolder of the cabinet)
+# Keep /miniapp/* as real static files (constructor/preview) so SPA rewrite doesn't swallow them.
+/panel-react/miniapp/*  /panel-react/miniapp/:splat  200
+
+# SPA fallback
+/panel-react/*  /panel-react/index.html  200
