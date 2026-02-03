@@ -121,10 +121,28 @@
     setMode(id);
   }
 
+  // Menu: internal views (data-view) + React routes (data-href)
   sideNav.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.side__item[data-view]');
+    const btn = e.target.closest('.side__item');
     if (!btn) return;
+
+    const href = (btn.dataset && btn.dataset.href) ? String(btn.dataset.href) : '';
+    if (href){
+      // keep active highlight
+      sideNav.querySelectorAll('.side__item').forEach(x=>x.classList.toggle('is-active', x===btn));
+
+      // pass current app id into React via ?app_id=...
+      const appId = resolveCabAppId() || '';
+      let next = href;
+      if (appId && !/[?&]app_id=/.test(next)){
+        next += (next.includes('?') ? '&' : '?') + 'app_id=' + encodeURIComponent(appId);
+      }
+      window.location.href = next;
+      return;
+    }
+
     const id = btn.dataset.view;
+    if (!id) return;
     sideNav.querySelectorAll('.side__item').forEach(x=>x.classList.toggle('is-active', x===btn));
     showView(id);
   });
