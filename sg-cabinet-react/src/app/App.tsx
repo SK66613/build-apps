@@ -12,7 +12,7 @@ import { ProfitPage } from '../pages/ProfitPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { RequireAuth } from './RequireAuth';
 
-import Constructor from './pages/Constructor';
+
 
 
 export default function App(){
@@ -39,7 +39,7 @@ export default function App(){
         <Route path="profit" element={<ProfitPage />} />
         <Route path="settings" element={<SettingsPage />} />
 
-        <Route path="constructor" element={<Constructor />} />
+        
 
       </Route>
 
