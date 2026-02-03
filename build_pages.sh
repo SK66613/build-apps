@@ -37,11 +37,12 @@ mkdir -p "$OUT/panel-react"
 cp -R "$ROOT_DIR/sg-cabinet-react/dist/"* "$OUT/panel-react/"
 
 # 4) Copy constructor (miniapp) into /panel-react/miniapp/
-if [ -d "$ROOT_DIR/miniapp" ]; then
+if [ -d "$ROOT_DIR/sg-cabinet-react/miniapp" ]; then
   mkdir -p "$OUT/panel-react/miniapp"
-  cp -R "$ROOT_DIR/miniapp/"* "$OUT/panel-react/miniapp/"
+  cp -R "$ROOT_DIR/sg-cabinet-react/miniapp/"* "$OUT/panel-react/miniapp/"
 else
-  echo "WARN: ./miniapp folder not found, skipping copy"
+  echo "WARN: ./sg-cabinet-react/miniapp not found, skipping copy"
 fi
+
 
 echo "Built combined site into: $OUT"
