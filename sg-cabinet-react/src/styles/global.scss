@@ -844,3 +844,50 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
 .sg-main.is-ctor .ctorX{
   top: 0 !important;
 }
+
+/* =========================
+   Constructor: make drawer + preview as ONE white canvas (no borders)
+   ========================= */
+
+/* общий белый фон по всей области конструктора */
+.sg-main.is-ctor{
+  background: #fff;
+}
+
+/* preview контейнер — без рамок/кардов, просто белый */
+.sg-main.is-ctor .ctorX__preview{
+  background: #fff;
+}
+
+/* stage — убираем рамку и серую подложку (она и рисует “панель”) */
+.sg-main.is-ctor .ctor-preview__stage{
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* шторка — тоже белая, без своей рамки; разделение только тенью справа */
+.sg-main.is-ctor .ctorX__drawer{
+  background: #fff !important;
+  border-right: 0 !important;
+  box-shadow: 14px 0 40px rgba(2,6,23,.10) !important; /* лёгкая тень по правому краю */
+}
+
+/* внутренние “карточки” внутри шторки (Pages/Blocks/Inspector) — если хочешь тоже без рамок */
+.sg-main.is-ctor .ctorX__drawer .sg-card,
+.sg-main.is-ctor .ctorX__drawer .card,
+.sg-main.is-ctor .ctorX__drawer .panel,
+.sg-main.is-ctor .ctorX__drawer .box{
+  box-shadow: none !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* (опционально) убрать линию у ушка-формы, если она даёт вертикальную “полосу” */
+.sg-main.is-ctor .ctorX__drawer::after{
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
