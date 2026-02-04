@@ -1,17 +1,19 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../app/auth';
+import React from "react";
+import { NavLink, Outlet } from "react-router-dom";
+import { useAuth } from "../app/auth";
 
-// если у тебя в appState есть хук — подключи и покажи проект/даты
-// import { useAppState } from '../app/appState';
+// Если у тебя есть готовые компоненты — подключи:
+// import ProjectPicker from "./ProjectPicker";
+// import DateRangePicker from "./DateRangePicker";
+// import ThemeToggle from "./ThemeToggle";
 
 function SideItem({ to, label, icon }: { to: string; label: string; icon: React.ReactNode }){
   return (
     <NavLink
       to={to}
-      className={({isActive}) => 'side__item' + (isActive ? ' is-active' : '')}
+      className={({isActive}) => "side__item" + (isActive ? " is-active" : "")}
       title={label}
-      end={to === '/'} // чтобы Overview активировался только на корне
+      end={to === "/"} // Overview active только на корне
     >
       <span className="ico">{icon}</span>
       <span className="txt">{label}</span>
@@ -19,13 +21,18 @@ function SideItem({ to, label, icon }: { to: string; label: string; icon: React.
   );
 }
 
-export default function Shell(){
+export default function AppShell(){
   const { me, logout } = useAuth();
+  const email = (me as any)?.email || (me as any)?.user?.email || "";
 
-  // Если у тебя есть app state — раскомментируй и подставь свои поля:
-  // const { appId, apps, setAppId, dateFrom, dateTo, setDateRange } = useAppState();
-
-  const email = (me as any)?.email || (me as any)?.user?.email || '';
+  // локальный тумблер темы (если у тебя уже есть ThemeToggle — убери этот кусок)
+  const curTheme = (document.documentElement.dataset.theme === "dark") ? "Dark" : "Light";
+  const toggleTheme = ()=>{
+    const cur = (document.documentElement.dataset.theme === "dark") ? "dark" : "light";
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try{ localStorage.setItem("sg_theme", next); }catch(_){}
+  };
 
   return (
     <div className="sg-shell">
@@ -71,41 +78,27 @@ export default function Shell(){
               <div className="sg-brand__sub">Cabinet</div>
             </div>
 
-            {/* ===== сюда переносим Проект / Тема / Email / Выйти ===== */}
+            {/* ====== Project Picker (сюда) ======
+                Вставь свой компонент выбора проекта (из старого Shell) */}
+            {/* <ProjectPicker /> */}
 
-            {/* Проект: подключи свой AppPicker/Select из твоих компонентов */}
-            {/* пример: */}
-            {/* <div className="sg-topbar__group">
-              <div className="sg-topbar__label">Проект</div>
-              <select className="sg-input" style={{ width: 220 }} value={appId||''} onChange={(e)=>setAppId(e.target.value)}>
-                {(apps||[]).map(a=> <option key={a.id} value={a.id}>{a.title}</option>)}
-              </select>
-            </div> */}
-
-            {/* Тема: у тебя уже есть кнопка Light, если она компонент — вставь сюда */}
-            {/* <ThemeToggle /> */}
-            <button
-              className="sg-btn sg-btn--ghost"
-              onClick={()=>{
-                const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-                const next = cur === 'dark' ? 'light' : 'dark';
-                document.documentElement.dataset.theme = next;
-                try{ localStorage.setItem('sg_theme', next); }catch(_){}
-              }}
-              title="Theme"
-            >
-              ☀️ {document.documentElement.dataset.theme === 'dark' ? 'Dark' : 'Light'}
+            {/* ====== Theme Toggle (сюда) ====== */}
+            {/* Если у тебя уже есть ThemeToggle — используй его */}
+            <button className="sg-btn sg-btn--ghost" onClick={toggleTheme} title="Theme">
+              ☀️ {curTheme}
             </button>
 
+            {/* ====== Email (сюда) ====== */}
             {email ? <div className="sg-user">{email}</div> : null}
 
-            <button className="sg-btn sg-btn--ghost" onClick={()=>logout?.()}>
+            {/* ====== Logout (сюда) ====== */}
+            <button className="sg-btn sg-btn--ghost" onClick={() => logout?.()}>
               Выйти
             </button>
           </div>
 
           <div className="sg-topbar__right">
-            {/* Даты: если у тебя есть DateRangePicker компонент — вставь сюда */}
+            {/* ====== DateRangePicker (сюда) ====== */}
             {/* <DateRangePicker /> */}
           </div>
         </header>
