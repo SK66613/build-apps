@@ -774,3 +774,112 @@ html[data-theme='dark'] .ctorX__resizeGrip{
   font-weight: 750;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+/* ===== Constructor layout with drawer (Plan B) ===== */
+.ctorX{
+  display: flex;
+  gap: 14px;
+  min-height: 0;
+  /* если хочешь чтобы конструктор занимал экран под topbar */
+  /* height: calc(100vh - 92px); */
+}
+
+.ctorX__left{
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 16px;
+  max-width: 560px;
+
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow);
+
+  overflow: hidden;
+  transition: width .18s ease;
+}
+
+.ctorX__leftInner{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+}
+
+.ctorX__insWrap{
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+/* ресайзер */
+.ctorX__resizeGrip{
+  position: absolute;
+  top: 0;
+  right: -6px;
+  width: 12px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+}
+
+/* ушко */
+.ctorX__ear{
+  position: absolute;
+  top: 50%;
+  right: -18px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 84px;
+
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.78);
+  box-shadow: var(--shadow);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+html[data-theme='dark'] .ctorX__ear{
+  background: rgba(2,6,23,.55);
+}
+
+.ctorX__earIcon{
+  font-weight: 900;
+  opacity: .75;
+}
+
+/* ПРАВАЯ часть должна реально сжиматься/расширяться */
+.ctorX__preview{
+  flex: 1 1 auto;
+  min-width: 0;     /* ВАЖНО: иначе iframe/контент не сжимается */
+  min-height: 0;
+
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.55);
+  box-shadow: var(--shadow);
+
+  overflow: hidden;
+}
+
+/* Если внутри PreviewFrame есть обертка — пусть тоже умеет сжиматься */
+.ctorX__preview *{
+  min-width: 0;
+}
+
+
