@@ -67,16 +67,17 @@ export function PreviewFrame(){
     }
   }, [selected, post]);
 
-  return (
-    <div className="sg-card" style={{ padding: 0, height: 'calc(100vh - 220px)', minHeight: 680, overflow: 'hidden' }}>
+    return (
+    <div className="sg-card ctor-card ctor-preview">
       <iframe
         ref={frameRef}
         key={src}
         title="Miniapp preview"
         src={src}
-        style={{ width: '100%', height: '100%', border: 0, borderRadius: 16 }}
+        className="ctor-preview__frame"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
       />
     </div>
   );
+
 }
