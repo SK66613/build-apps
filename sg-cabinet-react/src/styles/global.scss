@@ -613,8 +613,7 @@ html[data-theme='dark'] .ctor-preview__stage{
 
 /* =========================
    CANON ctorX (OLD-like): fixed drawer + pushed preview + ear
-   + fixes: sidebar doesn't overlap preview
-   + fixes: phone centered when drawer closed
+   FIX: ctorX does NOT cover cabinet sidebar menu
    ========================= */
 
 .ctorX{
@@ -626,7 +625,10 @@ html[data-theme='dark'] .ctor-preview__stage{
 
   position: fixed;
   top: var(--topbar-h);
-  left: 0;
+
+  /* === ВАЖНО: исключаем левое меню из слоя конструктора === */
+  left: var(--side-w);
+
   right: 0;
   bottom: 0;
 
@@ -637,9 +639,11 @@ html[data-theme='dark'] .ctor-preview__stage{
 .ctorX__drawer{
   position: fixed;
   top: var(--topbar-h);
-  left: var(--side-w);
-  bottom: 0;
 
+  /* так как ctorX уже начинается после side-w — тут left: 0 */
+  left: var(--side-w); /* <-- ОСТАВЛЯЕМ ТАК, иначе "fixed" привяжется к viewport */
+
+  bottom: 0;
   width: var(--ctor-left-w);
 
   background: var(--card);
@@ -676,13 +680,14 @@ html[data-theme='dark'] .ctor-preview__stage{
   background: transparent;
 }
 
-/* ===== PREVIEW (важно: НЕ под сайдбаром) ===== */
+/* ===== PREVIEW ===== */
 .ctorX__preview{
   position: fixed;
   top: var(--topbar-h);
 
-  /* sidebar больше не перекрывает превью */
+  /* preview начинается после sidebar (как и ctorX) */
   left: var(--side-w);
+
   right: 0;
   bottom: 0;
 
@@ -725,7 +730,7 @@ html[data-theme='dark'] .ctor-preview__stage{
   position:absolute;
   top:50%;
   left:100%;
-  margin-left:-1px; /* “сварка” со стенкой */
+  margin-left:-1px;
   transform:translateY(-50%);
 
   width: var(--ctor-ear-w);
@@ -758,8 +763,7 @@ html[data-theme='dark'] .ctor-preview__stage{
   padding:0;
   cursor:pointer;
 
-  /* ВАЖНО: поверх телефона/зумов */
-  z-index: 200;
+  z-index: 200; /* поверх телефона/зумов */
 }
 
 .ctorX__ear::before{
@@ -774,36 +778,8 @@ html[data-theme='dark'] .ctor-preview__stage{
 html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
 
 /* =========================
-   PREVIEW phone stage helpers
-   (работают с твоими классами ctor-preview__stage / ctor-phoneDock)
-   ========================= */
-
-/* по умолчанию (панель открыта) — можно держать левее */
-.ctor-preview__stage{
-  overflow: auto;
-  padding: 18px;
-
-  /* если хочешь всегда по центру — поставь center */
-  justify-content: flex-start;
-}
-
-/* ВАЖНО: когда панель закрыта — телефон строго по центру */
-.ctorX.is-closed .ctor-preview__stage{
-  justify-content: center !important;
-}
-
-/* чтобы масштабирование не “улетало” и не перекрывало элементы */
-.ctor-phoneDock{
-  transform-origin: top left;
-}
-.ctorX.is-closed .ctor-phoneDock{
-  transform-origin: center top !important;
-}
-
-
-/* =========================
    PREVIEW phone stage behavior
-   - ALWAYS center (no jumping to the drawer)
+   - ALWAYS center (no jumping)
    ========================= */
 .ctor-preview__stage{
   display: flex;
@@ -817,4 +793,5 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
 .ctor-phoneDock{
   transform-origin: center top;
 }
+
 
