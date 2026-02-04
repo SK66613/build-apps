@@ -900,7 +900,7 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   background: #fff !important;
 }
 /* на сколько ещё уезжает панель влево в закрытом виде */
-.ctorX{ --ctor-close-nudge: 8px; } /* подбери 6-12px */
+.ctorX{ --ctor-close-nudge: 10px; } /* подбери 6-12px */
 
 .ctorX.is-closed .ctorX__drawer{
   transform: translateX(
