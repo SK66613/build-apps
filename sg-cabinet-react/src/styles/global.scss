@@ -471,3 +471,193 @@ hr{
 .sg-pill{
   background: var(--card2);
 }
+
+
+/* =========================
+   Constructor: ear drawer + phone preview (ported from miniapp_sections_fixed2)
+   ========================= */
+
+.ctor__body--ear{
+  position: relative;
+}
+
+/* LEFT drawer */
+.ctor__left--ear{
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* scroll only inside left content */
+.ctor__leftInner{
+  min-height: 0;
+  overflow: auto;
+  padding-right: 6px;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ctor__leftInner::-webkit-scrollbar{ width: 0; height: 0; }
+
+/* resize grip */
+.ctor__resizeGrip{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+  background: linear-gradient(90deg, transparent, rgba(15,23,42,.06));
+}
+html[data-theme='dark'] .ctor__resizeGrip{
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08));
+}
+
+/* ear button (like .nav-ear in old) */
+.ctor__ear{
+  position: absolute;
+  top: 140px;
+  right: -14px;
+
+  width: 28px;
+  height: 86px;
+  border-radius: 18px;
+
+  border: 1px solid rgba(8,8,8,.7);
+  background: rgba(15, 17, 57, 0.92);
+  box-shadow: 0 14px 30px rgba(0,0,0,.25);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+  z-index: 20;
+}
+.ctor__earIco{
+  color: #fff;
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1;
+}
+.ctor__ear:hover{ filter: brightness(1.06); }
+.ctor__ear:active{ transform: translateY(1px) scale(.98); }
+
+/* closed state: keep just a thin rail */
+.ctor__left--ear.is-closed{
+  width: 16px !important;
+}
+.ctor__left--ear.is-closed .ctor__leftInner{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* PREVIEW: phone stage */
+.ctor-preview--phone{
+  padding: 12px;
+  display:flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* header controls inside preview */
+.ctor-preview__hdr{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ctor-preview__presets{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ctor-preview__btn{
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-weight: 750;
+}
+.ctor-preview__btn.is-active{
+  border-color: rgba(34,211,238,.55);
+  background: var(--accentSoft);
+}
+
+/* zoom rail */
+.ctor-preview__zoom{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.ctor-preview__zoomLbl{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+}
+.ctor-preview__zoomSlider{
+  width: 180px;
+}
+.ctor-preview__zoomVal{
+  font-weight: 900;
+  color: var(--muted);
+  min-width: 48px;
+  text-align:right;
+}
+
+/* stage */
+.ctor-preview__stage{
+  flex: 1;
+  min-height: 520px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.45);
+}
+html[data-theme='dark'] .ctor-preview__stage{
+  background: rgba(2,6,23,.22);
+}
+
+/* phone */
+.ctor-phoneDock{
+  transform-origin: center center;
+}
+
+.ctor-phone{
+  position: relative;
+  background: #000;
+  border: 10px solid #0b0f18;
+  box-shadow: 0 26px 80px rgba(0,0,0,.35);
+  overflow: hidden;
+}
+
+.ctor-notch{
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 28px;
+  background: #0b0f18;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  opacity: .9;
+  z-index: 2;
+}
+
+.ctor-screen{
+  position: absolute;
+  inset: 0;
+}
+
+.ctor-preview__frame{
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display:block;
+  background: #000;
+}
