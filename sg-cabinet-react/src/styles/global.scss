@@ -990,3 +990,155 @@ html[data-theme='dark'] .ctorX__ear{
 .ctorX__left.is-closed{
   width: 16px !important;
 }
+
+
+/* ===== Constructor like OLD (Visme drawer) ===== */
+
+.ctorX{
+  /* параметры */
+  --ctor-ear-w: 28px;
+  --ctor-ear-over: 14px; /* сколько ушко "залазит" на превью */
+  --ctor-left-w: 420px;  /* переопределяется inline */
+
+  /* чтобы превью “уезжало” как в старом */
+  --ctor-push: var(--ctor-left-w);
+}
+
+/* контейнер занимает экран под topbar */
+.ctorX{
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ===== DRAWER (левая панель) ===== */
+.ctorX__drawer{
+  position: fixed;
+  top: var(--topbar-h);
+  left: var(--side-w);
+  bottom: 0;
+
+  width: var(--ctor-left-w);
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 40;
+
+  overflow: visible; /* важно для ушка */
+  transition: transform .25s ease;
+}
+
+/* внутренняя прокрутка панели */
+.ctorX__drawerInner{
+  height: 100%;
+  overflow: auto;
+  padding: 12px;
+  scrollbar-width: none;
+}
+.ctorX__drawerInner::-webkit-scrollbar{ width:0; height:0; }
+
+/* ===== PREVIEW (выталкивается) ===== */
+.ctorX__preview{
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* место под левое меню + панель */
+  padding-left: calc(var(--side-w) + var(--ctor-push));
+  transition: padding-left .25s ease;
+
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+/* ===== CLOSED state ===== */
+.ctorX.is-closed{
+  --ctor-push: var(--ctor-ear-over); /* при закрытии оставляем место только под ушко */
+}
+
+.ctorX.is-closed .ctorX__drawer{
+  /* уезжаем влево, но оставляем торчать ушко */
+  transform: translateX(calc(-1 * (var(--ctor-left-w) - var(--ctor-ear-over))));
+}
+
+/* прячем контент панели, чтобы не ловил клики */
+.ctorX.is-closed .ctorX__drawerInner{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===== RESIZE ===== */
+.ctorX__resizeGrip{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+}
+
+/* ===== “Слитое” ушко как в старом ===== */
+.ctorX__drawer::after{
+  content:"";
+  position:absolute;
+  top:50%;
+  left:100%;
+  margin-left:-1px; /* “сварка” со стенкой */
+  transform:translateY(-50%);
+
+  width: var(--ctor-ear-w);
+  height: 84px;
+  border-radius: 0 14px 14px 0;
+
+  border: 1px solid rgba(0,0,0,.10);
+  border-left: 0;
+  background: inherit;
+  box-shadow: 0 10px 22px rgba(0,0,0,.18);
+
+  pointer-events:none;
+}
+
+.ctorX__ear{
+  position:absolute;
+  top:50%;
+  left:100%;
+  margin-left:-1px;
+  transform:translateY(-50%);
+
+  width: var(--ctor-ear-w);
+  height: 84px;
+  border-radius: 0 14px 14px 0;
+
+  border:0;
+  background: transparent;
+  padding:0;
+  cursor:pointer;
+
+  z-index: 60;
+}
+
+/* стрелка как в старом через псевдоэлемент */
+.ctorX__ear::before{
+  content:"›";
+  display:block;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(15,23,42,.85);
+  transition: transform .25s ease;
+}
+
+/* когда открыто — стрелка влево */
+.ctorX.is-open .ctorX__ear::before{
+  transform: rotate(180deg);
+}
+
+/* dark */
+html[data-theme='dark'] .ctorX__ear::before{
+  color: rgba(226,232,240,.90);
+}
+
