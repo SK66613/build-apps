@@ -907,30 +907,48 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
     calc(-1 * (var(--ctor-left-w) - var(--ctor-ear-over) + var(--ctor-close-nudge)))
   ) !important;
 }
-/* ушко такое же как панель */
-.sg-main.is-ctor .ctorX__ear{
+/* ===== Ear styles by state (open vs closed) ===== */
+
+/* OPEN: ушко как панель (белое), стрелка тёмная */
+.sg-main.is-ctor .ctorX.is-open .ctorX__ear{
   background: #fff !important;
+  border: 0 !important;
+}
+.sg-main.is-ctor .ctorX.is-open .ctorX__ear::before{
+  color: rgba(15,23,42,.75) !important;
 }
 
-/* форма “прилипшего” ушка — тоже белая и с той же тенью что у панели */
+/* CLOSED: ушко как меню кабинета (тёмное), стрелка белая */
+.sg-main.is-ctor .ctorX.is-closed .ctorX__ear{
+  background: linear-gradient(180deg, #0b1220, #0a1020) !important;
+  border: 0 !important;
+  box-shadow: 0 14px 30px rgba(0,0,0,.25) !important;
+}
+.sg-main.is-ctor .ctorX.is-closed .ctorX__ear::before{
+  color: rgba(255,255,255,.92) !important;
+}
+
+/* Форма “прилипшего” ушка (drawer::after) — всегда как панель */
 .sg-main.is-ctor .ctorX__drawer::after{
   background: #fff !important;
   border: 0 !important;
   box-shadow: 14px 0 40px rgba(2,6,23,.10) !important;
 }
 
-/* стрелка — чуть темнее, чтобы читалась */
-.sg-main.is-ctor .ctorX__ear::before{
-  color: rgba(15,23,42,.75) !important;
-}
-html[data-theme='dark'] .sg-main.is-ctor .ctorX__ear{
+/* DARK theme */
+html[data-theme='dark'] .sg-main.is-ctor .ctorX.is-open .ctorX__ear{
   background: rgba(15,23,42,.70) !important;
+}
+html[data-theme='dark'] .sg-main.is-ctor .ctorX.is-open .ctorX__ear::before{
+  color: rgba(226,232,240,.85) !important;
+}
+
+html[data-theme='dark'] .sg-main.is-ctor .ctorX.is-closed .ctorX__ear{
+  background: linear-gradient(180deg, #0b1220, #0a1020) !important;
 }
 html[data-theme='dark'] .sg-main.is-ctor .ctorX__drawer::after{
   background: rgba(15,23,42,.70) !important;
   box-shadow: 14px 0 40px rgba(0,0,0,.35) !important;
 }
-html[data-theme='dark'] .sg-main.is-ctor .ctorX__ear::before{
-  color: rgba(226,232,240,.85) !important;
-}
+
 
