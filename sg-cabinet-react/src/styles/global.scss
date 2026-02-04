@@ -794,15 +794,48 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   transform-origin: center top;
 }
 
-/* === CRITICAL FIX: constructor must NOT cover sidebar === */
-.ctorX{
-  left: var(--side-w) !important;
+/* =========================
+   Make ctorX go UNDER cabinet sidebar (not over)
+   ========================= */
+
+/* 1) Sidebar всегда сверху */
+.side{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-/* preview & drawer must be aligned to ctorX, not to viewport */
-.ctorX__preview{
-  left: var(--side-w) !important;
+/* 2) ctorX ниже sidebar */
+.ctorX{
+  z-index: 100;
 }
+
+/* 3) В зоне sidebar ctorX не ловит клики (и не “глушит” меню) */
+.ctorX{
+  pointer-events: none;
+}
+
+/* 4) Но внутри рабочей области конструктора клики должны работать */
+.ctorX__drawer,
+.ctorX__drawer * ,
+.ctorX__preview,
+.ctorX__preview * ,
+.ctorX__ear{
+  pointer-events: auto;
+}
+
+/* 5) А вот левая полоска под sidebar — снова без кликов, чтобы меню было полностью кликабельным */
+.ctorX::before{
+  content:"";
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  bottom: 0;
+  width: var(--side-w);
+  pointer-events: none; /* просто визуальная зона, клики уходят в sidebar */
+  z-index: 150;
+}
+
 .ctorX__drawer{
   left: var(--side-w) !important;
 }
