@@ -72,7 +72,8 @@ export default function ConstructorLayout(){
           onClick={()=>setOpen(!open)}
           title={open ? 'Свернуть' : 'Развернуть'}
         >
-          <span classNameBR {open ? '❮' : '❯'}</span>
+          <span>{open ? '❮' : '❯'}</span>
+
         </button>
       </aside>
 
