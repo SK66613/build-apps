@@ -890,4 +890,47 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   box-shadow: 14px 0 40px rgba(2,6,23,.10) !important;
 }
 
+/* превью — без скруглений/рамок */
+.sg-main.is-ctor .ctorX__preview,
+.sg-main.is-ctor .ctor-preview--phone,
+.sg-main.is-ctor .ctor-preview__stage{
+  border-radius: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+/* на сколько ещё уезжает панель влево в закрытом виде */
+.ctorX{ --ctor-close-nudge: 8px; } /* подбери 6-12px */
+
+.ctorX.is-closed .ctorX__drawer{
+  transform: translateX(
+    calc(-1 * (var(--ctor-left-w) - var(--ctor-ear-over) + var(--ctor-close-nudge)))
+  ) !important;
+}
+/* ушко такое же как панель */
+.sg-main.is-ctor .ctorX__ear{
+  background: #fff !important;
+}
+
+/* форма “прилипшего” ушка — тоже белая и с той же тенью что у панели */
+.sg-main.is-ctor .ctorX__drawer::after{
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: 14px 0 40px rgba(2,6,23,.10) !important;
+}
+
+/* стрелка — чуть темнее, чтобы читалась */
+.sg-main.is-ctor .ctorX__ear::before{
+  color: rgba(15,23,42,.75) !important;
+}
+html[data-theme='dark'] .sg-main.is-ctor .ctorX__ear{
+  background: rgba(15,23,42,.70) !important;
+}
+html[data-theme='dark'] .sg-main.is-ctor .ctorX__drawer::after{
+  background: rgba(15,23,42,.70) !important;
+  box-shadow: 14px 0 40px rgba(0,0,0,.35) !important;
+}
+html[data-theme='dark'] .sg-main.is-ctor .ctorX__ear::before{
+  color: rgba(226,232,240,.85) !important;
+}
 
