@@ -19,7 +19,6 @@
   --r2: 14px;
 
   --side-w: 92px;
-
   --topbar-h: 64px;
 }
 
@@ -226,7 +225,7 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
     radial-gradient(1200px 900px at 30% 0%, rgba(124,92,255,.12), transparent 60%),
     linear-gradient(180deg, #0b1220, #0a1020);
 
-  border-right: 0; /* убираем линию справа */
+  border-right: 0;
   overflow: hidden;
 }
 
@@ -247,14 +246,14 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
   justify-content:center;
 
   background: rgba(124,92,255,.14);
-  border: 0;              /* убрали линии */
+  border: 0;
   box-shadow: 0 10px 30px rgba(0,0,0,.22);
   color: rgba(255,255,255,.92);
   cursor: pointer;
 }
 .logoMark{ font-size: 20px; }
 
-/* scroll area: оставляем прокрутку, но скрываем scrollbar полностью */
+/* scroll area */
 .side__scroll{
   flex: 1 1 auto;
   min-height: 0;
@@ -264,10 +263,7 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.side__scroll::-webkit-scrollbar{
-  width: 0;
-  height: 0;
-}
+.side__scroll::-webkit-scrollbar{ width: 0; height: 0; }
 
 /* nav */
 .side__nav{
@@ -277,10 +273,10 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
   padding-bottom: 12px;
 }
 
-/* убираем разделители вообще */
+/* убираем разделители */
 .side__sep{ display: none !important; }
 
-/* item: никаких border/box-shadow/псевдолиний */
+/* item */
 .side__item{
   display:flex;
   flex-direction:column;
@@ -303,7 +299,6 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
   content: none !important;
   display: none !important;
 }
-
 .side__item:hover{ color: rgba(255,255,255,.88); }
 .side__item:active{ transform: translateY(1px); }
 
@@ -323,24 +318,19 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
 
   transition: background .18s ease, box-shadow .18s ease, transform .08s ease;
 }
+.side__item:hover .ico{ background: rgba(255,255,255,.10); }
 
-.side__item:hover .ico{
-  background: rgba(255,255,255,.10);
-}
-
-.side__item.is-active{
-  color: rgba(255,255,255,.92);
-}
+.side__item.is-active{ color: rgba(255,255,255,.92); }
 .side__item.is-active .ico{
   background: rgba(34,211,238,.18);
   box-shadow: 0 0 0 3px rgba(34,211,238,.12);
 }
 
-/* text: НЕ жирный */
+/* text */
 .side__item .txt{
   font-size: 11px;
   line-height: 1.05;
-  font-weight: 650; /* <— было 850, делаем норм */
+  font-weight: 650;
   text-align:center;
   opacity: .92;
 
@@ -351,23 +341,20 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
 }
 
 /* =========================
-   CONTENT polish (делает “дорого” внутри разделов)
+   CONTENT polish
    ========================= */
 
-/* общий контейнер страниц (если есть) */
 .page,
 .sg-page{
   display: grid;
   gap: 14px;
 }
 
-/* если у страниц заголовки сверху */
 .page h1, .sg-page h1{
   font-size: 22px;
   font-weight: 900;
 }
 
-/* карточки везде выглядят одинаково */
 .card, .panel, .box{
   background: var(--card);
   border: 1px solid var(--border);
@@ -375,7 +362,6 @@ html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
   box-shadow: var(--shadow2);
 }
 
-/* убрать “голые” бордер-линии у случайных hr */
 hr{
   border: 0;
   height: 1px;
@@ -391,18 +377,12 @@ hr{
   .side__scroll{ max-height: 260px; }
 }
 
-
-
 /* =========================
    CABINET PREMIUM SKIN (applies to ALL pages)
    ========================= */
 
-/* общий max-width и мягкий контейнер */
-.sg-main{
-  padding: 16px 22px 56px;
-}
+.sg-main{ padding: 16px 22px 56px; }
 
-/* сделать “плашки” во всех разделах одинаковыми */
 .sg-card,
 .card, .panel, .box,
 .page > section, .sg-page > section,
@@ -413,7 +393,6 @@ hr{
   box-shadow: var(--shadow2);
 }
 
-/* заголовки + подписи */
 .sg-h1, h1{
   font-weight: 900;
   letter-spacing: -0.2px;
@@ -423,7 +402,6 @@ hr{
   font-weight: 650;
 }
 
-/* кнопки/инпуты — “старо-студийный” вид: не жирные, аккуратные */
 .sg-btn,
 button.sg-btn,
 button{
@@ -443,52 +421,32 @@ html[data-theme='dark'] textarea{
   background: rgba(2,6,23,.40);
 }
 
-/* убираем “лишние линии” в разделах */
-hr{
-  border: 0;
-  height: 1px;
-  background: var(--border2);
-}
 .sg-table th, .sg-table td{
   border-bottom: 1px solid var(--border2);
 }
 
-/* topbar: чтобы выглядел как старая “дорогая” панель */
 .sg-topbar{
   border-bottom: 1px solid var(--border2);
   padding-bottom: 14px;
 }
 
-/* чуть компактнее элементы в topbar */
-.top__select{
-  border-radius: 16px;
-}
-.top__dates input{
-  width: 160px;
-}
+.top__select{ border-radius: 16px; }
+.top__dates input{ width: 160px; }
 
-/* кнопка “Выйти” и pill — одинаковые “капсулы” */
-.sg-pill{
-  background: var(--card2);
-}
-
+.sg-pill{ background: var(--card2); }
 
 /* =========================
-   Constructor: ear drawer + phone preview (ported from miniapp_sections_fixed2)
+   Constructor legacy (keep if you still use ctor__* somewhere)
    ========================= */
 
-.ctor__body--ear{
-  position: relative;
-}
+.ctor__body--ear{ position: relative; }
 
-/* LEFT drawer */
 .ctor__left--ear{
   position: relative;
   overflow: hidden;
   min-height: 0;
 }
 
-/* scroll only inside left content */
 .ctor__leftInner{
   min-height: 0;
   overflow: auto;
@@ -499,7 +457,6 @@ hr{
 }
 .ctor__leftInner::-webkit-scrollbar{ width: 0; height: 0; }
 
-/* resize grip */
 .ctor__resizeGrip{
   position: absolute;
   top: 0;
@@ -513,7 +470,6 @@ html[data-theme='dark'] .ctor__resizeGrip{
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.08));
 }
 
-/* ear button (like .nav-ear in old) */
 .ctor__ear{
   position: absolute;
   top: 140px;
@@ -543,10 +499,7 @@ html[data-theme='dark'] .ctor__resizeGrip{
 .ctor__ear:hover{ filter: brightness(1.06); }
 .ctor__ear:active{ transform: translateY(1px) scale(.98); }
 
-/* closed state: keep just a thin rail */
-.ctor__left--ear.is-closed{
-  width: 16px !important;
-}
+.ctor__left--ear.is-closed{ width: 16px !important; }
 .ctor__left--ear.is-closed .ctor__leftInner{
   opacity: 0;
   pointer-events: none;
@@ -560,7 +513,6 @@ html[data-theme='dark'] .ctor__resizeGrip{
   gap: 12px;
 }
 
-/* header controls inside preview */
 .ctor-preview__hdr{
   display:flex;
   align-items:center;
@@ -585,7 +537,6 @@ html[data-theme='dark'] .ctor__resizeGrip{
   background: var(--accentSoft);
 }
 
-/* zoom rail */
 .ctor-preview__zoom{
   display:flex;
   align-items:center;
@@ -596,9 +547,7 @@ html[data-theme='dark'] .ctor__resizeGrip{
   font-weight: 900;
   color: var(--muted);
 }
-.ctor-preview__zoomSlider{
-  width: 180px;
-}
+.ctor-preview__zoomSlider{ width: 180px; }
 .ctor-preview__zoomVal{
   font-weight: 900;
   color: var(--muted);
@@ -606,7 +555,6 @@ html[data-theme='dark'] .ctor__resizeGrip{
   text-align:right;
 }
 
-/* stage */
 .ctor-preview__stage{
   flex: 1;
   min-height: 520px;
@@ -617,15 +565,16 @@ html[data-theme='dark'] .ctor__resizeGrip{
   border-radius: var(--r);
   border: 1px solid var(--border);
   background: rgba(255,255,255,.45);
+
+  overflow: auto;          /* IMPORTANT: zoom не ломает */
+  padding: 18px;           /* чтобы телефон не “лип” */
+  justify-content:flex-start; /* полотно “влево до упора” */
 }
 html[data-theme='dark'] .ctor-preview__stage{
   background: rgba(2,6,23,.22);
 }
 
-/* phone */
-.ctor-phoneDock{
-  transform-origin: center center;
-}
+.ctor-phoneDock{ transform-origin: top left; } /* масштаб не от центра */
 
 .ctor-phone{
   position: relative;
@@ -662,358 +611,25 @@ html[data-theme='dark'] .ctor-preview__stage{
   background: #000;
 }
 
-
 /* =========================
-   Constructor X: LEFT drawer + PREVIEW (inspector inside drawer)
+   Constructor X (CANON): fixed drawer + pushed preview (NO CONFLICTS)
    ========================= */
 
 .ctorX{
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
-  min-height: calc(100vh - 140px); /* под topbar */
-  align-items: stretch;
-}
-
-/* LEFT */
-.ctorX__left{
-  position: relative;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.ctorX__leftInner{
-  min-height: 0;
-  height: 100%;
-  overflow: auto;
-  padding-right: 6px;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.ctorX__leftInner::-webkit-scrollbar{ width: 0; height: 0; }
-
-/* inspector wrapper inside left */
-.ctorX__insWrap{
-  margin-top: 12px;
-}
-
-/* resize */
-.ctorX__resizeGrip{
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 10px;
-  height: 100%;
-  cursor: ew-resize;
-  background: linear-gradient(90deg, transparent, rgba(15,23,42,.06));
-}
-html[data-theme='dark'] .ctorX__resizeGrip{
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08));
-}
-
-/* ear */
-.ctorX__ear{
-  position: absolute;
-  top: 140px;
-  right: -14px;
-  width: 28px;
-  height: 86px;
-  border-radius: 18px;
-  border: 1px solid rgba(8,8,8,.25);
-  background: rgba(15, 17, 57, 0.92);
-  box-shadow: 0 14px 30px rgba(0,0,0,.25);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  z-index: 20;
-}
-.ctorX__ear span{
-  color:#fff;
-  font-weight: 900;
-  font-size: 14px;
-}
-.ctorX__left.is-closed .ctorX__leftInner{
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* PREVIEW */
-.ctorX__preview{
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-}
-
-/* Preview header layout */
-.ctorP__hdr{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.ctorP__right{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.ctorP__actions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-
-.ctorP__act{
-  padding: 9px 12px;
-  border-radius: 999px;
-  font-weight: 750;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===== Constructor layout with drawer (Plan B) ===== */
-.ctorX{
-  display: flex;
-  gap: 14px;
-  min-height: 0;
-  /* если хочешь чтобы конструктор занимал экран под topbar */
-  /* height: calc(100vh - 92px); */
-}
-
-.ctorX__left{
-  position: relative;
-  flex: 0 0 auto;
-  min-width: 16px;
-  max-width: 560px;
-
-  border-radius: var(--r);
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: var(--shadow);
-
-  overflow: hidden;
-  transition: width .18s ease;
-}
-
-.ctorX__leftInner{
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  min-height: 0;
-}
-
-.ctorX__insWrap{
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: auto;
-}
-
-/* ресайзер */
-.ctorX__resizeGrip{
-  position: absolute;
-  top: 0;
-  right: -6px;
-  width: 12px;
-  height: 100%;
-  cursor: ew-resize;
-  background: transparent;
-}
-
-/* ушко */
-.ctorX__ear{
-  position: absolute;
-  top: 50%;
-  right: -18px;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 84px;
-
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.78);
-  box-shadow: var(--shadow);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-html[data-theme='dark'] .ctorX__ear{
-  background: rgba(2,6,23,.55);
-}
-
-.ctorX__earIcon{
-  font-weight: 900;
-  opacity: .75;
-}
-
-/* ПРАВАЯ часть должна реально сжиматься/расширяться */
-.ctorX__preview{
-  flex: 1 1 auto;
-  min-width: 0;     /* ВАЖНО: иначе iframe/контент не сжимается */
-  min-height: 0;
-
-  border-radius: var(--r);
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.55);
-  box-shadow: var(--shadow);
-
-  overflow: hidden;
-}
-
-/* Если внутри PreviewFrame есть обертка — пусть тоже умеет сжиматься */
-.ctorX__preview *{
-  min-width: 0;
-}
-
-
-/* =========================
-   Constructor X layout (drawer + preview)
-   ========================= */
-
-/* важно: ctorX — flex, а не overlay */
-.ctorX{
-  display: flex;
-  gap: 14px;
-  align-items: stretch;
-
-  /* чтобы не “плавало” при прокрутке страницы */
-  height: calc(100vh - 120px); /* подстрой если топбар выше/ниже */
-  min-height: 560px;
-  overflow: hidden;
-}
-
-/* LEFT */
-.ctorX__left{
-  position: relative;
-  flex: 0 0 auto;
-  min-width: 16px;
-
-  border-radius: var(--r);
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-
-  overflow: hidden; /* скролл только внутри */
-}
-
-/* внутренняя прокрутка панели */
-.ctorX__leftInner{
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-
-  overflow: auto;
-  min-height: 0;
-
-  /* спрятать скроллбар (но скролл оставить) */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.ctorX__leftInner::-webkit-scrollbar{ width:0; height:0; }
-
-/* Inspector внутри панели — занимает остаток */
-.ctorX__insWrap{
-  flex: 1 1 auto;
-  min-height: 180px;
-}
-
-/* RESIZE grip */
-.ctorX__resizeGrip{
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 10px;
-  height: 100%;
-  cursor: col-resize;
-  background: transparent;
-}
-
-/* EAR — фикс по центру панели, не “ездит” */
-.ctorX__ear{
-  position: absolute;
-  top: 50%;
-  right: -14px;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 76px;
-
-  border-radius: 16px;
-  border: 1px solid rgba(0,0,0,.08);
-  background: rgba(15,23,42,.08);
-  backdrop-filter: blur(10px);
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-
-  cursor: pointer;
-  box-shadow: 0 10px 30px rgba(0,0,0,.12);
-}
-html[data-theme='dark'] .ctorX__ear{
-  background: rgba(255,255,255,.08);
-  border-color: rgba(255,255,255,.10);
-}
-
-/* RIGHT PREVIEW — всегда занимает остаток ширины */
-.ctorX__preview{
-  flex: 1 1 auto;
-  min-width: 0;
-
-  border-radius: var(--r);
-  background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-
-  overflow: hidden; /* чтобы iframe/контент не вылазил */
-}
-
-/* когда панель закрыта — никаких отступов/паддингов */
-.ctorX__left.is-closed{
-  width: 16px !important;
-}
-
-
-/* ===== Constructor like OLD (Visme drawer) ===== */
-
-.ctorX{
-  /* параметры */
   --ctor-ear-w: 28px;
-  --ctor-ear-over: 14px; /* сколько ушко "залазит" на превью */
-  --ctor-left-w: 420px;  /* переопределяется inline */
-
-  /* чтобы превью “уезжало” как в старом */
+  --ctor-ear-over: 14px;
+  --ctor-left-w: 420px;  /* set inline */
   --ctor-push: var(--ctor-left-w);
-}
 
-/* контейнер занимает экран под topbar */
-.ctorX{
   position: fixed;
   top: var(--topbar-h);
   left: 0;
   right: 0;
   bottom: 0;
+
+  z-index: 10;
 }
 
-/* ===== DRAWER (левая панель) ===== */
 .ctorX__drawer{
   position: fixed;
   top: var(--topbar-h);
@@ -1024,54 +640,23 @@ html[data-theme='dark'] .ctorX__ear{
   background: var(--card);
   border-right: 1px solid var(--border);
   box-shadow: var(--shadow);
-  z-index: 40;
 
-  overflow: visible; /* важно для ушка */
+  overflow: visible;
   transition: transform .25s ease;
+  z-index: 50;
 }
 
-/* внутренняя прокрутка панели */
 .ctorX__drawerInner{
   height: 100%;
   overflow: auto;
   padding: 12px;
+
   scrollbar-width: none;
 }
 .ctorX__drawerInner::-webkit-scrollbar{ width:0; height:0; }
 
-/* ===== PREVIEW (выталкивается) ===== */
-.ctorX__preview{
-  position: fixed;
-  top: var(--topbar-h);
-  left: 0;
-  right: 0;
-  bottom: 0;
+.ctorX__insWrap{ margin-top: 12px; }
 
-  /* место под левое меню + панель */
-  padding-left: calc(var(--side-w) + var(--ctor-push));
-  transition: padding-left .25s ease;
-
-  box-sizing: border-box;
-  z-index: 1;
-}
-
-/* ===== CLOSED state ===== */
-.ctorX.is-closed{
-  --ctor-push: var(--ctor-ear-over); /* при закрытии оставляем место только под ушко */
-}
-
-.ctorX.is-closed .ctorX__drawer{
-  /* уезжаем влево, но оставляем торчать ушко */
-  transform: translateX(calc(-1 * (var(--ctor-left-w) - var(--ctor-ear-over))));
-}
-
-/* прячем контент панели, чтобы не ловил клики */
-.ctorX.is-closed .ctorX__drawerInner{
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* ===== RESIZE ===== */
 .ctorX__resizeGrip{
   position: absolute;
   top: 0;
@@ -1082,13 +667,40 @@ html[data-theme='dark'] .ctorX__ear{
   background: transparent;
 }
 
-/* ===== “Слитое” ушко как в старом ===== */
+/* preview pushed */
+.ctorX__preview{
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  padding-left: calc(var(--side-w) + var(--ctor-push));
+  transition: padding-left .25s ease;
+
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+/* CLOSED */
+.ctorX.is-closed{
+  --ctor-push: var(--ctor-ear-over);
+}
+.ctorX.is-closed .ctorX__drawer{
+  transform: translateX(calc(-1 * (var(--ctor-left-w) - var(--ctor-ear-over))));
+}
+.ctorX.is-closed .ctorX__drawerInner{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* “слитое” ушко форма */
 .ctorX__drawer::after{
   content:"";
   position:absolute;
   top:50%;
   left:100%;
-  margin-left:-1px; /* “сварка” со стенкой */
+  margin-left:-1px;
   transform:translateY(-50%);
 
   width: var(--ctor-ear-w);
@@ -1103,6 +715,7 @@ html[data-theme='dark'] .ctorX__ear{
   pointer-events:none;
 }
 
+/* ear button */
 .ctorX__ear{
   position:absolute;
   top:50%;
@@ -1119,10 +732,9 @@ html[data-theme='dark'] .ctorX__ear{
   padding:0;
   cursor:pointer;
 
-  z-index: 60;
+  z-index: 200; /* IMPORTANT: поверх телефона */
 }
 
-/* стрелка как в старом через псевдоэлемент */
 .ctorX__ear::before{
   content:"›";
   display:block;
@@ -1131,14 +743,5 @@ html[data-theme='dark'] .ctorX__ear{
   color: rgba(15,23,42,.85);
   transition: transform .25s ease;
 }
-
-/* когда открыто — стрелка влево */
-.ctorX.is-open .ctorX__ear::before{
-  transform: rotate(180deg);
-}
-
-/* dark */
-html[data-theme='dark'] .ctorX__ear::before{
-  color: rgba(226,232,240,.90);
-}
-
+.ctorX.is-open .ctorX__ear::before{ transform: rotate(180deg); }
+html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
