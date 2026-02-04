@@ -835,3 +835,12 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   left: var(--side-w) !important;
 }
 
+/* hide topbar spacing on constructor page */
+.sg-main.is-ctor{
+  --topbar-h: 0px;
+}
+
+/* ctorX должен прижаться к верху */
+.sg-main.is-ctor .ctorX{
+  top: 0 !important;
+}
