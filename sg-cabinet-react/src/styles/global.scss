@@ -787,12 +787,11 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   justify-content: center;
 
   overflow: auto;
-  padding: 18px;
+
+  /* было: padding: 18px; */
+  padding: 42px 18px 18px; /* ↑ увеличиваешь первое число — телефон ниже */
 }
 
-.ctor-phoneDock{
-  transform-origin: center top;
-}
 
 /* =========================
    Make ctorX go UNDER cabinet sidebar (not over)
