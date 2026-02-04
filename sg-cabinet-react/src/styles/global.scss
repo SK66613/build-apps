@@ -781,16 +781,12 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
    PREVIEW phone stage behavior
    - ALWAYS center (no jumping)
    ========================= */
-.ctor-preview__stage{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  overflow: auto;
-
-  /* было: padding: 18px; */
-  padding: 82px 18px 18px; /* ↑ увеличиваешь первое число — телефон ниже */
+.ctor-preview__stage{ display: flex; align-items: center; justify-content: center; overflow: auto; padding: 18px; } 
+.ctor-phoneDock{
+  transform-origin: center top;
+  margin-top: 44px; /* ↑ проще и не ломает scale */
 }
+
 
 
 /* =========================
