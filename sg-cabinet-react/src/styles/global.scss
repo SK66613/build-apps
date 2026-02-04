@@ -87,7 +87,7 @@ html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.55); }
 .sg-table td{ padding: 12px 10px; border-bottom: 1px solid var(--border); font-weight: 700; }
 
 /* =========================
-   Shell Layout
+   Shell layout (NEW)
    ========================= */
 
 .sg-shell{
@@ -99,50 +99,71 @@ html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.55); }
 .sg-main{
   padding: 18px 22px 42px;
   min-width: 0;
-  max-width: none;
+  max-width: none; /* важно: конструктор/дашборд не сужать */
 }
 
 .sg-topbar{
   display:flex;
   align-items:center;
+  gap: 10px;
+  padding: 14px 0;
+}
+
+.sg-topbar--v2{
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 0;
   flex-wrap: wrap;
 }
 
-.sg-topbar__left,
-.sg-topbar__right{
+.top__left,
+.top__right{
   display:flex;
   align-items:center;
   gap: 10px;
   min-width: 0;
 }
 
-.sg-brand{
+.top__brand{
   display:flex;
   flex-direction:column;
   line-height: 1.05;
-  margin-right: 6px;
+  margin-right: 8px;
 }
-.sg-brand__title{ font-weight: 1000; font-size: 14px; }
-.sg-brand__sub{ font-weight: 900; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.top__brandTitle{ font-weight: 1000; letter-spacing: -0.2px; }
+.top__brandSub{ font-size: 12px; color: var(--muted); font-weight: 800; margin-top: 3px; }
 
-.sg-user{
-  font-weight: 850;
-  font-size: 12px;
-  color: var(--muted);
-  padding: 8px 10px;
-  border-radius: 999px;
+.top__proj{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  min-width: 260px;
+}
+.top__label{ font-size: 12px; color: var(--muted); font-weight: 900; }
+
+.top__select{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,.55);
+  background: rgba(255,255,255,.75);
+  font-weight: 900;
 }
-html[data-theme='dark'] .sg-user{ background: rgba(2,6,23,.35); }
+html[data-theme='dark'] .top__select{
+  background: rgba(2,6,23,.45);
+}
 
-.sg-content{ min-width: 0; }
+.top__dates{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+.top__arrow{
+  color: var(--muted);
+  font-weight: 900;
+}
 
 /* =========================
-   LEFT SIDE MENU (scroll + icon highlight)
+   Left mini sidebar (как в старом конструкторе)
    ========================= */
 
 .side{
@@ -158,7 +179,7 @@ html[data-theme='dark'] .sg-user{ background: rgba(2,6,23,.35); }
               linear-gradient(180deg, #0b1220, #0a1020);
   border-right: 1px solid rgba(255,255,255,.06);
 
-  overflow: hidden;
+  overflow: hidden; /* скролл внутри */
 }
 
 .side__top{
@@ -183,6 +204,7 @@ html[data-theme='dark'] .sg-user{ background: rgba(2,6,23,.35); }
   color: rgba(255,255,255,.92);
   cursor: pointer;
 }
+
 .logoMark{ font-size: 20px; }
 
 .side__scroll{
@@ -192,6 +214,7 @@ html[data-theme='dark'] .sg-user{ background: rgba(2,6,23,.35); }
   padding-right: 4px;
 }
 
+/* тонкий скролл */
 .side__scroll::-webkit-scrollbar{ width: 8px; }
 .side__scroll::-webkit-scrollbar-thumb{
   background: rgba(255,255,255,.16);
@@ -212,6 +235,7 @@ html[data-theme='dark'] .sg-user{ background: rgba(2,6,23,.35); }
   border-radius: 999px;
 }
 
+/* пункт: без большой плашки; подсветка на иконке */
 .side__item{
   display:flex;
   flex-direction:column;
@@ -270,73 +294,6 @@ html[data-theme='dark'] .sg-user{ background: rgba(2,6,23,.35); }
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-
-/* =========================
-   Constructor (Plan B)
-   ========================= */
-
-.ctor{
-  display: grid;
-  gap: 14px;
-  min-height: 0;
-}
-
-.ctor__body{
-  display: grid;
-  gap: 14px;
-  min-height: 0;
-  grid-template-columns:
-    minmax(320px, 420px)
-    minmax(0, 1fr)
-    minmax(320px, 420px);
-  align-items: stretch;
-}
-
-.ctor__left,
-.ctor__center,
-.ctor__right{
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-@media (max-width: 1180px){
-  .ctor__body{
-    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-    grid-template-rows: auto auto;
-  }
-  .ctor__right{ grid-column: 1 / -1; }
-}
-
-@media (max-width: 820px){
-  .ctor__body{ grid-template-columns: 1fr; }
-}
-
-.ctor-card{
-  padding: 14px;
-  min-height: 0;
-}
-
-.ctor-preview{
-  padding: 0;
-  overflow: hidden;
-  flex: 1;
-  min-height: 520px;
-}
-
-.ctor-preview__frame{
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  border-radius: var(--r);
-}
-
-.ctor-inspector{
-  flex: 1;
-  overflow: auto;
 }
 
 /* responsive */
