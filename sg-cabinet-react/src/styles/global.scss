@@ -558,26 +558,29 @@ html[data-theme='dark'] .ctor__resizeGrip{
 .ctor-preview__stage{
   flex: 1;
   min-height: 520px;
+
   display:flex;
-  align-items:center;
-  justify-content:center;
+  align-items: flex-start;     /* вместо center */
+  justify-content: center;     /* телефон по центру по X */
 
   border-radius: var(--r);
   border: 1px solid var(--border);
   background: rgba(255,255,255,.45);
 
-  overflow: auto;          /* IMPORTANT: zoom не ломает */
-  padding: 18px;           /* чтобы телефон не “лип” */
-  justify-content:flex-start; /* полотно “влево до упора” */
+  overflow: auto;
+
+  /* вот этим опускаешь телефон */
+  padding: 64px 18px 18px;     /* ↑ 64px меняй как хочешь */
 }
 html[data-theme='dark'] .ctor-preview__stage{
   background: rgba(2,6,23,.22);
 }
 
+
 .ctor-phoneDock{ transform-origin: top left; } /* масштаб не от центра */
 
 .ctor-phone{
-  margin-top: 28px; /* ↑ увеличивай — телефон ниже */
+  position: relative;
   background: #000;
   border: 10px solid #0b0f18;
   box-shadow: 0 26px 80px rgba(0,0,0,.35);
@@ -781,11 +784,8 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
    PREVIEW phone stage behavior
    - ALWAYS center (no jumping)
    ========================= */
-.ctor-preview__stage{ display: flex; align-items: center; justify-content: center; overflow: auto; padding: 18px; } 
-.ctor-phoneDock{
-  transform-origin: center top;
-  margin-top: 44px; /* ↑ проще и не ломает scale */
-}
+
+
 
 
 
