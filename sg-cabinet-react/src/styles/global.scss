@@ -2,41 +2,61 @@
   --bg: #f4f6ff;
   --bg2: #eef2ff;
   --card: rgba(255,255,255,.92);
+  --card2: rgba(255,255,255,.72);
   --border: rgba(15,23,42,.12);
+  --border2: rgba(15,23,42,.08);
   --text: #0b1220;
-  --muted: rgba(15,23,42,.65);
+  --muted: rgba(15,23,42,.62);
+
   --accent: #22d3ee;
   --accent2: #3b82f6;
-  --accentSoft: rgba(34,211,238,.16);
+  --accentSoft: rgba(34,211,238,.14);
+
   --shadow: 0 18px 52px rgba(2,6,23,.10);
+  --shadow2: 0 10px 28px rgba(2,6,23,.08);
+
   --r: 18px;
   --r2: 14px;
 
-  --side-w: 96px;
+  --side-w: 92px;
+
+  --topbar-h: 64px;
 }
 
 html[data-theme='dark']{
   --bg: #020617;
-  --bg2: #111827;
-  --card: rgba(15,23,42,.66);
+  --bg2: #0b1220;
+  --card: rgba(15,23,42,.70);
+  --card2: rgba(15,23,42,.52);
   --border: rgba(148,163,184,.22);
+  --border2: rgba(148,163,184,.14);
   --text: #e5e7eb;
   --muted: rgba(226,232,240,.70);
-  --accentSoft: rgba(34,211,238,.14);
-  --shadow: 0 18px 52px rgba(0,0,0,.45);
+
+  --accentSoft: rgba(34,211,238,.12);
+
+  --shadow: 0 18px 52px rgba(0,0,0,.50);
+  --shadow2: 0 10px 28px rgba(0,0,0,.32);
 }
 
-*{box-sizing:border-box}
+*{ box-sizing:border-box; }
+html, body{ height: 100%; }
+
 body{
+  margin: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--text);
-  background: radial-gradient(circle at 10% 0, #ffffff 0, var(--bg) 55%, var(--bg2) 100%);
+  background:
+    radial-gradient(circle at 10% 0, rgba(255,255,255,.90) 0, var(--bg) 55%, var(--bg2) 100%);
 }
 
-a{color:inherit; text-decoration:none}
-button, input, select, textarea{font:inherit}
+a{ color:inherit; text-decoration:none; }
+button, input, select, textarea{ font:inherit; }
 
-/* utility */
+/* ==== smoother typography defaults ==== */
+h1,h2,h3{ margin: 0; letter-spacing: -0.2px; }
+
+/* ==== generic “premium” card ==== */
 .sg-card{
   background: var(--card);
   border: 1px solid var(--border);
@@ -44,15 +64,19 @@ button, input, select, textarea{font:inherit}
   box-shadow: var(--shadow);
 }
 
+/* buttons/inputs (единый вид, не жирный) */
 .sg-btn{
   border-radius: 999px;
   padding: 10px 14px;
-  font-weight: 850;
+  font-weight: 750;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.86);
   color: var(--text);
   cursor: pointer;
-  transition: transform .08s ease, filter .15s ease;
+  transition: transform .08s ease, filter .15s ease, background .15s ease;
+}
+html[data-theme='dark'] .sg-btn{
+  background: rgba(2,6,23,.35);
 }
 .sg-btn:active{ transform: translateY(1px) scale(.99); }
 .sg-btn:hover{ filter: brightness(1.02); }
@@ -71,25 +95,40 @@ button, input, select, textarea{font:inherit}
   border: 1px solid var(--border);
   background: rgba(255,255,255,.86);
   color: var(--text);
+  outline: none;
 }
-html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.55); }
+html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.45); }
 
-.sg-label{font-size:12px; font-weight:800; color: var(--muted)}
-.sg-pill{padding:8px 12px; border-radius:999px; border:1px solid var(--border); font-weight:800}
+/* pill / label */
+.sg-label{ font-size:12px; font-weight: 750; color: var(--muted); }
+.sg-pill{
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-weight: 750;
+  background: var(--card2);
+}
 
-.sg-h1{font-size: 22px; font-weight: 950; margin: 0}
-.sg-sub{color: var(--muted); font-weight: 700; margin-top: 4px}
+/* headings */
+.sg-h1{ font-size: 22px; font-weight: 900; margin: 0; }
+.sg-sub{ color: var(--muted); font-weight: 650; margin-top: 4px; }
 
-.sg-section-title{display:flex; align-items:end; justify-content:space-between; gap:12px; margin-top: 10px}
-
-.sg-table{width:100%; border-collapse: collapse; font-size: 13px}
-.sg-table th{ text-align:left; padding: 10px 10px; color: var(--muted); font-weight: 900; border-bottom: 1px solid var(--border); }
-.sg-table td{ padding: 12px 10px; border-bottom: 1px solid var(--border); font-weight: 700; }
+/* tables */
+.sg-table{ width:100%; border-collapse: collapse; font-size: 13px; }
+.sg-table th{
+  text-align:left; padding: 10px 10px;
+  color: var(--muted); font-weight: 800;
+  border-bottom: 1px solid var(--border2);
+}
+.sg-table td{
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border2);
+  font-weight: 650;
+}
 
 /* =========================
-   Shell layout (NEW)
+   SHELL
    ========================= */
-
 .sg-shell{
   display: grid;
   grid-template-columns: var(--side-w) minmax(0, 1fr);
@@ -97,22 +136,30 @@ html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.55); }
 }
 
 .sg-main{
-  padding: 18px 22px 42px;
   min-width: 0;
-  max-width: none; /* важно: конструктор/дашборд не сужать */
+  max-width: none;
+  padding: 14px 18px 42px;
 }
 
+/* topbar (дорого) */
 .sg-topbar{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
   display:flex;
   align-items:center;
-  gap: 10px;
-  padding: 14px 0;
-}
-
-.sg-topbar--v2{
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+
+  padding: 12px 0 14px;
+
+  /* subtle background so content doesn't "jump" under it */
+  background: linear-gradient(180deg, rgba(244,246,255,.92), rgba(244,246,255,.35) 70%, transparent);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+html[data-theme='dark'] .sg-topbar{
+  background: linear-gradient(180deg, rgba(2,6,23,.92), rgba(2,6,23,.35) 70%, transparent);
 }
 
 .top__left,
@@ -129,8 +176,8 @@ html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.55); }
   line-height: 1.05;
   margin-right: 8px;
 }
-.top__brandTitle{ font-weight: 1000; letter-spacing: -0.2px; }
-.top__brandSub{ font-size: 12px; color: var(--muted); font-weight: 800; margin-top: 3px; }
+.top__brandTitle{ font-weight: 900; font-size: 14px; }
+.top__brandSub{ font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 3px; }
 
 .top__proj{
   display:flex;
@@ -138,50 +185,52 @@ html[data-theme='dark'] .sg-input{ background: rgba(2,6,23,.55); }
   gap: 6px;
   min-width: 260px;
 }
-.top__label{ font-size: 12px; color: var(--muted); font-weight: 900; }
+.top__label{ font-size: 12px; color: var(--muted); font-weight: 750; }
 
 .top__select{
   width: 100%;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,.75);
-  font-weight: 900;
+  background: rgba(255,255,255,.70);
+  font-weight: 750;
+  outline: none;
 }
-html[data-theme='dark'] .top__select{
-  background: rgba(2,6,23,.45);
-}
+html[data-theme='dark'] .top__select{ background: rgba(2,6,23,.35); }
 
 .top__dates{
   display:flex;
   gap: 8px;
   align-items:center;
 }
-.top__arrow{
-  color: var(--muted);
-  font-weight: 900;
+.top__dates input{
+  padding: 10px 12px;
+  border-radius: 14px;
 }
+.top__arrow{ color: var(--muted); font-weight: 800; }
 
 /* =========================
-   Left mini sidebar (как в старом конструкторе)
+   LEFT MINI SIDEBAR (без скроллбара/полосок/линий)
    ========================= */
-
 .side{
   position: sticky;
   top: 0;
   height: 100vh;
+
   padding: 14px 10px;
-  display: flex;
-  flex-direction: column;
+  display:flex;
+  flex-direction:column;
   gap: 12px;
 
-  background: radial-gradient(1200px 900px at 30% 0%, rgba(124,92,255,.12), transparent 60%),
-              linear-gradient(180deg, #0b1220, #0a1020);
-  border-right: 1px solid rgba(255,255,255,.06);
+  background:
+    radial-gradient(1200px 900px at 30% 0%, rgba(124,92,255,.12), transparent 60%),
+    linear-gradient(180deg, #0b1220, #0a1020);
 
-  overflow: hidden; /* скролл внутри */
+  border-right: 0; /* убираем линию справа */
+  overflow: hidden;
 }
 
+/* top logo */
 .side__top{
   flex: 0 0 auto;
   display:flex;
@@ -189,53 +238,49 @@ html[data-theme='dark'] .top__select{
   justify-content:center;
   padding: 4px 0 8px;
 }
-
 .side__logo{
-  width: 54px;
-  height: 54px;
+  width: 52px;
+  height: 52px;
   border-radius: 18px;
   display:flex;
   align-items:center;
   justify-content:center;
 
   background: rgba(124,92,255,.14);
-  border: 1px solid rgba(124,92,255,.22);
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  border: 0;              /* убрали линии */
+  box-shadow: 0 10px 30px rgba(0,0,0,.22);
   color: rgba(255,255,255,.92);
   cursor: pointer;
 }
-
 .logoMark{ font-size: 20px; }
 
+/* scroll area: оставляем прокрутку, но скрываем scrollbar полностью */
 .side__scroll{
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding-right: 4px;
+  padding-right: 0;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.side__scroll::-webkit-scrollbar{
+  width: 0;
+  height: 0;
 }
 
-/* тонкий скролл */
-.side__scroll::-webkit-scrollbar{ width: 8px; }
-.side__scroll::-webkit-scrollbar-thumb{
-  background: rgba(255,255,255,.16);
-  border-radius: 999px;
-}
-.side__scroll::-webkit-scrollbar-track{ background: transparent; }
-
+/* nav */
 .side__nav{
   display:flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction:column;
+  gap: 10px;
+  padding-bottom: 12px;
 }
 
-.side__sep{
-  height: 1px;
-  background: rgba(255,255,255,.08);
-  margin: 6px 10px;
-  border-radius: 999px;
-}
+/* убираем разделители вообще */
+.side__sep{ display: none !important; }
 
-/* пункт: без большой плашки; подсветка на иконке */
+/* item: никаких border/box-shadow/псевдолиний */
 .side__item{
   display:flex;
   flex-direction:column;
@@ -245,35 +290,42 @@ html[data-theme='dark'] .top__select{
 
   padding: 10px 8px;
   border-radius: 16px;
-  text-decoration: none;
 
-  color: rgba(255,255,255,.55);
-  background: transparent;
-  border: 1px solid transparent;
+  color: rgba(255,255,255,.56);
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 
   transition: transform .08s ease, color .18s ease;
 }
-.side__item:hover{ color: rgba(255,255,255,.86); }
+.side__item::before,
+.side__item::after{
+  content: none !important;
+  display: none !important;
+}
+
+.side__item:hover{ color: rgba(255,255,255,.88); }
 .side__item:active{ transform: translateY(1px); }
 
+/* icon “pills” */
 .side__item .ico{
-  width: 32px;
-  height: 32px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 16px;
+
   display:flex;
   align-items:center;
   justify-content:center;
 
   background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.06);
+  border: 0 !important;
+  box-shadow: none !important;
 
-  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, filter .18s ease;
+  transition: background .18s ease, box-shadow .18s ease, transform .08s ease;
 }
 
 .side__item:hover .ico{
   background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.14);
-  filter: brightness(1.03);
 }
 
 .side__item.is-active{
@@ -281,57 +333,60 @@ html[data-theme='dark'] .top__select{
 }
 .side__item.is-active .ico{
   background: rgba(34,211,238,.18);
-  border-color: rgba(34,211,238,.34);
   box-shadow: 0 0 0 3px rgba(34,211,238,.12);
 }
 
+/* text: НЕ жирный */
 .side__item .txt{
   font-size: 11px;
   line-height: 1.05;
-  font-weight: 850;
+  font-weight: 650; /* <— было 850, делаем норм */
   text-align:center;
+  opacity: .92;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  max-width: 86px;
 }
 
-/* responsive */
+/* =========================
+   CONTENT polish (делает “дорого” внутри разделов)
+   ========================= */
+
+/* общий контейнер страниц (если есть) */
+.page,
+.sg-page{
+  display: grid;
+  gap: 14px;
+}
+
+/* если у страниц заголовки сверху */
+.page h1, .sg-page h1{
+  font-size: 22px;
+  font-weight: 900;
+}
+
+/* карточки везде выглядят одинаково */
+.card, .panel, .box{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow2);
+}
+
+/* убрать “голые” бордер-линии у случайных hr */
+hr{
+  border: 0;
+  height: 1px;
+  background: var(--border2);
+}
+
+/* =========================
+   MOBILE
+   ========================= */
 @media (max-width: 640px){
   .sg-shell{ grid-template-columns: 1fr; }
   .side{ position: relative; height: auto; }
-  .side__scroll{ max-height: 280px; }
+  .side__scroll{ max-height: 260px; }
 }
-
-
-/* скрыть скроллбар в меню, но оставить прокрутку */
-.side__scroll{
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* old Edge/IE */
-}
-.side__scroll::-webkit-scrollbar{
-  width: 0;
-  height: 0;
-}
-
-
-/* убираем любые линии/границы у пунктов меню */
-.side__item{
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-/* иконка — тоже без “инсет-линий” */
-.side__item .ico{
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-/* если где-то рисуется разделительная линия псевдоэлементом */
-.side__item::before,
-.side__item::after{
-  content: none !important;
-  display: none !important;
-}
-
