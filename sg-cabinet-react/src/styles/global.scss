@@ -302,3 +302,36 @@ html[data-theme='dark'] .top__select{
   .side{ position: relative; height: auto; }
   .side__scroll{ max-height: 280px; }
 }
+
+
+/* скрыть скроллбар в меню, но оставить прокрутку */
+.side__scroll{
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* old Edge/IE */
+}
+.side__scroll::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+
+/* убираем любые линии/границы у пунктов меню */
+.side__item{
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* иконка — тоже без “инсет-линий” */
+.side__item .ico{
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* если где-то рисуется разделительная линия псевдоэлементом */
+.side__item::before,
+.side__item::after{
+  content: none !important;
+  display: none !important;
+}
+
