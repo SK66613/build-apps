@@ -612,13 +612,16 @@ html[data-theme='dark'] .ctor-preview__stage{
 }
 
 /* =========================
-   Constructor X (CANON): fixed drawer + pushed preview (NO CONFLICTS)
+   CANON ctorX (OLD-like): fixed drawer + pushed preview + ear
+   + fixes: sidebar doesn't overlap preview
+   + fixes: phone centered when drawer closed
    ========================= */
 
 .ctorX{
+  /* sizing */
   --ctor-ear-w: 28px;
-  --ctor-ear-over: 14px;
-  --ctor-left-w: 420px;  /* set inline */
+  --ctor-ear-over: 14px;     /* сколько ушко торчит при закрытии */
+  --ctor-left-w: 420px;      /* задаётся inline в React */
   --ctor-push: var(--ctor-left-w);
 
   position: fixed;
@@ -630,6 +633,7 @@ html[data-theme='dark'] .ctor-preview__stage{
   z-index: 10;
 }
 
+/* ===== DRAWER (левая панель) ===== */
 .ctorX__drawer{
   position: fixed;
   top: var(--topbar-h);
@@ -637,26 +641,31 @@ html[data-theme='dark'] .ctor-preview__stage{
   bottom: 0;
 
   width: var(--ctor-left-w);
+
   background: var(--card);
   border-right: 1px solid var(--border);
   box-shadow: var(--shadow);
 
-  overflow: visible;
+  overflow: visible; /* нужно для ушка */
   transition: transform .25s ease;
-  z-index: 50;
+
+  z-index: 60;
 }
 
+/* внутренняя прокрутка */
 .ctorX__drawerInner{
   height: 100%;
   overflow: auto;
   padding: 12px;
 
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .ctorX__drawerInner::-webkit-scrollbar{ width:0; height:0; }
 
 .ctorX__insWrap{ margin-top: 12px; }
 
+/* ресайзер */
 .ctorX__resizeGrip{
   position: absolute;
   top: 0;
@@ -667,40 +676,56 @@ html[data-theme='dark'] .ctor-preview__stage{
   background: transparent;
 }
 
-/* preview pushed */
+/* ===== PREVIEW (важно: НЕ под сайдбаром) ===== */
 .ctorX__preview{
   position: fixed;
   top: var(--topbar-h);
-  left: 0;
+
+  /* sidebar больше не перекрывает превью */
+  left: var(--side-w);
   right: 0;
   bottom: 0;
 
-  padding-left: calc(var(--side-w) + var(--ctor-push));
+  /* толкаем превью на ширину панели */
+  padding-left: var(--ctor-push);
   transition: padding-left .25s ease;
 
   box-sizing: border-box;
   z-index: 1;
 }
 
-/* CLOSED */
+/* если PreviewFrame внутри имеет обертку — пусть тянется */
+.ctorX__preview > *{
+  height: calc(100vh - var(--topbar-h));
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ===== CLOSED STATE ===== */
 .ctorX.is-closed{
+  /* когда закрыто — оставляем место под ушко */
   --ctor-push: var(--ctor-ear-over);
 }
+
 .ctorX.is-closed .ctorX__drawer{
+  /* уезжаем, оставляя торчащее ушко */
   transform: translateX(calc(-1 * (var(--ctor-left-w) - var(--ctor-ear-over))));
 }
+
 .ctorX.is-closed .ctorX__drawerInner{
   opacity: 0;
   pointer-events: none;
 }
 
-/* “слитое” ушко форма */
+/* ===== “Слитое” ушко (форма) ===== */
 .ctorX__drawer::after{
   content:"";
   position:absolute;
   top:50%;
   left:100%;
-  margin-left:-1px;
+  margin-left:-1px; /* “сварка” со стенкой */
   transform:translateY(-50%);
 
   width: var(--ctor-ear-w);
@@ -709,13 +734,14 @@ html[data-theme='dark'] .ctor-preview__stage{
 
   border: 1px solid rgba(0,0,0,.10);
   border-left: 0;
+
   background: inherit;
   box-shadow: 0 10px 22px rgba(0,0,0,.18);
 
   pointer-events:none;
 }
 
-/* ear button */
+/* ===== Ear button (клик) ===== */
 .ctorX__ear{
   position:absolute;
   top:50%;
@@ -732,7 +758,8 @@ html[data-theme='dark'] .ctor-preview__stage{
   padding:0;
   cursor:pointer;
 
-  z-index: 200; /* IMPORTANT: поверх телефона */
+  /* ВАЖНО: поверх телефона/зумов */
+  z-index: 200;
 }
 
 .ctorX__ear::before{
@@ -745,3 +772,30 @@ html[data-theme='dark'] .ctor-preview__stage{
 }
 .ctorX.is-open .ctorX__ear::before{ transform: rotate(180deg); }
 html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
+
+/* =========================
+   PREVIEW phone stage helpers
+   (работают с твоими классами ctor-preview__stage / ctor-phoneDock)
+   ========================= */
+
+/* по умолчанию (панель открыта) — можно держать левее */
+.ctor-preview__stage{
+  overflow: auto;
+  padding: 18px;
+
+  /* если хочешь всегда по центру — поставь center */
+  justify-content: flex-start;
+}
+
+/* ВАЖНО: когда панель закрыта — телефон строго по центру */
+.ctorX.is-closed .ctor-preview__stage{
+  justify-content: center !important;
+}
+
+/* чтобы масштабирование не “улетало” и не перекрывало элементы */
+.ctor-phoneDock{
+  transform-origin: top left;
+}
+.ctorX.is-closed .ctor-phoneDock{
+  transform-origin: center top !important;
+}
