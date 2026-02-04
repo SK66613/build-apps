@@ -43,7 +43,7 @@ export function Inspector(){
   };
 
   return (
-    <div className="sg-card" style={{ height:'calc(100vh - 220px)', minHeight: 680, overflow:'auto' }}>
+    <div className="sg-card ctor-card ctor-inspector">
       <div style={{ fontWeight: 1000 }}>Inspector</div>
 
       <div style={{ marginTop: 12 }}>
