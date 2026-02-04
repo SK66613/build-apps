@@ -23,12 +23,33 @@ function ConstructorLayout(){
   const [open, setOpen] = useLS<boolean>('ctor_drawer_open', true);
   const [leftW, setLeftW] = useLS<number>('ctor_left_w', 420);
 
+  const onResizeMouseDown = (e: React.MouseEvent)=>{
+    e.preventDefault();
+    if (!open) return;
+
+    const startX = e.clientX;
+    const startW = leftW;
+
+    const onMove = (ev: MouseEvent)=>{
+      const dx = ev.clientX - startX;
+      const next = Math.max(320, Math.min(560, startW + dx));
+      setLeftW(next);
+    };
+    const onUp = ()=>{
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   return (
     <div
       className={'ctorX ' + (open ? 'is-open' : 'is-closed')}
       style={
         {
-          // ширина панели как CSS var
+          // ширина панели прокидывается как CSS var (двигает превью как в старом)
           ['--ctor-left-w' as any]: `${leftW}px`,
         } as React.CSSProperties
       }
@@ -49,6 +70,7 @@ function ConstructorLayout(){
           type="button"
           onClick={()=>setOpen(!open)}
           aria-label={open ? 'Свернуть панель' : 'Открыть панель'}
+          title={open ? 'Свернуть' : 'Развернуть'}
         />
       </aside>
 
