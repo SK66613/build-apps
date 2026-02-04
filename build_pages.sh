@@ -19,11 +19,11 @@ tar -cf - \
 # 2) Install + build React app
 npm install --prefix "$REACT_DIR" --no-fund --no-audit
 npm install --prefix "$REACT_DIR" zustand@^4.5.2 --no-fund --no-audit
-
-# add this:
+npm install --prefix "$REACT_DIR" @tanstack/react-query@^5.17.19 --no-fund --no-audit
+npm install --prefix "$REACT_DIR" date-fns@^3.6.0 --no-fund --no-audit
 npm install --prefix "$REACT_DIR" -D sass --no-fund --no-audit
-
 npm run build --prefix "$REACT_DIR"
+
 
 
 # 3) Publish React build into /panel-react/
