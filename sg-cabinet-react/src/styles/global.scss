@@ -661,3 +661,116 @@ html[data-theme='dark'] .ctor-preview__stage{
   display:block;
   background: #000;
 }
+
+
+/* =========================
+   Constructor X: LEFT drawer + PREVIEW (inspector inside drawer)
+   ========================= */
+
+.ctorX{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  min-height: calc(100vh - 140px); /* под topbar */
+  align-items: stretch;
+}
+
+/* LEFT */
+.ctorX__left{
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ctorX__leftInner{
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding-right: 6px;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ctorX__leftInner::-webkit-scrollbar{ width: 0; height: 0; }
+
+/* inspector wrapper inside left */
+.ctorX__insWrap{
+  margin-top: 12px;
+}
+
+/* resize */
+.ctorX__resizeGrip{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: ew-resize;
+  background: linear-gradient(90deg, transparent, rgba(15,23,42,.06));
+}
+html[data-theme='dark'] .ctorX__resizeGrip{
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08));
+}
+
+/* ear */
+.ctorX__ear{
+  position: absolute;
+  top: 140px;
+  right: -14px;
+  width: 28px;
+  height: 86px;
+  border-radius: 18px;
+  border: 1px solid rgba(8,8,8,.25);
+  background: rgba(15, 17, 57, 0.92);
+  box-shadow: 0 14px 30px rgba(0,0,0,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index: 20;
+}
+.ctorX__ear span{
+  color:#fff;
+  font-weight: 900;
+  font-size: 14px;
+}
+.ctorX__left.is-closed .ctorX__leftInner{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* PREVIEW */
+.ctorX__preview{
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+/* Preview header layout */
+.ctorP__hdr{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ctorP__right{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ctorP__actions{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.ctorP__act{
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-weight: 750;
+}
+
