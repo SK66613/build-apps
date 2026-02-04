@@ -6,20 +6,23 @@ import { PreviewFrame } from './preview/PreviewFrame';
 
 export function ConstructorLayout(){
   return (
-    <div className="sg-grid" style={{ gap: 14 }}>
+    <div className="ctor">
       <TopBar />
 
-      <div style={{ minHeight: 0, display: 'grid', gridTemplateColumns: '360px 1fr 360px', gap: 14 }}>
-        <div style={{ minHeight: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="ctor__body">
+        {/* LEFT */}
+        <div className="ctor__left">
           <PagesTree />
           <BlocksPalette />
         </div>
 
-        <div style={{ minHeight: 0 }}>
+        {/* CENTER */}
+        <div className="ctor__center">
           <PreviewFrame />
         </div>
 
-        <div style={{ minHeight: 0 }}>
+        {/* RIGHT */}
+        <div className="ctor__right">
           <Inspector />
         </div>
       </div>
