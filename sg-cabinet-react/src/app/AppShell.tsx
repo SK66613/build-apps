@@ -5,7 +5,7 @@ import { useAppState } from '../app/appState';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import type { AppListItem } from '../lib/types';
-import { Button, Input, Pill } from './ui';
+import { Button, Input, Pill } from '../components/ui';
 
 /** ===== UI blocks (оставляем твою логику) ===== */
 function ThemeToggle(){
