@@ -112,12 +112,12 @@ export default function AppShell(){
           {/* LEFT: бренд + проект + ДАТЫ */}
           <div className="top__left">
             <div className="top__brand">
-              <div className="top__brandTitle">Sales Genius</div>
-              <div className="top__brandSub">Cabinet</div>
+              <div className="top__brandTitle"></div>
+              <div className="top__brandSub"></div>
             </div>
 
             <div className="top__proj">
-              <div className="top__label">Проект</div>
+              <div className="top__label"></div>
               <select
                 value={appId || ''}
                 onChange={(e) => setAppId(e.target.value)}
