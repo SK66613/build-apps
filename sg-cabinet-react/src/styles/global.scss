@@ -884,10 +884,10 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   background: transparent !important;
 }
 
-/* (опционально) убрать линию у ушка-формы, если она даёт вертикальную “полосу” */
 .sg-main.is-ctor .ctorX__drawer::after{
+  background: #fff !important;
   border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  box-shadow: 14px 0 40px rgba(2,6,23,.10) !important;
 }
+
 
