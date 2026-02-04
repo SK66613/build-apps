@@ -794,4 +794,16 @@ html[data-theme='dark'] .ctorX__ear::before{ color: rgba(226,232,240,.90); }
   transform-origin: center top;
 }
 
+/* === CRITICAL FIX: constructor must NOT cover sidebar === */
+.ctorX{
+  left: var(--side-w) !important;
+}
+
+/* preview & drawer must be aligned to ctorX, not to viewport */
+.ctorX__preview{
+  left: var(--side-w) !important;
+}
+.ctorX__drawer{
+  left: var(--side-w) !important;
+}
 
