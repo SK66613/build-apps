@@ -23,34 +23,18 @@ function ConstructorLayout(){
   const [open, setOpen] = useLS<boolean>('ctor_drawer_open', true);
   const [leftW, setLeftW] = useLS<number>('ctor_left_w', 420);
 
-  const onResizeMouseDown = (e: React.MouseEvent)=>{
-    e.preventDefault();
-    if (!open) return;
-
-    const startX = e.clientX;
-    const startW = leftW;
-
-    const onMove = (ev: MouseEvent)=>{
-      const dx = ev.clientX - startX;
-      const next = Math.max(320, Math.min(560, startW + dx));
-      setLeftW(next);
-    };
-    const onUp = ()=>{
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  };
-
   return (
-    <div className="ctorX">
-      <aside
-        className={'ctorX__left' + (open ? ' is-open' : ' is-closed')}
-        style={{ width: open ? leftW : 16 }}
-      >
-        <div className="ctorX__leftInner">
+    <div
+      className={'ctorX ' + (open ? 'is-open' : 'is-closed')}
+      style={
+        {
+          // ширина панели как CSS var
+          ['--ctor-left-w' as any]: `${leftW}px`,
+        } as React.CSSProperties
+      }
+    >
+      <aside className="ctorX__drawer">
+        <div className="ctorX__drawerInner">
           <PagesTree />
           <BlocksPalette />
           <div className="ctorX__insWrap">
@@ -64,10 +48,8 @@ function ConstructorLayout(){
           className="ctorX__ear"
           type="button"
           onClick={()=>setOpen(!open)}
-          title={open ? 'Свернуть' : 'Развернуть'}
-        >
-          <span>{open ? '❮' : '❯'}</span>
-        </button>
+          aria-label={open ? 'Свернуть панель' : 'Открыть панель'}
+        />
       </aside>
 
       <section className="ctorX__preview">
