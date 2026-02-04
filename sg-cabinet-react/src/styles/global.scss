@@ -622,7 +622,7 @@ html[data-theme='dark'] .ctor-preview__stage{
 .ctorX{
   /* sizing */
   --ctor-ear-w: 28px;
-  --ctor-ear-over: 14px;     /* сколько ушко торчит при закрытии */
+  --ctor-ear-over: 12px;     /* сколько ушко торчит при закрытии */
   --ctor-left-w: 420px;      /* задаётся inline в React */
   --ctor-push: var(--ctor-left-w);
 
