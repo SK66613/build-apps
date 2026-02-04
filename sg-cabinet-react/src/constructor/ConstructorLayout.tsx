@@ -1,9 +1,8 @@
 import React from 'react';
-import { TopBar } from './ui/TopBar';
+import { PreviewFrame } from './preview/PreviewFrame';
 import { PagesTree } from './ui/PagesTree';
 import { BlocksPalette } from './ui/BlocksPalette';
 import { Inspector } from './ui/Inspector';
-import { PreviewFrame } from './preview/PreviewFrame';
 
 function useLS<T>(key: string, init: T){
   const [v, setV] = React.useState<T>(() => {
@@ -20,7 +19,7 @@ function useLS<T>(key: string, init: T){
   return [v, setV] as const;
 }
 
-export function ConstructorLayout(){
+export default function ConstructorLayout(){
   const [open, setOpen] = useLS<boolean>('ctor_drawer_open', true);
   const [leftW, setLeftW] = useLS<number>('ctor_left_w', 420);
 
@@ -46,46 +45,41 @@ export function ConstructorLayout(){
   };
 
   return (
-    <div className="ctor">
-      <TopBar />
+    <div className="ctorX">
+      {/* LEFT DRAWER (pages+blocks+inspector) */}
+      <aside
+        className={'ctorX__left' + (open ? ' is-open' : ' is-closed')}
+        style={{ width: open ? leftW : 16 }}
+      >
+        <div className="ctorX__leftInner">
+          {/* твои панели: страницы + блоки */}
+          <PagesTree />
+          <BlocksPalette />
 
-      <div className="ctor__body ctor__body--ear">
-        {/* LEFT DRAWER */}
-        <aside
-          className={'ctor__left ctor__left--ear' + (open ? ' is-open' : ' is-closed')}
-          style={{ width: open ? leftW : 16 }}
-        >
-          {/* CONTENT */}
-          <div className="ctor__leftInner">
-            <PagesTree />
-            <BlocksPalette />
+          {/* инспектор теперь ТУТ, внутри панели с ушком */}
+          <div className="ctorX__insWrap">
+            <Inspector />
           </div>
-
-          {/* RESIZE GRIP */}
-          {open && <div className="ctor__resizeGrip" onMouseDown={onResizeMouseDown} />}
-
-          {/* EAR BUTTON (как в старом) */}
-          <button
-            className="ctor__ear"
-            type="button"
-            onClick={()=>setOpen(!open)}
-            aria-label="Свернуть/развернуть панель"
-            title={open ? 'Свернуть' : 'Развернуть'}
-          >
-            <span className="ctor__earIco">{open ? '⮜' : '⮞'}</span>
-          </button>
-        </aside>
-
-        {/* CENTER PREVIEW */}
-        <div className="ctor__center">
-          <PreviewFrame />
         </div>
 
-        {/* RIGHT INSPECTOR */}
-        <div className="ctor__right">
-          <Inspector />
-        </div>
-      </div>
+        {/* resize grip */}
+        {open && <div className="ctorX__resizeGrip" onMouseDown={onResizeMouseDown} />}
+
+        {/* EAR */}
+        <button
+          className="ctorX__ear"
+          type="button"
+          onClick={()=>setOpen(!open)}
+          title={open ? 'Свернуть' : 'Развернуть'}
+        >
+          <span classNameBR {open ? '❮' : '❯'}</span>
+        </button>
+      </aside>
+
+      {/* RIGHT = PREVIEW (flexes automatically) */}
+      <section className="ctorX__preview">
+        <PreviewFrame />
+      </section>
     </div>
   );
 }
