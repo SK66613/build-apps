@@ -1,19 +1,48 @@
-import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { useAuth } from "../app/auth";
+import React from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '../app/auth';
+import { useAppState } from '../app/appState';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../lib/api';
+import type { AppListItem } from '../lib/types';
+import { Button, Input, Pill } from './ui';
 
-// Если у тебя есть готовые компоненты — подключи:
-// import ProjectPicker from "./ProjectPicker";
-// import DateRangePicker from "./DateRangePicker";
-// import ThemeToggle from "./ThemeToggle";
+/** ===== UI blocks (оставляем твою логику) ===== */
+function ThemeToggle(){
+  const [theme, setTheme] = React.useState(() => {
+    return document.documentElement.dataset.theme || 'light';
+  });
+  const toggle = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    setTheme(next);
+    try{ localStorage.setItem('sg_theme', next); }catch(_){ }
+  };
+  return (
+    <Button variant="ghost" onClick={toggle}>
+      {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+    </Button>
+  );
+}
 
-function SideItem({ to, label, icon }: { to: string; label: string; icon: React.ReactNode }){
+function DateRange(){
+  const { range, setRange } = useAppState();
+  return (
+    <div className="top__dates">
+      <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
+      <span className="top__arrow">→</span>
+      <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
+    </div>
+  );
+}
+
+function SideItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }){
   return (
     <NavLink
       to={to}
-      className={({isActive}) => "side__item" + (isActive ? " is-active" : "")}
+      end={to === '/'} // важно: index page
+      className={({isActive}) => 'side__item' + (isActive ? ' is-active' : '')}
       title={label}
-      end={to === "/"} // Overview active только на корне
     >
       <span className="ico">{icon}</span>
       <span className="txt">{label}</span>
@@ -22,21 +51,28 @@ function SideItem({ to, label, icon }: { to: string; label: string; icon: React.
 }
 
 export default function AppShell(){
-  const { me, logout } = useAuth();
-  const email = (me as any)?.email || (me as any)?.user?.email || "";
+  const { logout, me } = useAuth();
+  const { appId, setAppId } = useAppState();
 
-  // локальный тумблер темы (если у тебя уже есть ThemeToggle — убери этот кусок)
-  const curTheme = (document.documentElement.dataset.theme === "dark") ? "Dark" : "Light";
-  const toggleTheme = ()=>{
-    const cur = (document.documentElement.dataset.theme === "dark") ? "dark" : "light";
-    const next = cur === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try{ localStorage.setItem("sg_theme", next); }catch(_){}
-  };
+  const appsQ = useQuery({
+    queryKey: ['apps'],
+    queryFn: () => apiFetch<{ ok: true; apps: AppListItem[] }>('/api/apps'),
+    staleTime: 15_000,
+  });
+
+  // choose first app automatically (как было)
+  React.useEffect(() => {
+    if (!appId && appsQ.data?.apps?.length) {
+      setAppId(appsQ.data.apps[0].id);
+    }
+  }, [appId, appsQ.data?.apps, setAppId]);
+
+  const apps = appsQ.data?.apps || [];
+  const email = me?.user?.email || '—';
 
   return (
     <div className="sg-shell">
-      {/* LEFT NAV */}
+      {/* ===== LEFT: mini sidebar like старый конструктор ===== */}
       <aside className="side">
         <div className="side__top">
           <button className="side__logo" title="Sales Genius">
@@ -44,69 +80,70 @@ export default function AppShell(){
           </button>
         </div>
 
+        {/* scroll only for menu */}
         <div className="side__scroll">
           <nav className="side__nav">
-            <SideItem to="/"          icon="🏠" label="Overview" />
-            <SideItem to="/live"      icon="🟢" label="Live" />
-            <SideItem to="/customers" icon="👥" label="Customers" />
-            <SideItem to="/sales"     icon="🧾" label="Sales" />
+            <SideItem to="/"           icon="🏠" label="Overview" />
+            <SideItem to="/live"       icon="🟢" label="Live" />
+            <SideItem to="/customers"  icon="👥" label="Customers" />
+            <SideItem to="/sales"      icon="🧾" label="Sales" />
 
             <div className="side__sep" />
 
-            <SideItem to="/wheel"     icon="🎡" label="Wheel" />
-            <SideItem to="/passport"  icon="🏁" label="Passport" />
-            <SideItem to="/calendar"  icon="📅" label="Calendar" />
+            <SideItem to="/wheel"      icon="🎡" label="Wheel" />
+            <SideItem to="/passport"   icon="🏁" label="Passport" />
+            <SideItem to="/calendar"   icon="📅" label="Calendar" />
 
             <div className="side__sep" />
 
-            <SideItem to="/profit"    icon="💹" label="Profit / ROI" />
-            <SideItem to="/settings"  icon="⚙️" label="Settings" />
+            <SideItem to="/profit"     icon="💰" label="Profit / ROI" />
+            <SideItem to="/settings"   icon="⚙️" label="Settings" />
 
             <div className="side__sep" />
 
-            <SideItem to="/constructor" icon="🧩" label="Конструктор" />
+            <SideItem to="/constructor" icon="🛠️" label="Конструктор" />
           </nav>
         </div>
       </aside>
 
-      {/* MAIN */}
-      <div className="sg-main">
-        <header className="sg-topbar">
-          <div className="sg-topbar__left">
-            <div className="sg-brand">
-              <div className="sg-brand__title">Sales Genius</div>
-              <div className="sg-brand__sub">Cabinet</div>
+      {/* ===== RIGHT: content ===== */}
+      <main className="sg-main">
+        <header className="sg-topbar sg-topbar--v2">
+          {/* LEFT part of topbar: brand + project + theme + email + logout */}
+          <div className="top__left">
+            <div className="top__brand">
+              <div className="top__brandTitle">Sales Genius</div>
+              <div className="top__brandSub">Cabinet</div>
             </div>
 
-            {/* ====== Project Picker (сюда) ======
-                Вставь свой компонент выбора проекта (из старого Shell) */}
-            {/* <ProjectPicker /> */}
+            <div className="top__proj">
+              <div className="top__label">Проект</div>
+              <select
+                value={appId || ''}
+                onChange={(e) => setAppId(e.target.value)}
+                className="top__select"
+              >
+                {apps.map(a => (
+                  <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
+                ))}
+              </select>
+            </div>
 
-            {/* ====== Theme Toggle (сюда) ====== */}
-            {/* Если у тебя уже есть ThemeToggle — используй его */}
-            <button className="sg-btn sg-btn--ghost" onClick={toggleTheme} title="Theme">
-              ☀️ {curTheme}
-            </button>
+            <ThemeToggle />
 
-            {/* ====== Email (сюда) ====== */}
-            {email ? <div className="sg-user">{email}</div> : null}
+            <Pill>{email}</Pill>
 
-            {/* ====== Logout (сюда) ====== */}
-            <button className="sg-btn sg-btn--ghost" onClick={() => logout?.()}>
-              Выйти
-            </button>
+            <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
           </div>
 
-          <div className="sg-topbar__right">
-            {/* ====== DateRangePicker (сюда) ====== */}
-            {/* <DateRangePicker /> */}
+          {/* RIGHT part: dates */}
+          <div className="top__right">
+            <DateRange />
           </div>
         </header>
 
-        <main className="sg-content">
-          <Outlet />
-        </main>
-      </div>
+        <Outlet />
+      </main>
     </div>
   );
 }
