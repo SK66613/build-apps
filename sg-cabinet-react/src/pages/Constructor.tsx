@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
-import { ConstructorLayout } from '../constructor/ConstructorLayout';
+import ConstructorLayout from '../constructor/ConstructorLayout';
 import { useConstructorStore } from '../constructor/state/constructorStore';
 import { makeDefaultBlueprint } from '../constructor/state/utils';
 import type { Blueprint } from '../constructor/state/types';
