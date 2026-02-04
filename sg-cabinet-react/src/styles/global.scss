@@ -577,7 +577,7 @@ html[data-theme='dark'] .ctor-preview__stage{
 .ctor-phoneDock{ transform-origin: top left; } /* масштаб не от центра */
 
 .ctor-phone{
-  position: relative;
+  margin-top: 28px; /* ↑ увеличивай — телефон ниже */
   background: #000;
   border: 10px solid #0b0f18;
   box-shadow: 0 26px 80px rgba(0,0,0,.35);
