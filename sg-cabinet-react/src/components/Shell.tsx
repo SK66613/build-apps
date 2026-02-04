@@ -1,6 +1,7 @@
-import React from "react";
-import AppShell from "./AppShell";
+import React from 'react';
+import AppShell from './AppShell';
 
 export default function Shell(){
   return <AppShell />;
 }
+
