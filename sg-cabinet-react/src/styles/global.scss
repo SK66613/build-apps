@@ -883,3 +883,110 @@ html[data-theme='dark'] .ctorX__ear{
 }
 
 
+/* =========================
+   Constructor X layout (drawer + preview)
+   ========================= */
+
+/* важно: ctorX — flex, а не overlay */
+.ctorX{
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+
+  /* чтобы не “плавало” при прокрутке страницы */
+  height: calc(100vh - 120px); /* подстрой если топбар выше/ниже */
+  min-height: 560px;
+  overflow: hidden;
+}
+
+/* LEFT */
+.ctorX__left{
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 16px;
+
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+
+  overflow: hidden; /* скролл только внутри */
+}
+
+/* внутренняя прокрутка панели */
+.ctorX__leftInner{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+
+  overflow: auto;
+  min-height: 0;
+
+  /* спрятать скроллбар (но скролл оставить) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ctorX__leftInner::-webkit-scrollbar{ width:0; height:0; }
+
+/* Inspector внутри панели — занимает остаток */
+.ctorX__insWrap{
+  flex: 1 1 auto;
+  min-height: 180px;
+}
+
+/* RESIZE grip */
+.ctorX__resizeGrip{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+}
+
+/* EAR — фикс по центру панели, не “ездит” */
+.ctorX__ear{
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 76px;
+
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(15,23,42,.08);
+  backdrop-filter: blur(10px);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,0,0,.12);
+}
+html[data-theme='dark'] .ctorX__ear{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.10);
+}
+
+/* RIGHT PREVIEW — всегда занимает остаток ширины */
+.ctorX__preview{
+  flex: 1 1 auto;
+  min-width: 0;
+
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+
+  overflow: hidden; /* чтобы iframe/контент не вылазил */
+}
+
+/* когда панель закрыта — никаких отступов/паддингов */
+.ctorX__left.is-closed{
+  width: 16px !important;
+}
