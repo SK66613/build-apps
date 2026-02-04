@@ -12,6 +12,28 @@ function buildPreviewUrl(appId?: string | null){
   return u.pathname + u.search;
 }
 
+type PresetKey = 'iphone13' | 'iphoneSE' | 'pixel7';
+const PRESETS: Record<PresetKey, { label: string; w: number; h: number; radius: number }> = {
+  iphone13: { label: 'iPhone 13', w: 390, h: 844, radius: 44 },
+  iphoneSE: { label: 'iPhone SE', w: 375, h: 667, radius: 34 },
+  pixel7:   { label: 'Pixel 7',   w: 412, h: 915, radius: 38 },
+};
+
+function useLS<T>(key: string, init: T){
+  const [v, setV] = React.useState<T>(() => {
+    try{
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : init;
+    }catch(_){
+      return init;
+    }
+  });
+  React.useEffect(()=>{
+    try{ localStorage.setItem(key, JSON.stringify(v)); }catch(_){ }
+  }, [key, v]);
+  return [v, setV] as const;
+}
+
 export function PreviewFrame(){
   const frameRef = React.useRef<HTMLIFrameElement | null>(null);
 
@@ -22,6 +44,11 @@ export function PreviewFrame(){
   const selectBlock = useConstructorStore(s=>s.selectBlock);
 
   const src = React.useMemo(()=>buildPreviewUrl(appId), [appId]);
+
+  // presets + zoom (как в старом)
+  const [preset, setPreset] = useLS<PresetKey>('ctor_preset', 'iphone13');
+  const [zoom, setZoom] = useLS<number>('ctor_zoom', 100);
+  const p = PRESETS[preset];
 
   // push bp into preview
   const post = React.useCallback((msg:any)=>{
@@ -37,11 +64,9 @@ export function PreviewFrame(){
         if (selected?.kind === 'block') post({ type:'block:focus', id: selected.id });
       }
       if (d.type === 'nav:go' && typeof d.path === 'string'){
-        // preview initiated navigation (e.g. clicking bottom tabs)
         selectRoute(d.path);
       }
       if (d.type === 'block:edit' && d.id){
-        // preview asked to edit a block
         const path = typeof d.path === 'string' ? d.path : (selected?.kind ? (selected as any).path : '/');
         selectBlock(path, String(d.id));
       }
@@ -67,17 +92,67 @@ export function PreviewFrame(){
     }
   }, [selected, post]);
 
-    return (
-    <div className="sg-card ctor-card ctor-preview">
-      <iframe
-        ref={frameRef}
-        key={src}
-        title="Miniapp preview"
-        src={src}
-        className="ctor-preview__frame"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-      />
+  const scale = Math.max(30, Math.min(130, Number(zoom) || 100)) / 100;
+
+  return (
+    <div className="sg-card ctor-card ctor-preview ctor-preview--phone">
+      {/* top controls like old */}
+      <div className="ctor-preview__hdr">
+        <div className="ctor-preview__presets">
+          {Object.entries(PRESETS).map(([k, v]) => (
+            <button
+              key={k}
+              className={'sg-btn ctor-preview__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
+              onClick={()=>setPreset(k as PresetKey)}
+              type="button"
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="ctor-preview__zoom">
+          <div className="ctor-preview__zoomLbl">Масштаб</div>
+          <input
+            className="ctor-preview__zoomSlider"
+            type="range"
+            min={30}
+            max={130}
+            value={zoom}
+            onChange={(e)=>setZoom(Number(e.target.value))}
+          />
+          <div className="ctor-preview__zoomVal">{Math.round(scale*100)}%</div>
+        </div>
+      </div>
+
+      {/* phone stage */}
+      <div className="ctor-preview__stage">
+        <div
+          className="ctor-phoneDock"
+          style={{ transform: `scale(${scale})` }}
+        >
+          <div
+            className="ctor-phone"
+            style={{
+              width: p.w,
+              height: p.h,
+              borderRadius: p.radius,
+            }}
+          >
+            <div className="ctor-notch" />
+            <div className="ctor-screen">
+              <iframe
+                ref={frameRef}
+                key={src}
+                title="Miniapp preview"
+                src={src}
+                className="ctor-preview__frame"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-
 }
