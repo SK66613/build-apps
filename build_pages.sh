@@ -21,6 +21,7 @@ npm install --prefix "$REACT_DIR" --no-fund --no-audit
 npm install --prefix "$REACT_DIR" zustand@^4.5.2 --no-fund --no-audit
 npm install --prefix "$REACT_DIR" @tanstack/react-query@^5.17.19 --no-fund --no-audit
 npm install --prefix "$REACT_DIR" date-fns@^3.6.0 --no-fund --no-audit
+npm install --prefix "$REACT_DIR" recharts@^2.12.7 --no-fund --no-audit
 npm install --prefix "$REACT_DIR" -D sass --no-fund --no-audit
 npm run build --prefix "$REACT_DIR"
 
