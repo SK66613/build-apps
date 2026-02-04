@@ -21,15 +21,20 @@ export function BlocksPalette(){
       ? selected.path
       : (nav[0]?.path || '/');
 
-  return (
-    <div className="sg-card" style={{ minHeight: 0 }}>
-      <div style={{ fontWeight: 1000 }}>Блоки</div>
-      <div className="sg-muted" style={{ marginTop: 6 }}>Добавить на: <b>{path}</b></div>
+    return (
+    <div className="sg-card ctor-card">
+      <div className="ctor-panel__title">Блоки</div>
+      <div className="ctor-panel__sub">Добавить на: <b>{path}</b></div>
 
-      <div style={{ marginTop: 12, display:'grid', gridTemplateColumns:'1fr 1fr', gap: 10 }}>
+      <div className="ctor-grid">
         {PALETTE.map(b=> (
-          <button key={b.key} className="sg-btn" style={{ justifyContent:'flex-start' }} onClick={()=>addBlock(path, b.key)}>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
+          <button
+            key={b.key}
+            className="sg-btn"
+            style={{ justifyContent:'flex-start', textAlign:'left', padding: '12px 12px' }}
+            onClick={()=>addBlock(path, b.key)}
+          >
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap: 2 }}>
               <div style={{ fontWeight: 1000 }}>{b.title}</div>
               <div className="sg-muted" style={{ fontSize: 12 }}>{b.key}</div>
             </div>
@@ -38,4 +43,5 @@ export function BlocksPalette(){
       </div>
     </div>
   );
+
 }
