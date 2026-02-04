@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../app/auth';
 import { useAppState } from '../app/appState';
 import { useQuery } from '@tanstack/react-query';
@@ -54,6 +54,9 @@ export default function AppShell(){
   const { logout, me } = useAuth();
   const { appId, setAppId, range, setRange } = useAppState();
 
+  const loc = useLocation();
+  const isCtor = loc.pathname === '/constructor' || loc.pathname.startsWith('/constructor/');
+
   const appsQ = useQuery({
     queryKey: ['apps'],
     queryFn: () => apiFetch<{ ok: true; apps: AppListItem[] }>('/api/apps'),
@@ -107,43 +110,45 @@ export default function AppShell(){
       </aside>
 
       {/* ===== RIGHT: content ===== */}
-      <main className="sg-main">
-        <header className="sg-topbar sg-topbar--v2">
-          {/* LEFT: бренд + проект + ДАТЫ */}
-          <div className="top__left">
-            <div className="top__brand">
-              <div className="top__brandTitle"></div>
-              <div className="top__brandSub"></div>
+      <main className={'sg-main' + (isCtor ? ' is-ctor' : '')}>
+        {!isCtor && (
+          <header className="sg-topbar sg-topbar--v2">
+            {/* LEFT: бренд + проект + ДАТЫ */}
+            <div className="top__left">
+              <div className="top__brand">
+                <div className="top__brandTitle"></div>
+                <div className="top__brandSub"></div>
+              </div>
+
+              <div className="top__proj">
+                <div className="top__label"></div>
+                <select
+                  value={appId || ''}
+                  onChange={(e) => setAppId(e.target.value)}
+                  className="top__select"
+                >
+                  {apps.map(a => (
+                    <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Даты теперь слева */}
+              <div className="top__dates">
+                <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
+                <span className="top__arrow">→</span>
+                <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
+              </div>
             </div>
 
-            <div className="top__proj">
-              <div className="top__label"></div>
-              <select
-                value={appId || ''}
-                onChange={(e) => setAppId(e.target.value)}
-                className="top__select"
-              >
-                {apps.map(a => (
-                  <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
-                ))}
-              </select>
+            {/* RIGHT: тема + email + выйти (выйти крайний справа) */}
+            <div className="top__right">
+              <ThemeToggle />
+              <Pill>{email}</Pill>
+              <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
             </div>
-
-            {/* Даты теперь слева */}
-            <div className="top__dates">
-              <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
-              <span className="top__arrow">→</span>
-              <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
-            </div>
-          </div>
-
-          {/* RIGHT: тема + email + выйти (выйти крайний справа) */}
-          <div className="top__right">
-            <ThemeToggle />
-            <Pill>{email}</Pill>
-            <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
-          </div>
-        </header>
+          </header>
+        )}
 
         <Outlet />
       </main>
