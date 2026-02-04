@@ -108,39 +108,43 @@ export default function AppShell(){
 
       {/* ===== RIGHT: content ===== */}
       <main className="sg-main">
-        <header className="sg-topbar sg-topbar--v2">
-          {/* LEFT part of topbar: brand + project + theme + email + logout */}
-          <div className="top__left">
-            <div className="top__brand">
-              <div className="top__brandTitle">Sales Genius</div>
-              <div className="top__brandSub">Cabinet</div>
-            </div>
+<header className="sg-topbar sg-topbar--v2">
+  {/* LEFT: brand + project + dates */}
+  <div className="top__left">
+    <div className="top__brand">
+      <div className="top__brandTitle">Sales Genius</div>
+      <div className="top__brandSub">Cabinet</div>
+    </div>
 
-            <div className="top__proj">
-              <div className="top__label">Проект</div>
-              <select
-                value={appId || ''}
-                onChange={(e) => setAppId(e.target.value)}
-                className="top__select"
-              >
-                {apps.map(a => (
-                  <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
-                ))}
-              </select>
-            </div>
+    <div className="top__proj">
+      <div className="top__label">Проект</div>
+      <select
+        value={appId || ''}
+        onChange={(e) => setAppId(e.target.value)}
+        className="top__select"
+      >
+        {apps.map(a => (
+          <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
+        ))}
+      </select>
+    </div>
 
-            <ThemeToggle />
+    {/* ДАТЫ — теперь тут */}
+    <div className="top__dates">
+      <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
+      <span className="top__arrow">→</span>
+      <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
+    </div>
+  </div>
 
-            <Pill>{email}</Pill>
+  {/* RIGHT: theme + email + logout (logout крайний справа) */}
+  <div className="top__right">
+    <ThemeToggle />
+    <Pill>{email}</Pill>
+    <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
+  </div>
+</header>
 
-            <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
-          </div>
-
-          {/* RIGHT part: dates */}
-          <div className="top__right">
-            <DateRange />
-          </div>
-        </header>
 
         <Outlet />
       </main>
