@@ -19,7 +19,7 @@ function useLS<T>(key: string, init: T){
   return [v, setV] as const;
 }
 
-export default function ConstructorLayout(){
+function ConstructorLayout(){
   const [open, setOpen] = useLS<boolean>('ctor_drawer_open', true);
   const [leftW, setLeftW] = useLS<number>('ctor_left_w', 420);
 
@@ -46,26 +46,20 @@ export default function ConstructorLayout(){
 
   return (
     <div className="ctorX">
-      {/* LEFT DRAWER (pages+blocks+inspector) */}
       <aside
         className={'ctorX__left' + (open ? ' is-open' : ' is-closed')}
         style={{ width: open ? leftW : 16 }}
       >
         <div className="ctorX__leftInner">
-          {/* твои панели: страницы + блоки */}
           <PagesTree />
           <BlocksPalette />
-
-          {/* инспектор теперь ТУТ, внутри панели с ушком */}
           <div className="ctorX__insWrap">
             <Inspector />
           </div>
         </div>
 
-        {/* resize grip */}
         {open && <div className="ctorX__resizeGrip" onMouseDown={onResizeMouseDown} />}
 
-        {/* EAR */}
         <button
           className="ctorX__ear"
           type="button"
@@ -73,14 +67,15 @@ export default function ConstructorLayout(){
           title={open ? 'Свернуть' : 'Развернуть'}
         >
           <span>{open ? '❮' : '❯'}</span>
-
         </button>
       </aside>
 
-      {/* RIGHT = PREVIEW (flexes automatically) */}
       <section className="ctorX__preview">
         <PreviewFrame />
       </section>
     </div>
   );
 }
+
+export { ConstructorLayout };
+export default ConstructorLayout;
