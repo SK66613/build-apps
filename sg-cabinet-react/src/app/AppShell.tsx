@@ -52,7 +52,7 @@ function SideItem({ to, icon, label }: { to: string; icon: React.ReactNode; labe
 
 export default function AppShell(){
   const { logout, me } = useAuth();
-  const { appId, setAppId } = useAppState();
+  const { appId, setAppId, range, setRange } = useAppState();
 
   const appsQ = useQuery({
     queryKey: ['apps'],
@@ -83,21 +83,21 @@ export default function AppShell(){
         {/* scroll only for menu */}
         <div className="side__scroll">
           <nav className="side__nav">
-            <SideItem to="/"           icon="🏠" label="Overview" />
-            <SideItem to="/live"       icon="🟢" label="Live" />
-            <SideItem to="/customers"  icon="👥" label="Customers" />
-            <SideItem to="/sales"      icon="🧾" label="Sales" />
+            <SideItem to="/"            icon="🏠" label="Overview" />
+            <SideItem to="/live"        icon="🟢" label="Live" />
+            <SideItem to="/customers"   icon="👥" label="Customers" />
+            <SideItem to="/sales"       icon="🧾" label="Sales" />
 
             <div className="side__sep" />
 
-            <SideItem to="/wheel"      icon="🎡" label="Wheel" />
-            <SideItem to="/passport"   icon="🏁" label="Passport" />
-            <SideItem to="/calendar"   icon="📅" label="Calendar" />
+            <SideItem to="/wheel"       icon="🎡" label="Wheel" />
+            <SideItem to="/passport"    icon="🏁" label="Passport" />
+            <SideItem to="/calendar"    icon="📅" label="Calendar" />
 
             <div className="side__sep" />
 
-            <SideItem to="/profit"     icon="💰" label="Profit / ROI" />
-            <SideItem to="/settings"   icon="⚙️" label="Settings" />
+            <SideItem to="/profit"      icon="💰" label="Profit / ROI" />
+            <SideItem to="/settings"    icon="⚙️" label="Settings" />
 
             <div className="side__sep" />
 
@@ -108,43 +108,42 @@ export default function AppShell(){
 
       {/* ===== RIGHT: content ===== */}
       <main className="sg-main">
-<header className="sg-topbar sg-topbar--v2">
-  {/* LEFT: brand + project + dates */}
-  <div className="top__left">
-    <div className="top__brand">
-      <div className="top__brandTitle">Sales Genius</div>
-      <div className="top__brandSub">Cabinet</div>
-    </div>
+        <header className="sg-topbar sg-topbar--v2">
+          {/* LEFT: бренд + проект + ДАТЫ */}
+          <div className="top__left">
+            <div className="top__brand">
+              <div className="top__brandTitle">Sales Genius</div>
+              <div className="top__brandSub">Cabinet</div>
+            </div>
 
-    <div className="top__proj">
-      <div className="top__label">Проект</div>
-      <select
-        value={appId || ''}
-        onChange={(e) => setAppId(e.target.value)}
-        className="top__select"
-      >
-        {apps.map(a => (
-          <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
-        ))}
-      </select>
-    </div>
+            <div className="top__proj">
+              <div className="top__label">Проект</div>
+              <select
+                value={appId || ''}
+                onChange={(e) => setAppId(e.target.value)}
+                className="top__select"
+              >
+                {apps.map(a => (
+                  <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
+                ))}
+              </select>
+            </div>
 
-    {/* ДАТЫ — теперь тут */}
-    <div className="top__dates">
-      <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
-      <span className="top__arrow">→</span>
-      <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
-    </div>
-  </div>
+            {/* Даты теперь слева */}
+            <div className="top__dates">
+              <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
+              <span className="top__arrow">→</span>
+              <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
+            </div>
+          </div>
 
-  {/* RIGHT: theme + email + logout (logout крайний справа) */}
-  <div className="top__right">
-    <ThemeToggle />
-    <Pill>{email}</Pill>
-    <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
-  </div>
-</header>
-
+          {/* RIGHT: тема + email + выйти (выйти крайний справа) */}
+          <div className="top__right">
+            <ThemeToggle />
+            <Pill>{email}</Pill>
+            <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
+          </div>
+        </header>
 
         <Outlet />
       </main>
