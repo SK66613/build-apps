@@ -1,26 +1,17 @@
-import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import React from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '../app/auth';
 
-import { api } from "../lib/api";
-import { useCabinetStore } from "../lib/store";
+// если у тебя в appState есть хук — подключи и покажи проект/даты
+// import { useAppState } from '../app/appState';
 
-import { AppPicker } from "../components/AppPicker";
-import { DateRangePicker } from "../components/DateRangePicker";
-import { ThemeToggle } from "../components/ThemeToggle";
-
-type SideItemProps = {
-  to: string;
-  label: string;
-  icon: React.ReactNode;
-};
-
-function SideItem({ to, label, icon }: SideItemProps) {
+function SideItem({ to, label, icon }: { to: string; label: string; icon: React.ReactNode }){
   return (
     <NavLink
       to={to}
-      className={({ isActive }) => "side__item" + (isActive ? " is-active" : "")}
+      className={({isActive}) => 'side__item' + (isActive ? ' is-active' : '')}
       title={label}
+      end={to === '/'} // чтобы Overview активировался только на корне
     >
       <span className="ico">{icon}</span>
       <span className="txt">{label}</span>
@@ -28,30 +19,13 @@ function SideItem({ to, label, icon }: SideItemProps) {
   );
 }
 
-export function AppShell() {
-  const { appId } = useCabinetStore();
+export default function Shell(){
+  const { me, logout } = useAuth();
 
-  // apps list (для выбора проекта)
-  const appsQ = useQuery({
-    queryKey: ["apps.list"],
-    queryFn: () => api.apps.list(),
-  });
+  // Если у тебя есть app state — раскомментируй и подставь свои поля:
+  // const { appId, apps, setAppId, dateFrom, dateTo, setDateRange } = useAppState();
 
-  // user me (для email)
-  const meQ = useQuery({
-    queryKey: ["auth.me"],
-    queryFn: () => api.auth.me(),
-  });
-
-  const userEmail = (meQ.data as any)?.email || (meQ.data as any)?.user?.email || "";
-
-  async function logout() {
-    try {
-      await api.auth.logout();
-    } catch (_) {}
-    // самый простой вариант: перезагрузка (если у тебя так работает сессия)
-    window.location.href = "/";
-  }
+  const email = (me as any)?.email || (me as any)?.user?.email || '';
 
   return (
     <div className="sg-shell">
@@ -63,28 +37,27 @@ export function AppShell() {
           </button>
         </div>
 
-        {/* SCROLL AREA */}
         <div className="side__scroll">
           <nav className="side__nav">
-            <SideItem to="/overview" icon="🏠" label="Overview" />
-            <SideItem to="/live" icon="🟢" label="Live" />
+            <SideItem to="/"          icon="🏠" label="Overview" />
+            <SideItem to="/live"      icon="🟢" label="Live" />
             <SideItem to="/customers" icon="👥" label="Customers" />
-            <SideItem to="/sales" icon="🧾" label="Sales" />
+            <SideItem to="/sales"     icon="🧾" label="Sales" />
 
             <div className="side__sep" />
 
-            <SideItem to="/wheel" icon="🎡" label="Wheel" />
-            <SideItem to="/passport" icon="🏁" label="Passport" />
-            <SideItem to="/calendar" icon="📅" label="Calendar" />
+            <SideItem to="/wheel"     icon="🎡" label="Wheel" />
+            <SideItem to="/passport"  icon="🏁" label="Passport" />
+            <SideItem to="/calendar"  icon="📅" label="Calendar" />
 
             <div className="side__sep" />
 
-            <SideItem to="/profit" icon="💹" label="Profit / ROI" />
-            <SideItem to="/settings" icon="⚙️" label="Settings" />
+            <SideItem to="/profit"    icon="💹" label="Profit / ROI" />
+            <SideItem to="/settings"  icon="⚙️" label="Settings" />
 
             <div className="side__sep" />
 
-            <SideItem to="/constructor" icon="🧩" label="Constructor" />
+            <SideItem to="/constructor" icon="🧩" label="Конструктор" />
           </nav>
         </div>
       </aside>
@@ -98,22 +71,42 @@ export function AppShell() {
               <div className="sg-brand__sub">Cabinet</div>
             </div>
 
-            <div className="sg-topbar__group">
+            {/* ===== сюда переносим Проект / Тема / Email / Выйти ===== */}
+
+            {/* Проект: подключи свой AppPicker/Select из твоих компонентов */}
+            {/* пример: */}
+            {/* <div className="sg-topbar__group">
               <div className="sg-topbar__label">Проект</div>
-              <AppPicker apps={(appsQ.data as any)?.apps || []} />
-            </div>
+              <select className="sg-input" style={{ width: 220 }} value={appId||''} onChange={(e)=>setAppId(e.target.value)}>
+                {(apps||[]).map(a=> <option key={a.id} value={a.id}>{a.title}</option>)}
+              </select>
+            </div> */}
 
-            <ThemeToggle />
+            {/* Тема: у тебя уже есть кнопка Light, если она компонент — вставь сюда */}
+            {/* <ThemeToggle /> */}
+            <button
+              className="sg-btn sg-btn--ghost"
+              onClick={()=>{
+                const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.dataset.theme = next;
+                try{ localStorage.setItem('sg_theme', next); }catch(_){}
+              }}
+              title="Theme"
+            >
+              ☀️ {document.documentElement.dataset.theme === 'dark' ? 'Dark' : 'Light'}
+            </button>
 
-            {userEmail ? <div className="sg-user">{userEmail}</div> : null}
+            {email ? <div className="sg-user">{email}</div> : null}
 
-            <button className="sg-btn sg-btn--ghost" onClick={logout}>
+            <button className="sg-btn sg-btn--ghost" onClick={()=>logout?.()}>
               Выйти
             </button>
           </div>
 
           <div className="sg-topbar__right">
-            <DateRangePicker />
+            {/* Даты: если у тебя есть DateRangePicker компонент — вставь сюда */}
+            {/* <DateRangePicker /> */}
           </div>
         </header>
 
