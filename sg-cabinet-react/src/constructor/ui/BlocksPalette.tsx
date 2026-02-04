@@ -4,8 +4,10 @@ import { useConstructorStore } from '../state/constructorStore';
 const PALETTE = [
   { key: 'bonus_wheel_one', title: 'Wheel' },
   { key: 'styles_passport_one', title: 'Passport' },
-  { key: 'calendar_one', title: 'Calendar' },
-  { key: 'game_flappy', title: 'Flappy' },
+  { key: 'calendar_booking_one', title: 'Calendar' },
+  { key: 'game_flappy_one', title: 'Flappy' },
+  { key: 'shop_stars_product_one', title: 'Stars' },
+  
 ];
 
 export function BlocksPalette(){
