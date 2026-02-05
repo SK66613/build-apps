@@ -1,5 +1,8 @@
 import React from 'react';
 import { PreviewFrame } from './preview/PreviewFrame';
+
+import { ConstructorDrawer } from './ui/ConstructorDrawer';
+
 import { PagesTree } from './ui/PagesTree';
 import { BlocksPalette } from './ui/BlocksPalette';
 import { Inspector } from './ui/Inspector';
