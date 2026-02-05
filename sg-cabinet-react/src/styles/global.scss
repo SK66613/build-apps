@@ -537,23 +537,10 @@ html[data-theme='dark'] .ctor__resizeGrip{
   background: var(--accentSoft);
 }
 
-.ctor-preview__zoom{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-.ctor-preview__zoomLbl{
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--muted);
-}
-.ctor-preview__zoomSlider{ width: 180px; }
-.ctor-preview__zoomVal{
-  font-weight: 900;
-  color: var(--muted);
-  min-width: 48px;
-  text-align:right;
-}
+
+
+
+
 
 .ctor-preview__stage{
   flex: 1;
