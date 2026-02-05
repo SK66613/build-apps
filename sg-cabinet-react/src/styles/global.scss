@@ -1215,3 +1215,86 @@ html[data-theme='dark'] .ctorStub{
 }
 
 
+
+
+
+
+
+
+/* ===== Inspector rows like old constructor ===== */
+.ctorInspector__hdr{
+  display:flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ctorInspector__title{ font-weight: 900; }
+.ctorInspector__small{ color: var(--muted); font-weight: 800; }
+
+.layerRow{
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 10px 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+html[data-theme='dark'] .layerRow{
+  background: rgba(2,6,23,.28);
+  border-color: rgba(226,232,240,.10);
+}
+.layerRow.is-active{
+  outline: 2px solid rgba(124,92,255,.35);
+}
+.layerRow.is-hidden{
+  opacity: .55;
+}
+
+.layerRow__main{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.layerRow__name{ min-width: 0; }
+.layerRow__title{
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.layerRow__sub{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layerRow__actions{
+  display:flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* small icon button */
+.ctorIconBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.85);
+  font-weight: 900;
+  cursor: pointer;
+}
+.ctorIconBtn:disabled{
+  opacity: .35;
+  cursor: default;
+}
+html[data-theme='dark'] .ctorIconBtn{
+  border-color: rgba(226,232,240,.12);
+  background: rgba(15,23,42,.55);
+  color: rgba(226,232,240,.90);
+}
+
