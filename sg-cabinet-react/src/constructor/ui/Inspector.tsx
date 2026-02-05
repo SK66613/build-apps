@@ -1,102 +1,115 @@
 import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
+import { Button } from '../../components/ui';
 
-function safeJsonParse(s: string){
-  try{ return { ok: true, value: JSON.parse(s) }; }catch(e:any){ return { ok: false, error: e?.message || String(e) }; }
+function iconBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }){
+  const { title, children, className, ...rest } = props;
+  return (
+    <button
+      type="button"
+      title={title}
+      className={'ctorIconBtn ' + (className || '')}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function Inspector(){
-  const bp = useConstructorStore(s=>s.blueprint);
-  const selected = useConstructorStore(s=>s.selected);
-  const updateThemeCss = useConstructorStore(s=>s.updateThemeCss);
-  const updateBlockProps = useConstructorStore(s=>s.updateBlockProps);
-  const deleteBlock = useConstructorStore(s=>s.deleteBlock);
-  const selectBlock = useConstructorStore(s=>s.selectBlock);
+  const { bp, selected, selectRoute, selectBlock, updateRoute } = useConstructorStore();
+  const removeBlock = useConstructorStore(s=>s.removeBlock);
+  const moveBlock = useConstructorStore(s=>s.moveBlock);
+  const toggleHidden = useConstructorStore(s=>s.toggleBlockHidden);
+  const duplicateBlock = useConstructorStore(s=>s.duplicateBlock);
 
-  const selPath = selected?.kind ? (selected as any).path : '/';
-  const route = bp.routes.find(r=>r.path===selPath) || bp.routes[0];
-  const blocks = route?.blocks || [];
+  const curPath =
+    selected?.kind === 'block' ? selected.path :
+    selected?.kind === 'route' ? selected.path :
+    bp.routes[0]?.path || '/';
 
-  const selBlock = selected?.kind==='block'
-    ? blocks.find(b=>b.id===selected.id)
-    : null;
+  const route = bp.routes.find(r => r.path === curPath) || bp.routes[0];
+  if (!route){
+    return <div className="ctorEmpty">Нет страниц. Добавь страницу в “Страницы”.</div>;
+  }
 
-  const [propsText, setPropsText] = React.useState('');
-  const [propsErr, setPropsErr] = React.useState<string | null>(null);
-
+  // выбор страницы если selected пустой
   React.useEffect(()=>{
-    if (selBlock){
-      setPropsText(JSON.stringify(selBlock.props || {}, null, 2));
-      setPropsErr(null);
-    } else {
-      setPropsText('');
-      setPropsErr(null);
-    }
-  }, [selBlock?.id]);
-
-  const onApplyProps = () => {
-    if (!selBlock) return;
-    const p = safeJsonParse(propsText);
-    if (!p.ok){ setPropsErr(p.error); return; }
-    updateBlockProps(route.path, selBlock.id, p.value);
-    setPropsErr(null);
-  };
+    if (!selected && route?.path) selectRoute(route.path);
+  }, [selected, route?.path, selectRoute]);
 
   return (
-    <div className="sg-card ctor-card ctor-inspector">
-      <div style={{ fontWeight: 1000 }}>Inspector</div>
+    <div className="ctorInspector">
+      <div className="ctorInspector__hdr">
+        <div className="ctorInspector__title">Блоки на странице: <b>{route.path}</b></div>
+        <div className="ctorInspector__small">({route.blocks.length})</div>
+      </div>
 
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 1000 }}>Блоки на странице: <span className="sg-muted">{route?.path || '—'}</span></div>
-        <div style={{ marginTop: 10, display:'flex', flexDirection:'column', gap: 8 }}>
-          {blocks.length === 0 && <div className="sg-muted">Пока нет блоков</div>}
-          {blocks.map(b=>{
-            const active = selected?.kind==='block' && selected.id===b.id;
-            return (
-              <div key={b.id} style={{ display:'flex', gap: 8, alignItems:'center', padding: 10, borderRadius: 14, border:'1px solid var(--border)', background: active ? 'rgba(34, 197, 94, 0.10)' : 'transparent' }}>
-                <button className="sg-btn" style={{ flex: 1, justifyContent:'flex-start' }} onClick={()=>selectBlock(route.path, b.id)}>
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
-                    <div style={{ fontWeight: 1000 }}>{b.key}</div>
-                    <div className="sg-muted" style={{ fontSize: 12 }}>{b.id}</div>
-                  </div>
-                </button>
-                <button className="sg-btn" onClick={()=>deleteBlock(route.path, b.id)}>Удалить</button>
+      <div className="ctorInspector__list">
+        {route.blocks.map((b, idx) => {
+          const isSel = selected?.kind === 'block' && selected.path === route.path && selected.id === b.id;
+          const isHidden = !!b.hidden;
+
+          return (
+            <div
+              key={b.id}
+              className={'layerRow' + (isSel ? ' is-active' : '') + (isHidden ? ' is-hidden' : '')}
+              onClick={()=>selectBlock(route.path, b.id)}
+            >
+              <div className="layerRow__main">
+                <div className="layerRow__name">
+                  <div className="layerRow__title">{b.props?.title || b.key}</div>
+                  <div className="layerRow__sub">{b.key}</div>
+                </div>
+
+                <div className="layerRow__actions" onClick={(e)=>e.stopPropagation()}>
+                  {/* вверх/вниз */}
+                  <iconBtn title="Выше" disabled={idx===0} onClick={()=>moveBlock(route.path, b.id, -1)}>↑</iconBtn>
+                  <iconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(route.path, b.id, 1)}>↓</iconBtn>
+
+                  {/* редактировать (пока заглушка: можно потом подключить реальный editor) */}
+                  <iconBtn
+                    title="Редактировать"
+                    onClick={()=>{
+                      // TODO: подключим реальный BlockEditor modal как в старом.
+                      alert('Редактор блока: подключим следующим шагом (как в старом конструкторе).');
+                    }}
+                  >✎</iconBtn>
+
+                  {/* показать/скрыть */}
+                  <iconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(route.path, b.id)}>
+                    {isHidden ? '🙈' : '👁'}
+                  </iconBtn>
+
+                  {/* дублировать */}
+                  <iconBtn title="Дублировать" onClick={()=>duplicateBlock(route.path, b.id)}>⧉</iconBtn>
+
+                  {/* удалить */}
+                  <iconBtn
+                    title="Удалить"
+                    onClick={()=>{
+                      if (confirm('Удалить блок?')) removeBlock(route.path, b.id);
+                    }}
+                  >🗑</iconBtn>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontWeight: 1000 }}>Theme CSS</div>
-        <textarea
-          className="sg-input"
-          style={{ marginTop: 8, minHeight: 160, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-          value={String(bp.app?.theme?.css || '')}
-          onChange={(e)=>updateThemeCss(e.target.value)}
-          placeholder="CSS токены темы (как в старой студии)"
-        />
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontWeight: 1000 }}>Props выбранного блока</div>
-        {!selBlock && <div className="sg-muted" style={{ marginTop: 8 }}>Выбери блок слева или кликни его в превью</div>}
-
-        {selBlock && (
-          <>
-            <textarea
-              className="sg-input"
-              style={{ marginTop: 8, minHeight: 220, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-              value={propsText}
-              onChange={(e)=>setPropsText(e.target.value)}
-            />
-            {propsErr && <div className="sg-muted" style={{ marginTop: 8 }}>JSON ошибка: {propsErr}</div>}
-            <div style={{ display:'flex', gap: 10, marginTop: 10 }}>
-              <button className="sg-btn primary" onClick={onApplyProps}>Применить props</button>
             </div>
-          </>
-        )}
+          );
+        })}
+      </div>
+
+      <div className="ctorInspector__footer">
+        <Button
+          onClick={()=>{
+            // быстро: перекидываем пользователя к секции “Блоки” (палитра уже есть)
+            alert('Нажми “Блоки” → выбери блок. (Модал “Библиотека блоков” сделаем следующим шагом.)');
+          }}
+        >
+          Добавить блок
+        </Button>
       </div>
     </div>
   );
 }
+
+export default Inspector;
