@@ -1443,3 +1443,26 @@ html[data-theme='dark'] .ctorModal__sub{ color: rgba(148,163,184,.9); }
 }
 html[data-theme='dark'] .ctorModal__ftr{ border-top-color: rgba(226,232,240,.10); }
 
+
+
+
+//кнопки в первью pixel сохранить опубликовать
+
+/* preview header right actions */
+.ctor-preview__actions{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* tighter segmented for preview buttons */
+.ctorSeg--tight{
+  padding: 4px;
+  gap: 6px;
+  border-radius: 18px;
+}
+.ctorSeg--tight .ctorSeg__btn{
+  padding: 9px 12px;
+  border-radius: 14px;
+}
