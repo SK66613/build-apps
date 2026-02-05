@@ -1,164 +1,135 @@
 import { create } from 'zustand';
-import type { Blueprint, Selected, SaveState, RoutePage, BlockInst } from './types';
-import { clone, uid, makeDefaultBlueprint } from './utils';
-import { ensureThemeTokens, themeTokensToCss, type ThemeTokens } from '../design/theme';
+import type { Blueprint, RouteNode, BlockInst } from './types';
 
-
-type State = {
-  appId: string | null;
-  blueprint: Blueprint;
-  selected: Selected;
-  dirty: boolean;
-  saveState: SaveState;
-
-  setAppId(appId: string | null): void;
-  setBlueprint(bp: Blueprint): void;
-  setSaveState(st: SaveState): void;
-  markSaved(): void;
-
-  selectRoute(path: string): void;
-  selectBlock(path: string, id: string): void;
-
-  addRoute(path?: string, title?: string): void;
-  renameRouteTitle(path: string, title: string): void;
-
-  addBlock(path: string, key: string): void;
-  updateBlockProps(path: string, id: string, props: any): void;
-  deleteBlock(path: string, id: string): void;
-
-  updateThemeCss(css: string): void;
-};
-
-function ensureRoute(bp: Blueprint, path: string): RoutePage {
-  let r = bp.routes.find((x) => x.path === path);
-  if (!r) {
-    r = { path, blocks: [] };
-    bp.routes.push(r);
-  }
-  if (!Array.isArray(r.blocks)) r.blocks = [] as any;
-  return r;
+function uid(prefix='b_'){
+  return prefix + Math.random().toString(36).slice(2, 9) + '_' + Date.now().toString(36);
 }
 
-export const useConstructorStore = create<State>((set, get) => ({
-  appId: null,
-  blueprint: makeDefaultBlueprint(),
-  selected: { kind: 'route', path: '/' },
-  dirty: false,
-  saveState: 'idle',
+function clone<T>(v: T): T {
+  return JSON.parse(JSON.stringify(v));
+}
 
-  setAppId(appId) {
-    set({ appId });
+function findRoute(bp: Blueprint, path: string){
+  return bp.routes.find(r => r.path === path);
+}
+
+export const useConstructorStore = create<{
+  bp: Blueprint;
+  selected: { kind:'route'; path:string } | { kind:'block'; path:string; id:string } | null;
+
+  setBP: (bp: Blueprint)=>void;
+
+  selectRoute: (path: string)=>void;
+  selectBlock: (path: string, id: string)=>void;
+
+  addRoute: (route: RouteNode)=>void;
+  updateRoute: (path: string, patch: Partial<RouteNode>)=>void;
+
+  addBlock: (path: string, inst: BlockInst)=>void;
+  updateBlock: (path: string, id: string, patch: Partial<BlockInst>)=>void;
+
+  removeBlock: (path: string, id: string)=>void;
+  moveBlock: (path: string, id: string, dir: -1|1)=>void;
+  toggleBlockHidden: (path: string, id: string)=>void;
+  duplicateBlock: (path: string, id: string)=>void;
+}>((set, get) => ({
+  bp: { routes: [] },
+  selected: null,
+
+  setBP: (bp)=>set({ bp }),
+
+  selectRoute: (path)=>set({ selected: { kind:'route', path } }),
+  selectBlock: (path, id)=>set({ selected: { kind:'block', path, id } }),
+
+  addRoute: (route)=>{
+    const bp = clone(get().bp);
+    bp.routes.push({ path: route.path, title: route.title || route.path, blocks: route.blocks || [] });
+    set({ bp, selected: { kind:'route', path: route.path } });
   },
 
-  setBlueprint(bp) {
-    // normalize minimally
-    const clean = clone(bp || ({} as any));
-    if (!clean.nav || !Array.isArray(clean.nav.routes)) {
-      (clean as any).nav = makeDefaultBlueprint().nav;
-    }
-    if (!Array.isArray(clean.routes)) (clean as any).routes = makeDefaultBlueprint().routes;
-    if (!clean.app) (clean as any).app = makeDefaultBlueprint().app;
-    set({ blueprint: clean, dirty: false, saveState: 'idle' });
+  updateRoute: (path, patch)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    Object.assign(r, patch);
+    set({ bp });
   },
 
-  setSaveState(st) {
-    set({ saveState: st });
+  addBlock: (path, inst)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    const bi: BlockInst = {
+      id: inst.id || uid('b_'),
+      key: inst.key,
+      props: inst.props || {},
+      hidden: !!inst.hidden,
+    };
+    r.blocks.push(bi);
+    set({ bp, selected: { kind:'block', path, id: bi.id } });
   },
 
-  markSaved() {
-    set({ dirty: false, saveState: 'saved' });
-  },
-
-  selectRoute(path) {
-    set({ selected: { kind: 'route', path } });
-  },
-
-  selectBlock(path, id) {
-    set({ selected: { kind: 'block', path, id } });
-  },
-
-  addRoute(path, title) {
-    const st = get();
-    const bp = clone(st.blueprint);
-
-    const p = path || `/page-${bp.nav.routes.length + 1}`;
-    if (bp.nav.routes.some((r) => r.path === p)) return;
-
-    bp.nav.routes.push({
-      path: p,
-      title: title || 'Новая',
-      icon: 'custom',
-      icon_g: '◌',
-      icon_img: '',
-      kind: 'custom',
-    });
-
-    ensureRoute(bp, p);
-
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'route', path: p } });
-  },
-
-  renameRouteTitle(path, title) {
-    const st = get();
-    const bp = clone(st.blueprint);
-    const nr = bp.nav.routes.find((x) => x.path === path);
-    if (!nr) return;
-    nr.title = title;
-    set({ blueprint: bp, dirty: true, saveState: 'idle' });
-  },
-
-  addBlock(path, key) {
-    const st = get();
-    const bp = clone(st.blueprint);
-    const r = ensureRoute(bp, path);
-
-    const b: BlockInst = { id: uid('b'), key, props: {} };
-    r.blocks.push(b);
-
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'block', path, id: b.id } });
-  },
-
-  updateBlockProps(path, id, props) {
-    const st = get();
-    const bp = clone(st.blueprint);
-    const r = ensureRoute(bp, path);
-    const b = r.blocks.find((x) => x.id === id);
+  updateBlock: (path, id, patch)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    const b = r.blocks.find(x => x.id === id);
     if (!b) return;
-    b.props = props;
-    set({ blueprint: bp, dirty: true, saveState: 'idle' });
+    Object.assign(b, patch);
+    set({ bp });
   },
 
-  deleteBlock(path, id) {
-    const st = get();
-    const bp = clone(st.blueprint);
-    const r = ensureRoute(bp, path);
-    r.blocks = r.blocks.filter((b) => b.id !== id);
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'route', path } });
+  removeBlock: (path, id)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    r.blocks = r.blocks.filter(b => b.id !== id);
+    const sel = get().selected;
+    const nextSel =
+      (sel && sel.kind === 'block' && sel.path === path && sel.id === id)
+        ? { kind:'route' as const, path }
+        : sel;
+    set({ bp, selected: nextSel });
   },
 
-    updateThemeTokens(patch: ThemeTokens) {
-    const st = get();
-    const bp = clone(st.blueprint);
-
-    bp.app = bp.app || {};
-    const cur = ensureThemeTokens(bp.app.themeTokens || {});
-    const next = ensureThemeTokens({ ...cur, ...(patch || {}) });
-
-    bp.app.themeTokens = next;
-
-    bp.app.theme = bp.app.theme || {};
-    bp.app.theme.css = themeTokensToCss(next);
-
-    set({ blueprint: bp, dirty: true, saveState: 'idle' });
+  moveBlock: (path, id, dir)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    const i = r.blocks.findIndex(b => b.id === id);
+    if (i < 0) return;
+    const j = i + dir;
+    if (j < 0 || j >= r.blocks.length) return;
+    const tmp = r.blocks[i];
+    r.blocks[i] = r.blocks[j];
+    r.blocks[j] = tmp;
+    set({ bp });
   },
 
+  toggleBlockHidden: (path, id)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    const b = r.blocks.find(x => x.id === id);
+    if (!b) return;
+    b.hidden = !b.hidden;
+    set({ bp });
+  },
 
-  updateThemeCss(css) {
-    const st = get();
-    const bp = clone(st.blueprint);
-    bp.app = bp.app || {};
-    bp.app.theme = bp.app.theme || {};
-    bp.app.theme.css = String(css || '');
-    set({ blueprint: bp, dirty: true, saveState: 'idle' });
+  duplicateBlock: (path, id)=>{
+    const bp = clone(get().bp);
+    const r = findRoute(bp, path);
+    if (!r) return;
+    const i = r.blocks.findIndex(b => b.id === id);
+    if (i < 0) return;
+    const src = r.blocks[i];
+    const copy: BlockInst = {
+      id: uid('b_'),
+      key: src.key,
+      props: clone(src.props || {}),
+      hidden: !!src.hidden,
+    };
+    r.blocks.splice(i + 1, 0, copy);
+    set({ bp, selected: { kind:'block', path, id: copy.id } });
   },
 }));
