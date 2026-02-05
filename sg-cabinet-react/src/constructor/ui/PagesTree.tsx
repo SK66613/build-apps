@@ -1,6 +1,7 @@
 import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
 import { Button, Input } from '../../components/ui';
+import { BlocksPalette } from './BlocksPalette';
 
 function IconBtn(
   props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }
@@ -24,46 +25,161 @@ function normalizePathInput(v: string){
   if (!s.startsWith('/')) s = '/' + s;
   s = s.replace(/\s+/g, '-');
   s = s.replace(/[^/a-zA-Z0-9_-]/g, '');
-  return s;
+  return s || '/';
 }
-
-function slugLabel(path: string){
-  if (path === '/') return '/';
-  return path;
-}
-
-type IconPick =
-  | { type: 'kind'; kind: 'home'|'play'|'profile'|'bonuses'|'tournament'|'custom' }
-  | { type: 'glyph'; glyph: string }
-  | { type: 'none' };
-
-const PRESET_KINDS: Array<{ kind: IconPick & {type:'kind'}; label: string; glyph: string }> = [
-  { kind: {type:'kind', kind:'home'},       label: 'Home',      glyph: '🏠' },
-  { kind: {type:'kind', kind:'play'},       label: 'Play',      glyph: '▶️' },
-  { kind: {type:'kind', kind:'bonuses'},    label: 'Bonuses',   glyph: '🎁' },
-  { kind: {type:'kind', kind:'tournament'}, label: 'Tournament',glyph: '🏆' },
-  { kind: {type:'kind', kind:'profile'},    label: 'Profile',   glyph: '👤' },
-  { kind: {type:'kind', kind:'custom'},     label: 'Custom',    glyph: '◌' },
-];
 
 const GLYPHS: string[] = ['◌','●','■','▲','◆','★','♥','☻','✦','⚡','✚','☰'];
 
+const PRESET_KINDS: Array<{ kind: any; label: string; glyph: string }> = [
+  { kind: 'home',       label: 'Home',       glyph: '🏠' },
+  { kind: 'play',       label: 'Play',       glyph: '▶️' },
+  { kind: 'bonuses',    label: 'Bonuses',    glyph: '🎁' },
+  { kind: 'tournament', label: 'Tournament', glyph: '🏆' },
+  { kind: 'profile',    label: 'Profile',    glyph: '👤' },
+  { kind: 'custom',     label: 'Custom',     glyph: '◌' },
+];
+
+function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+}:{
+  open: boolean;
+  title: React.ReactNode;
+  onClose: ()=>void;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}){
+  if (!open) return null;
+  return (
+    <div className="ctorModal" onMouseDown={onClose}>
+      <div className="ctorModal__panel" onMouseDown={(e)=>e.stopPropagation()}>
+        <div className="ctorModal__hdr">
+          <div className="ctorModal__ttl">{title}</div>
+          <Button variant="ghost" onClick={onClose}>Закрыть</Button>
+        </div>
+        <div className="ctorModal__body">{children}</div>
+        {footer ? <div className="ctorModal__ftr">{footer}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+function LayersList({
+  path,
+  onRequestAddBlock,
+}:{
+  path: string;
+  onRequestAddBlock: ()=>void;
+}){
+  const blueprint = useConstructorStore(s=>s.blueprint);
+  const selected  = useConstructorStore(s=>s.selected);
+  const selectBlock = useConstructorStore(s=>s.selectBlock);
+
+  const deleteBlock = useConstructorStore(s=>s.deleteBlock);
+  const moveBlock = useConstructorStore(s=>s.moveBlock);
+  const toggleHidden = useConstructorStore(s=>s.toggleBlockHidden);
+  const duplicateBlock = useConstructorStore(s=>s.duplicateBlock);
+
+  const route = blueprint.routes.find(r=>r.path===path);
+  if (!route) return <div className="ctorEmpty">Нет данных страницы.</div>;
+
+  return (
+    <div className="ctorLayers">
+      <div className="ctorLayers__head">
+        <div className="ctorLayers__title">Блоки</div>
+        <div className="ctorLayers__count">({route.blocks.length})</div>
+      </div>
+
+      <div className="ctorLayers__list">
+        {route.blocks.map((b, idx)=>{
+          const isSel =
+            selected?.kind === 'block' &&
+            selected.path === path &&
+            selected.id === b.id;
+
+          const isHidden = !!b.hidden;
+
+          return (
+            <div
+              key={b.id}
+              className={'layerRow' + (isSel ? ' is-active' : '') + (isHidden ? ' is-hidden' : '')}
+              onClick={()=>selectBlock(path, b.id)}
+            >
+              <div className="layerRow__main">
+                <div className="layerRow__name">
+                  <div className="layerRow__title">{b.props?.title || b.key}</div>
+                  <div className="layerRow__sub">{b.key}</div>
+                </div>
+
+                <div className="layerRow__actions" onClick={(e)=>e.stopPropagation()}>
+                  <IconBtn title="Выше" disabled={idx===0} onClick={()=>moveBlock(path, b.id, -1)}>↑</IconBtn>
+                  <IconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(path, b.id, 1)}>↓</IconBtn>
+
+                  <IconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(path, b.id)}>
+                    {isHidden ? '🙈' : '👁'}
+                  </IconBtn>
+
+                  <IconBtn title="Дублировать" onClick={()=>duplicateBlock(path, b.id)}>⧉</IconBtn>
+
+                  <IconBtn
+                    title="Удалить"
+                    onClick={()=>{
+                      if (confirm('Удалить блок?')) deleteBlock(path, b.id);
+                    }}
+                  >
+                    🗑
+                  </IconBtn>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="ctorLayers__footer">
+        <Button onClick={onRequestAddBlock}>+ Блок</Button>
+      </div>
+    </div>
+  );
+}
+
 export function PagesTree(){
   const nav = useConstructorStore(s=>s.blueprint.nav.routes);
+  const blueprint = useConstructorStore(s=>s.blueprint);
+
   const selected = useConstructorStore(s=>s.selected);
   const selectRoute = useConstructorStore(s=>s.selectRoute);
 
   const addRoute = useConstructorStore(s=>s.addRoute);
 
-  // новые экшены “страниц как в старом”
-  const toggleHidden = useConstructorStore(s=> (s as any).toggleRouteHidden);
-  const setRouteIcon = useConstructorStore(s=> (s as any).setRouteIcon);
-  const renameRoute = useConstructorStore(s=> (s as any).renameRoute);
-  const deleteRoute = useConstructorStore(s=> (s as any).deleteRoute);
+  const toggleHidden = (useConstructorStore as any)(s=>s.toggleRouteHidden);
+  const setRouteIcon = (useConstructorStore as any)(s=>s.setRouteIcon);
+  const renameRoute = (useConstructorStore as any)(s=>s.renameRoute);
+  const deleteRoute = (useConstructorStore as any)(s=>s.deleteRoute);
 
-  // ----- modal state
+  const activePath =
+    selected?.kind === 'route' ? selected.path :
+    selected?.kind === 'block' ? selected.path :
+    nav[0]?.path || '/';
+
+  // open accordion state like old
+  const [openMap, setOpenMap] = React.useState<Record<string, boolean>>({});
+
+  React.useEffect(()=>{
+    // если ничего не открыто — открыть активную
+    setOpenMap((m)=>{
+      if (m[activePath] !== undefined) return m;
+      return { ...m, [activePath]: true };
+    });
+  }, [activePath]);
+
+  // modals
   const [editOpen, setEditOpen] = React.useState(false);
   const [iconOpen, setIconOpen] = React.useState(false);
+  const [libOpen, setLibOpen] = React.useState(false);
   const [curPath, setCurPath] = React.useState<string>('/');
 
   const cur = nav.find(r=>r.path===curPath) || nav[0];
@@ -78,10 +194,21 @@ export function PagesTree(){
     setTmpPath(r?.path || '/');
   }, [editOpen, curPath, nav]);
 
-  const activePath =
-    selected?.kind === 'route' ? selected.path :
-    selected?.kind === 'block' ? selected.path :
-    nav[0]?.path || '/';
+  const applyIconImg = async (file: File)=>{
+    // быстрый вариант: dataURL (как в старом часто делали)
+    // если хочешь грузить на сервер/CDN — потом поменяем.
+    const toDataUrl = (f: File) => new Promise<string>((res, rej)=>{
+      const rd = new FileReader();
+      rd.onload = ()=>res(String(rd.result || ''));
+      rd.onerror = ()=>rej(new Error('file read error'));
+      rd.readAsDataURL(f);
+    });
+    const url = await toDataUrl(file);
+    if (typeof setRouteIcon === 'function' && cur) {
+      setRouteIcon(cur.path, { kind:'custom', icon:'custom', icon_g:'', icon_img: url });
+    }
+    setIconOpen(false);
+  };
 
   return (
     <div className="pagesTree">
@@ -92,215 +219,264 @@ export function PagesTree(){
 
       <div className="pagesTree__list">
         {nav.map(r=>{
-          const active = activePath === r.path;
+          const isActive = activePath === r.path;
           const isHidden = !!(r as any).hidden;
 
-          // что показать как “иконка”
           const glyph =
             (r.icon_img && r.icon_img.trim()) ? '🖼' :
             (r.icon_g && r.icon_g.trim()) ? r.icon_g :
-            (r.kind ? PRESET_KINDS.find(k=>k.kind.kind===r.kind)?.glyph : '') ||
+            (r.kind ? PRESET_KINDS.find(k=>k.kind===r.kind)?.glyph : '') ||
             '◌';
 
+          const isOpen = !!openMap[r.path];
+
           return (
-            <div
-              key={r.path}
-              className={'pageRow' + (active ? ' is-active' : '') + (isHidden ? ' is-hidden' : '')}
-              onClick={()=>selectRoute(r.path)}
-            >
-              <div className="pageRow__ico">{glyph}</div>
+            <div key={r.path} className={'pageAcc' + (isActive ? ' is-active' : '') + (isHidden ? ' is-hidden' : '')}>
+              {/* HEADER */}
+              <div
+                className="pageAcc__hdr"
+                onClick={()=>{
+                  selectRoute(r.path);
+                  setOpenMap(m => ({ ...m, [r.path]: !m[r.path] }));
+                }}
+              >
+                <div className="pageAcc__left">
+                  <div className="pageRow__ico">{glyph}</div>
+                  <div className="pageRow__meta">
+                    <div className="pageRow__title">{r.title}</div>
+                    <div className="pageRow__slug">{r.path}</div>
+                  </div>
+                </div>
 
-              <div className="pageRow__meta">
-                <div className="pageRow__title">{r.title}</div>
-                <div className="pageRow__slug">{slugLabel(r.path)}</div>
-              </div>
-
-              <div className="pageRow__actions" onClick={(e)=>e.stopPropagation()}>
-                <IconBtn
-                  title={isHidden ? 'Показать вкладку' : 'Скрыть вкладку'}
-                  onClick={()=>{
-                    if (typeof toggleHidden === 'function') toggleHidden(r.path);
-                  }}
-                >
-                  {isHidden ? '🙈' : '👁'}
-                </IconBtn>
-
-                <IconBtn
-                  title="Иконка"
-                  onClick={()=>{
-                    setCurPath(r.path);
-                    setIconOpen(true);
-                  }}
-                >
-                  ico
-                </IconBtn>
-
-                <IconBtn
-                  title="Редактировать"
-                  onClick={()=>{
-                    setCurPath(r.path);
-                    setEditOpen(true);
-                  }}
-                >
-                  ✎
-                </IconBtn>
-
-                {r.path !== '/' && (
+                <div className="pageAcc__right" onClick={(e)=>e.stopPropagation()}>
                   <IconBtn
-                    title="Удалить"
+                    title={isHidden ? 'Показать вкладку' : 'Скрыть вкладку'}
                     onClick={()=>{
-                      if (confirm('Удалить страницу?')) {
-                        if (typeof deleteRoute === 'function') deleteRoute(r.path);
-                      }
+                      if (typeof toggleHidden === 'function') toggleHidden(r.path);
                     }}
                   >
-                    ✕
+                    {isHidden ? '🙈' : '👁'}
                   </IconBtn>
-                )}
+
+                  <IconBtn
+                    title="Иконка"
+                    onClick={()=>{
+                      setCurPath(r.path);
+                      setIconOpen(true);
+                    }}
+                  >
+                    ico
+                  </IconBtn>
+
+                  <IconBtn
+                    title="Редактировать"
+                    onClick={()=>{
+                      setCurPath(r.path);
+                      setEditOpen(true);
+                    }}
+                  >
+                    ✎
+                  </IconBtn>
+
+                  {r.path !== '/' && (
+                    <IconBtn
+                      title="Удалить"
+                      onClick={()=>{
+                        if (confirm('Удалить страницу?')) {
+                          if (typeof deleteRoute === 'function') deleteRoute(r.path);
+                        }
+                      }}
+                    >
+                      ✕
+                    </IconBtn>
+                  )}
+
+                  <IconBtn
+                    title={isOpen ? 'Свернуть' : 'Развернуть'}
+                    onClick={()=>{
+                      setOpenMap(m => ({ ...m, [r.path]: !m[r.path] }));
+                    }}
+                  >
+                    {isOpen ? '▴' : '▾'}
+                  </IconBtn>
+                </div>
               </div>
+
+              {/* BODY */}
+              {isOpen && (
+                <div className="pageAcc__body">
+                  <LayersList
+                    path={r.path}
+                    onRequestAddBlock={()=>{
+                      setCurPath(r.path);
+                      setLibOpen(true);
+                    }}
+                  />
+
+                  {/* нижняя кнопка, как в старом — под блоками */}
+                  <div className="pageAcc__addUnder">
+                    <Button onClick={()=>{
+                      setCurPath(r.path);
+                      setLibOpen(true);
+                    }}>
+                      + Блок
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
       {/* ===== Modal: edit title + slug ===== */}
-      {editOpen && cur && (
-        <div className="ctorModal" onMouseDown={()=>setEditOpen(false)}>
-          <div className="ctorModal__panel" onMouseDown={(e)=>e.stopPropagation()}>
-            <div className="ctorModal__hdr">
-              <div className="ctorModal__ttl">
-                Редактировать страницу <span className="ctorModal__muted">{cur.path}</span>
-              </div>
-              <Button variant="ghost" onClick={()=>setEditOpen(false)}>Закрыть</Button>
-            </div>
+      <Modal
+        open={editOpen}
+        title={<>Редактировать страницу <span className="ctorModal__muted">{cur?.path}</span></>}
+        onClose={()=>setEditOpen(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={()=>setEditOpen(false)}>Отмена</Button>
+            <Button
+              onClick={()=>{
+                if (!cur) return;
+                const nextPath = normalizePathInput(tmpPath);
+                const title = String(tmpTitle || '').trim();
+                if (typeof renameRoute === 'function') renameRoute(cur.path, { title, nextPath });
+                setEditOpen(false);
+              }}
+            >
+              Сохранить
+            </Button>
+          </>
+        }
+      >
+        <div className="ctorForm">
+          <div className="ctorField">
+            <div className="ctorLabel">Название</div>
+            <Input value={tmpTitle} onChange={(e)=>setTmpTitle(e.target.value)} />
+          </div>
 
-            <div className="ctorForm">
-              <div className="ctorField">
-                <div className="ctorLabel">Название</div>
-                <Input value={tmpTitle} onChange={(e)=>setTmpTitle(e.target.value)} />
-              </div>
-
-              <div className="ctorField">
-                <div className="ctorLabel">Slug / path</div>
-                <Input
-                  value={tmpPath}
-                  onChange={(e)=>setTmpPath(normalizePathInput(e.target.value))}
-                  placeholder="/"
-                />
-                <div className="ctorHelp">
-                  Пример: <b>/home</b>, <b>/bonus</b>. Для главной оставь <b>/</b>.
-                </div>
-              </div>
-            </div>
-
-            <div className="ctorModal__ftr">
-              <Button variant="ghost" onClick={()=>setEditOpen(false)}>Отмена</Button>
-              <Button
-                onClick={()=>{
-                  const nextPath = normalizePathInput(tmpPath);
-                  const title = String(tmpTitle || '').trim();
-
-                  if (typeof renameRoute === 'function') {
-                    renameRoute(cur.path, { title, nextPath });
-                  } else {
-                    // fallback: если не добавил renameRoute — не ломаем, просто меняем title старым методом
-                    const renameTitle = useConstructorStore.getState().renameRouteTitle;
-                    renameTitle(cur.path, title);
-                  }
-
-                  setEditOpen(false);
-                }}
-              >
-                Сохранить
-              </Button>
+          <div className="ctorField">
+            <div className="ctorLabel">Slug / path</div>
+            <Input
+              value={tmpPath}
+              onChange={(e)=>setTmpPath(normalizePathInput(e.target.value))}
+              placeholder="/"
+            />
+            <div className="ctorHelp">
+              Пример: <b>/home</b>, <b>/bonus</b>. Для главной оставь <b>/</b>.
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {/* ===== Modal: icon picker (kind / glyph) ===== */}
-      {iconOpen && cur && (
-        <div className="ctorModal" onMouseDown={()=>setIconOpen(false)}>
-          <div className="ctorModal__panel" onMouseDown={(e)=>e.stopPropagation()}>
-            <div className="ctorModal__hdr">
-              <div className="ctorModal__ttl">
-                Иконка вкладки <span className="ctorModal__muted">{cur.path}</span>
-              </div>
-              <Button variant="ghost" onClick={()=>setIconOpen(false)}>Закрыть</Button>
+      {/* ===== Modal: icon picker (kind / glyph / image upload) ===== */}
+      <Modal
+        open={iconOpen}
+        title={<>Иконка вкладки <span className="ctorModal__muted">{cur?.path}</span></>}
+        onClose={()=>setIconOpen(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={()=>setIconOpen(false)}>Отмена</Button>
+            <Button
+              onClick={()=>{
+                if (cur && typeof setRouteIcon === 'function') {
+                  setRouteIcon(cur.path, { kind:'custom', icon:'custom', icon_g:'◌', icon_img:'' });
+                }
+                setIconOpen(false);
+              }}
+            >
+              Сбросить
+            </Button>
+          </>
+        }
+      >
+        <div className="iconPicker">
+          <div className="iconPicker__sec">
+            <div className="iconPicker__ttl">Пресеты (kind)</div>
+            <div className="iconPicker__grid">
+              {PRESET_KINDS.map(item=>(
+                <button
+                  key={item.kind}
+                  type="button"
+                  className={'iconPick' + (cur?.kind === item.kind ? ' is-active' : '')}
+                  onClick={()=>{
+                    if (!cur) return;
+                    if (typeof setRouteIcon === 'function') {
+                      setRouteIcon(cur.path, { kind: item.kind, icon: 'custom', icon_g: '', icon_img: '' });
+                    }
+                    setIconOpen(false);
+                  }}
+                >
+                  <div className="iconPick__glyph">{item.glyph}</div>
+                  <div className="iconPick__lbl">{item.label}</div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="iconPicker">
-              <div className="iconPicker__sec">
-                <div className="iconPicker__ttl">Пресеты (kind)</div>
-                <div className="iconPicker__grid">
-                  {PRESET_KINDS.map(item=>(
-                    <button
-                      key={item.kind.kind}
-                      type="button"
-                      className={'iconPick' + (cur.kind === item.kind.kind ? ' is-active' : '')}
-                      onClick={()=>{
-                        if (typeof setRouteIcon === 'function') {
-                          setRouteIcon(cur.path, {
-                            kind: item.kind.kind,
-                            icon: 'custom',
-                            icon_g: '',
-                            icon_img: '',
-                          });
-                        }
-                        setIconOpen(false);
-                      }}
-                    >
-                      <div className="iconPick__glyph">{item.glyph}</div>
-                      <div className="iconPick__lbl">{item.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="iconPicker__sec">
-                <div className="iconPicker__ttl">Glyph (icon_g)</div>
-                <div className="iconPicker__grid">
-                  {GLYPHS.map(g=>(
-                    <button
-                      key={g}
-                      type="button"
-                      className={'iconPick' + (cur.icon_g === g ? ' is-active' : '')}
-                      onClick={()=>{
-                        if (typeof setRouteIcon === 'function') {
-                          setRouteIcon(cur.path, {
-                            kind: 'custom',
-                            icon: 'custom',
-                            icon_g: g,
-                            icon_img: '',
-                          });
-                        }
-                        setIconOpen(false);
-                      }}
-                    >
-                      <div className="iconPick__glyph">{g}</div>
-                      <div className="iconPick__lbl">glyph</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="iconPicker__sec">
+            <div className="iconPicker__ttl">Glyph (icon_g)</div>
+            <div className="iconPicker__grid">
+              {GLYPHS.map(g=>(
+                <button
+                  key={g}
+                  type="button"
+                  className={'iconPick' + (cur?.icon_g === g ? ' is-active' : '')}
+                  onClick={()=>{
+                    if (!cur) return;
+                    if (typeof setRouteIcon === 'function') {
+                      setRouteIcon(cur.path, { kind:'custom', icon:'custom', icon_g: g, icon_img: '' });
+                    }
+                    setIconOpen(false);
+                  }}
+                >
+                  <div className="iconPick__glyph">{g}</div>
+                  <div className="iconPick__lbl">glyph</div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="ctorModal__ftr">
-              <Button variant="ghost" onClick={()=>setIconOpen(false)}>Отмена</Button>
-              <Button
-                onClick={()=>{
-                  if (typeof setRouteIcon === 'function') {
-                    setRouteIcon(cur.path, { icon_g: '', icon_img: '', kind: 'custom', icon: 'custom' });
-                  }
-                  setIconOpen(false);
+          <div className="iconPicker__sec">
+            <div className="iconPicker__ttl">Своя картинка (icon_img)</div>
+            <div className="iconUpload">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e)=>{
+                  const f = e.target.files?.[0];
+                  if (f) applyIconImg(f);
+                  e.currentTarget.value = '';
                 }}
-              >
-                Сбросить
-              </Button>
+              />
+              <div className="ctorHelp">
+                Сейчас сохраняем как <b>data:</b> (внутри blueprint). Позже можем сделать загрузку на CDN и хранить URL.
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
+
+      {/* ===== Modal: Blocks library (BlocksPalette) ===== */}
+      <Modal
+        open={libOpen}
+        title={<>Библиотека блоков <span className="ctorModal__muted">{curPath}</span></>}
+        onClose={()=>setLibOpen(false)}
+        footer={<Button variant="ghost" onClick={()=>setLibOpen(false)}>Закрыть</Button>}
+      >
+        <div className="ctorLib">
+          {/* BlocksPalette сам вызывает addBlock внутри (у тебя так сделано).
+              Важно: чтобы добавлялось в нужную страницу —
+              BlocksPalette должен использовать selected.path или мы дадим ему "forcedPath".
+          */}
+          <BlocksPalette />
+          <div className="ctorHelp" style={{ marginTop: 10 }}>
+            Если блок добавляется не в ту страницу — скажи, я поправлю BlocksPalette, чтобы он добавлял в <b>{curPath}</b>.
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
