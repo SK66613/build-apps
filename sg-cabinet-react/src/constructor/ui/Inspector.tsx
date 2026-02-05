@@ -2,7 +2,9 @@ import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
 import { Button } from '../../components/ui';
 
-function IconBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }){
+function IconBtn(
+  props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }
+){
   const { title, children, className, ...rest } = props;
   return (
     <button
@@ -17,23 +19,33 @@ function IconBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title:
 }
 
 export function Inspector(){
-  const { bp, selected, selectRoute, selectBlock, updateRoute } = useConstructorStore();
-  const removeBlock = useConstructorStore(s=>s.removeBlock);
-  const moveBlock = useConstructorStore(s=>s.moveBlock);
-  const toggleHidden = useConstructorStore(s=>s.toggleBlockHidden);
-  const duplicateBlock = useConstructorStore(s=>s.duplicateBlock);
+  const blueprint = useConstructorStore(s => s.blueprint);
+  const selected = useConstructorStore(s => s.selected);
+
+  const selectRoute = useConstructorStore(s => s.selectRoute);
+  const selectBlock = useConstructorStore(s => s.selectBlock);
+
+  const deleteBlock = useConstructorStore(s => s.deleteBlock);
+  const moveBlock = useConstructorStore(s => s.moveBlock);
+  const toggleHidden = useConstructorStore(s => s.toggleBlockHidden);
+  const duplicateBlock = useConstructorStore(s => s.duplicateBlock);
 
   const curPath =
     selected?.kind === 'block' ? selected.path :
     selected?.kind === 'route' ? selected.path :
-    bp.routes[0]?.path || '/';
+    (blueprint.nav.routes[0]?.path || '/');
 
-  const route = bp.routes.find(r => r.path === curPath) || bp.routes[0];
+  const route = blueprint.routes.find(r => r.path === curPath);
+
   if (!route){
-    return <div className="ctorEmpty">Нет страниц. Добавь страницу в “Страницы”.</div>;
+    return (
+      <div className="ctorEmpty">
+        Нет страницы <b>{curPath}</b> в blueprint.routes. Добавь страницу в “Страницы”.
+      </div>
+    );
   }
 
-  // выбор страницы если selected пустой
+  // если вдруг selected слетел — восстановим
   React.useEffect(()=>{
     if (!selected && route?.path) selectRoute(route.path);
   }, [selected, route?.path, selectRoute]);
@@ -41,13 +53,19 @@ export function Inspector(){
   return (
     <div className="ctorInspector">
       <div className="ctorInspector__hdr">
-        <div className="ctorInspector__title">Блоки на странице: <b>{route.path}</b></div>
+        <div className="ctorInspector__title">
+          Блоки на странице: <b>{route.path}</b>
+        </div>
         <div className="ctorInspector__small">({route.blocks.length})</div>
       </div>
 
       <div className="ctorInspector__list">
         {route.blocks.map((b, idx) => {
-          const isSel = selected?.kind === 'block' && selected.path === route.path && selected.id === b.id;
+          const isSel =
+            selected?.kind === 'block' &&
+            selected.path === route.path &&
+            selected.id === b.id;
+
           const isHidden = !!b.hidden;
 
           return (
@@ -63,32 +81,26 @@ export function Inspector(){
                 </div>
 
                 <div className="layerRow__actions" onClick={(e)=>e.stopPropagation()}>
-                  {/* вверх/вниз */}
                   <IconBtn title="Выше" disabled={idx===0} onClick={()=>moveBlock(route.path, b.id, -1)}>↑</IconBtn>
                   <IconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(route.path, b.id, 1)}>↓</IconBtn>
 
-                  {/* редактировать (пока заглушка: можно потом подключить реальный editor) */}
                   <IconBtn
                     title="Редактировать"
                     onClick={()=>{
-                      // TODO: подключим реальный BlockEditor modal как в старом.
-                      alert('Редактор блока: подключим следующим шагом (как в старом конструкторе).');
+                      alert('Редактор блока подключим следующим шагом (как в старом конструкторе).');
                     }}
                   >✎</IconBtn>
 
-                  {/* показать/скрыть */}
                   <IconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(route.path, b.id)}>
                     {isHidden ? '🙈' : '👁'}
                   </IconBtn>
 
-                  {/* дублировать */}
                   <IconBtn title="Дублировать" onClick={()=>duplicateBlock(route.path, b.id)}>⧉</IconBtn>
 
-                  {/* удалить */}
                   <IconBtn
                     title="Удалить"
                     onClick={()=>{
-                      if (confirm('Удалить блок?')) removeBlock(route.path, b.id);
+                      if (confirm('Удалить блок?')) deleteBlock(route.path, b.id);
                     }}
                   >🗑</IconBtn>
                 </div>
@@ -101,7 +113,6 @@ export function Inspector(){
       <div className="ctorInspector__footer">
         <Button
           onClick={()=>{
-            // быстро: перекидываем пользователя к секции “Блоки” (палитра уже есть)
             alert('Нажми “Блоки” → выбери блок. (Модал “Библиотека блоков” сделаем следующим шагом.)');
           }}
         >
