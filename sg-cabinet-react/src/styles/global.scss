@@ -1092,3 +1092,209 @@ html[data-theme='dark'] .ctorAcc{
 }
 
 
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   Constructor Drawer UI (global)
+   ========================= */
+
+.sg-main.is-ctor{
+  /* чтобы внутри конструктора было “как в старом” */
+  padding: 0 !important;
+}
+
+/* Drawer root */
+.ctorDrawer{
+  display:flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* top segmented */
+.ctorDrawer__top{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 8px 0 4px;
+  background: transparent;
+}
+
+.ctorSeg{
+  display:flex;
+  gap: 10px;
+  background: rgba(255,255,255,.70);
+  border: 1px solid rgba(15,23,42,.10);
+  padding: 6px;
+  border-radius: 18px;
+}
+html[data-theme='dark'] .ctorSeg{
+  background: rgba(2,6,23,.35);
+  border-color: rgba(148,163,184,.18);
+}
+
+.ctorSeg__btn{
+  flex: 1 1 0;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 850;
+  color: rgba(15,23,42,.72);
+  background: transparent;
+  transition: background .15s ease, transform .08s ease, color .15s ease;
+}
+html[data-theme='dark'] .ctorSeg__btn{ color: rgba(226,232,240,.70); }
+
+.ctorSeg__btn.is-active{
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 24px rgba(2,6,23,.10);
+}
+html[data-theme='dark'] .ctorSeg__btn.is-active{
+  background: rgba(15,23,42,.75);
+  color: rgba(226,232,240,.92);
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+}
+
+.ctorSeg__btn:active{ transform: translateY(1px) scale(.99); }
+
+.ctorDrawer__hint{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.60);
+  color: rgba(15,23,42,.68);
+  font-weight: 650;
+  line-height: 1.35;
+}
+html[data-theme='dark'] .ctorDrawer__hint{
+  border-color: rgba(148,163,184,.18);
+  background: rgba(2,6,23,.25);
+  color: rgba(226,232,240,.70);
+}
+
+.ctorDrawer__stack{
+  display:flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Accordion */
+.ctorAcc{
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.68);
+  overflow: hidden;
+}
+html[data-theme='dark'] .ctorAcc{
+  border-color: rgba(148,163,184,.18);
+  background: rgba(2,6,23,.28);
+}
+
+.ctorAcc__sum{
+  list-style: none;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 14px;
+  cursor:pointer;
+  user-select:none;
+}
+.ctorAcc__sum::-webkit-details-marker{ display:none; }
+
+.ctorAcc__title{
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
+
+.ctorAcc__chev{
+  opacity: .65;
+  transform: rotate(0deg);
+  transition: transform .18s ease, opacity .18s ease;
+  font-weight: 900;
+}
+details[open] .ctorAcc__chev{ transform: rotate(180deg); opacity: .9; }
+
+.ctorAcc__body{
+  padding: 12px 14px 14px;
+  border-top: 1px solid rgba(15,23,42,.08);
+}
+html[data-theme='dark'] .ctorAcc__body{ border-top-color: rgba(148,163,184,.14); }
+
+/* row controls */
+.ctorRow{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items:center;
+  padding: 8px 0;
+}
+.ctorRow__lbl{
+  font-size: 13px;
+  font-weight: 750;
+  color: rgba(15,23,42,.70);
+}
+html[data-theme='dark'] .ctorRow__lbl{ color: rgba(226,232,240,.70); }
+
+.ctorRow__ctl input[type="color"]{
+  width: 40px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(15,23,42,.12);
+  border-radius: 10px;
+  background: transparent;
+}
+html[data-theme='dark'] .ctorRow__ctl input[type="color"]{
+  border-color: rgba(148,163,184,.20);
+}
+
+.ctorRow__ctl input[type="range"]{
+  width: 220px;
+}
+
+.ctorText{
+  width: 260px;
+  max-width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.78);
+  color: rgba(15,23,42,.92);
+  outline: none;
+}
+html[data-theme='dark'] .ctorText{
+  border-color: rgba(148,163,184,.18);
+  background: rgba(2,6,23,.38);
+  color: rgba(226,232,240,.92);
+}
+
+.ctorHr{
+  height: 1px;
+  background: rgba(15,23,42,.08);
+  margin: 10px 0;
+}
+html[data-theme='dark'] .ctorHr{ background: rgba(148,163,184,.14); }
+
+.ctorStub{
+  padding: 12px 12px;
+  border-radius: 14px;
+  background: rgba(15,23,42,.04);
+  color: rgba(15,23,42,.65);
+  font-weight: 650;
+  line-height: 1.35;
+}
+html[data-theme='dark'] .ctorStub{
+  background: rgba(255,255,255,.06);
+  color: rgba(226,232,240,.70);
+}
+
+
