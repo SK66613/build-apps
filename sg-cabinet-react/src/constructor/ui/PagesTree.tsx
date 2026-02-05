@@ -2,6 +2,8 @@ import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
 import { Button, Input } from '../../components/ui';
 import { BlocksPalette } from './BlocksPalette';
+import Modal from './Modal';
+import { getEditorForKey } from '../editors/getEditor';
 
 function IconBtn(
   props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }
@@ -39,7 +41,7 @@ const PRESET_KINDS: Array<{ kind: any; label: string; glyph: string }> = [
   { kind: 'custom',     label: 'Custom',     glyph: '◌' },
 ];
 
-function Modal({
+function InlineModal({
   open,
   title,
   onClose,
@@ -70,18 +72,20 @@ function Modal({
 function LayersList({
   path,
   onRequestAddBlock,
+  onRequestEditBlock,
 }:{
   path: string;
   onRequestAddBlock: ()=>void;
+  onRequestEditBlock: (id: string)=>void;
 }){
   const blueprint = useConstructorStore(s=>s.blueprint);
   const selected  = useConstructorStore(s=>s.selected);
   const selectBlock = useConstructorStore(s=>s.selectBlock);
 
-  const deleteBlock = useConstructorStore(s=>s.deleteBlock);
-  const moveBlock = useConstructorStore(s=>s.moveBlock);
-  const toggleHidden = useConstructorStore(s=>s.toggleBlockHidden);
-  const duplicateBlock = useConstructorStore(s=>s.duplicateBlock);
+  const deleteBlock = useConstructorStore(s=>(s as any).deleteBlock || (s as any).removeBlock);
+  const moveBlock = useConstructorStore(s=>(s as any).moveBlock);
+  const toggleHidden = useConstructorStore(s=>(s as any).toggleBlockHidden);
+  const duplicateBlock = useConstructorStore(s=>(s as any).duplicateBlock);
 
   const route = blueprint.routes.find(r=>r.path===path);
   if (!route) return <div className="ctorEmpty">Нет данных страницы.</div>;
@@ -100,7 +104,7 @@ function LayersList({
             selected.path === path &&
             selected.id === b.id;
 
-          const isHidden = !!b.hidden;
+          const isHidden = !!(b as any).hidden;
 
           return (
             <div
@@ -110,13 +114,16 @@ function LayersList({
             >
               <div className="layerRow__main">
                 <div className="layerRow__name">
-                  <div className="layerRow__title">{b.props?.title || b.key}</div>
+                  <div className="layerRow__title">{(b as any).props?.title || b.key}</div>
                   <div className="layerRow__sub">{b.key}</div>
                 </div>
 
                 <div className="layerRow__actions" onClick={(e)=>e.stopPropagation()}>
                   <IconBtn title="Выше" disabled={idx===0} onClick={()=>moveBlock(path, b.id, -1)}>↑</IconBtn>
                   <IconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(path, b.id, 1)}>↓</IconBtn>
+
+                  {/* ✅ карандашик */}
+                  <IconBtn title="Редактировать" onClick={()=>onRequestEditBlock(b.id)}>✎</IconBtn>
 
                   <IconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(path, b.id)}>
                     {isHidden ? '🙈' : '👁'}
@@ -160,6 +167,9 @@ export function PagesTree(){
   const renameRoute = (useConstructorStore as any)(s=>s.renameRoute);
   const deleteRoute = (useConstructorStore as any)(s=>s.deleteRoute);
 
+  const updateBlockProps = useConstructorStore(s=>(s as any).updateBlockProps || (s as any).updateBlock);
+  const deleteBlock = useConstructorStore(s=>(s as any).deleteBlock || (s as any).removeBlock);
+
   const activePath =
     selected?.kind === 'route' ? selected.path :
     selected?.kind === 'block' ? selected.path :
@@ -194,9 +204,13 @@ export function PagesTree(){
     setTmpPath(r?.path || '/');
   }, [editOpen, curPath, nav]);
 
+  // block editor modal state
+  const [blockEdit, setBlockEdit] = React.useState<{ path:string; id:string } | null>(null);
+  const editingRoute = blockEdit ? blueprint.routes.find(r=>r.path===blockEdit.path) : null;
+  const editingBlock = blockEdit && editingRoute ? (editingRoute as any).blocks?.find((b:any)=>b.id===blockEdit.id) : null;
+  const EditorCmp = editingBlock ? getEditorForKey(editingBlock.key) : null;
+
   const applyIconImg = async (file: File)=>{
-    // быстрый вариант: dataURL (как в старом часто делали)
-    // если хочешь грузить на сервер/CDN — потом поменяем.
     const toDataUrl = (f: File) => new Promise<string>((res, rej)=>{
       const rd = new FileReader();
       rd.onload = ()=>res(String(rd.result || ''));
@@ -223,9 +237,9 @@ export function PagesTree(){
           const isHidden = !!(r as any).hidden;
 
           const glyph =
-            (r.icon_img && r.icon_img.trim()) ? '🖼' :
-            (r.icon_g && r.icon_g.trim()) ? r.icon_g :
-            (r.kind ? PRESET_KINDS.find(k=>k.kind===r.kind)?.glyph : '') ||
+            ((r as any).icon_img && String((r as any).icon_img).trim()) ? '🖼' :
+            ((r as any).icon_g && String((r as any).icon_g).trim()) ? (r as any).icon_g :
+            ((r as any).kind ? PRESET_KINDS.find(k=>k.kind===(r as any).kind)?.glyph : '') ||
             '◌';
 
           const isOpen = !!openMap[r.path];
@@ -243,7 +257,7 @@ export function PagesTree(){
                 <div className="pageAcc__left">
                   <div className="pageRow__ico">{glyph}</div>
                   <div className="pageRow__meta">
-                    <div className="pageRow__title">{r.title}</div>
+                    <div className="pageRow__title">{(r as any).title}</div>
                     <div className="pageRow__slug">{r.path}</div>
                   </div>
                 </div>
@@ -311,6 +325,9 @@ export function PagesTree(){
                       setCurPath(r.path);
                       setLibOpen(true);
                     }}
+                    onRequestEditBlock={(id)=>{
+                      setBlockEdit({ path: r.path, id });
+                    }}
                   />
 
                   {/* нижняя кнопка, как в старом — под блоками */}
@@ -330,7 +347,7 @@ export function PagesTree(){
       </div>
 
       {/* ===== Modal: edit title + slug ===== */}
-      <Modal
+      <InlineModal
         open={editOpen}
         title={<>Редактировать страницу <span className="ctorModal__muted">{cur?.path}</span></>}
         onClose={()=>setEditOpen(false)}
@@ -369,10 +386,10 @@ export function PagesTree(){
             </div>
           </div>
         </div>
-      </Modal>
+      </InlineModal>
 
       {/* ===== Modal: icon picker (kind / glyph / image upload) ===== */}
-      <Modal
+      <InlineModal
         open={iconOpen}
         title={<>Иконка вкладки <span className="ctorModal__muted">{cur?.path}</span></>}
         onClose={()=>setIconOpen(false)}
@@ -400,7 +417,7 @@ export function PagesTree(){
                 <button
                   key={item.kind}
                   type="button"
-                  className={'iconPick' + (cur?.kind === item.kind ? ' is-active' : '')}
+                  className={'iconPick' + ((cur as any)?.kind === item.kind ? ' is-active' : '')}
                   onClick={()=>{
                     if (!cur) return;
                     if (typeof setRouteIcon === 'function') {
@@ -423,7 +440,7 @@ export function PagesTree(){
                 <button
                   key={g}
                   type="button"
-                  className={'iconPick' + (cur?.icon_g === g ? ' is-active' : '')}
+                  className={'iconPick' + ((cur as any)?.icon_g === g ? ' is-active' : '')}
                   onClick={()=>{
                     if (!cur) return;
                     if (typeof setRouteIcon === 'function') {
@@ -457,29 +474,64 @@ export function PagesTree(){
             </div>
           </div>
         </div>
-      </Modal>
+      </InlineModal>
 
       {/* ===== Modal: Blocks library (BlocksPalette) ===== */}
-      <Modal
+      <InlineModal
         open={libOpen}
         title={<>Библиотека блоков <span className="ctorModal__muted">{curPath}</span></>}
         onClose={()=>setLibOpen(false)}
         footer={<Button variant="ghost" onClick={()=>setLibOpen(false)}>Закрыть</Button>}
       >
         <div className="ctorLib">
-          {/* BlocksPalette сам вызывает addBlock внутри (у тебя так сделано).
-              Важно: чтобы добавлялось в нужную страницу —
-              BlocksPalette должен использовать selected.path или мы дадим ему "forcedPath".
-          */}
           <BlocksPalette />
           <div className="ctorHelp" style={{ marginTop: 10 }}>
             Если блок добавляется не в ту страницу — скажи, я поправлю BlocksPalette, чтобы он добавлял в <b>{curPath}</b>.
           </div>
         </div>
+      </InlineModal>
+
+      {/* ===== Modal: Block editor (✎) ===== */}
+      <Modal
+        open={!!blockEdit && !!editingBlock}
+        title={<>Редактор блока <span className="ctorModal__muted">{editingBlock?.key}</span></>}
+        subtitle={editingBlock ? <span style={{color:'rgba(100,116,139,.9)'}}>{editingBlock.key}</span> : null}
+        onClose={()=>setBlockEdit(null)}
+        footer={
+          editingBlock ? (
+            <>
+              <Button
+                variant="ghost"
+                onClick={()=>{
+                  if (confirm('Удалить блок?')) {
+                    if (editingRoute?.path) deleteBlock(editingRoute.path, editingBlock.id);
+                    setBlockEdit(null);
+                  }
+                }}
+              >
+                Удалить блок
+              </Button>
+              <div style={{flex:1}} />
+              <Button onClick={()=>setBlockEdit(null)}>Готово</Button>
+            </>
+          ) : null
+        }
+      >
+        {editingBlock && EditorCmp ? (
+          <EditorCmp
+            value={editingBlock.props || {}}
+            onChange={(nextProps:any)=>{
+              if (editingRoute?.path) updateBlockProps(editingRoute.path, editingBlock.id, nextProps);
+            }}
+          />
+        ) : (
+          <div className="ctorEmpty">
+            Для этого блока пока нет редактора (key: <b>{editingBlock?.key}</b>)
+          </div>
+        )}
       </Modal>
     </div>
   );
 }
 
 export default PagesTree;
-
