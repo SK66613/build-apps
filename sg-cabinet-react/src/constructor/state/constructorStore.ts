@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Blueprint, Selected, SaveState, RoutePage, BlockInst } from './types';
 import { clone, uid, makeDefaultBlueprint } from './utils';
+import { ensureThemeTokens, themeTokensToCss, type ThemeTokens } from '../design/theme';
+
 
 type State = {
   appId: string | null;
@@ -133,6 +135,23 @@ export const useConstructorStore = create<State>((set, get) => ({
     r.blocks = r.blocks.filter((b) => b.id !== id);
     set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'route', path } });
   },
+
+    updateThemeTokens(patch: ThemeTokens) {
+    const st = get();
+    const bp = clone(st.blueprint);
+
+    bp.app = bp.app || {};
+    const cur = ensureThemeTokens(bp.app.themeTokens || {});
+    const next = ensureThemeTokens({ ...cur, ...(patch || {}) });
+
+    bp.app.themeTokens = next;
+
+    bp.app.theme = bp.app.theme || {};
+    bp.app.theme.css = themeTokensToCss(next);
+
+    set({ blueprint: bp, dirty: true, saveState: 'idle' });
+  },
+
 
   updateThemeCss(css) {
     const st = get();
