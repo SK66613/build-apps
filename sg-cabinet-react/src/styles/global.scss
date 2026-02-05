@@ -1452,7 +1452,7 @@ html[data-theme='dark'] .ctorModal__ftr{ border-top-color: rgba(226,232,240,.10)
 .ctor-preview__actions{
   display:flex;
   align-items:center;
-  gap: 10px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
@@ -1463,6 +1463,6 @@ html[data-theme='dark'] .ctorModal__ftr{ border-top-color: rgba(226,232,240,.10)
   border-radius: 18px;
 }
 .ctorSeg--tight .ctorSeg__btn{
-  padding: 9px 19px;
+  padding: 9px 12px;
   border-radius: 14px;
 }
