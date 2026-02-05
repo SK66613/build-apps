@@ -25,6 +25,9 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   'tabbar-text': '#97aac4',
   'tabbar-active': '#ffffff',
 
+
+
+
   // radius
   'radius-card': 16,
   'radius-btn': 14,
@@ -51,6 +54,12 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   'ul-body': 0,
   'ul-head': 0,
   'ul-btn': 0,
+
+    // transparency strengths (0..1)
+  'a-surface': 0.90,
+  'a-card': 0.92,
+  'a-overlay': 0.70,
+
 };
 
 const clamp01 = (v: any) => {
@@ -89,6 +98,11 @@ export function ensureThemeTokens(tokens?: ThemeTokens): ThemeTokens {
   out['fw-body'] = toInt(out['fw-body'], 650);
   out['fw-head'] = toInt(out['fw-head'], 900);
   out['fw-btn'] = toInt(out['fw-btn'], 800);
+
+  out['a-surface'] = clamp01(out['a-surface']);
+  out['a-card'] = clamp01(out['a-card']);
+  out['a-overlay'] = clamp01(out['a-overlay']);
+
   return out;
 }
 
@@ -148,6 +162,17 @@ export function themeTokensToCss(tokensRaw?: ThemeTokens) {
   --ul-body:${Number(t['ul-body']) ? 'underline' : 'none'};
   --ul-head:${Number(t['ul-head']) ? 'underline' : 'none'};
   --ul-btn:${Number(t['ul-btn']) ? 'underline' : 'none'};
+
+    --a-surface:${clamp01(t['a-surface'])};
+  --a-card:${clamp01(t['a-card'])};
+  --a-overlay:${clamp01(t['a-overlay'])};
+
+  /* TG-safe прозрачные версии без color-mix */
+  --color-surface-a:${rgbaFromHex(String(t['color-surface']), clamp01(t['a-surface']))};
+  --color-card-a:${rgbaFromHex(String(t['color-card']), clamp01(t['a-card']))};
+  --color-overlay-a:${rgbaFromHex(String(t['color-bg']), clamp01(t['a-overlay']))};
+  
 }
 `.trim();
 }
+
