@@ -16,11 +16,17 @@ export type BlueprintRoute = {
 export type BlueprintNavRoute = {
   path: RoutePath;
   title: string;
-  icon: string;
+
+  // в старом было несколько вариантов иконки
+  icon?: string;        // ← сделаем optional, чтобы можно было "убрать"
   icon_g?: string;
   icon_img?: string;
+
   kind?: 'custom'|'home'|'play'|'profile'|'bonuses'|'tournament';
+
+  hidden?: boolean;     // ← ВОТ ЭТО ДЛЯ "скрыть вкладку"
 };
+
 
 export type Blueprint = {
   v: number;
