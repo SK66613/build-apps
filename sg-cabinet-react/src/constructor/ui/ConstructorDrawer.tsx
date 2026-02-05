@@ -4,6 +4,8 @@ import { BlocksPalette } from './BlocksPalette';
 import { Inspector } from './Inspector';
 import { useConstructorStore } from '../state/constructorStore';
 import { ensureThemeTokens } from '../design/theme';
+import { THEME_PRESETS } from '../design/presets';
+
 
 type Mode = 'panel' | 'design';
 
