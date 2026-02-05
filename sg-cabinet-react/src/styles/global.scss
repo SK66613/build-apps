@@ -1448,19 +1448,44 @@ html[data-theme='dark'] .ctorModal__ftr{ border-top-color: rgba(226,232,240,.10)
 
 //кнопки в первью pixel сохранить опубликовать
 
-/* чтобы зона пресетов занимала больше места */
-.ctor-preview__presets{
-  flex: 1 1 auto;
-  min-width: 520px;      /* можно 600/700 */
+/* header = 3 зоны */
+.ctor-preview__hdr{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
-/* сам сегмент растягиваем */
-.ctor-preview__presets .ctorSeg{
+/* devices растягиваются */
+.ctor-preview__presets{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ctorSeg--wide{
   width: 100%;
 }
 
-/* кнопки внутри равными долями */
-.ctor-preview__presets .ctorSeg__btn{
+/* правая колонка фикс */
+.ctor-preview__right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+/* компактные сегменты справа */
+.ctorSeg--mini{
+  padding: 6px;
+  border-radius: 18px;
+}
+.ctorSeg--mini .ctorSeg__btn{
+  padding: 10px 12px;
+  min-width: 44px;
+}
+
+/* чтобы устройства были равными по ширине */
+.ctorSeg--wide .ctorSeg__btn{
   flex: 1 1 0;
 }
+
 
