@@ -43,6 +43,11 @@ export function PreviewFrame(){
   const selectRoute = useConstructorStore(s=>s.selectRoute);
   const selectBlock = useConstructorStore(s=>s.selectBlock);
 
+  // (опционально) экшены — если есть в сторе, подключатся. Если нет — останутся заглушки.
+  const undo = useConstructorStore((s:any)=>s.undo);
+  const redo = useConstructorStore((s:any)=>s.redo);
+  const saveNow = useConstructorStore((s:any)=>s.saveNow || s.saveBlueprint);
+
   const src = React.useMemo(()=>buildPreviewUrl(appId), [appId]);
 
   // presets + zoom (как в старом)
@@ -94,23 +99,80 @@ export function PreviewFrame(){
 
   const scale = Math.max(30, Math.min(130, Number(zoom) || 100)) / 100;
 
+  const canUndo = typeof undo === 'function';
+  const canRedo = typeof redo === 'function';
+
   return (
     <div className="sg-card ctor-card ctor-preview ctor-preview--phone">
-      {/* top controls like old */}
+      {/* top controls like old, but style like Design/Panel */}
       <div className="ctor-preview__hdr">
-        <div className="ctor-preview__presets">
-          {Object.entries(PRESETS).map(([k, v]) => (
-            <button
-              key={k}
-              className={'sg-btn ctor-preview__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
-              onClick={()=>setPreset(k as PresetKey)}
-              type="button"
-            >
-              {v.label}
-            </button>
-          ))}
+        {/* LEFT: device segmented */}
+        <div className="ctor-preview__presets ctor-preview__seg">
+          <div className="ctorSeg ctorSeg--tight">
+            {Object.entries(PRESETS).map(([k, v]) => (
+              <button
+                key={k}
+                type="button"
+                className={'ctorSeg__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
+                onClick={()=>setPreset(k as PresetKey)}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* RIGHT: actions (undo/redo/save/publish) */}
+        <div className="ctor-preview__actions">
+          <div className="ctorSeg ctorSeg--tight">
+            <button
+              type="button"
+              className="ctorSeg__btn"
+              title="Отменить"
+              onClick={()=>{
+                if (typeof undo === 'function') undo();
+              }}
+              disabled={!canUndo}
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              className="ctorSeg__btn"
+              title="Вернуть"
+              onClick={()=>{
+                if (typeof redo === 'function') redo();
+              }}
+              disabled={!canRedo}
+            >
+              ↷
+            </button>
+          </div>
+
+          <div className="ctorSeg ctorSeg--tight">
+            <button
+              type="button"
+              className="ctorSeg__btn"
+              onClick={()=>{
+                if (typeof saveNow === 'function') saveNow();
+                else alert('Сохранение: подключим к экшену стора (saveNow/saveBlueprint).');
+              }}
+            >
+              Сохранить
+            </button>
+            <button
+              type="button"
+              className="ctorSeg__btn is-active"
+              onClick={()=>{
+                alert('Опубликовать: подключим после сохранения (publish).');
+              }}
+            >
+              Опубликовать
+            </button>
+          </div>
+        </div>
+
+        {/* zoom как было */}
         <div className="ctor-preview__zoom">
           <div className="ctor-preview__zoomLbl">Масштаб</div>
           <input
@@ -127,10 +189,7 @@ export function PreviewFrame(){
 
       {/* phone stage */}
       <div className="ctor-preview__stage">
-        <div
-          className="ctor-phoneDock"
-          style={{ transform: `scale(${scale})` }}
-        >
+        <div className="ctor-phoneDock" style={{ transform: `scale(${scale})` }}>
           <div
             className="ctor-phone"
             style={{
