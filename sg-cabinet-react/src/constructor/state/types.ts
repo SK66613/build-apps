@@ -1,44 +1,48 @@
-export type NavRoute = {
-  path: string;
-  title: string;
-  icon?: string;
-  icon_g?: string;
-  icon_img?: string;
-  kind?: string;
-};
+// sg-cabinet-react/src/constructor/state/types.ts
+export type RoutePath = string;
 
 export type BlockInst = {
   id: string;
-  key: string; // registry key (e.g. 'styles_passport_one')
-  props?: any;
+  key: string;
+  props: any;
 };
 
-export type RoutePage = {
-  path: string;
+export type BlueprintRoute = {
+  path: RoutePath;
   blocks: BlockInst[];
 };
 
-/**
- * Blueprint shape is aligned to the battle-tested templates.js renderer
- * from miniapp_sections_fixed2.
- */
+export type BlueprintNavRoute = {
+  path: RoutePath;
+  title: string;
+  icon: string;
+  icon_g?: string;
+  icon_img?: string;
+  kind?: 'custom'|'home'|'play'|'profile'|'bonuses'|'tournament';
+};
+
 export type Blueprint = {
-  app: {
-    name?: string;
-    title?: string;
-    theme?: { css?: string };
-  };
+  v: number;
+  app: BlueprintApp;
   nav: {
-    type: 'tabs';
-    position?: 'bottom' | 'top';
-    routes: NavRoute[];
+    routes: BlueprintNavRoute[];
   };
-  routes: RoutePage[];
+  routes: BlueprintRoute[];
+};
+
+export type BlueprintApp = {
+  id?: string;
+  title?: string;
+
+  // 1) текстовый CSS темы (iframe читает bp.app.theme.css)
+  theme?: { css?: string };
+
+  // 2) токены дизайна (как в старом конструкторе)
+  themeTokens?: Record<string, string | number>;
 };
 
 export type Selected =
-  | { kind: 'route'; path: string }
-  | { kind: 'block'; path: string; id: string }
-  | null;
+  | { kind: 'route'; path: RoutePath }
+  | { kind: 'block'; path: RoutePath; id: string };
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
