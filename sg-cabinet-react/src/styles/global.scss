@@ -946,8 +946,8 @@ html[data-theme='dark'] .sg-main.is-ctor .ctorX__drawer::after{
 /* ===== Floating Zoom (RIGHT, vertical, aligned) ===== */
 .ctor-preview__zoom{
   position: fixed;
-  top: 160px;           /* опусти ниже от кнопок устройств */
-  right: 46px;
+  top: 220px;           /* опусти ниже от кнопок устройств */
+  right: 80px;
   z-index: 500;
 
   width: 86px;
