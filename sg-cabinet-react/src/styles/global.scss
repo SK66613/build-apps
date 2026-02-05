@@ -1002,94 +1002,11 @@ html[data-theme='dark'] .ctor-preview__zoom{
 }
 
 
-/* ===== Drawer structure (Design/Panel + accordion) ===== */
-.ctorDrawer{
-  display:flex;
-  flex-direction:column;
-  gap: 12px;
-}
 
-.ctorDrawer__top{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
 
-.ctorSeg{
-  display:flex;
-  gap: 10px;
-}
-.ctorSeg__btn{
-  padding: 10px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.75);
-  font-weight: 800;
-  cursor:pointer;
-}
-html[data-theme='dark'] .ctorSeg__btn{
-  background: rgba(2,6,23,.35);
-}
-.ctorSeg__btn.is-active{
-  background: rgba(34,211,238,.16);
-  border-color: rgba(34,211,238,.40);
-}
 
-.ctorDrawer__hint{
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border2);
-  background: rgba(255,255,255,.65);
-  color: var(--muted);
-  font-weight: 650;
-}
-html[data-theme='dark'] .ctorDrawer__hint{
-  background: rgba(2,6,23,.25);
-}
 
-.ctorDrawer__stack{
-  display:flex;
-  flex-direction:column;
-  gap: 12px;
-}
 
-.ctorAcc{
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.70);
-  overflow: hidden;
-}
-html[data-theme='dark'] .ctorAcc{
-  background: rgba(2,6,23,.28);
-}
-
-.ctorAcc__sum{
-  list-style: none;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 12px 12px;
-  cursor:pointer;
-  user-select:none;
-  font-weight: 900;
-}
-.ctorAcc__sum::-webkit-details-marker{ display:none; }
-
-.ctorAcc__chev{
-  opacity: .55;
-  transition: transform .18s ease;
-}
-.ctorAcc[open] .ctorAcc__chev{ transform: rotate(180deg); }
-
-.ctorAcc__body{
-  padding: 12px 12px 14px;
-  border-top: 1px solid var(--border2);
-}
-
-.ctorStub{
-  color: var(--muted);
-  font-weight: 650;
-}
 
 
 
