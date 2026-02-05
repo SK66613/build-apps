@@ -3,9 +3,7 @@ import { PreviewFrame } from './preview/PreviewFrame';
 
 import { ConstructorDrawer } from './ui/ConstructorDrawer';
 
-import { PagesTree } from './ui/PagesTree';
-import { BlocksPalette } from './ui/BlocksPalette';
-import { Inspector } from './ui/Inspector';
+
 
 function useLS<T>(key: string, init: T){
   const [v, setV] = React.useState<T>(() => {
@@ -58,13 +56,9 @@ function ConstructorLayout(){
       }
     >
       <aside className="ctorX__drawer">
-        <div className="ctorX__drawerInner">
-          <PagesTree />
-          <BlocksPalette />
-          <div className="ctorX__insWrap">
-            <Inspector />
-          </div>
-        </div>
+<div className="ctorX__drawerInner">
+  <ConstructorDrawer />
+</div>
 
         {open && <div className="ctorX__resizeGrip" onMouseDown={onResizeMouseDown} />}
 
