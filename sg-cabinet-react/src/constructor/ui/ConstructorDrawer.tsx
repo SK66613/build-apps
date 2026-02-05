@@ -112,13 +112,6 @@ export function ConstructorDrawer(){
             <PagesTree />
           </Accordion>
 
-          <Accordion title="Блоки" defaultOpen>
-            <BlocksPalette />
-          </Accordion>
-
-          <Accordion title="Inspector" defaultOpen>
-            <Inspector />
-          </Accordion>
         </div>
       ) : (
         <div className="ctorDrawer__stack">
