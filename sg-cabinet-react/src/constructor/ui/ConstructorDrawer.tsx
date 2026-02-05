@@ -174,6 +174,40 @@ export function ConstructorDrawer(){
             </Row>
           </Accordion>
 
+
+
+
+          <Accordion title="Прозрачность">
+  <Row label={`Surface α (${Number(tokens['a-surface']).toFixed(2)})`}>
+    <input type="range" min={0} max={1} step={0.01}
+      value={Number(tokens['a-surface'])}
+      onChange={e=>setNum('a-surface', Number(e.target.value))}
+    />
+  </Row>
+
+  <Row label={`Card α (${Number(tokens['a-card']).toFixed(2)})`}>
+    <input type="range" min={0} max={1} step={0.01}
+      value={Number(tokens['a-card'])}
+      onChange={e=>setNum('a-card', Number(e.target.value))}
+    />
+  </Row>
+
+  <Row label={`Overlay α (${Number(tokens['a-overlay']).toFixed(2)})`}>
+    <input type="range" min={0} max={1} step={0.01}
+      value={Number(tokens['a-overlay'])}
+      onChange={e=>setNum('a-overlay', Number(e.target.value))}
+    />
+  </Row>
+
+  <div className="ctorStub" style={{marginTop:10}}>
+    Совет: в блоках/оверлеях используй <b>--color-card-a</b>/<b>--color-surface-a</b>, TG их понимает.
+  </div>
+</Accordion>
+
+
+
+          
+
           <Accordion title="Шрифты">
             <Row label="Body font">
               <input
