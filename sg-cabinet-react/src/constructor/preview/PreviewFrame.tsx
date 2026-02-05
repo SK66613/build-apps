@@ -105,35 +105,27 @@ export function PreviewFrame(){
   return (
     <div className="sg-card ctor-card ctor-preview ctor-preview--phone">
       {/* top controls like old, but style like Design/Panel */}
-      <div className="ctor-preview__hdr">
-  {/* devices (stretch) */}
-  <div className="ctor-preview__presets">
-    <div className="ctorSeg ctorSeg--wide">
-      {Object.entries(PRESETS).map(([k, v]) => (
-        <button
-          key={k}
-          type="button"
-          className={'ctorSeg__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
-          onClick={()=>setPreset(k as PresetKey)}
-        >
-          {v.label}
-        </button>
-      ))}
-    </div>
+<div className="ctor-preview__hdr">
+  {/* Плашка как у Дизайн/Панель */}
+  <div className="ctorSeg ctorPreviewSeg">
+    {Object.entries(PRESETS).map(([k, v]) => (
+      <button
+        key={k}
+        className={'ctorSeg__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
+        onClick={()=>setPreset(k as PresetKey)}
+        type="button"
+      >
+        {v.label}
+      </button>
+    ))}
+
+    {/* сюда потом добавим Undo/Redo/Save/Publish в том же стиле */}
+    <button className="ctorSeg__btn" type="button" title="Отменить">↶</button>
+    <button className="ctorSeg__btn" type="button" title="Вернуть">↷</button>
+    <button className="ctorSeg__btn" type="button">Сохранить</button>
+    <button className="ctorSeg__btn is-active" type="button">Опубликовать</button>
   </div>
 
-  {/* right actions */}
-  <div className="ctor-preview__right">
-    <div className="ctorSeg ctorSeg--mini">
-      <button type="button" className="ctorSeg__btn" title="Отменить">↶</button>
-      <button type="button" className="ctorSeg__btn" title="Вернуть">↷</button>
-    </div>
-
-    <div className="ctorSeg ctorSeg--mini">
-      <button type="button" className="ctorSeg__btn" title="Сохранить">Сохранить</button>
-      <button type="button" className="ctorSeg__btn is-active" title="Опубликовать">Опубликовать</button>
-    </div>
-  </div>
 
         {/* zoom как было */}
         <div className="ctor-preview__zoom">
