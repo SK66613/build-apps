@@ -5,6 +5,7 @@ export type BlockInst = {
   id: string;
   key: string;
   props: any;
+  hidden?: boolean; // ← как в старом конструкторе (скрыть блок)
 };
 
 export type BlueprintRoute = {
