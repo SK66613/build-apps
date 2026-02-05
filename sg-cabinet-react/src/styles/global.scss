@@ -1350,3 +1350,31 @@ html[data-theme='dark'] .ctorIconBtn{
 .iconPick__glyph{ font-size: 18px; font-weight: 900; margin-bottom: 6px; }
 .iconPick__lbl{ font-size: 12px; color: var(--muted); font-weight: 800; }
 
+
+
+
+
+.pageAcc{ border-radius: 16px; border: 1px solid rgba(15,23,42,.10); background: rgba(255,255,255,.72); overflow: hidden; }
+.pageAcc.is-active{ outline: 2px solid rgba(124,92,255,.30); }
+.pageAcc.is-hidden{ opacity:.62; }
+
+.pageAcc__hdr{
+  display:flex; align-items:center; justify-content:space-between;
+  gap: 10px; padding: 10px;
+  cursor: pointer;
+}
+.pageAcc__left{ display:flex; align-items:center; gap: 10px; min-width:0; flex:1; }
+.pageAcc__right{ display:flex; gap: 6px; flex-shrink:0; }
+
+.pageAcc__body{ padding: 10px 10px 12px; border-top: 1px solid rgba(15,23,42,.08); }
+.pageAcc__addUnder{ margin-top: 10px; display:flex; justify-content:flex-start; }
+
+.ctorLayers__head{ display:flex; align-items:baseline; justify-content:space-between; gap: 8px; margin-bottom: 10px; }
+.ctorLayers__title{ font-weight: 900; }
+.ctorLayers__count{ color: var(--muted); font-weight: 800; }
+.ctorLayers__footer{ margin-top: 10px; }
+
+.ctorModal__body{ padding: 16px 18px; }
+.iconUpload input{ width: 100%; }
+
+
