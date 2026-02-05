@@ -2,7 +2,7 @@ import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
 import { Button } from '../../components/ui';
 
-function iconBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }){
+function IconBtn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }){
   const { title, children, className, ...rest } = props;
   return (
     <button
@@ -64,33 +64,33 @@ export function Inspector(){
 
                 <div className="layerRow__actions" onClick={(e)=>e.stopPropagation()}>
                   {/* вверх/вниз */}
-                  <iconBtn title="Выше" disabled={idx===0} onClick={()=>moveBlock(route.path, b.id, -1)}>↑</iconBtn>
-                  <iconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(route.path, b.id, 1)}>↓</iconBtn>
+                  <IconBtn title="Выше" disabled={idx===0} onClick={()=>moveBlock(route.path, b.id, -1)}>↑</IconBtn>
+                  <IconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(route.path, b.id, 1)}>↓</IconBtn>
 
                   {/* редактировать (пока заглушка: можно потом подключить реальный editor) */}
-                  <iconBtn
+                  <IconBtn
                     title="Редактировать"
                     onClick={()=>{
                       // TODO: подключим реальный BlockEditor modal как в старом.
                       alert('Редактор блока: подключим следующим шагом (как в старом конструкторе).');
                     }}
-                  >✎</iconBtn>
+                  >✎</IconBtn>
 
                   {/* показать/скрыть */}
-                  <iconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(route.path, b.id)}>
+                  <IconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(route.path, b.id)}>
                     {isHidden ? '🙈' : '👁'}
-                  </iconBtn>
+                  </IconBtn>
 
                   {/* дублировать */}
-                  <iconBtn title="Дублировать" onClick={()=>duplicateBlock(route.path, b.id)}>⧉</iconBtn>
+                  <IconBtn title="Дублировать" onClick={()=>duplicateBlock(route.path, b.id)}>⧉</IconBtn>
 
                   {/* удалить */}
-                  <iconBtn
+                  <IconBtn
                     title="Удалить"
                     onClick={()=>{
                       if (confirm('Удалить блок?')) removeBlock(route.path, b.id);
                     }}
-                  >🗑</iconBtn>
+                  >🗑</IconBtn>
                 </div>
               </div>
             </div>
