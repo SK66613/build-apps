@@ -1448,21 +1448,19 @@ html[data-theme='dark'] .ctorModal__ftr{ border-top-color: rgba(226,232,240,.10)
 
 //кнопки в первью pixel сохранить опубликовать
 
-/* preview header right actions */
-.ctor-preview__actions{
-  display:flex;
-  align-items:center;
-  gap: 20px;
-  flex-wrap: wrap;
+/* чтобы зона пресетов занимала больше места */
+.ctor-preview__presets{
+  flex: 1 1 auto;
+  min-width: 520px;      /* можно 600/700 */
 }
 
-/* tighter segmented for preview buttons */
-.ctorSeg--tight{
-  padding: 4px;
-  gap: 6px;
-  border-radius: 18px;
+/* сам сегмент растягиваем */
+.ctor-preview__presets .ctorSeg{
+  width: 100%;
 }
-.ctorSeg--tight .ctorSeg__btn{
-  padding: 9px 12px;
-  border-radius: 14px;
+
+/* кнопки внутри равными долями */
+.ctor-preview__presets .ctorSeg__btn{
+  flex: 1 1 0;
 }
+
