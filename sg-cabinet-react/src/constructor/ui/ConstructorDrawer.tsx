@@ -128,6 +128,26 @@ export function ConstructorDrawer(){
             </div>
           </Accordion>
 
+
+          <Accordion title="Темы" defaultOpen>
+  <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+    {THEME_PRESETS.map(p => (
+      <button
+        key={p.id}
+        type="button"
+        className="sg-btn"
+        onClick={()=>updateThemeTokens?.(p.tokens)}
+      >
+        {p.title}
+      </button>
+    ))}
+  </div>
+  <div className="ctorStub" style={{marginTop:10}}>
+    Пресет применяет токены и сразу обновляет превью.
+  </div>
+</Accordion>
+
+
           <Accordion title="Базовые стили" defaultOpen>
             <Row label="Background"><input type="color" value={String(tokens['color-bg'])} onChange={e=>setColor('color-bg', e.target.value)} /></Row>
             <Row label="Surface"><input type="color" value={String(tokens['color-surface'])} onChange={e=>setColor('color-surface', e.target.value)} /></Row>
