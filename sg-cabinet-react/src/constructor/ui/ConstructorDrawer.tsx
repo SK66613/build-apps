@@ -130,6 +130,18 @@ export function ConstructorDrawer(){
           <Accordion title="Радиусы">
             <div className="ctorStub">radius-card / radius-btn / radius-input — подключим.</div>
           </Accordion>
+
+                    <Accordion title="Тени / Glow">
+            <div className="ctorStub">Card shadow (0..1) / Focus glow (0..1) — подключим.</div>
+          </Accordion>
+
+                    <Accordion title="Прозрачность">
+            <div className="ctorStub">Прозрачность применяется TG-safe через rgba(), без color-mix — подключим.</div>
+          </Accordion>
+
+                    <Accordion title="Шрифты">
+            <div className="ctorStub">Заголовки / Текст (Body) / Кнопки / Меню (Tabbar) — подключим.</div>
+          </Accordion>
         </div>
       )}
     </div>
