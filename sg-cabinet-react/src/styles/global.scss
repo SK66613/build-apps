@@ -952,3 +952,62 @@ html[data-theme='dark'] .sg-main.is-ctor .ctorX__drawer::after{
 }
 
 
+
+
+
+
+/* ===== Floating Zoom panel (vertical, fixed) ===== */
+.ctor-preview__zoom{
+  position: fixed;
+  top: 18px;                 /* опусти ниже если надо */
+  right: 18px;               /* отступ от правого края */
+  z-index: 500;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+
+  padding: 12px 12px;
+  border-radius: 16px;
+
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(12px) saturate(120%);
+  box-shadow: 0 16px 40px rgba(2,6,23,.10);
+}
+
+/* подпись */
+.ctor-preview__zoomLbl{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  order: 1;
+}
+
+/* слайдер — вертикально */
+.ctor-preview__zoomSlider{
+  order: 2;
+
+  width: 170px;              /* это станет “высотой” после поворота */
+  transform: rotate(-90deg);
+  transform-origin: right top;
+
+  margin: 68px 0;            /* подбери чтобы не налезало */
+}
+
+/* значение */
+.ctor-preview__zoomVal{
+  order: 3;
+  font-weight: 900;
+  color: var(--muted);
+  min-width: 48px;
+  text-align: right;
+}
+
+/* dark */
+html[data-theme='dark'] .ctor-preview__zoom{
+  background: rgba(2,6,23,.55);
+  box-shadow: 0 18px 50px rgba(0,0,0,.35);
+}
+
+
