@@ -1002,13 +1002,5 @@ html[data-theme='dark'] .ctor-preview__zoom{
 }
 
 
-/* hide window scrollbar only on constructor page */
-.sg-main.is-ctor{
-  scrollbar-width: none;      /* Firefox */
-  -ms-overflow-style: none;   /* old Edge */
-}
-.sg-main.is-ctor::-webkit-scrollbar{
-  width: 0;
-  height: 0;
-}
+
 
