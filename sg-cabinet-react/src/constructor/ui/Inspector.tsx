@@ -86,7 +86,7 @@ export function Inspector(){
 
 
                   <IconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(route.path, b.id)}>
-                    {isHidden ? '🙈' : '👁'}
+                    {isHidden ? '👁' : '👁'}
                   </IconBtn>
 
                   <IconBtn title="Дублировать" onClick={()=>duplicateBlock(route.path, b.id)}>⧉</IconBtn>
