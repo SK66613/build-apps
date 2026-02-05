@@ -82,7 +82,8 @@ export function Inspector(){
                   <IconBtn title="Ниже" disabled={idx===route.blocks.length-1} onClick={()=>moveBlock(route.path, b.id, 1)}>↓</IconBtn>
 
                   {/* ✅ РЕДАКТОР (карандаш) */}
-                  <IconBtn title="Редактировать" onClick={()=>setEdit({ path: route.path, id: b.id })}>✎</IconBtn>
+                  <IconBtn title="Редактировать" onClick={()=>setEdit({ path: route.path, id: b.id })}>✏️</IconBtn>
+
 
                   <IconBtn title={isHidden ? 'Показать' : 'Скрыть'} onClick={()=>toggleHidden(route.path, b.id)}>
                     {isHidden ? '🙈' : '👁'}
