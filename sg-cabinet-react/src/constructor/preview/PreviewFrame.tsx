@@ -123,35 +123,54 @@ export function PreviewFrame(){
         </div>
 
         {/* RIGHT: actions (undo/redo/save/publish) */}
-<div className="ctor-preview__hdr">
-  {/* devices (stretch) */}
-  <div className="ctor-preview__presets">
-    <div className="ctorSeg ctorSeg--wide">
-      {Object.entries(PRESETS).map(([k, v]) => (
-        <button
-          key={k}
-          type="button"
-          className={'ctorSeg__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
-          onClick={()=>setPreset(k as PresetKey)}
-        >
-          {v.label}
-        </button>
-      ))}
-    </div>
-  </div>
+        <div className="ctor-preview__actions">
+          <div className="ctorSeg ctorSeg--tight">
+            <button
+              type="button"
+              className="ctorSeg__btn"
+              title="Отменить"
+              onClick={()=>{
+                if (typeof undo === 'function') undo();
+              }}
+              disabled={!canUndo}
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              className="ctorSeg__btn"
+              title="Вернуть"
+              onClick={()=>{
+                if (typeof redo === 'function') redo();
+              }}
+              disabled={!canRedo}
+            >
+              ↷
+            </button>
+          </div>
 
-  {/* right actions */}
-  <div className="ctor-preview__right">
-    <div className="ctorSeg ctorSeg--mini">
-      <button type="button" className="ctorSeg__btn" title="Отменить">↶</button>
-      <button type="button" className="ctorSeg__btn" title="Вернуть">↷</button>
-    </div>
-
-    <div className="ctorSeg ctorSeg--mini">
-      <button type="button" className="ctorSeg__btn" title="Сохранить">Сохранить</button>
-      <button type="button" className="ctorSeg__btn is-active" title="Опубликовать">Опубликовать</button>
-    </div>
-  </div>
+          <div className="ctorSeg ctorSeg--tight">
+            <button
+              type="button"
+              className="ctorSeg__btn"
+              onClick={()=>{
+                if (typeof saveNow === 'function') saveNow();
+                else alert('Сохранение: подключим к экшену стора (saveNow/saveBlueprint).');
+              }}
+            >
+              Сохранить
+            </button>
+            <button
+              type="button"
+              className="ctorSeg__btn is-active"
+              onClick={()=>{
+                alert('Опубликовать: подключим после сохранения (publish).');
+              }}
+            >
+              Опубликовать
+            </button>
+          </div>
+        </div>
 
         {/* zoom как было */}
         <div className="ctor-preview__zoom">
