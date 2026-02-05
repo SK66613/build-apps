@@ -943,58 +943,63 @@ html[data-theme='dark'] .sg-main.is-ctor .ctorX__drawer::after{
 
 
 
-/* ===== Floating Zoom panel (vertical, fixed) ===== */
+/* ===== Floating Zoom (RIGHT, vertical, aligned) ===== */
 .ctor-preview__zoom{
   position: fixed;
-  top: 18px;                 /* опусти ниже если надо */
-  right: 18px;               /* отступ от правого края */
+  top: 110px;           /* опусти ниже от кнопок устройств */
+  right: 22px;
   z-index: 500;
+
+  width: 86px;
+  height: 260px;
 
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
 
-  padding: 12px 12px;
-  border-radius: 16px;
+  padding: 12px 10px;
+  border-radius: 18px;
 
-  background: rgba(255,255,255,.88);
+  background: rgba(255,255,255,.90);
   backdrop-filter: blur(12px) saturate(120%);
-  box-shadow: 0 16px 40px rgba(2,6,23,.10);
+  box-shadow: 0 18px 52px rgba(2,6,23,.12);
 }
 
-/* подпись */
+html[data-theme='dark'] .ctor-preview__zoom{
+  background: rgba(2,6,23,.55);
+  box-shadow: 0 18px 52px rgba(0,0,0,.35);
+}
+
 .ctor-preview__zoomLbl{
   font-size: 12px;
   font-weight: 900;
   color: var(--muted);
-  order: 1;
+  line-height: 1;
 }
 
-/* слайдер — вертикально */
-.ctor-preview__zoomSlider{
-  order: 2;
-
-  width: 170px;              /* это станет “высотой” после поворота */
-  transform: rotate(-90deg);
-  transform-origin: right top;
-
-  margin: 68px 0;            /* подбери чтобы не налезало */
-}
-
-/* значение */
+/* значение внизу */
 .ctor-preview__zoomVal{
-  order: 3;
   font-weight: 900;
   color: var(--muted);
-  min-width: 48px;
-  text-align: right;
+  line-height: 1;
 }
 
-/* dark */
-html[data-theme='dark'] .ctor-preview__zoom{
-  background: rgba(2,6,23,.55);
-  box-shadow: 0 18px 50px rgba(0,0,0,.35);
+/* сам range делаем вертикальным НОРМАЛЬНО */
+.ctor-preview__zoomSlider{
+  width: 160px;                 /* станет высотой после rotate */
+  height: 28px;
+
+  transform: rotate(-90deg);
+  transform-origin: center;
+
+  margin: 0;                    /* убираем кривые отступы */
 }
+
+/* чтобы плавающая панель не перекрывала контент справа */
+.ctor-preview__stage{
+  padding-right: 120px;
+}
+
 
 
