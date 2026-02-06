@@ -1456,7 +1456,7 @@ html[data-theme='dark'] .ctorModal__ftr{ border-top-color: rgba(226,232,240,.10)
 
 /* опускаем блок кнопок ниже от верхнего края превью */
 .ctor-preview__hdr{
-  padding-top: 3px;      /* <-- было 0, подними/опусти тут */
+  padding-top: 8px;      /* <-- было 0, подними/опусти тут */
   margin-bottom: 10px;
 }
 
