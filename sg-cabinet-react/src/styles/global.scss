@@ -1499,227 +1499,163 @@ html[data-theme='dark'] .ctorPreviewSeg{
 
 
 
-/* ===== Ozon-light dashboard layer (append to global.scss) ===== */
+/* ===================================================================
+   WHEEL / Dashboard skin — like Constructor (segmented, clean, no blue)
+   Replace previous "Ozon-light dashboard layer"
+   Put this at the END of your global.css/global.scss
+   =================================================================== */
 
-/* Base tokens (light) */
-:root{
-  --bg: #f4f6fb;
-  --bg2: #eef2ff;
-
-  --card: rgba(255,255,255,.92);
-  --card2: rgba(255,255,255,.70);
-
-  --text: #0b1220;
-  --muted: rgba(15,23,42,.60);
-
-  --border: rgba(15,23,42,.12);
-  --border2: rgba(15,23,42,.08);
-
-  --accent: #2563eb;
-  --accent2: #22c55e;
-
-  --shadow: 0 18px 52px rgba(2,6,23,.10);
-  --shadow2: 0 10px 28px rgba(2,6,23,.08);
-
-  --radius-card: 18px;
-  --radius-btn: 14px;
-  --radius-input: 12px;
-
-  --focus: 0 0 0 4px rgba(37,99,235,.16);
+/* 1) Фон: ближе к конструктору (почти белый, без сильных градиентов) */
+body{
+  background: #f7f9ff;
 }
 
-/* Page bg helper (optional) */
-.sg-page{
-  background: radial-gradient(1200px 520px at 22% -10%, rgba(37,99,235,.10), transparent 60%),
-              radial-gradient(900px 420px at 92% 0%, rgba(34,197,94,.10), transparent 55%),
-              linear-gradient(180deg, var(--bg), var(--bg2));
-  min-height: 100%;
+/* 2) Карточки: более “плоские”, мягкая обводка, меньше тени */
+.sg-card,
+.card, .panel, .box{
+  box-shadow: 0 10px 28px rgba(2,6,23,.06);
 }
 
-/* Typography */
-.sg-h1{
-  margin: 0;
-  font-weight: 1000;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  font-size: 28px;
-  line-height: 1.1;
-}
-.sg-sub{
-  margin-top: 6px;
-  color: var(--muted);
-  font-weight: 700;
-}
-.sg-muted{ color: var(--muted); }
-.sg-divider{ height: 1px; background: var(--border2); }
-
-/* Layout grids */
-.sg-grid{
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0,1fr));
-  gap: 14px;
-}
-@media (max-width: 980px){
-  .sg-grid{ grid-template-columns: repeat(6, minmax(0,1fr)); }
-}
-@media (max-width: 620px){
-  .sg-grid{ grid-template-columns: repeat(1, minmax(0,1fr)); }
-}
-
-/* Generic row */
-.sg-row{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* Card look (your <Card/> probably wraps .sg-card style, but keep both) */
-.sg-card, .card, .ui-card{
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow2);
-  backdrop-filter: blur(8px);
-}
-.sg-card:hover{
-  box-shadow: var(--shadow);
-}
-
-/* Lists inside cards */
-.sg-list{
-  display: grid;
-  gap: 10px;
-}
-
-/* Pills */
-.sg-pill{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--card2);
-  border-radius: 999px;
-  font-weight: 900;
-  color: var(--text);
-}
-
-/* Buttons (if your Button already has styles, this won’t hurt; it’s extra) */
-.sg-btn{
-  appearance: none;
-  border: 1px solid var(--border);
-  background: var(--card2);
-  color: var(--text);
-  border-radius: var(--radius-btn);
-  padding: 10px 12px;
-  font-weight: 900;
-  cursor: pointer;
-  transition: transform .06s ease, box-shadow .12s ease, background .12s ease;
-}
-.sg-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow2); }
-.sg-btn:active{ transform: translateY(0px); }
-.sg-btn:disabled{ opacity: .6; cursor: default; transform:none; box-shadow:none; }
-
-.sg-btn--primary{
-  background: linear-gradient(180deg, rgba(37,99,235,.95), rgba(37,99,235,.85));
-  border-color: rgba(37,99,235,.55);
-  color: #fff;
-}
-.sg-btn--primary:hover{ box-shadow: 0 14px 36px rgba(37,99,235,.22); }
-
-/* Tabs / segmented (for chart mode toggles etc.) */
-.sg-tabs{
-  display: inline-flex;
-  gap: 8px;
-  padding: 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.55);
-  border: 1px solid var(--border2);
-  box-shadow: 0 8px 24px rgba(2,6,23,.06);
-}
-.sg-tab{
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  border-radius: 999px;
-  padding: 10px 12px;
-  font-weight: 950;
-  cursor: pointer;
-}
-.sg-tab:hover{
-  background: rgba(255,255,255,.55);
-  border-color: var(--border2);
-}
-.sg-tab.is-active{
-  background: linear-gradient(180deg, rgba(37,99,235,.95), rgba(37,99,235,.85));
-  color: #fff;
-  border-color: rgba(37,99,235,.45);
-  box-shadow: 0 10px 28px rgba(37,99,235,.22);
-}
-
-/* Inputs */
-.sg-input, input[type="text"], input[type="number"], input[type="email"], textarea, select{
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,.85);
-  color: var(--text);
-  border-radius: var(--radius-input);
-  padding: 10px 12px;
-  outline: none;
-  font-weight: 800;
-}
-.sg-input:focus, input:focus, textarea:focus, select:focus{
-  box-shadow: var(--focus);
-  border-color: rgba(37,99,235,.35);
-}
-
-/* Tables */
+/* 3) Таблицы: более “ozon/ctor” — легкий хедер, ровные строки */
 .sg-table{
-  width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  overflow: hidden;
 }
-.sg-table thead th{
-  text-align: left;
-  font-size: 12px;
-  letter-spacing: .02em;
+.sg-table th{
+  background: rgba(255,255,255,.55);
+  backdrop-filter: blur(8px) saturate(120%);
+  border-bottom: 1px solid var(--border2);
+  font-size: 11px;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  color: rgba(15,23,42,.60);
-  font-weight: 950;
-  padding: 12px 12px;
-  background: rgba(255,255,255,.70);
-  border-bottom: 1px solid var(--border2);
 }
-.sg-table tbody td{
-  padding: 12px 12px;
-  border-bottom: 1px solid var(--border2);
-  font-weight: 800;
-  color: var(--text);
+.sg-table td{
+  font-weight: 700;
 }
 .sg-table tbody tr:hover td{
+  background: rgba(255,255,255,.50);
+}
+
+/* 4) ВАЖНО: сегменты (Столбцы/Линия/Area) как Design/Panel в конструкторе */
+.sg-tabs{
+  display:flex;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 18px;
+
+  /* как ctorSeg */
+  background: rgba(255,255,255,.35);
+  border: 1px solid rgba(15,23,42,.08);
+  backdrop-filter: blur(10px) saturate(120%);
+
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+}
+
+html[data-theme='dark'] .sg-tabs{
+  background: rgba(2,6,23,.22);
+  border-color: rgba(148,163,184,.14);
+  box-shadow: 0 12px 28px rgba(0,0,0,.28);
+}
+
+.sg-tab{
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor:pointer;
+
+  font-weight: 850;
+  color: rgba(15,23,42,.72);
+  background: transparent;
+
+  transition: background .15s ease, transform .08s ease, color .15s ease, box-shadow .15s ease;
+}
+
+html[data-theme='dark'] .sg-tab{
+  color: rgba(226,232,240,.70);
+}
+
+.sg-tab:hover{
+  background: rgba(255,255,255,.40);
+}
+
+html[data-theme='dark'] .sg-tab:hover{
+  background: rgba(255,255,255,.06);
+}
+
+.sg-tab.is-active{
+  /* активный сегмент — НЕ синий, а как “выбранная вкладка” */
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 24px rgba(2,6,23,.10);
+}
+
+html[data-theme='dark'] .sg-tab.is-active{
+  background: rgba(15,23,42,.75);
+  color: rgba(226,232,240,.92);
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+}
+
+.sg-tab:active{ transform: translateY(1px) scale(.99); }
+
+/* 5) Убираем “синий primary” в Wheel (сделаем primary как аккуратная кнопка) */
+.sg-btn--primary{
+  /* вместо синей заливки — светлая “selected” */
+  background: rgba(255,255,255,.90);
+  color: rgba(15,23,42,.92);
+  border: 1px solid rgba(15,23,42,.12);
+  box-shadow: 0 10px 24px rgba(2,6,23,.08);
+}
+
+html[data-theme='dark'] .sg-btn--primary{
+  background: rgba(15,23,42,.55);
+  color: rgba(226,232,240,.92);
+  border-color: rgba(148,163,184,.18);
+  box-shadow: 0 12px 28px rgba(0,0,0,.30);
+}
+
+/* hover чуть “дороже”, но без синего */
+.sg-btn--primary:hover{
+  filter: brightness(1.02);
+}
+
+/* 6) Правые карточки: аккуратная обводка + внутренние отступы */
+.sg-card > div[style*="font-weight: 950"],
+.card > div[style*="font-weight: 950"]{
+  /* заголовки внутри карточек выглядят плотнее */
+  letter-spacing: -0.2px;
+}
+
+/* 7) KPI под графиком — делаем их как мини-карточки */
+.sg-card .kpi,
+.kpi-card{
+  border: 1px solid var(--border2);
   background: rgba(255,255,255,.55);
-}
-.sg-table tbody tr:last-child td{
-  border-bottom: none;
+  border-radius: 16px;
 }
 
-/* Charts tooltip polish (recharts default) */
-.recharts-tooltip-wrapper{
-  outline: none;
-}
+/* 8) Recharts tooltip — мягче и как у конструктора */
 .recharts-default-tooltip{
-  border-radius: 14px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow2) !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  background: rgba(255,255,255,.92) !important;
+  box-shadow: 0 18px 52px rgba(2,6,23,.12) !important;
+  backdrop-filter: blur(10px) saturate(120%);
+}
+html[data-theme='dark'] .recharts-default-tooltip{
+  background: rgba(15,23,42,.90) !important;
+  border-color: rgba(148,163,184,.18) !important;
 }
 
-/* Small responsive tweak for 2-col dashboard layouts */
+/* 9) Чуть “выровнять” визуально отступы */
+.sg-h1{ font-size: 22px; }
+.sg-sub{ font-weight: 650; }
+
+/* 10) На узких экранах — правая колонка уходит вниз аккуратно */
 @media (max-width: 980px){
-  /* If you used inline gridTemplateColumns 2fr 1fr, this helps cards stack */
+  /* если где-то используешь 2 колонки */
   .sg-dashboard-two-col{
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
+    grid-template-columns: 1fr !important;
   }
 }
+
 
