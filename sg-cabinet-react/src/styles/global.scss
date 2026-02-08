@@ -1967,3 +1967,35 @@ html[data-theme='dark'] .wheelRedeemMeta b{
   color: rgba(226,232,240,.92);
 }
 
+/* ===== Sticky Top card ===== */
+.wheelStickyTop{
+  position: sticky;
+  top: 84px;            /* под topbar, подстрой 64-96 */
+  z-index: 2;
+}
+
+/* на мобилке sticky не нужен */
+@media (max-width: 1100px){
+  .wheelStickyTop{ position: static; }
+}
+
+/* ===== Top header (title + small tabs) ===== */
+.wheelTopHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.wheelMiniTabs{
+  padding: 5px !important;
+  gap: 6px !important;
+  border-radius: 14px !important;
+}
+
+.wheelMiniTabs .sg-tab{
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  font-weight: 900 !important;
+  font-size: 12px;
+}
