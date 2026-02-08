@@ -45,7 +45,7 @@ body{
   margin: 0;
   font-family: Manrope, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--text);
-  background: linear-gradient(180deg, var(--bg), var(--bg2));
+  background: #fff; /* ✅ чисто белый */
 }
 
 a{ color:inherit; text-decoration:none; }
