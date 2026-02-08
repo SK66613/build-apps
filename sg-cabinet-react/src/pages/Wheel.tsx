@@ -1,16 +1,16 @@
-// src/pages/Wheel.tsx
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '../lib/api';
-import { useAppState } from '../app/appState';
-import { Button, Card, Input } from '../components/ui';
 import {
   ResponsiveContainer,
   BarChart, Bar,
   LineChart, Line,
   AreaChart, Area,
-  XAxis, YAxis, Tooltip, CartesianGrid,
+  CartesianGrid, XAxis, YAxis, Tooltip,
 } from 'recharts';
+
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../lib/api';
+import { useAppState } from '../app/appState';
+import { Button, Card, Input } from '../components/ui';
 
 type PrizeStat = {
   prize_code: string;
@@ -22,12 +22,7 @@ type PrizeStat = {
   active?: number;
 };
 
-type ActivityItem = {
-  ts?: string;
-  type?: string;
-  label?: string;
-  user?: string;
-};
+type WheelStatsResponse = { ok: true; items: PrizeStat[] };
 
 function qs(obj: Record<string, string | number | undefined | null>){
   const p = new URLSearchParams();
@@ -43,74 +38,100 @@ function toInt(v: any, d = 0){
   return Math.trunc(n);
 }
 
-function clampN(n: any, min: number, max: number){
-  const x = Number(n);
-  if (!Number.isFinite(x)) return min;
-  return Math.max(min, Math.min(max, x));
+function pct(n: number, d: number){
+  if (!d) return '0%';
+  return Math.round((n / d) * 100) + '%';
+}
+
+/** маленькие иконки, чтобы табы выглядели богаче (без либ) */
+function IcoBars(){ return (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M3 13V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M8 13V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M13 13V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);}
+
+function IcoLine(){ return (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);}
+
+function IcoArea(){ return (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M2 11l4-4 3 3 5-6v10H2V11z" fill="currentColor" opacity="0.18"/>
+    <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M2 14h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);}
+
+function SegTabs(props: {
+  value: string;
+  onChange: (v: string) => void;
+  items: Array<{ key: string; label: React.ReactNode }>;
+  className?: string;
+}){
+  return (
+    <div className={props.className || ''} style={{ display:'flex', gap: 10 }}>
+      <div className="sg-tabs">
+        {props.items.map(it => (
+          <button
+            key={it.key}
+            type="button"
+            className={'sg-tab' + (props.value === it.key ? ' is-active' : '')}
+            onClick={() => props.onChange(it.key)}
+          >
+            {it.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function Wheel(){
   const { appId, range } = useAppState();
   const qc = useQueryClient();
 
-  const [chartMode, setChartMode] = React.useState<'bar'|'line'|'area'>('bar');
-  const [section, setSection] = React.useState<'stats'|'live'|'settings'>('stats');
+  const [mode, setMode] = React.useState<'stats'|'live'|'settings'>('stats');
+  const [chartType, setChartType] = React.useState<'bar'|'line'|'area'>('bar');
 
+  // ===== STATS (всегда грузим, это и для Settings нужно)
   const qStats = useQuery({
     enabled: !!appId,
     queryKey: ['wheel', appId, range.from, range.to],
-    queryFn: () => apiFetch<{ ok: true; items: PrizeStat[] }>(
-      `/api/cabinet/apps/${appId}/wheel/stats?${qs(range)}`
-    ),
+    queryFn: () => apiFetch<WheelStatsResponse>(`/api/cabinet/apps/${appId}/wheel/stats?${qs(range)}`),
     staleTime: 10_000,
-  });
-
-  const qLive = useQuery({
-    enabled: !!appId && section === 'live',
-    queryKey: ['wheel.live', appId, range.from, range.to],
-    queryFn: async () => {
-      // используем общий activity
-      return apiFetch<{ ok: true; items: ActivityItem[] }>(
-        `/api/cabinet/apps/${appId}/activity?${qs(range)}`
-      );
-    },
-    staleTime: 5_000,
-    refetchInterval: 7_000,
-    retry: 0,
   });
 
   const items = qStats.data?.items || [];
 
-  // KPI
-  const totalWins = items.reduce((s, p) => s + (Number(p.wins) || 0), 0);
-  const totalRedeemed = items.reduce((s, p) => s + (Number(p.redeemed) || 0), 0);
-  const redeemRate = totalWins > 0 ? Math.round((totalRedeemed / totalWins) * 100) : 0;
+  // ===== LIVE (включаем только когда пользователь реально в режиме live)
+  // ВАЖНО: если эндпоинт другой — поменяешь URL ниже, UI уже готов.
+  const qLive = useQuery({
+    enabled: !!appId && mode === 'live',
+    queryKey: ['wheel.live', appId, range.from, range.to],
+    queryFn: () => apiFetch<any>(`/api/cabinet/apps/${appId}/wheel/live?${qs(range)}`),
+    refetchInterval: 6_000,
+    retry: 0,
+  });
 
-  // Chart data (оставим все призы, но можно ограничить топом)
-  const chartData = items.map(p => ({
-    title: p.title || p.prize_code,
-    wins: Number(p.wins) || 0,
-    redeemed: Number(p.redeemed) || 0,
-  }));
-
-  // Top prizes (по wins)
-  const top = [...items]
-    .sort((a,b) => (Number(b.wins)||0) - (Number(a.wins)||0))
-    .slice(0, 7);
-
-  // ===== Settings form draft =====
+  // ===== local form for SETTINGS (weights/active)
   const [draft, setDraft] = React.useState<Record<string, { weight: string; active: boolean }>>({});
   const [saving, setSaving] = React.useState(false);
   const [saveMsg, setSaveMsg] = React.useState<string>('');
 
   React.useEffect(() => {
-    if (!items.length) return;
-    setDraft(prev => {
+    const list = items;
+    if (!list.length) return;
+
+    setDraft((prev) => {
       const next = { ...prev };
-      for (const p of items){
+      for (const p of list) {
         const key = p.prize_code;
         if (!key) continue;
-        if (next[key] === undefined){
+        if (next[key] === undefined) {
           next[key] = {
             weight: (p.weight ?? '') === null || (p.weight ?? '') === undefined ? '' : String(p.weight),
             active: !!p.active,
@@ -119,14 +140,13 @@ export default function Wheel(){
       }
       return next;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qStats.data?.items]);
 
   function setWeight(code: string, v: string){
-    setDraft(d => ({ ...d, [code]: { weight: v, active: !!d[code]?.active } }));
+    setDraft((d) => ({ ...d, [code]: { weight: v, active: !!d[code]?.active } }));
   }
   function toggleActive(code: string){
-    setDraft(d => ({ ...d, [code]: { weight: d[code]?.weight ?? '', active: !d[code]?.active } }));
+    setDraft((d) => ({ ...d, [code]: { weight: d[code]?.weight ?? '', active: !d[code]?.active } }));
   }
 
   async function save(){
@@ -139,7 +159,7 @@ export default function Wheel(){
         const d = draft[code];
         if (!d) return null;
 
-        const weight = clampN(toInt(d.weight, 0), 0, 1_000_000);
+        const weight = Math.max(0, toInt(d.weight, 0));
         const active = d.active ? 1 : 0;
 
         return { prize_code: code, weight, active };
@@ -164,6 +184,7 @@ export default function Wheel(){
 
       setSaveMsg(`Сохранено: ${r.updated}`);
       await qc.invalidateQueries({ queryKey: ['wheel', appId] });
+
     }catch(e: any){
       setSaveMsg('Ошибка сохранения: ' + String(e?.message || e));
     }finally{
@@ -171,266 +192,345 @@ export default function Wheel(){
     }
   }
 
-  return (
-    <div className="sg-page wheelPage">
-      <div className="wheelHead">
-        <div>
-          <h1 className="sg-h1">Wheel</h1>
-          <div className="sg-sub">График + KPI + топы + live + настройка весов (runtime override).</div>
-        </div>
+  // ===== Derived stats
+  const totalWins = items.reduce((s, x) => s + (Number(x.wins) || 0), 0);
+  const totalRedeemed = items.reduce((s, x) => s + (Number(x.redeemed) || 0), 0);
+  const redeemRate = pct(totalRedeemed, totalWins);
 
-        <div className="sg-tabs">
-          <button className={'sg-tab ' + (chartMode==='bar' ? 'is-active' : '')} onClick={() => setChartMode('bar')}>Столбцы</button>
-          <button className={'sg-tab ' + (chartMode==='line' ? 'is-active' : '')} onClick={() => setChartMode('line')}>Линия</button>
-          <button className={'sg-tab ' + (chartMode==='area' ? 'is-active' : '')} onClick={() => setChartMode('area')}>Area</button>
-        </div>
+  const top = [...items].sort((a,b) => (b.wins||0) - (a.wins||0)).slice(0, 7);
+
+  const chartData = items.map(p => ({
+    name: p.title || p.prize_code,
+    wins: Number(p.wins) || 0,
+    redeemed: Number(p.redeemed) || 0,
+  }));
+
+  // ===== UI blocks
+  const ModeTabs = (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap: 12, flexWrap:'wrap' }}>
+      <div style={{ minWidth: 260 }}>
+        <SegTabs
+          value={mode}
+          onChange={(v) => setMode(v as any)}
+          items={[
+            { key: 'stats', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}>Статистика</span> },
+            { key: 'live', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}>Live</span> },
+            { key: 'settings', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}>Настройки</span> },
+          ]}
+        />
       </div>
 
-      {/* 2 колонки */}
-      <div className="wheelGrid">
-        {/* LEFT */}
-        <div className="wheelLeft">
-          {/* SECTION TABS */}
-          <div className="wheelSectionTabs">
-            <div className="sg-tabs">
-              <button className={'sg-tab ' + (section==='stats' ? 'is-active' : '')} onClick={() => setSection('stats')}>Статистика</button>
-              <button className={'sg-tab ' + (section==='live' ? 'is-active' : '')} onClick={() => setSection('live')}>Live</button>
-              <button className={'sg-tab ' + (section==='settings' ? 'is-active' : '')} onClick={() => setSection('settings')}>Настройки</button>
-            </div>
+      {/* мелкая подсказка справа (смотрится “дороже”, чем просто текст) */}
+      <div className="sg-pill" style={{ padding: '8px 12px', gap: 10, opacity: 0.95 }}>
+        <span style={{ fontWeight: 950 }}>Wheel</span>
+        <span style={{ opacity: 0.65, fontWeight: 850 }}>runtime override</span>
+      </div>
+    </div>
+  );
+
+  const ChartTypeTabs = (
+    <SegTabs
+      value={chartType}
+      onChange={(v) => setChartType(v as any)}
+      items={[
+        { key: 'bar',  label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}><IcoBars/> Столбцы</span> },
+        { key: 'line', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}><IcoLine/> Линия</span> },
+        { key: 'area', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}><IcoArea/> Area</span> },
+      ]}
+    />
+  );
+
+  return (
+    <div
+      className="sg-grid"
+      style={{
+        gap: 14,
+        // 2 колонки как на скринах: слева контент, справа сайдбар
+        gridTemplateColumns: 'minmax(0, 2fr) minmax(320px, 1fr)',
+        alignItems: 'start',
+        // переменные цветов для графика (без “двух одинаковых”)
+        ...( { ['--chart-1' as any]: '#22d3ee', ['--chart-2' as any]: '#3b82f6' } ),
+      }}
+    >
+      {/* LEFT */}
+      <div className="sg-grid" style={{ gridTemplateColumns: '1fr', gap: 14 }}>
+        <div className="sg-grid" style={{ gridTemplateColumns:'1fr', gap: 10 }}>
+          <div>
+            <h1 className="sg-h1">Wheel</h1>
+            <div className="sg-sub">График + KPI + топы + live + настройка весов (runtime override).</div>
           </div>
 
-          {section === 'stats' && (
-            <>
-              <Card className="wheelCard">
-                <div className="wheelCardHead">
-                  <div>
-                    <div className="wheelCardTitle">Распределение призов</div>
-                    <div className="wheelCardSub">{range.from} — {range.to}</div>
+          {ModeTabs}
+        </div>
+
+        {/* ===== MODE: STATS ===== */}
+        {mode === 'stats' && (
+          <>
+            <Card>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap: 12, flexWrap:'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: 950, letterSpacing: -0.2 }}>Распределение призов</div>
+                  <div className="sg-muted" style={{ marginTop: 4 }}>
+                    {range?.from} — {range?.to}
                   </div>
                 </div>
 
-                <div className="wheelChart">
-                  {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
-                  {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
+                {/* тип графика — теперь внутри карточки, справа */}
+                <div style={{ flex: '0 0 auto' }}>
+                  {ChartTypeTabs}
+                </div>
+              </div>
 
-                  {!qStats.isLoading && !qStats.isError && (
+              <div style={{ marginTop: 12 }}>
+                {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
+                {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
+
+                {!qStats.isLoading && !qStats.isError && (
+                  <div style={{ height: 320 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      {chartMode === 'bar' ? (
-                        <BarChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={42} />
-                          <YAxis />
+                      {chartType === 'bar' ? (
+                        <BarChart data={chartData} barCategoryGap={18}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
+                          <YAxis tick={{ fontSize: 12 }} />
                           <Tooltip />
-                          <Bar dataKey="wins" fill="var(--accent)" radius={[10,10,0,0]} />
-                          <Bar dataKey="redeemed" fill="var(--accent2)" radius={[10,10,0,0]} />
+                          <Bar dataKey="wins" fill="var(--chart-1)" radius={[10,10,4,4]} />
+                          <Bar dataKey="redeemed" fill="var(--chart-2)" radius={[10,10,4,4]} />
                         </BarChart>
-                      ) : chartMode === 'line' ? (
+                      ) : chartType === 'line' ? (
                         <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={42} />
-                          <YAxis />
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
+                          <YAxis tick={{ fontSize: 12 }} />
                           <Tooltip />
-                          <Line type="monotone" dataKey="wins" stroke="var(--accent)" strokeWidth={3} dot={false} />
-                          <Line type="monotone" dataKey="redeemed" stroke="var(--accent2)" strokeWidth={3} dot={false} />
+                          <Line type="monotone" dataKey="wins" stroke="var(--chart-1)" strokeWidth={3} dot={false} />
+                          <Line type="monotone" dataKey="redeemed" stroke="var(--chart-2)" strokeWidth={3} dot={false} />
                         </LineChart>
                       ) : (
                         <AreaChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={42} />
-                          <YAxis />
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
+                          <YAxis tick={{ fontSize: 12 }} />
                           <Tooltip />
-                          <Area type="monotone" dataKey="wins" stroke="var(--accent)" fill="var(--accentSoft)" strokeWidth={2} />
-                          <Area type="monotone" dataKey="redeemed" stroke="var(--accent2)" fill="rgba(59,130,246,.10)" strokeWidth={2} />
+                          <Area type="monotone" dataKey="wins" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.18} strokeWidth={3} />
+                          <Area type="monotone" dataKey="redeemed" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.16} strokeWidth={3} />
                         </AreaChart>
                       )}
                     </ResponsiveContainer>
-                  )}
-                </div>
-
-                <div className="wheelKpiRow">
-                  <div className="wheelKpi">
-                    <div className="wheelKpiLbl">Wins</div>
-                    <div className="wheelKpiVal">{totalWins}</div>
                   </div>
-                  <div className="wheelKpi">
-                    <div className="wheelKpiLbl">Redeemed</div>
-                    <div className="wheelKpiVal">{totalRedeemed}</div>
-                  </div>
-                  <div className="wheelKpi">
-                    <div className="wheelKpiLbl">Redeem rate</div>
-                    <div className="wheelKpiVal">{redeemRate}%</div>
-                  </div>
-                </div>
-              </Card>
-            </>
-          )}
-
-          {section === 'live' && (
-            <Card className="wheelCard">
-              <div className="wheelCardHead">
-                <div>
-                  <div className="wheelCardTitle">Live (последние события)</div>
-                  <div className="wheelCardSub">auto refresh</div>
-                </div>
+                )}
               </div>
 
-              {qLive.isLoading && <div className="sg-muted">Загрузка…</div>}
+              {/* KPI под графиком */}
+              <div
+                className="sg-grid"
+                style={{
+                  marginTop: 12,
+                  gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+                  gap: 12,
+                }}
+              >
+                <div className="sg-card" style={{ padding: 12, boxShadow:'none' }}>
+                  <div className="sg-muted" style={{ fontWeight: 900 }}>Wins</div>
+                  <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{totalWins}</div>
+                </div>
+                <div className="sg-card" style={{ padding: 12, boxShadow:'none' }}>
+                  <div className="sg-muted" style={{ fontWeight: 900 }}>Redeemed</div>
+                  <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{totalRedeemed}</div>
+                </div>
+                <div className="sg-card" style={{ padding: 12, boxShadow:'none' }}>
+                  <div className="sg-muted" style={{ fontWeight: 900 }}>Redeem rate</div>
+                  <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{redeemRate}</div>
+                </div>
+              </div>
+            </Card>
+          </>
+        )}
 
-              {qLive.isError && (
+        {/* ===== MODE: LIVE ===== */}
+        {mode === 'live' && (
+          <Card>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap: 10, flexWrap:'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 950 }}>Live (последние события)</div>
+                <div className="sg-muted" style={{ marginTop: 4 }}>auto refresh</div>
+              </div>
+              <div className="sg-pill" style={{ padding: '8px 12px' }}>
+                {qLive.isFetching ? 'обновляю…' : 'готово'}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              {!appId && <div className="sg-muted">Выбери проект.</div>}
+              {appId && qLive.isLoading && <div className="sg-muted">Загрузка…</div>}
+              {appId && qLive.isError && (
                 <div className="sg-muted">
-                  Ошибка: {(qLive.error as Error).message}
-                  <div style={{ marginTop: 8 }}>
-                    Если видишь <b>Not found</b> — значит в воркере нет эндпоинта <code>/activity</code>.
+                  Ошибка: {(qLive.error as Error).message || 'Not found'}
+                  <div style={{ marginTop: 8, opacity: 0.8 }}>
+                    Если эндпоинт другой — поменяй URL в Wheel.tsx: <code>/wheel/live</code>
                   </div>
                 </div>
               )}
-
-              {qLive.data?.items?.length ? (
-                <div className="wheelLiveList">
-                  {qLive.data.items.slice(0, 20).map((e, i) => (
-                    <div className="wheelLiveRow" key={i}>
-                      <div className="wheelLiveType">{e.type || 'event'}</div>
-                      <div className="wheelLiveLabel">{e.label || e.user || '—'}</div>
-                      <div className="wheelLiveTs">{e.ts || ''}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (!qLive.isLoading && !qLive.isError) ? (
-                <div className="sg-muted">Пока пусто</div>
-              ) : null}
-            </Card>
-          )}
-
-          {section === 'settings' && (
-            <Card className="wheelCard">
-              <div className="wheelCardHead wheelCardHeadRow">
-                <div>
-                  <div className="wheelCardTitle">Настройки (runtime override)</div>
-                  <div className="wheelCardSub">Меняешь weight/active → сохраняешь → воркер применяет в рантайме.</div>
-                </div>
-
-                <div className="wheelSave">
-                  {saveMsg && <div className="wheelSaveMsg">{saveMsg}</div>}
-                  <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={save}>
-                    {saving ? 'Сохраняю…' : 'Сохранить изменения'}
-                  </Button>
-                </div>
-              </div>
-
-              {qStats.isError && (
-                <div style={{ marginTop: 10, fontWeight: 900 }}>
-                  Ошибка загрузки. Проверь эндпоинт <code>/wheel/stats</code> в воркере.
-                </div>
+              {appId && qLive.data && (
+                <pre style={{ margin: 0, whiteSpace:'pre-wrap' }}>
+                  {JSON.stringify(qLive.data, null, 2)}
+                </pre>
               )}
-
-              <div className="wheelTableWrap">
-                <table className="sg-table">
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Title</th>
-                      <th>Wins</th>
-                      <th>Redeemed</th>
-                      <th style={{ minWidth: 240 }}>Weight</th>
-                      <th style={{ minWidth: 120 }}>Active</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((p) => {
-                      const d = draft[p.prize_code] || { weight: String(p.weight ?? ''), active: !!p.active };
-                      return (
-                        <tr key={p.prize_code}>
-                          <td><b>{p.prize_code}</b></td>
-                          <td>{p.title}</td>
-                          <td>{p.wins}</td>
-                          <td>{p.redeemed}</td>
-                          <td>
-                            <Input
-                              value={d.weight}
-                              onChange={(e: any) => setWeight(p.prize_code, e.target.value)}
-                              placeholder="weight"
-                            />
-                          </td>
-                          <td>
-                            <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
-                              <input
-                                type="checkbox"
-                                checked={!!d.active}
-                                onChange={() => toggleActive(p.prize_code)}
-                              />
-                              <span style={{ fontWeight: 800 }}>{d.active ? 'on' : 'off'}</span>
-                            </label>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {!items.length && !qStats.isLoading && (
-                      <tr><td colSpan={6} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* RIGHT */}
-        <div className="wheelRight">
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Топ призов</div>
+              {appId && !qLive.isLoading && !qLive.isError && !qLive.data && (
+                <div className="sg-muted">Пока пусто.</div>
+              )}
             </div>
+          </Card>
+        )}
 
-            <div className="wheelTopList">
-              {top.map((p, idx) => (
-                <div className="wheelTopRow" key={p.prize_code}>
-                  <div className="wheelTopIdx">{idx + 1}</div>
-                  <div className="wheelTopTitle">{p.title}</div>
-                  <div className="wheelTopVal">{p.wins}</div>
+        {/* ===== MODE: SETTINGS ===== */}
+        {mode === 'settings' && (
+          <Card>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap: 10, flexWrap:'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 950 }}>Настройки (runtime override)</div>
+                <div className="sg-muted" style={{ marginTop: 4 }}>
+                  Меняешь <b>weight/active</b> — сохраняешь — воркер применяет в рантайме.
                 </div>
-              ))}
-              {!top.length && <div className="sg-muted">Пока пусто</div>}
-            </div>
-          </Card>
-
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Сводка</div>
-            </div>
-
-            <div className="wheelSummary">
-              <div className="wheelSummaryRow"><span className="sg-muted">Активных призов</span><b>{items.filter(i => (Number(i.active)||0) ? true : false).length}</b></div>
-              <div className="wheelSummaryRow"><span className="sg-muted">Всего призов</span><b>{items.length}</b></div>
-              <div className="wheelSummaryRow"><span className="sg-muted">Redeem rate</span><b>{redeemRate}%</b></div>
-            </div>
-          </Card>
-
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Режим</div>
-            </div>
-
-            <div className="wheelMode">
-              <div className="sg-tabs wheelModeTabs">
-                <button className={'sg-tab ' + (section==='live' ? 'is-active' : '')} onClick={() => setSection('live')}>Live</button>
-                <button className={'sg-tab ' + (section==='settings' ? 'is-active' : '')} onClick={() => setSection('settings')}>Настройки / Веса</button>
-                <button className={'sg-tab ' + (section==='stats' ? 'is-active' : '')} onClick={() => setSection('stats')}>Статистика</button>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
+                {saveMsg && <div style={{ fontWeight: 900, opacity: 0.8 }}>{saveMsg}</div>}
+                <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={save}>
+                  {saving ? 'Сохраняю…' : 'Сохранить изменения'}
+                </Button>
               </div>
             </div>
-          </Card>
 
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Идеи next widgets</div>
-            </div>
-            <div className="wheelIdeas">
-              <div className="sg-muted">• Себестоимость (cost) + ROI по колесу</div>
-              <div className="sg-muted">• “Проблемные призы”: много wins, мало redeemed</div>
-              <div className="sg-muted">• Авто-рекомендации по weight</div>
-              <div className="sg-muted">• Блокировка “крутить”, если есть незабранный приз</div>
+            {qStats.isError && (
+              <div style={{ marginTop: 10, fontWeight: 900 }}>
+                Ошибка загрузки. Проверь эндпоинт <code>/wheel/stats</code> в воркере.
+              </div>
+            )}
+
+            <div style={{ overflow:'auto', marginTop: 12 }}>
+              <table className="sg-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Wins</th>
+                    <th>Redeemed</th>
+                    <th style={{ minWidth: 180 }}>Weight</th>
+                    <th style={{ minWidth: 120 }}>Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((p) => {
+                    const d = draft[p.prize_code] || { weight: String(p.weight ?? ''), active: !!p.active };
+                    return (
+                      <tr key={p.prize_code}>
+                        <td style={{ fontWeight: 900 }}>{p.prize_code}</td>
+                        <td>{p.title}</td>
+                        <td>{p.wins}</td>
+                        <td>{p.redeemed}</td>
+                        <td>
+                          <Input
+                            value={d.weight}
+                            onChange={(e: any) => setWeight(p.prize_code, e.target.value)}
+                            placeholder="weight"
+                          />
+                        </td>
+                        <td>
+                          <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
+                            <input
+                              type="checkbox"
+                              checked={!!d.active}
+                              onChange={() => toggleActive(p.prize_code)}
+                            />
+                            <span style={{ fontWeight: 900 }}>{d.active ? 'on' : 'off'}</span>
+                          </label>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!items.length && !qStats.isLoading && (
+                    <tr><td colSpan={6} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </Card>
-        </div>
+        )}
+      </div>
+
+      {/* RIGHT SIDEBAR (без “режимов” — только полезные карточки) */}
+      <div className="sg-grid" style={{ gridTemplateColumns:'1fr', gap: 14 }}>
+        <Card>
+          <div style={{ fontWeight: 950 }}>Топ призов</div>
+          <div style={{ marginTop: 12, display:'grid', gap: 10 }}>
+            {top.map((p, i) => (
+              <div
+                key={p.prize_code}
+                style={{
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'space-between',
+                  gap: 10,
+                  padding: '10px 12px',
+                  borderRadius: 16,
+                  border: '1px solid var(--border2)',
+                  background: 'rgba(255,255,255,.55)',
+                }}
+              >
+                <div style={{ display:'flex', alignItems:'center', gap: 10, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 28, height: 28,
+                      borderRadius: 999,
+                      display:'flex',
+                      alignItems:'center',
+                      justifyContent:'center',
+                      fontWeight: 1000,
+                      border: '1px solid var(--border2)',
+                      background: 'rgba(255,255,255,.9)',
+                      flex: '0 0 auto',
+                    }}
+                  >
+                    {i+1}
+                  </div>
+                  <div style={{ fontWeight: 900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {p.title || p.prize_code}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 1000, opacity: 0.85 }}>{p.wins || 0}</div>
+              </div>
+            ))}
+            {!top.length && <div className="sg-muted">Нет данных.</div>}
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontWeight: 950 }}>Сводка</div>
+          <div style={{ marginTop: 12, display:'grid', gap: 10 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 850 }}>
+              <span className="sg-muted">Активных призов</span>
+              <span>{items.filter(x => !!x.active).length}</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 850 }}>
+              <span className="sg-muted">Всего призов</span>
+              <span>{items.length}</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 850 }}>
+              <span className="sg-muted">Redeem rate</span>
+              <span style={{ fontWeight: 1000 }}>{redeemRate}</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontWeight: 950 }}>Идеи next widgets</div>
+          <div className="sg-muted" style={{ marginTop: 10, fontWeight: 800, lineHeight: 1.55 }}>
+            • Себестоимость (cost) + ROI по колесу<br/>
+            • “Проблемные призы”: много wins, мало redeemed<br/>
+            • Авто-рекомендации по weight<br/>
+            • Блокировка “крутить”, если есть незабранный приз
+          </div>
+        </Card>
       </div>
     </div>
   );
