@@ -1842,3 +1842,128 @@ html[data-theme='dark'] .wheelUnderPanel{
   padding: 2px 2px 10px;
 }
 
+/* ===== Summary Pro ===== */
+.wheelSummaryPro{
+  display: grid;
+  gap: 12px;
+  padding: 2px;
+}
+
+.wheelSummaryTiles{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wheelSumTile{
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.55);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+}
+
+html[data-theme='dark'] .wheelSumTile{
+  background: rgba(2,6,23,.22);
+  box-shadow: 0 12px 28px rgba(0,0,0,.28);
+}
+
+.wheelSumTile.is-strong{
+  background: rgba(255,255,255,.85);
+  box-shadow: 0 18px 44px rgba(2,6,23,.10);
+}
+html[data-theme='dark'] .wheelSumTile.is-strong{
+  background: rgba(15,23,42,.55);
+  box-shadow: 0 18px 44px rgba(0,0,0,.40);
+}
+
+.wheelSumLbl{
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+
+.wheelSumVal{
+  margin-top: 6px;
+  font-weight: 1000;
+  font-size: 20px;
+  letter-spacing: -.2px;
+}
+
+.wheelRedeemBar{
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 12px 12px;
+  background: rgba(255,255,255,.55);
+}
+
+html[data-theme='dark'] .wheelRedeemBar{
+  background: rgba(2,6,23,.22);
+}
+
+.wheelRedeemTop{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wheelRedeemName{
+  font-weight: 950;
+  letter-spacing: -.2px;
+}
+
+.wheelRedeemBadge{
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 1000;
+  font-size: 12px;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,.70);
+}
+
+html[data-theme='dark'] .wheelRedeemBadge{
+  background: rgba(15,23,42,.45);
+}
+
+.wheelRedeemBadge.ok{ opacity: .95; }
+.wheelRedeemBadge.mid{ opacity: .78; }
+.wheelRedeemBadge.bad{ opacity: .62; }
+
+.wheelBarTrack{
+  margin-top: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.08);
+  overflow: hidden;
+  border: 1px solid rgba(15,23,42,.08);
+}
+
+html[data-theme='dark'] .wheelBarTrack{
+  background: rgba(226,232,240,.10);
+  border-color: rgba(148,163,184,.14);
+}
+
+.wheelBarFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%);
+}
+
+.wheelRedeemMeta{
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 850;
+}
+
+.wheelRedeemMeta b{
+  font-weight: 1000;
+  color: rgba(15,23,42,.92);
+}
+html[data-theme='dark'] .wheelRedeemMeta b{
+  color: rgba(226,232,240,.92);
+}
+
