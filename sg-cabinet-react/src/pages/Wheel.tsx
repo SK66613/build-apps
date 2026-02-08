@@ -49,12 +49,41 @@ function clampN(n: any, min: number, max: number){
   return Math.max(min, Math.min(max, x));
 }
 
+/* ===== SVG icons for chart mode ===== */
+function IcoBars(){
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3 13V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M8 13V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M13 13V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IcoLine(){
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IcoArea(){
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2 11l4-4 3 3 5-6v10H2V11z" fill="currentColor" opacity="0.18"/>
+      <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M2 14h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 export default function Wheel(){
   const { appId, range } = useAppState();
   const qc = useQueryClient();
 
   const [chartMode, setChartMode] = React.useState<'bar'|'line'|'area'>('bar');
-  const [section, setSection] = React.useState<'stats'|'live'|'settings'>('stats');
+
+  // под графиком переключаем только Live / Settings
+  const [panel, setPanel] = React.useState<'live'|'settings'>('live');
 
   const qStats = useQuery({
     enabled: !!appId,
@@ -66,10 +95,9 @@ export default function Wheel(){
   });
 
   const qLive = useQuery({
-    enabled: !!appId && section === 'live',
+    enabled: !!appId && panel === 'live',
     queryKey: ['wheel.live', appId, range.from, range.to],
     queryFn: async () => {
-      // используем общий activity
       return apiFetch<{ ok: true; items: ActivityItem[] }>(
         `/api/cabinet/apps/${appId}/activity?${qs(range)}`
       );
@@ -86,14 +114,14 @@ export default function Wheel(){
   const totalRedeemed = items.reduce((s, p) => s + (Number(p.redeemed) || 0), 0);
   const redeemRate = totalWins > 0 ? Math.round((totalRedeemed / totalWins) * 100) : 0;
 
-  // Chart data (оставим все призы, но можно ограничить топом)
+  // Chart data
   const chartData = items.map(p => ({
     title: p.title || p.prize_code,
     wins: Number(p.wins) || 0,
     redeemed: Number(p.redeemed) || 0,
   }));
 
-  // Top prizes (по wins)
+  // Top prizes
   const top = [...items]
     .sort((a,b) => (Number(b.wins)||0) - (Number(a.wins)||0))
     .slice(0, 7);
@@ -178,200 +206,223 @@ export default function Wheel(){
           <h1 className="sg-h1">Wheel</h1>
           <div className="sg-sub">График + KPI + топы + live + настройка весов (runtime override).</div>
         </div>
-
-        <div className="sg-tabs">
-          <button className={'sg-tab ' + (chartMode==='bar' ? 'is-active' : '')} onClick={() => setChartMode('bar')}>Столбцы</button>
-          <button className={'sg-tab ' + (chartMode==='line' ? 'is-active' : '')} onClick={() => setChartMode('line')}>Линия</button>
-          <button className={'sg-tab ' + (chartMode==='area' ? 'is-active' : '')} onClick={() => setChartMode('area')}>Area</button>
-        </div>
       </div>
 
-      {/* 2 колонки */}
       <div className="wheelGrid">
         {/* LEFT */}
         <div className="wheelLeft">
-          {/* SECTION TABS */}
-          <div className="wheelSectionTabs">
-            <div className="sg-tabs">
-              <button className={'sg-tab ' + (section==='stats' ? 'is-active' : '')} onClick={() => setSection('stats')}>Статистика</button>
-              <button className={'sg-tab ' + (section==='live' ? 'is-active' : '')} onClick={() => setSection('live')}>Live</button>
-              <button className={'sg-tab ' + (section==='settings' ? 'is-active' : '')} onClick={() => setSection('settings')}>Настройки</button>
+          {/* CHART ALWAYS VISIBLE */}
+          <Card className="wheelCard">
+            <div className="wheelCardHead wheelCardHeadRow">
+              <div>
+                <div className="wheelCardTitle">Распределение призов</div>
+                <div className="wheelCardSub">{range.from} — {range.to}</div>
+              </div>
+
+              {/* SVG chart-mode buttons ON the chart card */}
+              <div className="wheelChartBtns" role="tablist" aria-label="Chart type">
+                <button
+                  type="button"
+                  className={'wheelChartBtn ' + (chartMode==='bar' ? 'is-active' : '')}
+                  onClick={() => setChartMode('bar')}
+                  title="Столбцы"
+                  aria-label="Столбцы"
+                ><IcoBars/></button>
+
+                <button
+                  type="button"
+                  className={'wheelChartBtn ' + (chartMode==='line' ? 'is-active' : '')}
+                  onClick={() => setChartMode('line')}
+                  title="Линия"
+                  aria-label="Линия"
+                ><IcoLine/></button>
+
+                <button
+                  type="button"
+                  className={'wheelChartBtn ' + (chartMode==='area' ? 'is-active' : '')}
+                  onClick={() => setChartMode('area')}
+                  title="Area"
+                  aria-label="Area"
+                ><IcoArea/></button>
+              </div>
             </div>
-          </div>
 
-          {section === 'stats' && (
-            <>
-              <Card className="wheelCard">
-                <div className="wheelCardHead">
-                  <div>
-                    <div className="wheelCardTitle">Распределение призов</div>
-                    <div className="wheelCardSub">{range.from} — {range.to}</div>
-                  </div>
-                </div>
+            <div className="wheelChart">
+              {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
+              {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
 
-                <div className="wheelChart">
-                  {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
-                  {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
-
-                  {!qStats.isLoading && !qStats.isError && (
-                    <ResponsiveContainer width="100%" height="100%">
-                      {chartMode === 'bar' ? (
-                        <BarChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={42} />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="wins" fill="var(--accent)" radius={[10,10,0,0]} />
-                          <Bar dataKey="redeemed" fill="var(--accent2)" radius={[10,10,0,0]} />
-                        </BarChart>
-                      ) : chartMode === 'line' ? (
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={42} />
-                          <YAxis />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="wins" stroke="var(--accent)" strokeWidth={3} dot={false} />
-                          <Line type="monotone" dataKey="redeemed" stroke="var(--accent2)" strokeWidth={3} dot={false} />
-                        </LineChart>
-                      ) : (
-                        <AreaChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={42} />
-                          <YAxis />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="wins" stroke="var(--accent)" fill="var(--accentSoft)" strokeWidth={2} />
-                          <Area type="monotone" dataKey="redeemed" stroke="var(--accent2)" fill="rgba(59,130,246,.10)" strokeWidth={2} />
-                        </AreaChart>
-                      )}
-                    </ResponsiveContainer>
+              {!qStats.isLoading && !qStats.isError && (
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartMode === 'bar' ? (
+                    <BarChart data={chartData} barCategoryGap={18}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                      <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="wins" fill="var(--accent)" radius={[10,10,4,4]} />
+                      <Bar dataKey="redeemed" fill="var(--accent2)" radius={[10,10,4,4]} />
+                    </BarChart>
+                  ) : chartMode === 'line' ? (
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                      <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="wins" stroke="var(--accent)" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="redeemed" stroke="var(--accent2)" strokeWidth={3} dot={false} />
+                    </LineChart>
+                  ) : (
+                    <AreaChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                      <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="wins" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.16} strokeWidth={3} />
+                      <Area type="monotone" dataKey="redeemed" stroke="var(--accent2)" fill="var(--accent2)" fillOpacity={0.12} strokeWidth={3} />
+                    </AreaChart>
                   )}
-                </div>
+                </ResponsiveContainer>
+              )}
+            </div>
 
-                <div className="wheelKpiRow">
-                  <div className="wheelKpi">
-                    <div className="wheelKpiLbl">Wins</div>
-                    <div className="wheelKpiVal">{totalWins}</div>
-                  </div>
-                  <div className="wheelKpi">
-                    <div className="wheelKpiLbl">Redeemed</div>
-                    <div className="wheelKpiVal">{totalRedeemed}</div>
-                  </div>
-                  <div className="wheelKpi">
-                    <div className="wheelKpiLbl">Redeem rate</div>
-                    <div className="wheelKpiVal">{redeemRate}%</div>
-                  </div>
-                </div>
-              </Card>
-            </>
-          )}
+            <div className="wheelKpiRow">
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Wins</div>
+                <div className="wheelKpiVal">{totalWins}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Redeemed</div>
+                <div className="wheelKpiVal">{totalRedeemed}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Redeem rate</div>
+                <div className="wheelKpiVal">{redeemRate}%</div>
+              </div>
+            </div>
 
-          {section === 'live' && (
-            <Card className="wheelCard">
-              <div className="wheelCardHead">
-                <div>
-                  <div className="wheelCardTitle">Live (последние события)</div>
-                  <div className="wheelCardSub">auto refresh</div>
-                </div>
+            {/* SWITCHER UNDER CHART (Live / Settings) */}
+            <div className="wheelUnderTabs">
+              <div className="sg-tabs wheelUnderTabs__seg">
+                <button className={'sg-tab ' + (panel==='live' ? 'is-active' : '')} onClick={() => setPanel('live')}>
+                  Live
+                </button>
+                <button className={'sg-tab ' + (panel==='settings' ? 'is-active' : '')} onClick={() => setPanel('settings')}>
+                  Настройки
+                </button>
               </div>
 
-              {qLive.isLoading && <div className="sg-muted">Загрузка…</div>}
-
-              {qLive.isError && (
-                <div className="sg-muted">
-                  Ошибка: {(qLive.error as Error).message}
-                  <div style={{ marginTop: 8 }}>
-                    Если видишь <b>Not found</b> — значит в воркере нет эндпоинта <code>/activity</code>.
-                  </div>
-                </div>
-              )}
-
-              {qLive.data?.items?.length ? (
-                <div className="wheelLiveList">
-                  {qLive.data.items.slice(0, 20).map((e, i) => (
-                    <div className="wheelLiveRow" key={i}>
-                      <div className="wheelLiveType">{e.type || 'event'}</div>
-                      <div className="wheelLiveLabel">{e.label || e.user || '—'}</div>
-                      <div className="wheelLiveTs">{e.ts || ''}</div>
+              {panel === 'live' && (
+                <div className="wheelUnderPanel">
+                  <div className="wheelUnderHead">
+                    <div>
+                      <div className="wheelCardTitle">Live (последние события)</div>
+                      <div className="wheelCardSub">auto refresh</div>
                     </div>
-                  ))}
-                </div>
-              ) : (!qLive.isLoading && !qLive.isError) ? (
-                <div className="sg-muted">Пока пусто</div>
-              ) : null}
-            </Card>
-          )}
+                    <div className="sg-pill" style={{ padding: '8px 12px' }}>
+                      {qLive.isFetching ? 'обновляю…' : 'готово'}
+                    </div>
+                  </div>
 
-          {section === 'settings' && (
-            <Card className="wheelCard">
-              <div className="wheelCardHead wheelCardHeadRow">
-                <div>
-                  <div className="wheelCardTitle">Настройки (runtime override)</div>
-                  <div className="wheelCardSub">Меняешь weight/active → сохраняешь → воркер применяет в рантайме.</div>
-                </div>
+                  {qLive.isLoading && <div className="sg-muted">Загрузка…</div>}
 
-                <div className="wheelSave">
-                  {saveMsg && <div className="wheelSaveMsg">{saveMsg}</div>}
-                  <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={save}>
-                    {saving ? 'Сохраняю…' : 'Сохранить изменения'}
-                  </Button>
-                </div>
-              </div>
+                  {qLive.isError && (
+                    <div className="sg-muted">
+                      Ошибка: {(qLive.error as Error).message}
+                      <div style={{ marginTop: 8 }}>
+                        Если видишь <b>Not found</b> — значит в воркере нет эндпоинта <code>/activity</code>.
+                      </div>
+                    </div>
+                  )}
 
-              {qStats.isError && (
-                <div style={{ marginTop: 10, fontWeight: 900 }}>
-                  Ошибка загрузки. Проверь эндпоинт <code>/wheel/stats</code> в воркере.
+                  {qLive.data?.items?.length ? (
+                    <div className="wheelLiveList">
+                      {qLive.data.items.slice(0, 16).map((e, i) => (
+                        <div className="wheelLiveRow" key={i}>
+                          <div className="wheelLiveType">{e.type || 'event'}</div>
+                          <div className="wheelLiveLabel">{e.label || e.user || '—'}</div>
+                          <div className="wheelLiveTs">{e.ts || ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (!qLive.isLoading && !qLive.isError) ? (
+                    <div className="sg-muted">Пока пусто</div>
+                  ) : null}
                 </div>
               )}
 
-              <div className="wheelTableWrap">
-                <table className="sg-table">
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Title</th>
-                      <th>Wins</th>
-                      <th>Redeemed</th>
-                      <th style={{ minWidth: 240 }}>Weight</th>
-                      <th style={{ minWidth: 120 }}>Active</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((p) => {
-                      const d = draft[p.prize_code] || { weight: String(p.weight ?? ''), active: !!p.active };
-                      return (
-                        <tr key={p.prize_code}>
-                          <td><b>{p.prize_code}</b></td>
-                          <td>{p.title}</td>
-                          <td>{p.wins}</td>
-                          <td>{p.redeemed}</td>
-                          <td>
-                            <Input
-                              value={d.weight}
-                              onChange={(e: any) => setWeight(p.prize_code, e.target.value)}
-                              placeholder="weight"
-                            />
-                          </td>
-                          <td>
-                            <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
-                              <input
-                                type="checkbox"
-                                checked={!!d.active}
-                                onChange={() => toggleActive(p.prize_code)}
-                              />
-                              <span style={{ fontWeight: 800 }}>{d.active ? 'on' : 'off'}</span>
-                            </label>
-                          </td>
+              {panel === 'settings' && (
+                <div className="wheelUnderPanel">
+                  <div className="wheelUnderHead">
+                    <div>
+                      <div className="wheelCardTitle">Настройки (runtime override)</div>
+                      <div className="wheelCardSub">Меняешь weight/active → сохраняешь → воркер применяет в рантайме.</div>
+                    </div>
+
+                    <div className="wheelSave">
+                      {saveMsg && <div className="wheelSaveMsg">{saveMsg}</div>}
+                      <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={save}>
+                        {saving ? 'Сохраняю…' : 'Сохранить изменения'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {qStats.isError && (
+                    <div style={{ marginTop: 10, fontWeight: 900 }}>
+                      Ошибка загрузки. Проверь эндпоинт <code>/wheel/stats</code> в воркере.
+                    </div>
+                  )}
+
+                  <div className="wheelTableWrap">
+                    <table className="sg-table">
+                      <thead>
+                        <tr>
+                          <th>Code</th>
+                          <th>Title</th>
+                          <th>Wins</th>
+                          <th>Redeemed</th>
+                          <th style={{ minWidth: 240 }}>Weight</th>
+                          <th style={{ minWidth: 120 }}>Active</th>
                         </tr>
-                      );
-                    })}
-                    {!items.length && !qStats.isLoading && (
-                      <tr><td colSpan={6} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
+                      </thead>
+                      <tbody>
+                        {items.map((p) => {
+                          const d = draft[p.prize_code] || { weight: String(p.weight ?? ''), active: !!p.active };
+                          return (
+                            <tr key={p.prize_code}>
+                              <td><b>{p.prize_code}</b></td>
+                              <td>{p.title}</td>
+                              <td>{p.wins}</td>
+                              <td>{p.redeemed}</td>
+                              <td>
+                                <Input
+                                  value={d.weight}
+                                  onChange={(e: any) => setWeight(p.prize_code, e.target.value)}
+                                  placeholder="weight"
+                                />
+                              </td>
+                              <td>
+                                <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!d.active}
+                                    onChange={() => toggleActive(p.prize_code)}
+                                  />
+                                  <span style={{ fontWeight: 800 }}>{d.active ? 'on' : 'off'}</span>
+                                </label>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {!items.length && !qStats.isLoading && (
+                          <tr><td colSpan={6} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
 
         {/* RIGHT */}
@@ -404,8 +455,6 @@ export default function Wheel(){
               <div className="wheelSummaryRow"><span className="sg-muted">Redeem rate</span><b>{redeemRate}%</b></div>
             </div>
           </Card>
-
-
 
           <Card className="wheelCard">
             <div className="wheelCardHead">
