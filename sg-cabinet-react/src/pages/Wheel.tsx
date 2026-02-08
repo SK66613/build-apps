@@ -213,75 +213,6 @@ export default function Wheel(){
         <div className="wheelLeft">
           {/* CHART ALWAYS VISIBLE */}
 
-
-
-
-<Card className="wheelCard wheelStickyTop">
-  <div className="wheelCardHead wheelTopHead">
-    <div className="wheelCardTitle">Топ призов</div>
-
-    <div className="sg-tabs wheelMiniTabs">
-      <button
-        type="button"
-        className={'sg-tab ' + (topMetric==='wins' ? 'is-active' : '')}
-        onClick={() => setTopMetric('wins')}
-      >
-        Wins
-      </button>
-      <button
-        type="button"
-        className={'sg-tab ' + (topMetric==='redeemed' ? 'is-active' : '')}
-        onClick={() => setTopMetric('redeemed')}
-      >
-        Redeemed
-      </button>
-    </div>
-  </div>
-
-  <div className="wheelTopList">
-    {top.map((p, idx) => {
-      const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
-      const val = Number((p as any)[topMetric]) || 0;
-      const w = Math.round((val / max) * 100);
-
-      return (
-        <div className={"wheelTopRowPro " + (idx < 3 ? "is-top" : "")} key={p.prize_code}>
-          <div className={"wheelTopMedal m" + (idx+1)}>{idx+1}</div>
-
-          <div className="wheelTopMid">
-            <div className="wheelTopTitle">{p.title}</div>
-
-            <div className="wheelTopMini">
-              {topMetric === 'wins'
-                ? `redeemed: ${Number(p.redeemed)||0}`
-                : `wins: ${Number(p.wins)||0}`
-              }
-            </div>
-
-            <div className="wheelTopBar">
-              <div className="wheelTopBarFill" style={{ width: `${w}%` }} />
-            </div>
-          </div>
-
-          <div className="wheelTopRight">
-            <div className="wheelTopCount">{val}</div>
-          </div>
-        </div>
-      );
-    })}
-
-    {!top.length && <div className="sg-muted">Пока пусто</div>}
-  </div>
-</Card>
-
-
-
-
-
-
-
-
-
           
           <Card className="wheelCard">
             <div className="wheelCardHead wheelCardHeadRow">
@@ -555,22 +486,63 @@ export default function Wheel(){
             </div>
           </Card>
 
-                    <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Топ призов</div>
+<Card className="wheelCard wheelStickyTop">
+  <div className="wheelCardHead wheelTopHead">
+    <div className="wheelCardTitle">Топ призов</div>
+
+    <div className="sg-tabs wheelMiniTabs">
+      <button
+        type="button"
+        className={'sg-tab ' + (topMetric==='wins' ? 'is-active' : '')}
+        onClick={() => setTopMetric('wins')}
+      >
+        Wins
+      </button>
+      <button
+        type="button"
+        className={'sg-tab ' + (topMetric==='redeemed' ? 'is-active' : '')}
+        onClick={() => setTopMetric('redeemed')}
+      >
+        Redeemed
+      </button>
+    </div>
+  </div>
+
+  <div className="wheelTopList">
+    {top.map((p, idx) => {
+      const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
+      const val = Number((p as any)[topMetric]) || 0;
+      const w = Math.round((val / max) * 100);
+
+      return (
+        <div className={"wheelTopRowPro " + (idx < 3 ? "is-top" : "")} key={p.prize_code}>
+          <div className={"wheelTopMedal m" + (idx+1)}>{idx+1}</div>
+
+          <div className="wheelTopMid">
+            <div className="wheelTopTitle">{p.title}</div>
+
+            <div className="wheelTopMini">
+              {topMetric === 'wins'
+                ? `redeemed: ${Number(p.redeemed)||0}`
+                : `wins: ${Number(p.wins)||0}`
+              }
             </div>
 
-            <div className="wheelTopList">
-              {top.map((p, idx) => (
-                <div className="wheelTopRow" key={p.prize_code}>
-                  <div className="wheelTopIdx">{idx + 1}</div>
-                  <div className="wheelTopTitle">{p.title}</div>
-                  <div className="wheelTopVal">{p.wins}</div>
-                </div>
-              ))}
-              {!top.length && <div className="sg-muted">Пока пусто</div>}
+            <div className="wheelTopBar">
+              <div className="wheelTopBarFill" style={{ width: `${w}%` }} />
             </div>
-          </Card>
+          </div>
+
+          <div className="wheelTopRight">
+            <div className="wheelTopCount">{val}</div>
+          </div>
+        </div>
+      );
+    })}
+
+    {!top.length && <div className="sg-muted">Пока пусто</div>}
+  </div>
+</Card>
           
         </div>
       </div>
