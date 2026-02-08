@@ -427,22 +427,7 @@ export default function Wheel(){
 
         {/* RIGHT */}
         <div className="wheelRight">
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Топ призов</div>
-            </div>
 
-            <div className="wheelTopList">
-              {top.map((p, idx) => (
-                <div className="wheelTopRow" key={p.prize_code}>
-                  <div className="wheelTopIdx">{idx + 1}</div>
-                  <div className="wheelTopTitle">{p.title}</div>
-                  <div className="wheelTopVal">{p.wins}</div>
-                </div>
-              ))}
-              {!top.length && <div className="sg-muted">Пока пусто</div>}
-            </div>
-          </Card>
 
           <Card className="wheelCard">
             <div className="wheelCardHead">
@@ -467,6 +452,24 @@ export default function Wheel(){
               <div className="sg-muted">• Блокировка “крутить”, если есть незабранный приз</div>
             </div>
           </Card>
+
+                    <Card className="wheelCard">
+            <div className="wheelCardHead">
+              <div className="wheelCardTitle">Топ призов</div>
+            </div>
+
+            <div className="wheelTopList">
+              {top.map((p, idx) => (
+                <div className="wheelTopRow" key={p.prize_code}>
+                  <div className="wheelTopIdx">{idx + 1}</div>
+                  <div className="wheelTopTitle">{p.title}</div>
+                  <div className="wheelTopVal">{p.wins}</div>
+                </div>
+              ))}
+              {!top.length && <div className="sg-muted">Пока пусто</div>}
+            </div>
+          </Card>
+          
         </div>
       </div>
     </div>
