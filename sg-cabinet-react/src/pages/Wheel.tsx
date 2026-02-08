@@ -24,63 +24,71 @@ type PrizeStat = {
 
 type WheelStatsResponse = { ok: true; items: PrizeStat[] };
 
-function qs(obj: Record<string, string | number | undefined | null>){
+function qs(obj: Record<string, string | number | undefined | null>) {
   const p = new URLSearchParams();
-  for (const [k,v] of Object.entries(obj)){
+  for (const [k, v] of Object.entries(obj)) {
     if (v !== undefined && v !== null && String(v) !== '') p.set(k, String(v));
   }
   return p.toString();
 }
 
-function toInt(v: any, d = 0){
+function toInt(v: any, d = 0) {
   const n = Number(v);
   if (!Number.isFinite(n)) return d;
   return Math.trunc(n);
 }
 
-function pct(n: number, d: number){
+function pct(n: number, d: number) {
   if (!d) return '0%';
   return Math.round((n / d) * 100) + '%';
 }
 
 /** маленькие иконки, чтобы табы выглядели богаче (без либ) */
-function IcoBars(){ return (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M3 13V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M8 13V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M13 13V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);}
+function IcoBars() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3 13V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 13V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M13 13V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
-function IcoLine(){ return (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);}
+function IcoLine() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-function IcoArea(){ return (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M2 11l4-4 3 3 5-6v10H2V11z" fill="currentColor" opacity="0.18"/>
-    <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 14h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);}
+function IcoArea() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2 11l4-4 3 3 5-6v10H2V11z" fill="currentColor" opacity="0.18" />
+      <path d="M2 11l4-4 3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 14h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function SegTabs(props: {
   value: string;
   onChange: (v: string) => void;
   items: Array<{ key: string; label: React.ReactNode }>;
   className?: string;
-}){
+  dense?: boolean;
+}) {
   return (
-    <div className={props.className || ''} style={{ display:'flex', gap: 10 }}>
-      <div className="sg-tabs">
-        {props.items.map(it => (
+    <div className={props.className || ''} style={{ display: 'flex', gap: 10 }}>
+      <div className="sg-tabs" style={props.dense ? { padding: 5, gap: 8 } : undefined}>
+        {props.items.map((it) => (
           <button
             key={it.key}
             type="button"
             className={'sg-tab' + (props.value === it.key ? ' is-active' : '')}
             onClick={() => props.onChange(it.key)}
+            style={props.dense ? { padding: '9px 10px' } : undefined}
           >
             {it.label}
           </button>
@@ -90,12 +98,12 @@ function SegTabs(props: {
   );
 }
 
-export default function Wheel(){
+export default function Wheel() {
   const { appId, range } = useAppState();
   const qc = useQueryClient();
 
-  const [mode, setMode] = React.useState<'stats'|'live'|'settings'>('stats');
-  const [chartType, setChartType] = React.useState<'bar'|'line'|'area'>('bar');
+  const [mode, setMode] = React.useState<'stats' | 'live' | 'settings'>('stats');
+  const [chartType, setChartType] = React.useState<'bar' | 'line' | 'area'>('bar');
 
   // ===== STATS (всегда грузим, это и для Settings нужно)
   const qStats = useQuery({
@@ -108,7 +116,6 @@ export default function Wheel(){
   const items = qStats.data?.items || [];
 
   // ===== LIVE (включаем только когда пользователь реально в режиме live)
-  // ВАЖНО: если эндпоинт другой — поменяешь URL ниже, UI уже готов.
   const qLive = useQuery({
     enabled: !!appId && mode === 'live',
     queryKey: ['wheel.live', appId, range.from, range.to],
@@ -142,14 +149,14 @@ export default function Wheel(){
     });
   }, [qStats.data?.items]);
 
-  function setWeight(code: string, v: string){
+  function setWeight(code: string, v: string) {
     setDraft((d) => ({ ...d, [code]: { weight: v, active: !!d[code]?.active } }));
   }
-  function toggleActive(code: string){
+  function toggleActive(code: string) {
     setDraft((d) => ({ ...d, [code]: { weight: d[code]?.weight ?? '', active: !d[code]?.active } }));
   }
 
-  async function save(){
+  async function save() {
     if (!appId) return;
     setSaveMsg('');
 
@@ -166,28 +173,24 @@ export default function Wheel(){
       })
       .filter(Boolean) as Array<{ prize_code: string; weight: number; active: 0 | 1 }>;
 
-    if (!payloadItems.length){
+    if (!payloadItems.length) {
       setSaveMsg('Нечего сохранять.');
       return;
     }
 
     setSaving(true);
-    try{
-      const r = await apiFetch<{ ok: true; updated: number }>(
-        `/api/cabinet/apps/${appId}/wheel/prizes`,
-        {
-          method: 'PUT',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ items: payloadItems }),
-        }
-      );
+    try {
+      const r = await apiFetch<{ ok: true; updated: number }>(`/api/cabinet/apps/${appId}/wheel/prizes`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ items: payloadItems }),
+      });
 
       setSaveMsg(`Сохранено: ${r.updated}`);
       await qc.invalidateQueries({ queryKey: ['wheel', appId] });
-
-    }catch(e: any){
+    } catch (e: any) {
       setSaveMsg('Ошибка сохранения: ' + String(e?.message || e));
-    }finally{
+    } finally {
       setSaving(false);
     }
   }
@@ -197,45 +200,35 @@ export default function Wheel(){
   const totalRedeemed = items.reduce((s, x) => s + (Number(x.redeemed) || 0), 0);
   const redeemRate = pct(totalRedeemed, totalWins);
 
-  const top = [...items].sort((a,b) => (b.wins||0) - (a.wins||0)).slice(0, 7);
+  const top = [...items].sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 7);
 
-  const chartData = items.map(p => ({
+  const chartData = items.map((p) => ({
     name: p.title || p.prize_code,
     wins: Number(p.wins) || 0,
     redeemed: Number(p.redeemed) || 0,
   }));
 
-  // ===== UI blocks
   const ModeTabs = (
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap: 12, flexWrap:'wrap' }}>
-      <div style={{ minWidth: 260 }}>
-        <SegTabs
-          value={mode}
-          onChange={(v) => setMode(v as any)}
-          items={[
-            { key: 'stats', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}>Статистика</span> },
-            { key: 'live', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}>Live</span> },
-            { key: 'settings', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}>Настройки</span> },
-          ]}
-        />
-      </div>
-
-      {/* мелкая подсказка справа (смотрится “дороже”, чем просто текст) */}
-      <div className="sg-pill" style={{ padding: '8px 12px', gap: 10, opacity: 0.95 }}>
-        <span style={{ fontWeight: 950 }}>Wheel</span>
-        <span style={{ opacity: 0.65, fontWeight: 850 }}>runtime override</span>
-      </div>
-    </div>
+    <SegTabs
+      value={mode}
+      onChange={(v) => setMode(v as any)}
+      items={[
+        { key: 'stats', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>Статистика</span> },
+        { key: 'live', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>Live</span> },
+        { key: 'settings', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>Настройки</span> },
+      ]}
+    />
   );
 
   const ChartTypeTabs = (
     <SegTabs
+      dense
       value={chartType}
       onChange={(v) => setChartType(v as any)}
       items={[
-        { key: 'bar',  label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}><IcoBars/> Столбцы</span> },
-        { key: 'line', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}><IcoLine/> Линия</span> },
-        { key: 'area', label: <span style={{ display:'inline-flex', alignItems:'center', gap: 8 }}><IcoArea/> Area</span> },
+        { key: 'bar', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IcoBars /> Столбцы</span> },
+        { key: 'line', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IcoLine /> Линия</span> },
+        { key: 'area', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IcoArea /> Area</span> },
       ]}
     />
   );
@@ -245,112 +238,116 @@ export default function Wheel(){
       className="sg-grid"
       style={{
         gap: 14,
-        // 2 колонки как на скринах: слева контент, справа сайдбар
         gridTemplateColumns: 'minmax(0, 2fr) minmax(320px, 1fr)',
         alignItems: 'start',
-        // переменные цветов для графика (без “двух одинаковых”)
         ...( { ['--chart-1' as any]: '#22d3ee', ['--chart-2' as any]: '#3b82f6' } ),
       }}
     >
       {/* LEFT */}
       <div className="sg-grid" style={{ gridTemplateColumns: '1fr', gap: 14 }}>
-        <div className="sg-grid" style={{ gridTemplateColumns:'1fr', gap: 10 }}>
+        {/* header + mode tabs */}
+        <div className="sg-grid" style={{ gridTemplateColumns: '1fr', gap: 10 }}>
           <div>
             <h1 className="sg-h1">Wheel</h1>
             <div className="sg-sub">График + KPI + топы + live + настройка весов (runtime override).</div>
           </div>
-
           {ModeTabs}
         </div>
 
         {/* ===== MODE: STATS ===== */}
         {mode === 'stats' && (
-          <>
-            <Card>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap: 12, flexWrap:'wrap' }}>
-                <div>
-                  <div style={{ fontWeight: 950, letterSpacing: -0.2 }}>Распределение призов</div>
-                  <div className="sg-muted" style={{ marginTop: 4 }}>
-                    {range?.from} — {range?.to}
-                  </div>
-                </div>
-
-                {/* тип графика — теперь внутри карточки, справа */}
-                <div style={{ flex: '0 0 auto' }}>
-                  {ChartTypeTabs}
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={{ fontWeight: 950, letterSpacing: -0.2 }}>Распределение призов</div>
+                <div className="sg-muted" style={{ marginTop: 4 }}>
+                  {range?.from} — {range?.to}
                 </div>
               </div>
+            </div>
 
-              <div style={{ marginTop: 12 }}>
-                {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
-                {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
-
-                {!qStats.isLoading && !qStats.isError && (
-                  <div style={{ height: 320 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      {chartType === 'bar' ? (
-                        <BarChart data={chartData} barCategoryGap={18}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
-                          <YAxis tick={{ fontSize: 12 }} />
-                          <Tooltip />
-                          <Bar dataKey="wins" fill="var(--chart-1)" radius={[10,10,4,4]} />
-                          <Bar dataKey="redeemed" fill="var(--chart-2)" radius={[10,10,4,4]} />
-                        </BarChart>
-                      ) : chartType === 'line' ? (
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
-                          <YAxis tick={{ fontSize: 12 }} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="wins" stroke="var(--chart-1)" strokeWidth={3} dot={false} />
-                          <Line type="monotone" dataKey="redeemed" stroke="var(--chart-2)" strokeWidth={3} dot={false} />
-                        </LineChart>
-                      ) : (
-                        <AreaChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
-                          <YAxis tick={{ fontSize: 12 }} />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="wins" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.18} strokeWidth={3} />
-                          <Area type="monotone" dataKey="redeemed" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.16} strokeWidth={3} />
-                        </AreaChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-
-              {/* KPI под графиком */}
+            {/* CHART WRAP (tabs overlay here) */}
+            <div style={{ position: 'relative', marginTop: 12 }}>
+              {/* tabs on the chart (top-right) */}
               <div
-                className="sg-grid"
                 style={{
-                  marginTop: 12,
-                  gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
-                  gap: 12,
+                  position: 'absolute',
+                  right: 10,
+                  top: 10,
+                  zIndex: 5,
                 }}
               >
-                <div className="sg-card" style={{ padding: 12, boxShadow:'none' }}>
-                  <div className="sg-muted" style={{ fontWeight: 900 }}>Wins</div>
-                  <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{totalWins}</div>
-                </div>
-                <div className="sg-card" style={{ padding: 12, boxShadow:'none' }}>
-                  <div className="sg-muted" style={{ fontWeight: 900 }}>Redeemed</div>
-                  <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{totalRedeemed}</div>
-                </div>
-                <div className="sg-card" style={{ padding: 12, boxShadow:'none' }}>
-                  <div className="sg-muted" style={{ fontWeight: 900 }}>Redeem rate</div>
-                  <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{redeemRate}</div>
-                </div>
+                {ChartTypeTabs}
               </div>
-            </Card>
-          </>
+
+              {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
+              {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
+
+              {!qStats.isLoading && !qStats.isError && (
+                <div style={{ height: 320 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    {chartType === 'bar' ? (
+                      <BarChart data={chartData} barCategoryGap={18}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Bar dataKey="wins" fill="var(--chart-1)" radius={[10, 10, 4, 4]} />
+                        <Bar dataKey="redeemed" fill="var(--chart-2)" radius={[10, 10, 4, 4]} />
+                      </BarChart>
+                    ) : chartType === 'line' ? (
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="wins" stroke="var(--chart-1)" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="redeemed" stroke="var(--chart-2)" strokeWidth={3} dot={false} />
+                      </LineChart>
+                    ) : (
+                      <AreaChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} height={46} />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="wins" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.16} strokeWidth={3} />
+                        <Area type="monotone" dataKey="redeemed" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.14} strokeWidth={3} />
+                      </AreaChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            {/* KPI under chart */}
+            <div
+              className="sg-grid"
+              style={{
+                marginTop: 12,
+                gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+                gap: 12,
+              }}
+            >
+              <div className="sg-card" style={{ padding: 12, boxShadow: 'none' }}>
+                <div className="sg-muted" style={{ fontWeight: 900 }}>Wins</div>
+                <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{totalWins}</div>
+              </div>
+              <div className="sg-card" style={{ padding: 12, boxShadow: 'none' }}>
+                <div className="sg-muted" style={{ fontWeight: 900 }}>Redeemed</div>
+                <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{totalRedeemed}</div>
+              </div>
+              <div className="sg-card" style={{ padding: 12, boxShadow: 'none' }}>
+                <div className="sg-muted" style={{ fontWeight: 900 }}>Redeem rate</div>
+                <div style={{ fontSize: 20, fontWeight: 1000, marginTop: 2 }}>{redeemRate}</div>
+              </div>
+            </div>
+          </Card>
         )}
 
         {/* ===== MODE: LIVE ===== */}
         {mode === 'live' && (
           <Card>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap: 10, flexWrap:'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontWeight: 950 }}>Live (последние события)</div>
                 <div className="sg-muted" style={{ marginTop: 4 }}>auto refresh</div>
@@ -372,7 +369,7 @@ export default function Wheel(){
                 </div>
               )}
               {appId && qLive.data && (
-                <pre style={{ margin: 0, whiteSpace:'pre-wrap' }}>
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
                   {JSON.stringify(qLive.data, null, 2)}
                 </pre>
               )}
@@ -386,14 +383,14 @@ export default function Wheel(){
         {/* ===== MODE: SETTINGS ===== */}
         {mode === 'settings' && (
           <Card>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap: 10, flexWrap:'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontWeight: 950 }}>Настройки (runtime override)</div>
                 <div className="sg-muted" style={{ marginTop: 4 }}>
                   Меняешь <b>weight/active</b> — сохраняешь — воркер применяет в рантайме.
                 </div>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {saveMsg && <div style={{ fontWeight: 900, opacity: 0.8 }}>{saveMsg}</div>}
                 <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={save}>
                   {saving ? 'Сохраняю…' : 'Сохранить изменения'}
@@ -407,7 +404,7 @@ export default function Wheel(){
               </div>
             )}
 
-            <div style={{ overflow:'auto', marginTop: 12 }}>
+            <div style={{ overflow: 'auto', marginTop: 12 }}>
               <table className="sg-table">
                 <thead>
                   <tr>
@@ -436,12 +433,8 @@ export default function Wheel(){
                           />
                         </td>
                         <td>
-                          <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
-                            <input
-                              type="checkbox"
-                              checked={!!d.active}
-                              onChange={() => toggleActive(p.prize_code)}
-                            />
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <input type="checkbox" checked={!!d.active} onChange={() => toggleActive(p.prize_code)} />
                             <span style={{ fontWeight: 900 }}>{d.active ? 'on' : 'off'}</span>
                           </label>
                         </td>
@@ -458,18 +451,18 @@ export default function Wheel(){
         )}
       </div>
 
-      {/* RIGHT SIDEBAR (без “режимов” — только полезные карточки) */}
-      <div className="sg-grid" style={{ gridTemplateColumns:'1fr', gap: 14 }}>
+      {/* RIGHT SIDEBAR */}
+      <div className="sg-grid" style={{ gridTemplateColumns: '1fr', gap: 14 }}>
         <Card>
           <div style={{ fontWeight: 950 }}>Топ призов</div>
-          <div style={{ marginTop: 12, display:'grid', gap: 10 }}>
+          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
             {top.map((p, i) => (
               <div
                 key={p.prize_code}
                 style={{
-                  display:'flex',
-                  alignItems:'center',
-                  justifyContent:'space-between',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   gap: 10,
                   padding: '10px 12px',
                   borderRadius: 16,
@@ -477,23 +470,23 @@ export default function Wheel(){
                   background: 'rgba(255,255,255,.55)',
                 }}
               >
-                <div style={{ display:'flex', alignItems:'center', gap: 10, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                   <div
                     style={{
                       width: 28, height: 28,
                       borderRadius: 999,
-                      display:'flex',
-                      alignItems:'center',
-                      justifyContent:'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       fontWeight: 1000,
                       border: '1px solid var(--border2)',
                       background: 'rgba(255,255,255,.9)',
                       flex: '0 0 auto',
                     }}
                   >
-                    {i+1}
+                    {i + 1}
                   </div>
-                  <div style={{ fontWeight: 900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  <div style={{ fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {p.title || p.prize_code}
                   </div>
                 </div>
@@ -506,16 +499,16 @@ export default function Wheel(){
 
         <Card>
           <div style={{ fontWeight: 950 }}>Сводка</div>
-          <div style={{ marginTop: 12, display:'grid', gap: 10 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 850 }}>
+          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 850 }}>
               <span className="sg-muted">Активных призов</span>
-              <span>{items.filter(x => !!x.active).length}</span>
+              <span>{items.filter((x) => !!x.active).length}</span>
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 850 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 850 }}>
               <span className="sg-muted">Всего призов</span>
               <span>{items.length}</span>
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontWeight: 850 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 850 }}>
               <span className="sg-muted">Redeem rate</span>
               <span style={{ fontWeight: 1000 }}>{redeemRate}</span>
             </div>
@@ -525,9 +518,9 @@ export default function Wheel(){
         <Card>
           <div style={{ fontWeight: 950 }}>Идеи next widgets</div>
           <div className="sg-muted" style={{ marginTop: 10, fontWeight: 800, lineHeight: 1.55 }}>
-            • Себестоимость (cost) + ROI по колесу<br/>
-            • “Проблемные призы”: много wins, мало redeemed<br/>
-            • Авто-рекомендации по weight<br/>
+            • Себестоимость (cost) + ROI по колесу<br />
+            • “Проблемные призы”: много wins, мало redeemed<br />
+            • Авто-рекомендации по weight<br />
             • Блокировка “крутить”, если есть незабранный приз
           </div>
         </Card>
