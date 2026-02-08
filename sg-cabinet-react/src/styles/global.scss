@@ -2034,3 +2034,410 @@ html[data-theme='dark'] .wheelRedeemMeta b{
   font-size: 12px;
 }
 
+
+
+
+
+
+
+
+/* ===================================================================
+   WHEEL — premium clean skin (white bg, segmented, sticky top list)
+   Put at END of global.css / global.scss
+   =================================================================== */
+
+/* --------- Base background: просто белый, без градиента --------- */
+body{
+  background: #ffffff;
+}
+
+/* Cards subtle */
+.sg-card,
+.card, .panel, .box{
+  box-shadow: 0 10px 28px rgba(2,6,23,.06);
+}
+
+/* --------- Tables (nice header, hover) --------- */
+.sg-table{ border-collapse: separate; border-spacing: 0; width: 100%; }
+.sg-table th{
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(10px) saturate(120%);
+  border-bottom: 1px solid var(--border2);
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 12px 12px;
+  white-space: nowrap;
+}
+.sg-table td{
+  font-weight: 750;
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(15,23,42,.06);
+}
+.sg-table tbody tr:hover td{ background: rgba(2,6,23,.02); }
+
+/* --------- Segmented tabs (ctor-like) --------- */
+.sg-tabs{
+  display:flex;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 18px;
+  background: rgba(2,6,23,.03);
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+}
+.sg-tab{
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor:pointer;
+  font-weight: 900;
+  color: rgba(15,23,42,.72);
+  background: transparent;
+  transition: background .15s ease, transform .08s ease, color .15s ease, box-shadow .15s ease;
+}
+.sg-tab:hover{ background: rgba(255,255,255,.70); }
+.sg-tab.is-active{
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 24px rgba(2,6,23,.10);
+}
+.sg-tab:active{ transform: translateY(1px) scale(.99); }
+
+/* Primary button in this dashboard — neutral premium */
+.sg-btn--primary{
+  background: rgba(255,255,255,.95);
+  color: rgba(15,23,42,.92);
+  border: 1px solid rgba(15,23,42,.12);
+  box-shadow: 0 12px 28px rgba(2,6,23,.10);
+}
+.sg-btn--primary:hover{ filter: brightness(1.02); }
+
+/* Recharts tooltip — premium */
+.recharts-default-tooltip{
+  border-radius: 16px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  background: rgba(255,255,255,.94) !important;
+  box-shadow: 0 18px 52px rgba(2,6,23,.12) !important;
+  backdrop-filter: blur(10px) saturate(120%);
+}
+
+/* Headings */
+.sg-h1{ font-size: 22px; }
+.sg-sub{ font-weight: 650; }
+
+/* ===================================================================
+   Wheel layout
+   =================================================================== */
+
+.wheelPage{ display: grid; gap: 14px; }
+.wheelHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 14px;
+}
+
+.wheelGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+}
+@media (max-width: 1100px){
+  .wheelGrid{ grid-template-columns: 1fr; }
+}
+
+.wheelLeft, .wheelRight{ display:grid; gap: 14px; }
+
+.wheelCard{ padding: 14px 14px; }
+.wheelCardHead{ padding: 2px 2px 10px; }
+.wheelCardHeadRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.wheelCardTitle{ font-weight: 950; letter-spacing: -.2px; }
+.wheelCardSub{ margin-top: 4px; color: var(--muted); font-weight: 750; font-size: 12px; }
+
+/* Chart */
+.wheelChart{ height: 320px; margin-top: 6px; position: relative; }
+
+/* KPI */
+.wheelKpiRow{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.wheelKpi{
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 12px 12px;
+  background: rgba(2,6,23,.02);
+}
+.wheelKpiLbl{ color: var(--muted); font-weight: 900; font-size: 12px; }
+.wheelKpiVal{ font-weight: 1000; font-size: 18px; margin-top: 6px; }
+
+/* ===================================================================
+   Chart SVG buttons (top-right inside chart card)
+   =================================================================== */
+.wheelChartBtns{
+  display:flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 12px 28px rgba(2,6,23,.10);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.wheelChartBtn{
+  width: 36px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+  color: rgba(15,23,42,.70);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition: transform .08s ease, background .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.wheelChartBtn:hover{
+  background: rgba(255,255,255,.85);
+  transform: translateY(-1px);
+}
+.wheelChartBtn.is-active{
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+.wheelChartBtn:active{ transform: translateY(0px) scale(.98); }
+
+/* ===================================================================
+   Under-chart switcher (Live / Settings)
+   =================================================================== */
+.wheelUnderTabs{ margin-top: 12px; }
+.wheelUnderTabs__seg{
+  width: 100%;
+  justify-content:flex-start;
+}
+.wheelUnderTabs__seg .sg-tab{
+  padding: 10px 14px;
+  min-width: 120px;
+}
+
+/* Panel body */
+.wheelUnderPanel{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 12px 28px rgba(2,6,23,.06);
+  padding: 14px;
+}
+.wheelUnderHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.wheelSave{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content:flex-end;
+}
+.wheelSaveMsg{ font-weight: 850; color: var(--muted); }
+
+/* Live rows */
+.wheelLiveList{ display:grid; gap: 8px; }
+.wheelLiveRow{
+  display:grid;
+  grid-template-columns: 140px 1fr 160px;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,.02);
+}
+.wheelLiveType{ font-weight: 950; color: var(--muted); }
+.wheelLiveLabel{ font-weight: 850; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wheelLiveTs{ text-align:right; color: var(--muted); font-weight: 800; font-size: 12px; }
+
+.wheelTableWrap{ overflow:auto; }
+
+/* ===================================================================
+   Summary PRO (right)
+   =================================================================== */
+.wheelSummaryPro{ display:grid; gap: 14px; padding: 2px; }
+.wheelSummaryTiles{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.wheelSumTile{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px 12px;
+  background: rgba(2,6,23,.02);
+}
+.wheelSumTile.is-strong{
+  background: rgba(34,211,238,.10);
+  border-color: rgba(34,211,238,.22);
+}
+.wheelSumLbl{ color: rgba(15,23,42,.62); font-weight: 900; font-size: 12px; }
+.wheelSumVal{ margin-top: 6px; font-weight: 1000; font-size: 20px; letter-spacing: -.3px; }
+
+/* Redeem bar */
+.wheelRedeemBar{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.85);
+  padding: 12px;
+}
+.wheelRedeemTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wheelRedeemName{ font-weight: 950; }
+.wheelRedeemBadge{
+  font-weight: 1000;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.wheelRedeemBadge.ok{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.25); }
+.wheelRedeemBadge.mid{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.wheelRedeemBadge.bad{ background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.22); }
+
+.wheelBarTrack{
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow: hidden;
+}
+.wheelBarFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+.wheelRedeemMeta{
+  margin-top: 10px;
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  font-weight: 850;
+}
+
+/* ===================================================================
+   TOP PRO (right) + sticky + wins/redeemed mini tabs
+   =================================================================== */
+.wheelStickyTop{
+  position: sticky;
+  top: 14px; /* если есть верхний бар — увеличь до 70-90px */
+  z-index: 2;
+}
+.wheelTopHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+.wheelMiniTabs{
+  padding: 4px;
+  gap: 6px;
+  border-radius: 16px;
+}
+.wheelMiniTabs .sg-tab{
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+/* top list rows */
+.wheelTopList{ display:grid; gap: 10px; }
+
+.wheelTopRowPro{
+  display:grid;
+  grid-template-columns: 38px 1fr 60px;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.85);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+}
+.wheelTopRowPro.is-top{
+  border-color: rgba(34,211,238,.22);
+  box-shadow: 0 16px 40px rgba(2,6,23,.08);
+}
+
+.wheelTopMedal{
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 1000;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.wheelTopMedal.m1{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.wheelTopMedal.m2{ background: rgba(148,163,184,.18); border-color: rgba(148,163,184,.28); }
+.wheelTopMedal.m3{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.22); }
+
+.wheelTopMid{ min-width: 0; }
+.wheelTopTitle{
+  font-weight: 950;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.wheelTopMini{
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(15,23,42,.56);
+  font-weight: 850;
+}
+.wheelTopBar{
+  margin-top: 8px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.wheelTopBarFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+.wheelTopRight{ text-align:right; }
+.wheelTopCount{ font-weight: 1000; font-size: 18px; }
+
+/* Ideas block */
+.wheelIdeas{ display:grid; gap: 8px; padding: 2px; }
+
+/* Mobile */
+@media (max-width: 980px){
+  .wheelStickyTop{ position: relative; top: auto; }
+  .wheelLiveRow{ grid-template-columns: 120px 1fr 120px; }
+  .wheelSummaryTiles{ grid-template-columns: 1fr; }
+  .wheelKpiRow{ grid-template-columns: 1fr; }
+}
+
+
