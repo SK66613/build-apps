@@ -405,19 +405,7 @@ export default function Wheel(){
             </div>
           </Card>
 
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Режим</div>
-            </div>
 
-            <div className="wheelMode">
-              <div className="sg-tabs wheelModeTabs">
-                <button className={'sg-tab ' + (section==='live' ? 'is-active' : '')} onClick={() => setSection('live')}>Live</button>
-                <button className={'sg-tab ' + (section==='settings' ? 'is-active' : '')} onClick={() => setSection('settings')}>Настройки / Веса</button>
-                <button className={'sg-tab ' + (section==='stats' ? 'is-active' : '')} onClick={() => setSection('stats')}>Статистика</button>
-              </div>
-            </div>
-          </Card>
 
           <Card className="wheelCard">
             <div className="wheelCardHead">
