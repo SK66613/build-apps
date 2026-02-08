@@ -1789,4 +1789,106 @@ html[data-theme='dark'] .wheelLiveRow{
 }
 
 
+/* ===== Wheel layout polish ===== */
+.wheelPage{ display: grid; gap: 14px; }
+
+.wheelHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 14px;
+}
+
+.wheelGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+}
+
+@media (max-width: 1100px){
+  .wheelGrid{ grid-template-columns: 1fr; }
+}
+
+.wheelLeft, .wheelRight{ display:grid; gap: 14px; }
+
+.wheelCard{ padding: 14px 14px; }
+.wheelCardHead{ padding: 2px 2px 10px; }
+.wheelCardHeadRow{ display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; }
+
+.wheelCardTitle{ font-weight: 950; letter-spacing: -.2px; }
+.wheelCardSub{ margin-top: 4px; color: var(--muted); font-weight: 700; font-size: 12px; }
+
+.wheelChart{ height: 320px; margin-top: 6px; }
+
+.wheelKpiRow{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.wheelKpi{
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.60);
+}
+html[data-theme='dark'] .wheelKpi{ background: rgba(2,6,23,.25); }
+
+.wheelKpiLbl{ color: var(--muted); font-weight: 900; font-size: 12px; }
+.wheelKpiVal{ font-weight: 1000; font-size: 18px; margin-top: 6px; }
+
+.wheelTopList{ display:grid; gap: 8px; }
+.wheelTopRow{
+  display:grid;
+  grid-template-columns: 26px 1fr 44px;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: rgba(255,255,255,.55);
+}
+html[data-theme='dark'] .wheelTopRow{ background: rgba(2,6,23,.22); }
+
+.wheelTopIdx{
+  width: 26px; height: 26px;
+  border-radius: 999px;
+  display:flex; align-items:center; justify-content:center;
+  font-weight: 950;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,.70);
+}
+html[data-theme='dark'] .wheelTopIdx{ background: rgba(15,23,42,.45); }
+
+.wheelTopTitle{ font-weight: 850; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wheelTopVal{ text-align:right; font-weight: 950; color: var(--muted); }
+
+.wheelSummary{ display:grid; gap: 10px; padding: 2px; }
+.wheelSummaryRow{ display:flex; justify-content:space-between; gap: 12px; font-weight: 850; }
+
+.wheelModeTabs{ width: 100%; justify-content:space-between; }
+.wheelModeTabs .sg-tab{ flex: 1 1 0; text-align:center; }
+
+.wheelIdeas{ display:grid; gap: 8px; padding: 2px; }
+
+.wheelSave{ display:flex; align-items:center; gap: 10px; flex-wrap: wrap; justify-content:flex-end; }
+.wheelSaveMsg{ font-weight: 850; color: var(--muted); }
+
+.wheelTableWrap{ overflow:auto; margin-top: 10px; }
+
+.wheelLiveList{ display:grid; gap: 8px; }
+.wheelLiveRow{
+  display:grid;
+  grid-template-columns: 140px 1fr 160px;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: rgba(255,255,255,.55);
+}
+html[data-theme='dark'] .wheelLiveRow{ background: rgba(2,6,23,.22); }
+.wheelLiveType{ font-weight: 950; color: var(--muted); }
+.wheelLiveLabel{ font-weight: 850; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wheelLiveTs{ text-align:right; color: var(--muted); font-weight: 800; font-size: 12px; }
 
