@@ -85,6 +85,8 @@ export default function Wheel(){
   // под графиком переключаем только Live / Settings
   const [panel, setPanel] = React.useState<'live'|'settings'>('live');
 
+  const [topMetric, setTopMetric] = React.useState<'wins'|'redeemed'>('wins');
+
   const qStats = useQuery({
     enabled: !!appId,
     queryKey: ['wheel', appId, range.from, range.to],
@@ -122,9 +124,10 @@ export default function Wheel(){
   }));
 
   // Top prizes
-  const top = [...items]
-    .sort((a,b) => (Number(b.wins)||0) - (Number(a.wins)||0))
-    .slice(0, 7);
+const top = [...items]
+  .sort((a,b) => (Number((b as any)[topMetric])||0) - (Number((a as any)[topMetric])||0))
+  .slice(0, 7);
+
 
   // ===== Settings form draft =====
   const [draft, setDraft] = React.useState<Record<string, { weight: string; active: boolean }>>({});
@@ -430,63 +433,7 @@ export default function Wheel(){
         {/* RIGHT */}
         <div className="wheelRight">
 
-
-<Card className="wheelCard">
-  <div className="wheelCardHead">
-    <div className="wheelCardTitle">Сводка</div>
-  </div>
-
-  <div className="wheelSummaryPro">
-    <div className="wheelSummaryTiles">
-      <div className="wheelSumTile">
-        <div className="wheelSumLbl">Активных</div>
-        <div className="wheelSumVal">{items.filter(i => (Number(i.active)||0) ? true : false).length}</div>
-      </div>
-
-      <div className="wheelSumTile">
-        <div className="wheelSumLbl">Всего</div>
-        <div className="wheelSumVal">{items.length}</div>
-      </div>
-
-      <div className="wheelSumTile is-strong">
-        <div className="wheelSumLbl">Redeem</div>
-        <div className="wheelSumVal">{redeemRate}%</div>
-      </div>
-    </div>
-
-    <div className="wheelRedeemBar">
-      <div className="wheelRedeemTop">
-        <div className="wheelRedeemName">Redeem rate</div>
-        <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
-          {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
-        </div>
-      </div>
-
-      <div className="wheelBarTrack" aria-hidden="true">
-        <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
-      </div>
-
-      <div className="wheelRedeemMeta">
-        <span className="sg-muted">Wins: <b>{totalWins}</b></span>
-        <span className="sg-muted">Redeemed: <b>{totalRedeemed}</b></span>
-      </div>
-    </div>
-  </div>
-</Card>
-
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Идеи next widgets</div>
-            </div>
-            <div className="wheelIdeas">
-              <div className="sg-muted">• Себестоимость (cost) + ROI по колесу</div>
-              <div className="sg-muted">• “Проблемные призы”: много wins, мало redeemed</div>
-              <div className="sg-muted">• Авто-рекомендации по weight</div>
-              <div className="sg-muted">• Блокировка “крутить”, если есть незабранный приз</div>
-            </div>
-          </Card>
-
-<Card className="wheelCard wheelStickyTop">
+          <Card className="wheelCard wheelStickyTop">
   <div className="wheelCardHead wheelTopHead">
     <div className="wheelCardTitle">Топ призов</div>
 
@@ -543,6 +490,64 @@ export default function Wheel(){
     {!top.length && <div className="sg-muted">Пока пусто</div>}
   </div>
 </Card>
+
+
+<Card className="wheelCard">
+  <div className="wheelCardHead">
+    <div className="wheelCardTitle">Сводка</div>
+  </div>
+
+  <div className="wheelSummaryPro">
+    <div className="wheelSummaryTiles">
+      <div className="wheelSumTile">
+        <div className="wheelSumLbl">Активных</div>
+        <div className="wheelSumVal">{items.filter(i => (Number(i.active)||0) ? true : false).length}</div>
+      </div>
+
+      <div className="wheelSumTile">
+        <div className="wheelSumLbl">Всего</div>
+        <div className="wheelSumVal">{items.length}</div>
+      </div>
+
+      <div className="wheelSumTile is-strong">
+        <div className="wheelSumLbl">Redeem</div>
+        <div className="wheelSumVal">{redeemRate}%</div>
+      </div>
+    </div>
+
+    <div className="wheelRedeemBar">
+      <div className="wheelRedeemTop">
+        <div className="wheelRedeemName">Redeem rate</div>
+        <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
+          {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
+        </div>
+      </div>
+
+      <div className="wheelBarTrack" aria-hidden="true">
+        <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
+      </div>
+
+      <div className="wheelRedeemMeta">
+        <span className="sg-muted">Wins: <b>{totalWins}</b></span>
+        <span className="sg-muted">Redeemed: <b>{totalRedeemed}</b></span>
+      </div>
+    </div>
+  </div>
+</Card>
+
+          <Card className="wheelCard">
+            <div className="wheelCardHead">
+              <div className="wheelCardTitle">Идеи next widgets</div>
+            </div>
+            <div className="wheelIdeas">
+              <div className="sg-muted">• Себестоимость (cost) + ROI по колесу</div>
+              <div className="sg-muted">• “Проблемные призы”: много wins, мало redeemed</div>
+              <div className="sg-muted">• Авто-рекомендации по weight</div>
+              <div className="sg-muted">• Блокировка “крутить”, если есть незабранный приз</div>
+            </div>
+          </Card>
+
+
           
         </div>
       </div>
