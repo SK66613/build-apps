@@ -433,6 +433,56 @@ const top = [...items]
         {/* RIGHT */}
         <div className="wheelRight">
 
+
+
+
+<Card className="wheelCard">
+  <div className="wheelCardHead">
+    <div className="wheelCardTitle">Сводка</div>
+  </div>
+
+  <div className="wheelSummaryPro">
+    <div className="wheelSummaryTiles">
+      <div className="wheelSumTile">
+        <div className="wheelSumLbl">Активных</div>
+        <div className="wheelSumVal">{items.filter(i => (Number(i.active)||0) ? true : false).length}</div>
+      </div>
+
+      <div className="wheelSumTile">
+        <div className="wheelSumLbl">Всего</div>
+        <div className="wheelSumVal">{items.length}</div>
+      </div>
+
+      <div className="wheelSumTile is-strong">
+        <div className="wheelSumLbl">Redeem</div>
+        <div className="wheelSumVal">{redeemRate}%</div>
+      </div>
+    </div>
+
+    <div className="wheelRedeemBar">
+      <div className="wheelRedeemTop">
+        <div className="wheelRedeemName">Redeem rate</div>
+        <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
+          {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
+        </div>
+      </div>
+
+      <div className="wheelBarTrack" aria-hidden="true">
+        <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
+      </div>
+
+      <div className="wheelRedeemMeta">
+        <span className="sg-muted">Wins: <b>{totalWins}</b></span>
+        <span className="sg-muted">Redeemed: <b>{totalRedeemed}</b></span>
+      </div>
+    </div>
+  </div>
+</Card>
+
+
+
+          
+
           <Card className="wheelCard wheelStickyTop">
   <div className="wheelCardHead wheelTopHead">
     <div className="wheelCardTitle">Топ призов</div>
@@ -492,48 +542,7 @@ const top = [...items]
 </Card>
 
 
-<Card className="wheelCard">
-  <div className="wheelCardHead">
-    <div className="wheelCardTitle">Сводка</div>
-  </div>
 
-  <div className="wheelSummaryPro">
-    <div className="wheelSummaryTiles">
-      <div className="wheelSumTile">
-        <div className="wheelSumLbl">Активных</div>
-        <div className="wheelSumVal">{items.filter(i => (Number(i.active)||0) ? true : false).length}</div>
-      </div>
-
-      <div className="wheelSumTile">
-        <div className="wheelSumLbl">Всего</div>
-        <div className="wheelSumVal">{items.length}</div>
-      </div>
-
-      <div className="wheelSumTile is-strong">
-        <div className="wheelSumLbl">Redeem</div>
-        <div className="wheelSumVal">{redeemRate}%</div>
-      </div>
-    </div>
-
-    <div className="wheelRedeemBar">
-      <div className="wheelRedeemTop">
-        <div className="wheelRedeemName">Redeem rate</div>
-        <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
-          {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
-        </div>
-      </div>
-
-      <div className="wheelBarTrack" aria-hidden="true">
-        <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
-      </div>
-
-      <div className="wheelRedeemMeta">
-        <span className="sg-muted">Wins: <b>{totalWins}</b></span>
-        <span className="sg-muted">Redeemed: <b>{totalRedeemed}</b></span>
-      </div>
-    </div>
-  </div>
-</Card>
 
           <Card className="wheelCard">
             <div className="wheelCardHead">
