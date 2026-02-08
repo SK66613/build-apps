@@ -544,19 +544,6 @@ const top = [...items]
 
 
 
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div className="wheelCardTitle">Идеи next widgets</div>
-            </div>
-            <div className="wheelIdeas">
-              <div className="sg-muted">• Себестоимость (cost) + ROI по колесу</div>
-              <div className="sg-muted">• “Проблемные призы”: много wins, мало redeemed</div>
-              <div className="sg-muted">• Авто-рекомендации по weight</div>
-              <div className="sg-muted">• Блокировка “крутить”, если есть незабранный приз</div>
-            </div>
-          </Card>
-
-
           
         </div>
       </div>
