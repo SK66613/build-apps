@@ -2441,20 +2441,4 @@ body{
 }
 
 
-/* правая колонка должна разрешать sticky */
-.wheelRight{
-  overflow: visible;          /* важно */
-  position: relative;         /* ок, но не обязательно */
-}
 
-/* sticky только Top */
-.wheelStickyTop{
-  position: sticky;
-  top: 14px;                  /* если есть верхний бар — сделай 72-88px */
-  z-index: 3;                 /* чтобы красиво поверх графики, но не бесконечно */
-}
-
-/* чтобы следующий блок не прятался под sticky */
-.wheelStickyTop + .wheelCard{
-  margin-top: 14px;
-}
