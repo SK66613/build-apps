@@ -5298,3 +5298,161 @@ body{
 .recharts-tooltip-cursor{
   fill: rgba(2,6,23,.04) !important;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===================================================================
+   SETTINGS — premium-white (Wheel style)
+   Put at END of global.css / global.scss
+   =================================================================== */
+
+.stPage{ display:grid; gap: 14px; }
+
+.stHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.stHeadRight{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content:flex-end;
+}
+.stMsg{ font-weight: 900; color: rgba(15,23,42,.72); }
+
+.stGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1100px){
+  .stGrid{ grid-template-columns: 1fr; }
+}
+
+.stLeft, .stRight{ display:grid; gap: 14px; }
+.stCard{ padding: 14px 14px; }
+.stSegTabs{ width: 100%; overflow:auto; }
+
+.stCardHead{ padding: 2px 2px 10px; }
+.stCardTitle{ font-weight: 950; letter-spacing: -.2px; }
+.stCardSub{ margin-top: 4px; color: var(--muted); font-weight: 750; font-size: 12px; }
+
+/* Form */
+.stForm{ display:grid; gap: 12px; margin-top: 8px; }
+.stRow{ display:grid; gap: 8px; }
+.stRow2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 980px){ .stRow2{ grid-template-columns: 1fr; } }
+
+.stLbl{ font-weight: 950; color: rgba(15,23,42,.68); font-size: 12px; }
+
+.stTextarea{
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.92);
+  padding: 12px;
+  font-weight: 800;
+  outline: none;
+}
+.stHint{ font-weight: 850; font-size: 12px; }
+
+/* Mini tabs */
+.stMiniTabs{ padding: 4px; gap: 6px; border-radius: 16px; width: fit-content; }
+.stMiniTabs .sg-tab{ padding: 8px 10px; border-radius: 12px; font-size: 12px; font-weight: 1000; }
+
+/* Switch (toggle) */
+.stSwitch{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  user-select:none;
+  cursor:pointer;
+  font-weight: 900;
+}
+.stSwitch input{ display:none; }
+.stSwitchUi{
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.06);
+  position: relative;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.06);
+}
+.stSwitchUi::after{
+  content:'';
+  position:absolute;
+  left: 4px;
+  top: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 10px 24px rgba(2,6,23,.10);
+  transition: transform .18s ease;
+}
+.stSwitch input:checked + .stSwitchUi{
+  background: rgba(34,211,238,.18);
+  border-color: rgba(34,211,238,.22);
+}
+.stSwitch input:checked + .stSwitchUi::after{
+  transform: translateX(18px);
+}
+.stSwitchTxt{ color: rgba(15,23,42,.72); }
+
+/* Status block */
+.stSticky{
+  position: sticky;
+  top: 14px;
+  z-index: 2;
+}
+.stSticky2{
+  position: sticky;
+  top: 360px;
+  z-index: 1;
+}
+@media (max-width: 980px){
+  .stSticky, .stSticky2{ position: relative; top: auto; }
+}
+
+.stStatus{ display:grid; gap: 10px; padding: 2px; margin-top: 6px; }
+.stStatusRow{ display:flex; justify-content:space-between; gap: 10px; font-weight: 900; }
+
+.stBadge{
+  font-weight: 1000;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.stBadge.ok{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.25); }
+.stBadge.mid{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.stBadge.bad{ background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.22); }
+
+.stQuick{ margin-top: 12px; display:grid; gap: 10px; }
+.stDanger{ display:grid; gap: 10px; }
