@@ -4154,3 +4154,219 @@ body{
 .ovHealthRow{ display:flex; justify-content:space-between; gap: 10px; font-weight: 850; }
 .ovHealthStrong{ font-weight: 1000; }
 
+
+
+
+
+
+
+
+
+/* ===================================================================
+   PROFIT — premium white skin (Wheel-like)
+   Put at END of global.css / global.scss
+   =================================================================== */
+
+:root{
+  --pf-chart-1: var(--accent, #22d3ee);
+  --pf-card-soft: rgba(2,6,23,.02);
+  --pf-border: rgba(15,23,42,.08);
+}
+
+/* layout */
+.pfPage{ display:grid; gap: 14px; }
+.pfHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 14px;
+}
+
+.pfGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1100px){
+  .pfGrid{ grid-template-columns: 1fr; }
+}
+
+.pfLeft, .pfRight{ display:grid; gap: 14px; }
+.pfSticky{
+  position: sticky;
+  top: 14px;
+  display:grid;
+  gap: 14px;
+}
+@media (max-width: 980px){
+  .pfSticky{ position: relative; top: auto; }
+}
+
+.pfCard{ padding: 14px 14px; }
+.pfCardHead{ padding: 2px 2px 10px; }
+
+.pfTitle{ font-weight: 950; letter-spacing: -.2px; }
+.pfSub{ margin-top: 4px; color: var(--muted); font-weight: 750; font-size: 12px; }
+
+/* KPI row */
+.pfKpiRow{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 980px){
+  .pfKpiRow{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+.pfKpi{
+  border: 1px solid var(--pf-border);
+  border-radius: 16px;
+  padding: 12px;
+  background: var(--pf-card-soft);
+}
+.pfKpiLbl{ color: rgba(15,23,42,.62); font-weight: 900; font-size: 12px; }
+.pfKpiVal{ margin-top: 6px; font-weight: 1000; font-size: 20px; letter-spacing: -.3px; }
+
+/* chart head */
+.pfChartHead{
+  display:grid;
+  grid-template-columns: 1fr auto auto;
+  align-items:start;
+  gap: 12px;
+}
+@media (max-width: 980px){
+  .pfChartHead{ grid-template-columns: 1fr; }
+  .pfMetricSeg{ order: 3; }
+}
+
+/* chart box */
+.pfChart{
+  height: 360px;
+  margin-top: 8px;
+  margin-left: -10px;
+  margin-right: -6px;
+}
+
+/* chart buttons */
+.pfChartBtns{
+  display:flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 12px 28px rgba(2,6,23,.10);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.pfChartBtn{
+  width: 36px; height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+  color: rgba(15,23,42,.70);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition: transform .08s ease, background .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.pfChartBtn:hover{ background: rgba(255,255,255,.85); transform: translateY(-1px); }
+.pfChartBtn.is-active{
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+
+/* under chart */
+.pfUnder{ margin-top: 12px; }
+.pfUnderTabs{ justify-content:flex-start; }
+.pfUnderPanel{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 12px 28px rgba(2,6,23,.06);
+  padding: 14px;
+}
+
+/* live feed */
+.pfFeed{ display:grid; gap: 8px; }
+.pfFeedRow{
+  display:grid;
+  grid-template-columns: 140px 1fr 160px;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,.02);
+}
+.pfFeedType{ font-weight: 950; color: var(--muted); }
+.pfFeedLabel{ font-weight: 850; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pfFeedTs{ text-align:right; color: var(--muted); font-weight: 800; font-size: 12px; }
+
+/* alerts */
+.pfAlerts{ display:grid; gap: 10px; }
+.pfAlert{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,.86);
+}
+.pfAlert.ok{ border-color: rgba(34,211,238,.22); }
+.pfAlert.risk{ border-color: rgba(245,158,11,.22); }
+.pfAlert.bad{ border-color: rgba(239,68,68,.22); }
+.pfAlertTop{ display:flex; justify-content:space-between; gap: 10px; }
+.pfAlertTitle{ font-weight: 950; }
+.pfAlertDesc{ margin-top: 6px; color: rgba(15,23,42,.62); font-weight: 750; }
+.pfAlertAct{ margin-top: 10px; display:flex; justify-content:flex-end; }
+
+.pfBadge{
+  font-weight: 1000; font-size: 12px;
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.pfBadge.ok{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.25); }
+.pfBadge.risk{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.pfBadge.bad{ background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.22); }
+
+/* mode blocks */
+.pfBlock{ padding: 2px; display:grid; gap: 12px; }
+.pfRows{ display:grid; gap: 10px; }
+.pfRow{ display:flex; justify-content:space-between; gap: 12px; font-weight: 850; }
+.pfRow.is-strong b{ font-weight: 1000; }
+.pfTodo{ display:grid; gap: 8px; }
+.pfTodoItem{ font-weight: 850; color: rgba(15,23,42,.72); }
+
+/* health */
+.pfHealth{ display:grid; gap: 10px; }
+.pfHealthRow{ display:flex; justify-content:space-between; gap: 10px; font-weight: 850; }
+.pfTrack{
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.pfFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+.pfQuick{ display:grid; gap: 10px; margin-top: 6px; }
+
+/* drivers */
+.pfDrivers{ display:grid; gap: 10px; }
+.pfDriverRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,.02);
+}
+.pfDriverTitle{ font-weight: 900; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pfDriverVal{ font-weight: 1000; }
+
+/* actions */
+.pfActions{ display:grid; gap: 10px; }
+
+
