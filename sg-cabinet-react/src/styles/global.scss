@@ -2855,3 +2855,258 @@ body{
 }
 
 
+
+
+
+
+
+
+
+/* Put at END of global.css/global.scss (Sales page only styles) */
+
+.salesPage{ display:grid; gap:14px; }
+.salesHead{ display:flex; align-items:flex-end; justify-content:space-between; gap:14px; }
+
+.salesGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1100px){
+  .salesGrid{ grid-template-columns: 1fr; }
+}
+
+.salesLeft, .salesRight{ display:grid; gap:14px; }
+.salesCard{ padding:14px 14px; }
+.salesCardHead{ padding:2px 2px 10px; }
+.salesCardHeadRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap: wrap;
+}
+
+.salesCardTitle{ font-weight:950; letter-spacing:-.2px; }
+.salesCardSub{ margin-top:4px; color: var(--muted); font-weight:750; font-size:12px; }
+
+.salesMetricTabs{ min-width: 520px; }
+@media (max-width: 900px){
+  .salesMetricTabs{ min-width: 100%; }
+}
+
+/* chart */
+.salesChart{ margin-top: 6px; }
+
+/* chart icon buttons */
+.salesChartBtns{
+  display:flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 12px 28px rgba(2,6,23,.10);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.salesChartBtn{
+  width: 36px; height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+  color: rgba(15,23,42,.70);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition: transform .08s ease, background .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.salesChartBtn:hover{ background: rgba(255,255,255,.85); transform: translateY(-1px); }
+.salesChartBtn.is-active{
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+.salesChartBtn:active{ transform: translateY(0) scale(.98); }
+
+/* KPI row */
+.salesKpiRow{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+@media (max-width: 900px){
+  .salesKpiRow{ grid-template-columns: 1fr 1fr; }
+}
+.salesKpi{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.salesKpiLbl{ color: var(--muted); font-weight:900; font-size:12px; }
+.salesKpiVal{ font-weight:1000; font-size:18px; margin-top: 6px; }
+
+/* Under-chart panels */
+.salesUnderTabs{ margin-top: 12px; }
+.salesUnderTabs__seg .sg-tabs{ justify-content:flex-start; }
+.salesUnderPanel{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 12px 28px rgba(2,6,23,.06);
+  padding: 14px;
+}
+.salesUnderHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* Live */
+.salesLiveList{ display:grid; gap: 8px; }
+.salesLiveRow{
+  display:grid;
+  grid-template-columns: 140px 1fr 120px;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,.02);
+}
+.salesLiveTs{ color: var(--muted); font-weight: 900; font-size: 12px; }
+.salesLiveMid{ min-width:0; }
+.salesLiveTitle{ font-weight: 950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.salesLiveSub{ margin-top:2px; color: rgba(15,23,42,.56); font-weight: 850; font-size: 12px; }
+.salesLiveRight{ text-align:right; }
+.salesLiveAmt{ font-weight: 1000; }
+.salesLiveCoins{ margin-top:2px; color: rgba(15,23,42,.56); font-weight: 900; font-size: 12px; }
+
+/* Tables */
+.salesTableWrap{ overflow:auto; }
+
+/* Right: sticky */
+.salesSticky{ position: sticky; top: 14px; z-index: 2; }
+.salesStickyTop{ position: sticky; top: 178px; z-index: 2; } /* adjust if you change blocks order */
+@media (max-width: 980px){
+  .salesSticky, .salesStickyTop{ position: relative; top:auto; }
+}
+
+/* Summary PRO */
+.salesSummaryPro{ display:grid; gap: 14px; padding: 2px; }
+.salesSummaryTiles{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+.salesSumTile{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.salesSumTile.is-strong{
+  background: rgba(34,211,238,.10);
+  border-color: rgba(34,211,238,.22);
+}
+.salesSumLbl{ color: rgba(15,23,42,.62); font-weight: 900; font-size: 12px; }
+.salesSumVal{ margin-top:6px; font-weight: 1000; font-size: 20px; letter-spacing: -.3px; }
+
+.salesBarBox{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.85);
+  padding: 12px;
+}
+.salesBarTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+.salesBarName{ font-weight:950; }
+.salesBadge{
+  font-weight: 1000;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.salesTrack{
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.salesFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+.salesBarMeta{
+  margin-top: 10px;
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  font-weight: 850;
+}
+
+/* Top list */
+.salesTopHead{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap: wrap; }
+.salesMiniTabs .sg-tabs{ padding: 4px; gap: 6px; border-radius: 16px; }
+.salesMiniTabs .sg-tab{ padding: 8px 10px; border-radius: 12px; font-size: 12px; font-weight: 1000; }
+
+.salesTopList{ display:grid; gap: 10px; }
+.salesTopRow{
+  display:grid;
+  grid-template-columns: 38px 1fr 60px;
+  align-items:center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.85);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+}
+.salesTopRow.is-top{
+  border-color: rgba(34,211,238,.22);
+  box-shadow: 0 16px 40px rgba(2,6,23,.08);
+}
+.salesMedal{
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  display:flex; align-items:center; justify-content:center;
+  font-weight: 1000;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.salesMedal.m1{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.salesMedal.m2{ background: rgba(148,163,184,.18); border-color: rgba(148,163,184,.28); }
+.salesMedal.m3{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.22); }
+
+.salesTopMid{ min-width:0; }
+.salesTopTitle{ font-weight: 950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.salesTopMini{ margin-top:2px; font-size:12px; color: rgba(15,23,42,.56); font-weight: 850; }
+.salesTopBar{
+  margin-top: 8px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.salesTopBarFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+.salesTopRight{ text-align:right; }
+.salesTopCount{ font-weight: 1000; font-size: 18px; }
+
+/* Insights */
+.salesIdeas{ display:grid; gap:8px; padding: 2px; }
