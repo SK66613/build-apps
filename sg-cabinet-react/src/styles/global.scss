@@ -2471,3 +2471,9 @@ body{
   align-items: start;
 }
 
+.wheelRight{
+  align-self: start;
+  min-height: calc(100vh - 160px); /* подстрой если шапка выше */
+}
+
+
