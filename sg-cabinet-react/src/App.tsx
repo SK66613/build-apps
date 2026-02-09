@@ -15,6 +15,8 @@ import Profit from './pages/Profit';
 import Settings from './pages/Settings';
 import Constructor from './pages/Constructor';
 import Game from './pages/Game';
+import Referrals from './pages/Referrals';
+
 
 function Guarded({ children }: { children: React.ReactNode }){
   const { me, isLoading } = useAuth();
@@ -42,6 +44,7 @@ export default function App(){
             <Route path="settings" element={<Settings />} />
             <Route path="constructor" element={<Constructor />} />
             <Route path="game" element={<Game />} />
+            <Route path="Referrals" element={<Referrals />} />
           </Route>
         </Routes>
       </AppStateProvider>
