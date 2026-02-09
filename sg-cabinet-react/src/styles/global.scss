@@ -2443,103 +2443,20 @@ body{
 
 
 /* ===== Placeholder card (next widgets) ===== */
-.wheelPlaceholder{
-  position: relative;
-  overflow: hidden;
+.wheelTopStub{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border2);
+  display: grid;
+  gap: 6px;
 }
-
-.wheelPlaceholderHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 10px;
+.wheelTopStubTitle{
+  font-weight: 950;
+  letter-spacing: -0.2px;
 }
-
-.wheelPlaceholderBadge{
-  font-weight: 900;
-  font-size: 12px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border2);
-  background: rgba(255,255,255,.65);
-  color: rgba(15,23,42,.72);
-  text-transform: lowercase;
-  letter-spacing: .02em;
-}
-html[data-theme='dark'] .wheelPlaceholderBadge{
-  background: rgba(2,6,23,.22);
-  color: rgba(226,232,240,.72);
-  border-color: rgba(148,163,184,.18);
-}
-
-.wheelPlaceholderBody{
-  margin-top: 10px;
-  display:grid;
-  gap: 12px;
-}
-
-.wheelPlaceholderText{
-  font-weight: 850;
-  color: rgba(15,23,42,.78);
-}
-html[data-theme='dark'] .wheelPlaceholderText{
-  color: rgba(226,232,240,.78);
-}
-
-.wheelPlaceholderList{
-  display:grid;
-  gap: 10px;
-}
-
-.wheelPlaceholderItem{
-  display:flex;
-  align-items:flex-start;
-  gap: 10px;
-  padding: 10px 10px;
-  border-radius: 14px;
-  border: 1px solid var(--border2);
-  background: rgba(255,255,255,.55);
-  font-weight: 800;
-  color: rgba(15,23,42,.82);
-}
-html[data-theme='dark'] .wheelPlaceholderItem{
-  background: rgba(2,6,23,.20);
-  color: rgba(226,232,240,.82);
-}
-
-.wheelDot{
-  width: 10px;
-  height: 10px;
-  margin-top: 4px;
-  border-radius: 999px;
-  background: rgba(15,23,42,.18);
-  flex: 0 0 auto;
-}
-html[data-theme='dark'] .wheelDot{
-  background: rgba(226,232,240,.18);
-}
-
-.wheelPlaceholderHint{
-  font-size: 12px;
-  font-weight: 750;
+.wheelTopStubTxt{
   color: var(--muted);
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1.45;
 }
-
-/* лёгкий “дорогой” блик */
-.wheelPlaceholder:before{
-  content:"";
-  position:absolute;
-  top:-60px;
-  right:-80px;
-  width: 220px;
-  height: 220px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(34,211,238,.16), rgba(59,130,246,.10), transparent 70%);
-  pointer-events:none;
-  filter: blur(2px);
-}
-html[data-theme='dark'] .wheelPlaceholder:before{
-  background: radial-gradient(circle at 30% 30%, rgba(34,211,238,.12), rgba(59,130,246,.08), transparent 70%);
-}
-
-
