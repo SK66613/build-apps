@@ -279,7 +279,6 @@ const top = [...items]
                   ) : (
                     
                       <AreaChart data={chartData}>
->
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
                       <YAxis tick={{ fontSize: 12 }} />
