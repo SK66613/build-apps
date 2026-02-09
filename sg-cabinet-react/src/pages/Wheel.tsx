@@ -252,7 +252,8 @@ const top = [...items]
               </div>
             </div>
 
-            <div className="wheelChart">
+            <div className={'wheelChart ' + (chartMode === 'bar' ? 'is-bar' : chartMode === 'line' ? 'is-line' : 'is-area')}>
+
               {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
               {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
 
