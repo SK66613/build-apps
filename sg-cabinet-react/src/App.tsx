@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Constructor from './pages/Constructor';
 import Game from './pages/Game';
 import Referrals from './pages/Referrals';
+import Broadcasts from './pages/Broadcasts';
 
 
 function Guarded({ children }: { children: React.ReactNode }){
@@ -45,6 +46,7 @@ export default function App(){
             <Route path="constructor" element={<Constructor />} />
             <Route path="game" element={<Game />} />
             <Route path="Referrals" element={<Referrals />} />
+            <Route path="Broadcasts" element={<Broadcasts />} />
           </Route>
         </Routes>
       </AppStateProvider>
