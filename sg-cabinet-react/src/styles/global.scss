@@ -2506,3 +2506,350 @@ body{
 }
 
 
+
+
+
+
+
+
+
+
+
+
+/* =========================================================
+   CALENDAR — premium tokens + layout (like Wheel)
+   Put at END of global.css / global.scss
+   ========================================================= */
+
+/* Optional: calendar-specific tokens */
+:root{
+  --cal-card: rgba(255,255,255,.92);
+  --cal-border: rgba(15,23,42,.10);
+  --cal-soft: rgba(2,6,23,.02);
+  --cal-soft2: rgba(2,6,23,.04);
+  --cal-shadow: 0 12px 28px rgba(2,6,23,.08);
+
+  --cal-accent: var(--accent, #22d3ee);
+  --cal-accent2: var(--accent2, #3b82f6);
+}
+
+/* Page */
+.calPage{ display:grid; gap: 14px; }
+
+/* Head */
+.calHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 14px;
+}
+.calHeadRight{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+/* Sticky toolbar */
+.calToolbar{
+  padding: 12px 12px;
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  background: rgba(255,255,255,.86);
+  backdrop-filter: blur(10px) saturate(120%);
+  border: 1px solid var(--cal-border);
+  box-shadow: var(--cal-shadow);
+}
+.calToolbarRow{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+.calSearch{ flex: 1 1 340px; min-width: 260px; }
+.calFilters{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+.calSelect{
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.90);
+  font-weight: 850;
+  outline: none;
+}
+.calSelect:focus{
+  border-color: rgba(34,211,238,.35);
+  box-shadow: 0 0 0 4px rgba(34,211,238,.14);
+}
+.calViewTabs{ margin-left:auto; }
+.calTabI{ display:inline-flex; gap: 8px; align-items:center; }
+
+/* 2 columns */
+.calGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+  align-items: start; /* важно для sticky sidebar */
+}
+@media (max-width: 1100px){
+  .calGrid{ grid-template-columns: 1fr; }
+}
+
+/* Left */
+.calLeft{ display:grid; gap: 14px; }
+.calMainCard{ padding: 14px; }
+.calMainHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 2px 2px 10px;
+}
+.calMainTitle{ font-weight: 950; letter-spacing: -.2px; }
+.calMainSub{ margin-top: 4px; color: var(--muted); font-weight: 750; font-size: 12px; }
+.calLegend{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+  color: rgba(15,23,42,.62);
+  font-weight: 850;
+  font-size: 12px;
+}
+.calDot{
+  width: 10px; height: 10px; border-radius: 999px; display:inline-block; margin: 0 6px 0 10px;
+  border: 1px solid rgba(15,23,42,.10);
+}
+.calDot.pending{ background: rgba(245,158,11,.65); }
+.calDot.confirmed{ background: rgba(34,211,238,.90); }
+.calDot.arrived{ background: rgba(59,130,246,.90); }
+.calDot.done{ background: rgba(16,185,129,.90); }
+.calDot.cancelled{ background: rgba(148,163,184,.80); }
+.calDot.noshow{ background: rgba(239,68,68,.80); }
+
+.calMainBody{ padding: 6px 2px 2px; }
+
+/* Timeline (v1 list-style) */
+.calTimeline{ display:grid; gap: 10px; }
+.calAppt{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.90);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+  padding: 12px 12px;
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  text-align:left;
+  cursor:pointer;
+}
+.calAppt:hover{ filter: brightness(1.01); transform: translateY(-1px); transition: .15s ease; }
+.calApptLeft{ display:grid; gap: 6px; }
+.calApptTime{ font-weight: 1000; letter-spacing: -.2px; }
+.calApptMeta{ color: rgba(15,23,42,.56); font-weight: 800; font-size: 12px; }
+.calApptMid{ min-width:0; }
+.calApptTitle{ font-weight: 950; }
+.calApptSub{ margin-top: 4px; color: rgba(15,23,42,.60); font-weight: 800; font-size: 12px; }
+.calApptBadges{ margin-top: 8px; display:flex; gap: 8px; flex-wrap: wrap; }
+
+.calStatusPill{
+  display:inline-flex;
+  align-items:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+  font-weight: 950;
+  font-size: 12px;
+}
+.calMoneyPill{
+  display:inline-flex;
+  align-items:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(34,211,238,.12);
+  font-weight: 950;
+  font-size: 12px;
+}
+
+/* status tint */
+.calAppt.st-pending{ border-left: 6px solid rgba(245,158,11,.9); }
+.calAppt.st-confirmed{ border-left: 6px solid rgba(34,211,238,.95); }
+.calAppt.st-arrived{ border-left: 6px solid rgba(59,130,246,.95); }
+.calAppt.st-done{ border-left: 6px solid rgba(16,185,129,.95); }
+.calAppt.st-cancelled{ border-left: 6px solid rgba(148,163,184,.95); }
+.calAppt.st-noshow{ border-left: 6px solid rgba(239,68,68,.95); }
+
+/* List view */
+.calList{ display:grid; gap: 10px; }
+.calListRow{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.90);
+  padding: 12px 12px;
+  display:grid;
+  grid-template-columns: 140px 1fr 160px;
+  gap: 12px;
+  text-align:left;
+  cursor:pointer;
+}
+.calListRow:hover{ transform: translateY(-1px); transition: .15s ease; }
+.calListTime{ font-weight: 1000; }
+.calListTitle{ font-weight: 950; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calListSub{ margin-top: 4px; color: rgba(15,23,42,.60); font-weight: 800; font-size: 12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calListRight{ text-align:right; display:grid; gap: 6px; justify-items:end; }
+.calListPrice{ font-weight: 1000; opacity: .75; }
+
+/* Right sidebar */
+.calRight{ display:grid; gap: 14px; }
+.calSideCard{ padding: 14px; }
+.calSideSticky{
+  position: sticky;
+  top: 90px; /* если toolbar sticky сверху, ставь 90-110px */
+  z-index: 2;
+}
+.calSideHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 2px 2px 10px;
+}
+.calSideTitle{ font-weight: 950; }
+.calSideBody{ padding-top: 6px; display:grid; gap: 14px; }
+
+.calSumTiles{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+.calTile{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.calTileStrong{
+  background: rgba(34,211,238,.12);
+  border-color: rgba(34,211,238,.22);
+}
+.calTileLbl{ color: rgba(15,23,42,.60); font-weight: 900; font-size: 12px; }
+.calTileVal{ margin-top: 6px; font-weight: 1000; font-size: 20px; letter-spacing: -.3px; }
+
+.calBarBox{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.86);
+  padding: 12px;
+}
+.calBarTop{ display:flex; justify-content:space-between; align-items:center; gap: 10px; margin-bottom: 10px; }
+.calBarName{ font-weight: 950; }
+.calBadge{
+  font-weight: 1000;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.calBarTrack{ height: 12px; border-radius: 999px; background: rgba(15,23,42,.06); overflow:hidden; }
+.calBarFill{ height: 100%; border-radius: 999px; background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95)); }
+.calBarMeta{ margin-top: 10px; display:flex; justify-content:space-between; gap: 10px; font-weight: 850; }
+
+.calNextBox{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(2,6,23,.02);
+  padding: 12px;
+}
+.calNextTitle{ font-weight: 950; }
+.calNextRow{ margin-top: 10px; display:flex; justify-content:space-between; align-items:center; gap: 10px; }
+.calNextWho{ font-weight: 1000; }
+.calNextSub{ margin-top: 6px; color: rgba(15,23,42,.60); font-weight: 800; font-size: 12px; }
+.calNextActions{ margin-top: 12px; display:flex; gap: 10px; flex-wrap: wrap; }
+
+/* Live list in sidebar */
+.calLiveHead{ display:flex; justify-content:space-between; align-items:flex-start; gap: 10px; }
+.calLiveTitle{ font-weight: 950; }
+.calLiveList{ display:grid; gap: 8px; }
+.calLiveRow{
+  display:grid;
+  grid-template-columns: 120px 1fr 120px;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,.02);
+}
+.calLiveType{ font-weight: 950; color: var(--muted); }
+.calLiveLabel{ font-weight: 850; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calLiveTs{ text-align:right; color: var(--muted); font-weight: 800; font-size: 12px; }
+
+/* Drawer */
+.calDrawerBack{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,.22);
+  backdrop-filter: blur(6px) saturate(120%);
+  z-index: 50;
+  display:flex;
+  justify-content:flex-end;
+}
+.calDrawer{
+  width: min(480px, 92vw);
+  height: 100%;
+  background: rgba(255,255,255,.94);
+  border-left: 1px solid rgba(15,23,42,.10);
+  box-shadow: -24px 0 60px rgba(2,6,23,.18);
+  padding: 14px;
+}
+.calDrawerHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(15,23,42,.08);
+}
+.calDrawerTitle{ font-weight: 1000; font-size: 18px; letter-spacing: -.2px; }
+.calDrawerSub{ margin-top: 4px; color: rgba(15,23,42,.60); font-weight: 800; font-size: 12px; }
+.calDrawerBody{ padding-top: 12px; display:grid; gap: 12px; }
+.calDrawerGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+}
+.calDrawerField{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  background: rgba(2,6,23,.02);
+  padding: 12px;
+}
+.calFieldLbl{ color: rgba(15,23,42,.60); font-weight: 900; font-size: 12px; }
+.calFieldVal{ margin-top: 6px; font-weight: 950; }
+
+.calNoteBox{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.86);
+  padding: 12px;
+}
+.calNoteText{ margin-top: 6px; font-weight: 850; color: rgba(15,23,42,.78); }
+
+.calDrawerActions{ display:flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+
+/* Mobile */
+@media (max-width: 980px){
+  .calSideSticky{ position: relative; top: auto; }
+  .calSumTiles{ grid-template-columns: 1fr; }
+  .calAppt{ grid-template-columns: 1fr; }
+  .calListRow{ grid-template-columns: 1fr; }
+  .calDrawerGrid{ grid-template-columns: 1fr; }
+}
