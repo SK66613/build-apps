@@ -3381,3 +3381,441 @@ body{
 
 .passportIdeas{ display:grid; gap:8px; padding:2px; }
 
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===================================================================
+   CUSTOMERS — premium clean skin (grid + sticky list + sticky profile header)
+   Put at END of global.css / global.scss
+   Depends on your existing vars: --muted, --border2, etc.
+   =================================================================== */
+
+/* ===== TOKENS (добавь в :root или рядом) ===== */
+:root{
+  --cust-bg: #ffffff;
+  --cust-surface: rgba(2,6,23,.02);
+  --cust-surface2: rgba(255,255,255,.85);
+
+  --cust-border: rgba(15,23,42,.10);
+  --cust-border2: rgba(15,23,42,.08);
+
+  --cust-shadow: 0 10px 28px rgba(2,6,23,.06);
+  --cust-shadow2: 0 16px 40px rgba(2,6,23,.08);
+
+  --cust-radius-card: 18px;
+  --cust-radius-row: 16px;
+  --cust-radius-pill: 999px;
+
+  --cust-pad: 14px;
+  --cust-gap: 14px;
+
+  --cust-accent: rgba(34,211,238,.95);
+  --cust-accent2: rgba(59,130,246,.95);
+}
+
+/* ===== PAGE ===== */
+.custPage{
+  display:grid;
+  gap: var(--cust-gap);
+}
+
+.custHeader{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 8px 0;
+
+  /* “дорого” */
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.72));
+  backdrop-filter: blur(10px) saturate(120%);
+}
+
+.custTitle{ min-width: 280px; }
+.custHeaderRight{
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.custSearchRow{ min-width: 360px; }
+@media (max-width: 980px){
+  .custSearchRow{ min-width: 1px; width: 100%; }
+}
+
+/* ===== GRID: list + profile ===== */
+.custGrid{
+  display:grid;
+  grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
+  gap: var(--cust-gap);
+  align-items: start; /* важно чтобы колонки не тянули друг друга */
+}
+
+@media (max-width: 980px){
+  .custGrid{ grid-template-columns: 1fr; }
+}
+
+/* ===== LEFT LIST CARD ===== */
+.custListCard{
+  padding: 0 !important;
+  border-radius: var(--cust-radius-card);
+  box-shadow: var(--cust-shadow);
+  overflow: hidden; /* чтобы sticky header красиво */
+}
+
+.custListHead{
+  position: sticky;
+  top: 58px; /* если header sticky — подстрой */
+  z-index: 2;
+  padding: 12px 12px 10px;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(10px) saturate(120%);
+  border-bottom: 1px solid var(--cust-border2);
+}
+
+.custListHeadRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.custListHeadTitle{
+  font-weight: 1000;
+  letter-spacing: -.2px;
+}
+
+.custCount{
+  margin-left: 8px;
+  font-weight: 900;
+  font-size: 12px;
+  opacity: .7;
+  padding: 4px 8px;
+  border-radius: var(--cust-radius-pill);
+  border: 1px solid var(--cust-border2);
+  background: rgba(2,6,23,.02);
+}
+
+.custFilters{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+.custFilter{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(15,23,42,.68);
+}
+
+/* List scroll */
+.custList{
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  padding: 10px;
+  display:grid;
+  gap: 10px;
+}
+
+/* Empty */
+.custEmpty{
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed var(--cust-border2);
+  background: rgba(2,6,23,.01);
+}
+.custEmptyTitle{ font-weight: 1000; }
+.custEmptySub{ margin-top: 6px; opacity: .7; font-weight: 850; }
+
+/* Customer row */
+.custRow{
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--cust-border2);
+  border-radius: var(--cust-radius-row);
+  background: rgba(255,255,255,.86);
+  box-shadow: var(--cust-shadow);
+  padding: 10px;
+  display:grid;
+  grid-template-columns: 44px 1fr 70px;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.custRow:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--cust-shadow2);
+}
+.custRow.is-active{
+  border-color: rgba(34,211,238,.25);
+  box-shadow: 0 18px 52px rgba(2,6,23,.10);
+  background: rgba(255,255,255,.92);
+}
+
+.custAvatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  overflow:hidden;
+  border: 1px solid var(--cust-border2);
+  background: rgba(2,6,23,.02);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.custAvatar img{ width:100%; height:100%; object-fit: cover; display:block; }
+.custAvatarFallback{
+  font-weight: 1000;
+  color: rgba(15,23,42,.75);
+}
+
+.custRowMid{ min-width: 0; }
+.custRowTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 10px;
+}
+.custName{
+  font-weight: 1000;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.custUser{
+  margin-left: 8px;
+  font-weight: 900;
+  font-size: 12px;
+  opacity: .6;
+}
+
+.custBadges{ display:flex; gap: 6px; flex-wrap: wrap; justify-content:flex-end; }
+
+.custRowMeta{
+  margin-top: 6px;
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: rgba(15,23,42,.62);
+  font-weight: 900;
+  font-size: 12px;
+}
+.custMetaItem b{ color: rgba(15,23,42,.90); }
+.custMetaDot{ opacity: .35; }
+
+.custMiniBar{
+  margin-top: 8px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow: hidden;
+}
+.custMiniBarFill{
+  height:100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cust-accent), var(--cust-accent2));
+}
+
+.custRowRight{
+  text-align:right;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap: 4px;
+}
+.custTiny{ font-size: 11px; opacity: .55; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.custTinyVal{ font-weight: 950; font-size: 12px; opacity: .8; }
+
+/* ===== RIGHT PROFILE ===== */
+.custProfileCol{ display:grid; gap: var(--cust-gap); }
+.custProfileCard{
+  padding: 0 !important;
+  border-radius: var(--cust-radius-card);
+  box-shadow: var(--cust-shadow);
+  overflow: hidden;
+}
+
+/* Sticky head inside profile */
+.custProfileHead{
+  position: sticky;
+  top: 58px; /* подстрой под header */
+  z-index: 3;
+  padding: 12px 12px 10px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(10px) saturate(120%);
+  border-bottom: 1px solid var(--cust-border2);
+}
+
+.custProfileHeadTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.custProfileName{ font-weight: 1100; letter-spacing: -.2px; }
+.custProfileSub{ margin-top: 4px; font-weight: 900; opacity: .7; display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
+
+.custProfileActions{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+/* KPI tiles */
+.custKpiRow{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+@media (max-width: 980px){
+  .custKpiRow{ grid-template-columns: 1fr; }
+}
+
+.custKpi{
+  border: 1px solid var(--cust-border2);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.custKpiLbl{ font-weight: 900; font-size: 12px; opacity: .6; }
+.custKpiVal{ margin-top: 6px; font-weight: 1100; font-size: 20px; letter-spacing: -.3px; }
+
+.custProfileTabs{ margin-top: 12px; }
+
+/* Body */
+.custProfileBody{
+  padding: 12px;
+  display:grid;
+  gap: 12px;
+}
+
+/* Two-col inside overview */
+.custTwoCol{
+  display:grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  gap: 12px;
+}
+@media (max-width: 1100px){
+  .custTwoCol{ grid-template-columns: 1fr; }
+}
+
+.custBlock{
+  border: 1px solid var(--cust-border2);
+  border-radius: var(--cust-radius-card);
+  background: rgba(255,255,255,.86);
+  box-shadow: var(--cust-shadow);
+  padding: 12px;
+}
+.custBlockTitle{ font-weight: 1000; letter-spacing: -.2px; margin-bottom: 10px; }
+
+/* Timeline */
+.custTimeline{ display:grid; gap: 10px; }
+.custEvent{
+  display:grid;
+  grid-template-columns: 10px 1fr 120px;
+  gap: 10px;
+  align-items:center;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--cust-border2);
+  background: rgba(2,6,23,.01);
+}
+.custEventDot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.22);
+}
+.custEventDot.t-sale{ background: rgba(59,130,246,.7); }
+.custEventDot.t-coins{ background: rgba(34,211,238,.7); }
+.custEventDot.t-passport{ background: rgba(245,158,11,.7); }
+.custEventDot.t-wheel{ background: rgba(168,85,247,.7); }
+.custEventDot.t-message{ background: rgba(16,185,129,.7); }
+.custEventDot.t-redeem{ background: rgba(239,68,68,.7); }
+
+.custEventTitle{ font-weight: 950; }
+.custEventMeta{ margin-top: 2px; font-size: 12px; opacity: .6; font-weight: 850; }
+.custEventTs{ text-align:right; font-weight: 900; font-size: 12px; opacity: .7; }
+
+/* Forms */
+.custForm{ display:grid; gap: 10px; }
+.custFormRow{ display:grid; gap: 6px; }
+.custFormLbl{ font-weight: 900; font-size: 12px; opacity: .65; }
+.custFormActions{ display:flex; justify-content:flex-end; gap: 10px; align-items:center; margin-top: 2px; }
+.custActionMsg{ font-weight: 900; opacity: .7; }
+
+/* Table wrap helper */
+.custTableWrap{ overflow: auto; }
+
+/* ===== Pills ===== */
+.custPill{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 1000;
+  padding: 6px 10px;
+  border-radius: var(--cust-radius-pill);
+  border: 1px solid var(--cust-border2);
+  background: rgba(2,6,23,.02);
+  color: rgba(15,23,42,.82);
+}
+.custPill.is-ok{ background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.22); }
+.custPill.is-warn{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); }
+.custPill.is-bad{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); }
+.custPill.is-muted{ opacity: .75; }
+
+/* ===== Switch ===== */
+.custSwitch{
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--cust-border2);
+  background: rgba(2,6,23,.02);
+  position: relative;
+  cursor: pointer;
+  padding: 2px;
+  transition: background .15s ease, border-color .15s ease;
+}
+.custSwitchDot{
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+  position:absolute;
+  left: 2px;
+  top: 2px;
+  transition: transform .15s ease;
+}
+.custSwitch.is-on{
+  background: rgba(34,211,238,.18);
+  border-color: rgba(34,211,238,.25);
+}
+.custSwitch.is-on .custSwitchDot{ transform: translateX(18px); }
+.custSwitch.is-disabled{ opacity: .5; cursor: not-allowed; }
+
+
