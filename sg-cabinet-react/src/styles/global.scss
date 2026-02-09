@@ -2461,3 +2461,13 @@ body{
   padding: 0 !important;
 }
 
+
+.wheelGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+
+  /* ✅ ВАЖНО: чтобы правая колонка не тянулась до высоты левой */
+  align-items: start;
+}
+
