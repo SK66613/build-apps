@@ -542,21 +542,7 @@ const top = [...items]
 </Card>
 
 
-<Card className="wheelCard wheelStickyTop">
-  {/* ...header + tabs... */}
 
-  <div className="wheelTopList">
-    {/* ...rows... */}
-  </div>
-
-  {/* ✅ заглушка ВНУТРИ sticky карточки */}
-  <div className="wheelTopStub">
-    <div className="wheelTopStubTitle">Next widgets</div>
-    <div className="wheelTopStubTxt">
-      Скоро: ROI, проблемные призы, авто-weight, блокировка “крутить”.
-    </div>
-  </div>
-</Card>
 
 
 
