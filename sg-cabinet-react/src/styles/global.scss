@@ -2443,20 +2443,15 @@ body{
 
 
 /* ===== Placeholder card (next widgets) ===== */
+/* Вариант 1: заглушка существует, но НЕ занимает место и НЕ влияет на sticky */
 .wheelTopStub{
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border2);
-  display: grid;
-  gap: 6px;
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
-.wheelTopStubTitle{
-  font-weight: 950;
-  letter-spacing: -0.2px;
-}
-.wheelTopStubTxt{
-  color: var(--muted);
-  font-weight: 800;
-  font-size: 12px;
-  line-height: 1.45;
-}
+
