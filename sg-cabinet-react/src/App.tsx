@@ -41,6 +41,7 @@ export default function App(){
             <Route path="profit" element={<Profit />} />
             <Route path="settings" element={<Settings />} />
             <Route path="constructor" element={<Constructor />} />
+            <Route path="game" element={<Game />} />
           </Route>
         </Routes>
       </AppStateProvider>
