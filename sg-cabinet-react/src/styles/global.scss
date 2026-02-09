@@ -4594,3 +4594,364 @@ body{
 @media (max-width:980px){ .gmRow2{ grid-template-columns: 1fr; } }
 
 .gmFieldLbl{ color: rgba(15,23,42,.62); font-weight: 900; font-size: 12px; margin-bottom: 6px; }
+
+
+
+
+
+
+
+
+
+
+
+/* ===================================================================
+   REFERRALS — premium white tokens + layout (Wheel-like)
+   Put at END of global.css/global.scss
+   =================================================================== */
+
+:root{
+  /* optional per-page accent */
+  --ref-accent: rgba(34,211,238,.95);
+  --ref-accent2: rgba(59,130,246,.95);
+}
+
+/* Page */
+.refPage{ display:grid; gap: 14px; }
+
+/* Header */
+.refHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.refSegTabs{ max-width: 100%; overflow:auto; }
+
+/* Grid */
+.refGrid{
+  display:grid;
+  grid-template-columns: 1.65fr .95fr;
+  gap: 14px;
+  align-items: start; /* ✅ важное для sticky */
+}
+@media (max-width: 1100px){
+  .refGrid{ grid-template-columns: 1fr; }
+}
+.refLeft, .refRight{ display:grid; gap: 14px; }
+
+.refCard{ padding: 14px 14px; }
+.refCardHead{ padding: 2px 2px 10px; }
+.refCardHeadRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+}
+.refCardTitle{ font-weight: 950; letter-spacing: -.2px; }
+.refCardSub{ margin-top: 4px; color: var(--muted); font-weight: 750; font-size: 12px; }
+
+/* Chart */
+.refChart{ height: 340px; margin-top: 10px; position: relative; }
+
+/* Chart icon buttons (top right) */
+.refChartBtns{
+  display:flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 12px 28px rgba(2,6,23,.10);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.refChartBtn{
+  width: 36px; height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+  color: rgba(15,23,42,.70);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  transition: transform .08s ease, background .15s ease, box-shadow .15s ease, color .15s ease;
+}
+.refChartBtn:hover{ background: rgba(255,255,255,.85); transform: translateY(-1px); }
+.refChartBtn.is-active{
+  background: #fff;
+  color: rgba(15,23,42,.92);
+  box-shadow: 0 10px 22px rgba(2,6,23,.10);
+}
+.refChartBtn:active{ transform: translateY(0) scale(.98); }
+
+/* Metric segmented row */
+.refMetricRow{ margin-top: 10px; }
+.refMetricTabs{ width: 100%; justify-content:flex-start; flex-wrap: wrap; }
+.refMetricTabs .sg-tab{ padding: 10px 12px; min-width: 120px; }
+
+/* KPI under chart */
+.refKpiRow{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+@media (max-width: 980px){
+  .refKpiRow{ grid-template-columns: 1fr; }
+}
+.refKpi{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.refKpiLbl{ color: var(--muted); font-weight: 900; font-size: 12px; }
+.refKpiVal{ font-weight: 1000; font-size: 20px; margin-top: 6px; letter-spacing:-.3px; }
+.refKpiMini{ margin-top: 6px; color: rgba(15,23,42,.56); font-weight: 850; font-size: 12px; }
+
+/* Under chart (Live/Alerts) */
+.refUnder{ margin-top: 12px; }
+.refUnderTabs{ width: 100%; justify-content:flex-start; }
+.refUnderPanel{
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 12px 28px rgba(2,6,23,.06);
+  padding: 14px;
+}
+.refUnderHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Badges */
+.refBadgeRow{ display:flex; gap: 8px; flex-wrap: wrap; justify-content:flex-end; }
+.refBadge{
+  font-weight: 1000;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.refBadge.ok{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.25); }
+.refBadge.mid{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.refBadge.bad{ background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.22); }
+
+/* Alerts list */
+.refAlerts{ display:grid; gap: 10px; }
+.refAlert{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.refAlert.ok{ border-color: rgba(34,211,238,.22); }
+.refAlert.warn{ border-color: rgba(245,158,11,.22); }
+.refAlert.bad{ border-color: rgba(239,68,68,.22); }
+.refAlertTitle{ font-weight: 1000; }
+.refAlertDesc{ margin-top: 6px; color: rgba(15,23,42,.62); font-weight: 850; font-size: 12px; }
+
+/* Live rows */
+.refLiveList{ display:grid; gap: 8px; }
+.refLiveRow{
+  display:grid;
+  grid-template-columns: 120px 1fr 160px;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 14px;
+  background: rgba(2,6,23,.02);
+}
+.refLiveType{ font-weight: 950; color: var(--muted); }
+.refLiveLabel{ font-weight: 850; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.refLiveTs{ text-align:right; color: var(--muted); font-weight: 800; font-size: 12px; }
+
+/* Funnel (simple tiles) */
+.refFunnelGrid{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0,1fr));
+  gap: 10px;
+}
+@media (max-width: 1100px){
+  .refFunnelGrid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+.refFunnelStep{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.refFunnelLbl{ color: rgba(15,23,42,.62); font-weight: 900; font-size: 12px; }
+.refFunnelVal{ margin-top: 6px; font-weight: 1000; font-size: 20px; letter-spacing:-.3px; }
+.refFunnelMini{ margin-top: 6px; font-size: 12px; font-weight: 850; color: rgba(15,23,42,.56); }
+
+/* Filters */
+.refFilters{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content:flex-end;
+  align-items:center;
+}
+.refRiskTabs{ padding: 4px; gap: 6px; border-radius: 16px; }
+.refRiskTabs .sg-tab{ padding: 8px 10px; border-radius: 12px; font-size: 12px; font-weight: 1000; }
+.refTableWrap{ overflow:auto; margin-top: 10px; }
+
+/* Risk pill */
+.refRiskPill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+  font-weight: 1000;
+  font-size: 12px;
+}
+.refRiskPill.ok{ background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.22); }
+.refRiskPill.mid{ background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.22); }
+.refRiskPill.bad{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); }
+
+/* Sticky right */
+.refSticky{
+  position: sticky;
+  top: 14px;
+  z-index: 2;
+}
+.refSticky2{
+  position: sticky;
+  top: 230px; /* ниже summary */
+  z-index: 1;
+}
+@media (max-width: 980px){
+  .refSticky, .refSticky2{ position: relative; top: auto; }
+}
+
+/* Summary tiles (right) */
+.refSummaryTiles{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+@media (max-width: 980px){
+  .refSummaryTiles{ grid-template-columns: 1fr; }
+}
+.refTile{
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2,6,23,.02);
+}
+.refTile.is-strong{
+  background: rgba(239,68,68,.08);
+  border-color: rgba(239,68,68,.18);
+}
+.refTileLbl{ color: rgba(15,23,42,.62); font-weight: 900; font-size: 12px; }
+.refTileVal{ margin-top: 6px; font-weight: 1000; font-size: 20px; letter-spacing:-.3px; }
+.refTileMini{ margin-top: 6px; color: rgba(15,23,42,.56); font-weight: 850; font-size: 12px; }
+
+/* ROI box */
+.refRoiBox{
+  margin-top: 12px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.85);
+  padding: 12px;
+}
+.refRoiTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.refRoiName{ font-weight: 950; }
+.refRoiMeta{
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+  font-weight: 850;
+  margin-bottom: 10px;
+}
+.refBarTrack{
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.refBarFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+
+/* Top list (right) */
+.refTopList{ display:grid; gap: 10px; margin-top: 12px; }
+.refTopRow{
+  display:grid;
+  grid-template-columns: 38px 1fr 70px;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.85);
+  box-shadow: 0 10px 24px rgba(2,6,23,.06);
+}
+.refTopRow.is-top{
+  border-color: rgba(34,211,238,.22);
+  box-shadow: 0 16px 40px rgba(2,6,23,.08);
+}
+.refMedal{
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  display:flex; align-items:center; justify-content:center;
+  font-weight: 1000;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(2,6,23,.02);
+}
+.refMedal.m1{ background: rgba(245,158,11,.14); border-color: rgba(245,158,11,.22); }
+.refMedal.m2{ background: rgba(148,163,184,.18); border-color: rgba(148,163,184,.28); }
+.refMedal.m3{ background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.22); }
+
+.refTopMid{ min-width: 0; }
+.refTopTitle{
+  font-weight: 950;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.refTopMini{ margin-top: 2px; font-size: 12px; color: rgba(15,23,42,.56); font-weight: 850; }
+.refTopBar{
+  margin-top: 8px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.refTopBarFill{
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,211,238,.95), rgba(59,130,246,.95));
+}
+.refTopRight{ text-align:right; }
+.refTopCount{ font-weight: 1000; font-size: 14px; }
+
+/* Small helper pill */
+.refHintPill{
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(2,6,23,.02);
+  font-weight: 950;
+  font-size: 12px;
+  color: rgba(15,23,42,.62);
+}
+
