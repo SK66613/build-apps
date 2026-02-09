@@ -264,7 +264,7 @@ const top = [...items]
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
                       <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <Tooltip cursor={{ fill: 'rgba(2,6,23,0.02)' }} />
                       <Bar dataKey="wins" fill="var(--accent)" radius={[10,10,4,4]} />
                       <Bar dataKey="redeemed" fill="var(--accent2)" radius={[10,10,4,4]} />
                     </BarChart>
@@ -273,7 +273,7 @@ const top = [...items]
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
                       <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <Tooltip cursor={{ fill: 'rgba(2,6,23,0.02)' }} />
                       <Line type="monotone" dataKey="wins" stroke="var(--accent)" strokeWidth={3} dot={false} />
                       <Line type="monotone" dataKey="redeemed" stroke="var(--accent2)" strokeWidth={3} dot={false} />
                     </LineChart>
@@ -283,7 +283,7 @@ const top = [...items]
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
                       <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <Tooltip cursor={{ fill: 'rgba(2,6,23,0.02)' }} />
                       <Area type="monotone" dataKey="wins" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.16} strokeWidth={3} />
                       <Area type="monotone" dataKey="redeemed" stroke="var(--accent2)" fill="var(--accent2)" fillOpacity={0.12} strokeWidth={3} />
                     </AreaChart>
