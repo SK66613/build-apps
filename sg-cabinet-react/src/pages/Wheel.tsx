@@ -278,9 +278,7 @@ const top = [...items]
                     </LineChart>
                   ) : (
                     
-                      <AreaChart
-  data={chartData}
-  margin={{ top: 6, right: 8, left: -10, bottom: 0 }}
+                      <AreaChart data={chartData}>
 >
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
