@@ -181,7 +181,7 @@ export default function Settings(){
             <button className={'sg-tab ' + (seg==='referrals'?'is-active':'')} onClick={()=>setSeg('referrals')}>Referrals</button>
             <button className={'sg-tab ' + (seg==='game'?'is-active':'')} onClick={()=>setSeg('game')}>Game</button>
             <button className={'sg-tab ' + (seg==='broadcasts'?'is-active':'')} onClick={()=>setSeg('broadcasts')}>Broadcasts</button>
-            <button className={'sg-tab ' + (seg==='integrations'?'is-active':'')} onClick={()=>setSeg('integrations')}>Integrations</button>
+            
             <button className={'sg-tab ' + (seg==='access'?'is-active':'')} onClick={()=>setSeg('access')}>Access</button>
           </div>
 
