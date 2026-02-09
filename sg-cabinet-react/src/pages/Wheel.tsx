@@ -277,7 +277,11 @@ const top = [...items]
                       <Line type="monotone" dataKey="redeemed" stroke="var(--accent2)" strokeWidth={3} dot={false} />
                     </LineChart>
                   ) : (
-                    <AreaChart data={chartData}>
+                    
+                      <AreaChart
+  data={chartData}
+  margin={{ top: 6, right: 8, left: -10, bottom: 0 }}
+>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
                       <YAxis tick={{ fontSize: 12 }} />
