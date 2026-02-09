@@ -109,6 +109,9 @@ export default function AppShell(){
             <SideItem to="/game" icon="🟢" label="Game" />
 
             <SideItem to="/referrals" icon="🟢" label="Referrals" />
+
+            <SideItem to="/broadcasts" icon="🟢" label="Broadcasts" />
+            
           </nav>
         </div>
       </aside>
