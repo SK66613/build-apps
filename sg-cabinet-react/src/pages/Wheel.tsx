@@ -542,41 +542,22 @@ const top = [...items]
 </Card>
 
 
-<Card className="wheelCard wheelPlaceholder">
-  <div className="wheelCardHead wheelPlaceholderHead">
-    <div className="wheelCardTitle">Next widgets</div>
-    <div className="wheelPlaceholderBadge">coming soon</div>
+<Card className="wheelCard wheelStickyTop">
+  {/* ...header + tabs... */}
+
+  <div className="wheelTopList">
+    {/* ...rows... */}
   </div>
 
-  <div className="wheelPlaceholderBody">
-    <div className="wheelPlaceholderText">
-      Здесь скоро появятся умные подсказки и авто-виджеты для колеса.
-    </div>
-
-    <div className="wheelPlaceholderList">
-      <div className="wheelPlaceholderItem">
-        <div className="wheelDot" />
-        <div><b>ROI</b> по колесу (cost + маржа)</div>
-      </div>
-      <div className="wheelPlaceholderItem">
-        <div className="wheelDot" />
-        <div><b>Проблемные призы</b>: много wins, мало redeemed</div>
-      </div>
-      <div className="wheelPlaceholderItem">
-        <div className="wheelDot" />
-        <div><b>Авто-рекомендации</b> по weight</div>
-      </div>
-      <div className="wheelPlaceholderItem">
-        <div className="wheelDot" />
-        <div><b>Блокировка “крутить”</b>, если есть незабранный приз</div>
-      </div>
-    </div>
-
-    <div className="wheelPlaceholderHint">
-      * Это просто заглушка — не влияет на логику и sticky.
+  {/* ✅ заглушка ВНУТРИ sticky карточки */}
+  <div className="wheelTopStub">
+    <div className="wheelTopStubTitle">Next widgets</div>
+    <div className="wheelTopStubTxt">
+      Скоро: ROI, проблемные призы, авто-weight, блокировка “крутить”.
     </div>
   </div>
 </Card>
+
 
 
 
