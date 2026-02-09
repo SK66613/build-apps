@@ -2454,4 +2454,10 @@ body{
   opacity: 0;
   pointer-events: none;
 }
+.wheelTopStub,
+.wheelTopStub *{
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+}
 
