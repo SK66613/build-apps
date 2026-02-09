@@ -105,6 +105,8 @@ export default function AppShell(){
             <div className="side__sep" />
 
             <SideItem to="/constructor" icon="🛠️" label="Конструктор" />
+
+            <SideItem to="/constructor" icon="🟢" label="Game" />
           </nav>
         </div>
       </aside>
