@@ -14,7 +14,7 @@ import Calendar from './pages/Calendar';
 import Profit from './pages/Profit';
 import Settings from './pages/Settings';
 import Constructor from './pages/Constructor';
-import Constructor from './pages/Game';
+import Game from './pages/Game';
 
 function Guarded({ children }: { children: React.ReactNode }){
   const { me, isLoading } = useAuth();
