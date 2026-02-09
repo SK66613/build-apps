@@ -2471,9 +2471,11 @@ body{
   align-items: start;
 }
 
-.wheelRight{
-  align-self: start;
-  min-height: calc(100vh - 160px); /* подстрой если шапка выше */
+.wheelRight::after{
+  content:"";
+  display:block;
+  height: 240px; /* сколько нужно “места” чтобы sticky жил */
 }
+
 
 
