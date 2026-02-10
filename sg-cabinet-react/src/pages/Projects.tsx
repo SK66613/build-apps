@@ -1,5 +1,6 @@
 import React from "react";
 import { apiFetch } from "../lib/api";
+import { useI18n } from "../i18n";
 
 type AppRow = { id: string; title: string; public_id?: string; status?: string };
 type TemplateRow = { id?: string; key?: string; template_id?: string; title?: string; name?: string };
@@ -12,6 +13,8 @@ function getTplTitle(t: any){
 }
 
 export default function Projects() {
+  const { lang, setLang, t } = useI18n();
+
   const [apps, setApps] = React.useState<AppRow[]>([]);
   const [templates, setTemplates] = React.useState<TemplateRow[]>([]);
   const [busy, setBusy] = React.useState(false);
@@ -23,8 +26,8 @@ export default function Projects() {
     const a = await apiFetch<any>("/api/apps"); // alias на /api/my/apps
     setApps(a.apps || a.items || []);
     try {
-      const t = await apiFetch<any>("/api/templates");
-      setTemplates(t.templates || t.catalog || t.items || []);
+      const tt = await apiFetch<any>("/api/templates");
+      setTemplates(tt.templates || tt.catalog || tt.items || []);
     } catch (_) {
       setTemplates([]);
     }
@@ -50,9 +53,7 @@ export default function Projects() {
   }
 
   function openApp(appId: string){
-    // сохраняем выбранный проект так, как удобно твоей панели
     localStorage.setItem("sg_app_id", appId);
-    // переход в панель (как ты попросил)
     window.location.href = "/panel-react/#/";
   }
 
@@ -63,30 +64,49 @@ export default function Projects() {
           <div className="cab-logo">SG</div>
           <div className="cab-title">
             <div className="t1">Sales Genius</div>
-            <div className="t2">Кабинет проектов</div>
+            <div className="t2">{t("cabinet.title")}</div>
           </div>
         </div>
 
         <div className="cab-actions">
-          <button className="sg-btn ghost" onClick={load} disabled={busy}>Обновить</button>
-          <button className="sg-btn" onClick={logout} disabled={busy}>Выйти</button>
+          {/* dropdown языков */}
+          <select
+            className="lang-select"
+            value={lang}
+            onChange={(e)=>setLang(e.target.value as any)}
+            disabled={busy}
+            aria-label="Language"
+            title="Language"
+          >
+            <option value="ru">RU</option>
+            <option value="en">EN</option>
+          </select>
+
+          <button className="sg-btn ghost" onClick={load} disabled={busy}>
+            {t("common.refresh")}
+          </button>
+          <button className="sg-btn" onClick={logout} disabled={busy}>
+            {t("common.logout")}
+          </button>
         </div>
       </div>
 
       <div className="cab-create">
         <input
           className="sg-input"
-          placeholder="Название mini-app"
+          placeholder={t("cabinet.projectName")}
           value={title}
           onChange={(e)=>setTitle(e.target.value)}
         />
         <select className="sg-input" value={templateId} onChange={(e)=>setTemplateId(e.target.value)}>
           <option value="blank">Blank</option>
-          {templates.map((t:any)=>(
-            <option key={getTplId(t)} value={getTplId(t)}>{getTplTitle(t)}</option>
+          {templates.map((tt:any)=>(
+            <option key={getTplId(tt)} value={getTplId(tt)}>{getTplTitle(tt)}</option>
           ))}
         </select>
-        <button className="sg-btn" disabled={busy} onClick={createApp}>Создать проект</button>
+        <button className="sg-btn" disabled={busy} onClick={createApp}>
+          {t("cabinet.newProject")}
+        </button>
       </div>
 
       <div className="cab-grid">
@@ -95,12 +115,14 @@ export default function Projects() {
             <div className="cab-card-title">{a.title}</div>
             <div className="cab-card-sub">id: {a.id}</div>
             <div className="cab-card-row">
-              <button className="sg-btn" onClick={()=>openApp(a.id)}>Открыть</button>
+              <button className="sg-btn" onClick={()=>openApp(a.id)}>
+                {t("cabinet.open")}
+              </button>
             </div>
           </div>
         ))}
         {!apps.length && (
-          <div className="cab-empty">Проектов пока нет — создай первый.</div>
+          <div className="cab-empty">{t("cabinet.empty")}</div>
         )}
       </div>
     </div>
