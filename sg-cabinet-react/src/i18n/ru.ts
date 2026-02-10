@@ -61,8 +61,75 @@ const RU: Record<string, string> = {
   "nav.game": "Игра",
   "nav.referrals": "Рефералы",
   "nav.broadcasts": "Рассылки",
+
+
+  // severity
+"sev.ok": "ОК",
+"sev.risk": "РИСК",
+"sev.bad": "ПЛОХО",
+
+// overview texts
+"ov.title": "Обзор",
+"ov.subtitle": "Главная панель: продажи, клиенты, лояльность, алерты.",
+"ov.range": "Период",
+"ov.dynamics": "Динамика",
+"ov.chartType": "Тип графика",
+"ov.chart.bars": "Столбцы",
+"ov.chart.line": "Линия",
+"ov.chart.area": "Площадь",
+"ov.pickProject": "Выбери проект.",
+"ov.error": "Ошибка: {msg}",
+
+"ov.metric.sales": "Продажи",
+"ov.metric.customers": "Клиенты",
+"ov.metric.loyalty": "Лояльность",
+"ov.metric.funnel": "Воронка",
+"ov.metric.qrScans": "Сканов QR",
+
+"ov.kpi.revenue": "Выручка",
+"ov.kpi.checks": "Чеков",
+"ov.kpi.avgCheck": "Средний чек",
+"ov.kpi.coinsIssued": "Монет начислено",
+"ov.kpi.coinsRedeemed": "Монет списано",
+"ov.kpi.redeemRate": "Процент списания",
+"ov.kpi.newCustomers": "Новые",
+"ov.kpi.activeCustomers": "Активные",
+"ov.kpi.hint.period": "за период",
+
+"ov.live": "Лента",
+"ov.alerts": "Алерты",
+"ov.liveFeed": "Лайв-лента",
+"ov.liveFeedSub": "последние события",
+"ov.refreshing": "обновляю…",
+"ov.ready": "готово",
+"ov.empty": "Пока пусто.",
+
+"ov.alertsTitle": "Алерты и инсайты",
+"ov.alertsSub": "что требует внимания",
+"ov.items": "{n} шт.",
+"ov.items0": "0 шт.",
+"ov.noAlerts": "Нет алертов. Всё ок.",
+
+"ov.quickActions": "Быстрые действия",
+"ov.action.sendMessage": "Отправить сообщение",
+"ov.action.createPromo": "Создать промо",
+"ov.action.cashbackSettings": "Настройки кэшбэка",
+"ov.tip": "Совет",
+"ov.tipText": "начни с winback для тех, кто не приходил 14+ дней.",
+
+"ov.top": "Топ",
+"ov.top.customers": "Клиенты",
+"ov.top.prizes": "Призы",
+"ov.top.cashiers": "Кассиры",
+"ov.noData": "Нет данных.",
+"ov.redeemed": "выдано",
+
+"ov.health": "Здоровье",
+"ov.liabilityCoins": "Обязательство (монеты)",
+
 };
 
 export default RU;
+
 
 
