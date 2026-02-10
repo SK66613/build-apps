@@ -1,427 +1,466 @@
 import React from 'react';
+import { PagesTree } from './PagesTree';
+import { BlocksPalette } from './BlocksPalette';
+import { Inspector } from './Inspector';
 import { useConstructorStore } from '../state/constructorStore';
 import { ensureThemeTokens } from '../design/theme';
+import { THEME_PRESETS } from '../design/presets';
 
-type SectionProps = {
+type Mode = 'panel' | 'design';
+
+function useLS<T>(key: string, init: T){
+  const [v, setV] = React.useState<T>(() => {
+    try{
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : init;
+    }catch(_){
+      return init;
+    }
+  });
+  React.useEffect(()=>{
+    try{ localStorage.setItem(key, JSON.stringify(v)); }catch(_){ }
+  }, [key, v]);
+  return [v, setV] as const;
+}
+
+/** простая “гармошка” без зависимостей */
+function Accordion({
+  title,
+  defaultOpen = false,
+  children,
+}: {
   title: string;
-  children: React.ReactNode;
   defaultOpen?: boolean;
-};
-
-function Section({ title, children, defaultOpen }: SectionProps) {
-  const [open, setOpen] = React.useState(!!defaultOpen);
+  children: React.ReactNode;
+}){
   return (
-    <div className="ctor-sec">
-      <button className="ctor-sec__head" type="button" onClick={() => setOpen((v) => !v)}>
-        <div className="ctor-sec__title">{title}</div>
-        <div className="ctor-sec__chev">{open ? '▾' : '▸'}</div>
-      </button>
-      {open ? <div className="ctor-sec__body">{children}</div> : null}
-    </div>
+    <details className="ctorAcc" open={defaultOpen}>
+      <summary className="ctorAcc__sum">
+        <span className="ctorAcc__title">{title}</span>
+        <span className="ctorAcc__chev">▾</span>
+      </summary>
+      <div className="ctorAcc__body">{children}</div>
+    </details>
   );
 }
 
-function Row({ label, hint, right, children }: any) {
-  return (
-    <div className="ctor-row">
-      <div className="ctor-row__left">
-        <div className="ctor-row__label">{label}</div>
-        {hint ? <div className="ctor-row__hint">{hint}</div> : null}
-      </div>
-      <div className="ctor-row__mid">{children}</div>
-      {right ? <div className="ctor-row__right">{right}</div> : null}
-    </div>
-  );
-}
-
-function clamp01(v: any) {
-  const x = Number(v);
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(1, x));
-}
-
-function clampNum(v: any, min: number, max: number) {
-  const x = Number(v);
-  if (!Number.isFinite(x)) return min;
-  return Math.max(min, Math.min(max, x));
-}
-
-function fmtA(v: any) {
-  const x = clamp01(v);
-  return x.toFixed(2);
-}
-
-function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-      <input
-        type="color"
-        value={String(value || '#000000')}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ width: 38, height: 34, padding: 0, borderRadius: 10, border: '1px solid rgba(15,23,42,.12)', background: 'transparent' }}
-      />
-      <input
-        type="text"
-        value={String(value || '')}
-        onChange={(e) => onChange(e.target.value)}
-        className="ctor-input"
-        placeholder="#RRGGBB"
-      />
-    </div>
-  );
-}
-
-function Slider({
+function Segmented({
   value,
-  min,
-  max,
-  step,
   onChange,
 }: {
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}) {
+  value: Mode;
+  onChange: (m: Mode)=>void;
+}){
   return (
-    <input
-      type="range"
-      value={String(value)}
-      min={String(min)}
-      max={String(max)}
-      step={String(step)}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="ctor-range"
-    />
+    <div className="ctorSeg" role="tablist" aria-label="Constructor mode">
+      <button
+        type="button"
+        className={'ctorSeg__btn' + (value==='design' ? ' is-active' : '')}
+        onClick={()=>onChange('design')}
+        role="tab"
+        aria-selected={value==='design'}
+      >
+        Дизайн
+      </button>
+      <button
+        type="button"
+        className={'ctorSeg__btn' + (value==='panel' ? ' is-active' : '')}
+        onClick={()=>onChange('panel')}
+        role="tab"
+        aria-selected={value==='panel'}
+      >
+        Панель
+      </button>
+    </div>
   );
 }
 
-function NumField({ value, onChange, min, max, step }: any) {
+function Row({ label, children }: { label: string; children: React.ReactNode }){
   return (
+    <div className="ctorRow">
+      <div className="ctorRow__lbl">{label}</div>
+      <div className="ctorRow__ctl">{children}</div>
+    </div>
+  );
+}
+
+function clamp01(v:any){
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+function clampNum(v:any, min:number, max:number){
+  const n = Number(v);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
+function fmt2(v:any){
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(2) : '0.00';
+}
+function truthy01(v:any){ return v ? 1 : 0; }
+
+export function ConstructorDrawer(){
+  const [mode, setMode] = useLS<Mode>('ctor_mode', 'panel');
+
+  const bp = useConstructorStore(s => s.blueprint);
+  const updateThemeTokens = useConstructorStore(s => (s as any).updateThemeTokens) as ((p:any)=>void);
+
+  // raw tokens from BP could contain old keys — keep them, but render as new model
+  const rawTokens = bp?.app?.themeTokens || {};
+  const tokens = React.useMemo(()=>ensureThemeTokens(rawTokens), [rawTokens]);
+
+  /**
+   * Alias bridge:
+   * - UI работает с NEW keys (camelCase) из theme.ts
+   * - но если в bp лежат OLD keys ('color-bg', 'a-surface', etc.), мы их читаем тоже
+   * - при записи: пишем NEW key (основной), а для критичных — дублируем в OLD key (чтобы ничего старого не отвалилось)
+   */
+  const ALIAS: Record<string, string[]> = {
+    // colors old -> new
+    colorBg: ['color-bg'],
+    colorSurface: ['color-surface'],
+    colorCard: ['color-card'],
+    colorBorder: ['color-border'],
+    colorText: ['color-text'],
+    colorMuted: ['color-muted'],
+    colorBrand: ['color-brand'],
+    colorBrandSoft: ['color-brand-soft'],
+    colorBrand2: ['color-brand2', 'color-brand-2'],
+
+    btnPrimaryBg: ['btn-primary-bg'],
+    btnPrimaryText: ['btn-primary-text'],
+    btnSecondaryBg: ['btn-secondary-bg'],
+    btnSecondaryText: ['btn-secondary-text'],
+
+    tabbarBg: ['tabbar-bg'],
+    tabbarText: ['tabbar-text'],
+    tabbarActive: ['tabbar-active'],
+
+    radiusCard: ['radius-card'],
+    radiusBtn: ['radius-btn'],
+    radiusInput: ['radius-input'],
+
+    shadowA: ['shadow-a'],
+    glowA: ['glow-a'],
+
+    // alpha old -> new
+    surfaceA: ['a-surface'],
+    cardA: ['a-card'],
+    overlayA: ['a-overlay'],
+
+    fontBody: ['font-body'],
+    fontHead: ['font-head'],
+    fontBtn: ['font-btn'],
+
+    fwBody: ['fw-body'],
+    fwHead: ['fw-head'],
+    fwBtn: ['fw-btn'],
+  };
+
+  const getTok = (k: string) => {
+    // prefer ensureThemeTokens output (new model)
+    if (tokens && Object.prototype.hasOwnProperty.call(tokens, k)) return (tokens as any)[k];
+    // fallback to raw old keys
+    const aliases = ALIAS[k] || [];
+    for (const old of aliases) {
+      if (rawTokens && Object.prototype.hasOwnProperty.call(rawTokens, old)) return (rawTokens as any)[old];
+    }
+    return undefined;
+  };
+
+  const setTok = (k: string, v: any) => {
+    const patch: any = { [k]: v };
+    const aliases = ALIAS[k] || [];
+    // keep backward compatibility for already stored blueprints
+    // write old aliases too (harmless)
+    for (const old of aliases) patch[old] = v;
+    updateThemeTokens?.(patch);
+  };
+
+  const setColor = (k: string, v: string) => setTok(k, v);
+  const setNum   = (k: string, v: number) => setTok(k, v);
+
+  // Helpers for inputs
+  const Color = ({ k }: { k: string }) => (
+    <input type="color" value={String(getTok(k) || '#000000')} onChange={e=>setColor(k, e.target.value)} />
+  );
+
+  const Range = ({ k, min, max, step=1 }: { k:string; min:number; max:number; step?:number }) => (
     <input
-      type="number"
-      className="ctor-input"
-      value={String(value ?? '')}
+      type="range"
       min={min}
       max={max}
       step={step}
-      onChange={(e) => onChange(Number(e.target.value))}
+      value={Number(getTok(k) || 0)}
+      onChange={e=>setNum(k, Number(e.target.value))}
     />
   );
-}
 
-export function ConstructorDrawer() {
-
-  const bp = useConstructorStore((s: any) => s.blueprint);
-  const updateThemeTokens = useConstructorStore((s: any) => s.updateThemeTokens);
-
-  const raw = bp?.app?.themeTokens || {};
-  const tokens = React.useMemo(() => ensureThemeTokens(raw), [raw]);
-
-  const setTok = React.useCallback(
-    (patch: Record<string, any>) => {
-      updateThemeTokens?.(patch);
-    },
-    [updateThemeTokens]
+  const Check01 = ({ k, label }: { k:string; label:string }) => (
+    <label style={{display:'flex', gap:8, alignItems:'center'}}>
+      <input
+        type="checkbox"
+        checked={!!Number(getTok(k) || 0)}
+        onChange={e=>setNum(k, e.target.checked ? 1 : 0)}
+      />
+      <span>{label}</span>
+    </label>
   );
 
-  // ===== UI blocks =====
   return (
-    <div className="ctor-drawer">
-      {/* === DESIGN PANEL === */}
-      <div className="ctor-drawer__title">Design</div>
+    <div className="ctorDrawer">
+      <div className="ctorDrawer__top">
+        <Segmented value={mode} onChange={setMode} />
+      </div>
 
-      <Section title="Colors" defaultOpen>
-        <Row label="Background">
-          <ColorField value={tokens.colorBg} onChange={(v) => setTok({ colorBg: v })} />
-        </Row>
-        <Row label="Surface">
-          <ColorField value={tokens.colorSurface} onChange={(v) => setTok({ colorSurface: v })} />
-        </Row>
-        <Row label="Card">
-          <ColorField value={tokens.colorCard} onChange={(v) => setTok({ colorCard: v })} />
-        </Row>
-        <Row label="Border">
-          <ColorField value={tokens.colorBorder} onChange={(v) => setTok({ colorBorder: v })} />
-        </Row>
-        <Row label="Text">
-          <ColorField value={tokens.colorText} onChange={(v) => setTok({ colorText: v })} />
-        </Row>
-        <Row label="Muted">
-          <ColorField value={tokens.colorMuted} onChange={(v) => setTok({ colorMuted: v })} />
-        </Row>
+      <div className="ctorDrawer__hint">
+        Добавляй вкладки и страницы, редактируй блоки; превью обновляется сразу, сохраняется по кнопке.
+      </div>
 
-        <div className="ctor-split" />
+      {mode === 'panel' ? (
+        <div className="ctorDrawer__stack">
+          <Accordion title="Страницы" defaultOpen>
+            <PagesTree />
+          </Accordion>
 
-        <Row label="Brand">
-          <ColorField value={tokens.colorBrand} onChange={(v) => setTok({ colorBrand: v })} />
-        </Row>
-        <Row label="Brand 2">
-          <ColorField value={tokens.colorBrand2} onChange={(v) => setTok({ colorBrand2: v })} />
-        </Row>
-        <Row label="Brand Soft (base)">
-          <ColorField value={tokens.colorBrandSoft} onChange={(v) => setTok({ colorBrandSoft: v })} />
-        </Row>
-      </Section>
+          <Accordion title="Блоки" defaultOpen>
+            <BlocksPalette />
+          </Accordion>
 
-      <Section title="Status">
-        <Row label="Success">
-          <ColorField value={tokens.colorSuccess} onChange={(v) => setTok({ colorSuccess: v })} />
-        </Row>
-        <Row label="Warning">
-          <ColorField value={tokens.colorWarning} onChange={(v) => setTok({ colorWarning: v })} />
-        </Row>
-        <Row label="Danger">
-          <ColorField value={tokens.colorDanger} onChange={(v) => setTok({ colorDanger: v })} />
-        </Row>
-      </Section>
+          <Accordion title="Инспектор" defaultOpen>
+            <Inspector />
+          </Accordion>
+        </div>
+      ) : (
+        <div className="ctorDrawer__stack">
+          <Accordion title="Пресеты" defaultOpen>
+            <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+              {THEME_PRESETS.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="sg-btn"
+                  onClick={()=>updateThemeTokens?.(p.tokens)}
+                >
+                  {p.title}
+                </button>
+              ))}
+            </div>
+            <div className="ctorStub" style={{marginTop:10}}>
+              Пресет применяет токены в blueprint и сразу обновляет превью.
+            </div>
+          </Accordion>
 
-      <Section title="Buttons">
-        <Row label="Primary BG">
-          <ColorField value={tokens.btnPrimaryBg} onChange={(v) => setTok({ btnPrimaryBg: v })} />
-        </Row>
-        <Row label="Primary Text">
-          <ColorField value={tokens.btnPrimaryText} onChange={(v) => setTok({ btnPrimaryText: v })} />
-        </Row>
-        <Row label="Secondary BG">
-          <ColorField value={tokens.btnSecondaryBg} onChange={(v) => setTok({ btnSecondaryBg: v })} />
-        </Row>
-        <Row label="Secondary Text">
-          <ColorField value={tokens.btnSecondaryText} onChange={(v) => setTok({ btnSecondaryText: v })} />
-        </Row>
-      </Section>
+          <Accordion title="Базовые стили" defaultOpen>
+            <Row label="Background"><Color k="colorBg" /></Row>
+            <Row label="Surface"><Color k="colorSurface" /></Row>
+            <Row label="Card"><Color k="colorCard" /></Row>
+            <Row label="Border"><Color k="colorBorder" /></Row>
+            <Row label="Text"><Color k="colorText" /></Row>
+            <Row label="Muted"><Color k="colorMuted" /></Row>
 
-      <Section title="Tabbar">
-        <Row label="Tabbar BG">
-          <ColorField value={tokens.tabbarBg} onChange={(v) => setTok({ tabbarBg: v })} />
-        </Row>
-        <Row label="Tabbar Text">
-          <ColorField value={tokens.tabbarText} onChange={(v) => setTok({ tabbarText: v })} />
-        </Row>
-        <Row label="Tabbar Active">
-          <ColorField value={tokens.tabbarActive} onChange={(v) => setTok({ tabbarActive: v })} />
-        </Row>
-      </Section>
+            <div className="ctorHr" />
 
-      <Section title="Radius">
-        <Row label="Card radius" right={`${Math.round(tokens.radiusCard)}px`}>
-          <Slider value={tokens.radiusCard} min={0} max={42} step={1} onChange={(v) => setTok({ radiusCard: v })} />
-        </Row>
-        <Row label="Button radius" right={`${Math.round(tokens.radiusBtn)}px`}>
-          <Slider value={tokens.radiusBtn} min={0} max={42} step={1} onChange={(v) => setTok({ radiusBtn: v })} />
-        </Row>
-        <Row label="Input radius" right={`${Math.round(tokens.radiusInput)}px`}>
-          <Slider value={tokens.radiusInput} min={0} max={42} step={1} onChange={(v) => setTok({ radiusInput: v })} />
-        </Row>
-      </Section>
+            <Row label="Brand"><Color k="colorBrand" /></Row>
+            <Row label="Brand 2"><Color k="colorBrand2" /></Row>
+            <Row label="Brand soft (base)"><Color k="colorBrandSoft" /></Row>
+          </Accordion>
 
-      <Section title="Shadow & Glow">
-        <Row label="Shadow strength" right={fmtA(tokens.shadowA)}>
-          <Slider value={tokens.shadowA} min={0} max={0.35} step={0.005} onChange={(v) => setTok({ shadowA: clamp01(v) })} />
-        </Row>
-        <Row label="Shadow 2 strength" right={fmtA(tokens.shadow2A)}>
-          <Slider value={tokens.shadow2A} min={0} max={0.30} step={0.005} onChange={(v) => setTok({ shadow2A: clamp01(v) })} />
-        </Row>
-        <Row label="Glow strength" right={fmtA(tokens.glowA)}>
-          <Slider value={tokens.glowA} min={0} max={0.6} step={0.01} onChange={(v) => setTok({ glowA: clamp01(v) })} />
-        </Row>
-        <Row label="Glow blur" right={`${Math.round(tokens.glowBlur)}px`}>
-          <Slider value={tokens.glowBlur} min={0} max={80} step={1} onChange={(v) => setTok({ glowBlur: clampNum(v, 0, 80) })} />
-        </Row>
-      </Section>
+          <Accordion title="Статусы">
+            <Row label="Success"><Color k="colorSuccess" /></Row>
+            <Row label="Warning"><Color k="colorWarning" /></Row>
+            <Row label="Danger"><Color k="colorDanger" /></Row>
+          </Accordion>
 
-      <Section title="Opacity (Advanced)">
-        <Row label="BG alpha" right={fmtA(tokens.bgA)}>
-          <Slider value={tokens.bgA} min={0} max={1} step={0.01} onChange={(v) => setTok({ bgA: clamp01(v) })} />
-        </Row>
-        <Row label="Surface alpha" right={fmtA(tokens.surfaceA)}>
-          <Slider value={tokens.surfaceA} min={0} max={1} step={0.01} onChange={(v) => setTok({ surfaceA: clamp01(v) })} />
-        </Row>
-        <Row label="Surface2 alpha" right={fmtA(tokens.surface2A)}>
-          <Slider value={tokens.surface2A} min={0} max={1} step={0.01} onChange={(v) => setTok({ surface2A: clamp01(v) })} />
-        </Row>
-        <Row label="Card alpha" right={fmtA(tokens.cardA)}>
-          <Slider value={tokens.cardA} min={0} max={1} step={0.01} onChange={(v) => setTok({ cardA: clamp01(v) })} />
-        </Row>
-        <Row label="Border alpha" right={fmtA(tokens.borderA)}>
-          <Slider value={tokens.borderA} min={0} max={1} step={0.01} onChange={(v) => setTok({ borderA: clamp01(v) })} />
-        </Row>
+          <Accordion title="Кнопки">
+            <Row label="Primary bg"><Color k="btnPrimaryBg" /></Row>
+            <Row label="Primary text"><Color k="btnPrimaryText" /></Row>
+            <Row label="Secondary bg"><Color k="btnSecondaryBg" /></Row>
+            <Row label="Secondary text"><Color k="btnSecondaryText" /></Row>
 
-        <div className="ctor-split" />
+            <div className="ctorHr" />
 
-        <Row label="Overlay color">
-          <ColorField value={tokens.colorOverlay} onChange={(v) => setTok({ colorOverlay: v })} />
-        </Row>
-        <Row label="Overlay alpha" right={fmtA(tokens.overlayA)}>
-          <Slider value={tokens.overlayA} min={0} max={0.6} step={0.01} onChange={(v) => setTok({ overlayA: clamp01(v) })} />
-        </Row>
+            <Row label={`Primary bg α (${fmt2(getTok('btnPrimaryBgA'))})`}>
+              <Range k="btnPrimaryBgA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Primary text α (${fmt2(getTok('btnPrimaryTextA'))})`}>
+              <Range k="btnPrimaryTextA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Secondary bg α (${fmt2(getTok('btnSecondaryBgA'))})`}>
+              <Range k="btnSecondaryBgA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Secondary text α (${fmt2(getTok('btnSecondaryTextA'))})`}>
+              <Range k="btnSecondaryTextA" min={0} max={1} step={0.01} />
+            </Row>
+          </Accordion>
 
-        <div className="ctor-split" />
+          <Accordion title="Навбар / Overlay">
+            <Row label="Tabbar bg"><Color k="tabbarBg" /></Row>
+            <Row label="Tabbar text"><Color k="tabbarText" /></Row>
+            <Row label="Tabbar active"><Color k="tabbarActive" /></Row>
 
-        <Row label="Primary BG alpha" right={fmtA(tokens.btnPrimaryBgA)}>
-          <Slider value={tokens.btnPrimaryBgA} min={0} max={1} step={0.01} onChange={(v) => setTok({ btnPrimaryBgA: clamp01(v) })} />
-        </Row>
-        <Row label="Primary Text alpha" right={fmtA(tokens.btnPrimaryTextA)}>
-          <Slider value={tokens.btnPrimaryTextA} min={0} max={1} step={0.01} onChange={(v) => setTok({ btnPrimaryTextA: clamp01(v) })} />
-        </Row>
-        <Row label="Secondary BG alpha" right={fmtA(tokens.btnSecondaryBgA)}>
-          <Slider value={tokens.btnSecondaryBgA} min={0} max={1} step={0.01} onChange={(v) => setTok({ btnSecondaryBgA: clamp01(v) })} />
-        </Row>
-        <Row label="Secondary Text alpha" right={fmtA(tokens.btnSecondaryTextA)}>
-          <Slider value={tokens.btnSecondaryTextA} min={0} max={1} step={0.01} onChange={(v) => setTok({ btnSecondaryTextA: clamp01(v) })} />
-        </Row>
+            <div className="ctorHr" />
 
-        <div className="ctor-split" />
+            <Row label={`Tabbar bg α (${fmt2(getTok('tabbarBgA'))})`}>
+              <Range k="tabbarBgA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Tabbar text α (${fmt2(getTok('tabbarTextA'))})`}>
+              <Range k="tabbarTextA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Tabbar active α (${fmt2(getTok('tabbarActiveA'))})`}>
+              <Range k="tabbarActiveA" min={0} max={1} step={0.01} />
+            </Row>
 
-        <Row label="Tabbar BG alpha" right={fmtA(tokens.tabbarBgA)}>
-          <Slider value={tokens.tabbarBgA} min={0} max={1} step={0.01} onChange={(v) => setTok({ tabbarBgA: clamp01(v) })} />
-        </Row>
-        <Row label="Tabbar Text alpha" right={fmtA(tokens.tabbarTextA)}>
-          <Slider value={tokens.tabbarTextA} min={0} max={1} step={0.01} onChange={(v) => setTok({ tabbarTextA: clamp01(v) })} />
-        </Row>
-        <Row label="Tabbar Active alpha" right={fmtA(tokens.tabbarActiveA)}>
-          <Slider value={tokens.tabbarActiveA} min={0} max={1} step={0.01} onChange={(v) => setTok({ tabbarActiveA: clamp01(v) })} />
-        </Row>
+            <div className="ctorHr" />
 
-        <div className="ctor-split" />
+            <Row label="Overlay color"><Color k="colorOverlay" /></Row>
+            <Row label={`Overlay α (${fmt2(getTok('overlayA'))})`}>
+              <Range k="overlayA" min={0} max={0.6} step={0.01} />
+            </Row>
+          </Accordion>
 
-        <Row label="Brand soft alpha" right={fmtA(tokens.brandSoftA)}>
-          <Slider value={tokens.brandSoftA} min={0} max={1} step={0.01} onChange={(v) => setTok({ brandSoftA: clamp01(v) })} />
-        </Row>
-      </Section>
+          <Accordion title="Радиусы">
+            <Row label={`Card (${Number(getTok('radiusCard')||0)}px)`}>
+              <Range k="radiusCard" min={0} max={42} step={1} />
+            </Row>
+            <Row label={`Button (${Number(getTok('radiusBtn')||0)}px)`}>
+              <Range k="radiusBtn" min={0} max={42} step={1} />
+            </Row>
+            <Row label={`Input (${Number(getTok('radiusInput')||0)}px)`}>
+              <Range k="radiusInput" min={0} max={42} step={1} />
+            </Row>
+          </Accordion>
 
-      <Section title="Typography">
-        <Row label="Body font">
-          <input className="ctor-input" value={tokens.fontBody} onChange={(e) => setTok({ fontBody: e.target.value })} />
-        </Row>
-        <Row label="Head font">
-          <input className="ctor-input" value={tokens.fontHead} onChange={(e) => setTok({ fontHead: e.target.value })} />
-        </Row>
-        <Row label="Button font">
-          <input className="ctor-input" value={tokens.fontBtn} onChange={(e) => setTok({ fontBtn: e.target.value })} />
-        </Row>
-        <Row label="Menu font">
-          <input className="ctor-input" value={tokens.fontMenu} onChange={(e) => setTok({ fontMenu: e.target.value })} />
-        </Row>
+          <Accordion title="Тени / Glow">
+            <Row label={`Shadow (${fmt2(getTok('shadowA'))})`}>
+              <Range k="shadowA" min={0} max={0.35} step={0.005} />
+            </Row>
+            <Row label={`Shadow2 (${fmt2(getTok('shadow2A'))})`}>
+              <Range k="shadow2A" min={0} max={0.30} step={0.005} />
+            </Row>
+            <Row label={`Glow (${fmt2(getTok('glowA'))})`}>
+              <Range k="glowA" min={0} max={0.6} step={0.01} />
+            </Row>
+            <Row label={`Glow blur (${Number(getTok('glowBlur')||0)}px)`}>
+              <Range k="glowBlur" min={0} max={80} step={1} />
+            </Row>
+          </Accordion>
 
-        <div className="ctor-split" />
+          <Accordion title="Прозрачность (Advanced)">
+            <Row label={`BG α (${fmt2(getTok('bgA'))})`}>
+              <Range k="bgA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Surface α (${fmt2(getTok('surfaceA'))})`}>
+              <Range k="surfaceA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Surface2 α (${fmt2(getTok('surface2A'))})`}>
+              <Range k="surface2A" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Card α (${fmt2(getTok('cardA'))})`}>
+              <Range k="cardA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Border α (${fmt2(getTok('borderA'))})`}>
+              <Range k="borderA" min={0} max={1} step={0.01} />
+            </Row>
 
-        <Row label="Body size" right={`${Math.round(tokens.fsBody)}px`}>
-          <Slider value={tokens.fsBody} min={10} max={22} step={1} onChange={(v) => setTok({ fsBody: clampNum(v, 10, 22) })} />
-        </Row>
-        <Row label="Button size" right={`${Math.round(tokens.fsBtn)}px`}>
-          <Slider value={tokens.fsBtn} min={10} max={22} step={1} onChange={(v) => setTok({ fsBtn: clampNum(v, 10, 22) })} />
-        </Row>
-        <Row label="Menu size" right={`${Math.round(tokens.fsMenu)}px`}>
-          <Slider value={tokens.fsMenu} min={10} max={22} step={1} onChange={(v) => setTok({ fsMenu: clampNum(v, 10, 22) })} />
-        </Row>
-        <Row label="H1 size" right={`${Math.round(tokens.fsH1)}px`}>
-          <Slider value={tokens.fsH1} min={14} max={44} step={1} onChange={(v) => setTok({ fsH1: clampNum(v, 14, 44) })} />
-        </Row>
-        <Row label="H2 size" right={`${Math.round(tokens.fsH2)}px`}>
-          <Slider value={tokens.fsH2} min={12} max={34} step={1} onChange={(v) => setTok({ fsH2: clampNum(v, 12, 34) })} />
-        </Row>
-        <Row label="H3 size" right={`${Math.round(tokens.fsH3)}px`}>
-          <Slider value={tokens.fsH3} min={12} max={30} step={1} onChange={(v) => setTok({ fsH3: clampNum(v, 12, 30) })} />
-        </Row>
+            <div className="ctorHr" />
 
-        <div className="ctor-split" />
+            <Row label={`Text α (${fmt2(getTok('textA'))})`}>
+              <Range k="textA" min={0} max={1} step={0.01} />
+            </Row>
+            <Row label={`Muted α (${fmt2(getTok('mutedA'))})`}>
+              <Range k="mutedA" min={0} max={1} step={0.01} />
+            </Row>
 
-        <Row label="Body weight">
-          <NumField value={tokens.fwBody} min={100} max={900} step={50} onChange={(v: number) => setTok({ fwBody: clampNum(v, 100, 900) })} />
-        </Row>
-        <Row label="Head weight">
-          <NumField value={tokens.fwHead} min={100} max={900} step={50} onChange={(v: number) => setTok({ fwHead: clampNum(v, 100, 900) })} />
-        </Row>
-        <Row label="Button weight">
-          <NumField value={tokens.fwBtn} min={100} max={900} step={50} onChange={(v: number) => setTok({ fwBtn: clampNum(v, 100, 900) })} />
-        </Row>
-        <Row label="Menu weight">
-          <NumField value={tokens.fwMenu} min={100} max={900} step={50} onChange={(v: number) => setTok({ fwMenu: clampNum(v, 100, 900) })} />
-        </Row>
+            <div className="ctorHr" />
 
-        <div className="ctor-split" />
+            <Row label={`Brand soft α (${fmt2(getTok('brandSoftA'))})`}>
+              <Range k="brandSoftA" min={0} max={1} step={0.01} />
+            </Row>
 
-        <Row label="Body italic / underline">
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.itBody} onChange={(e) => setTok({ itBody: e.target.checked ? 1 : 0 })} />
-              <span>Italic</span>
-            </label>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.ulBody} onChange={(e) => setTok({ ulBody: e.target.checked ? 1 : 0 })} />
-              <span>Underline</span>
-            </label>
-          </div>
-        </Row>
+            <div className="ctorStub" style={{marginTop:10}}>
+              Совет: используй токены <b>--color-card</b>/<b>--color-surface</b>/<b>--overlay</b> — они генерятся как rgba и Telegram их понимает.
+            </div>
+          </Accordion>
 
-        <Row label="Head italic / underline">
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.itHead} onChange={(e) => setTok({ itHead: e.target.checked ? 1 : 0 })} />
-              <span>Italic</span>
-            </label>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.ulHead} onChange={(e) => setTok({ ulHead: e.target.checked ? 1 : 0 })} />
-              <span>Underline</span>
-            </label>
-          </div>
-        </Row>
+          <Accordion title="Типографика">
+            <Row label="Body font">
+              <input
+                className="ctorText"
+                value={String(getTok('fontBody') || '')}
+                onChange={e=>setTok('fontBody', e.target.value)}
+              />
+            </Row>
+            <Row label="Head font">
+              <input
+                className="ctorText"
+                value={String(getTok('fontHead') || '')}
+                onChange={e=>setTok('fontHead', e.target.value)}
+              />
+            </Row>
+            <Row label="Button font">
+              <input
+                className="ctorText"
+                value={String(getTok('fontBtn') || '')}
+                onChange={e=>setTok('fontBtn', e.target.value)}
+              />
+            </Row>
+            <Row label="Menu font">
+              <input
+                className="ctorText"
+                value={String(getTok('fontMenu') || '')}
+                onChange={e=>setTok('fontMenu', e.target.value)}
+              />
+            </Row>
 
-        <Row label="Button italic / underline">
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.itBtn} onChange={(e) => setTok({ itBtn: e.target.checked ? 1 : 0 })} />
-              <span>Italic</span>
-            </label>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.ulBtn} onChange={(e) => setTok({ ulBtn: e.target.checked ? 1 : 0 })} />
-              <span>Underline</span>
-            </label>
-          </div>
-        </Row>
+            <div className="ctorHr" />
 
-        <Row label="Menu italic / underline">
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.itMenu} onChange={(e) => setTok({ itMenu: e.target.checked ? 1 : 0 })} />
-              <span>Italic</span>
-            </label>
-            <label className="ctor-check">
-              <input type="checkbox" checked={!!tokens.ulMenu} onChange={(e) => setTok({ ulMenu: e.target.checked ? 1 : 0 })} />
-              <span>Underline</span>
-            </label>
-          </div>
-        </Row>
-      </Section>
+            <Row label={`FS body (${Number(getTok('fsBody')||0)}px)`}><Range k="fsBody" min={10} max={22} step={1} /></Row>
+            <Row label={`FS btn (${Number(getTok('fsBtn')||0)}px)`}><Range k="fsBtn" min={10} max={22} step={1} /></Row>
+            <Row label={`FS menu (${Number(getTok('fsMenu')||0)}px)`}><Range k="fsMenu" min={10} max={22} step={1} /></Row>
+            <Row label={`FS H1 (${Number(getTok('fsH1')||0)}px)`}><Range k="fsH1" min={14} max={44} step={1} /></Row>
+            <Row label={`FS H2 (${Number(getTok('fsH2')||0)}px)`}><Range k="fsH2" min={12} max={34} step={1} /></Row>
+            <Row label={`FS H3 (${Number(getTok('fsH3')||0)}px)`}><Range k="fsH3" min={12} max={30} step={1} /></Row>
 
-      {/* ===== minimal CSS for drawer controls (if you already have it, remove this section) */}
-      <style>{`
-        .ctor-drawer{ padding: 14px; display:flex; flex-direction:column; gap: 10px; }
-        .ctor-drawer__title{ font-weight: 900; font-size: 16px; margin-bottom: 2px; }
-        .ctor-sec{ border:1px solid rgba(15,23,42,.10); background: rgba(255,255,255,.66); border-radius: 16px; overflow:hidden; }
-        .ctor-sec__head{ width:100%; display:flex; justify-content:space-between; align-items:center; padding: 10px 12px; background: rgba(255,255,255,.6); border:0; cursor:pointer; }
-        .ctor-sec__title{ font-weight: 900; font-size: 13px; }
-        .ctor-sec__chev{ opacity:.7; }
-        .ctor-sec__body{ padding: 10px 12px; display:flex; flex-direction:column; gap: 10px; }
-        .ctor-row{ display:grid; grid-template-columns: 170px 1fr auto; gap: 10px; align-items:center; }
-        .ctor-row__label{ font-size: 12px; font-weight: 800; }
-        .ctor-row__hint{ font-size: 11px; opacity:.65; margin-top: 2px; }
-        .ctor-row__mid{ min-width: 0; }
-        .ctor-row__right{ font-size: 11px; opacity:.7; }
-        .ctor-input{ width:100%; padding: 9px 10px; border-radius: 12px; border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.78); font-size: 13px; }
-        .ctor-range{ width:100%; }
-        .ctor-check{ display:flex; gap: 8px; align-items:center; font-size: 12px; }
-        .ctor-split{ height:1px; background: rgba(15,23,42,.08); margin: 4px 0; }
-        @media (max-width: 900px){
-          .ctor-row{ grid-template-columns: 1fr; }
-          .ctor-row__right{ justify-self:start; }
-        }
-      `}</style>
+            <div className="ctorHr" />
+
+            <Row label={`FW body (${Number(getTok('fwBody')||0)})`}><Range k="fwBody" min={100} max={900} step={50} /></Row>
+            <Row label={`FW head (${Number(getTok('fwHead')||0)})`}><Range k="fwHead" min={100} max={900} step={50} /></Row>
+            <Row label={`FW btn (${Number(getTok('fwBtn')||0)})`}><Range k="fwBtn" min={100} max={900} step={50} /></Row>
+            <Row label={`FW menu (${Number(getTok('fwMenu')||0)})`}><Range k="fwMenu" min={100} max={900} step={50} /></Row>
+
+            <div className="ctorHr" />
+
+            <Row label="Body style">
+              <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
+                <Check01 k="itBody" label="Italic" />
+                <Check01 k="ulBody" label="Underline" />
+              </div>
+            </Row>
+            <Row label="Head style">
+              <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
+                <Check01 k="itHead" label="Italic" />
+                <Check01 k="ulHead" label="Underline" />
+              </div>
+            </Row>
+            <Row label="Button style">
+              <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
+                <Check01 k="itBtn" label="Italic" />
+                <Check01 k="ulBtn" label="Underline" />
+              </div>
+            </Row>
+            <Row label="Menu style">
+              <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
+                <Check01 k="itMenu" label="Italic" />
+                <Check01 k="ulMenu" label="Underline" />
+              </div>
+            </Row>
+          </Accordion>
+        </div>
+      )}
     </div>
   );
 }
 
 export default ConstructorDrawer;
-
