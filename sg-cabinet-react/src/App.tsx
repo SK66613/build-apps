@@ -20,6 +20,8 @@ import Broadcasts from './pages/Broadcasts';
 
 import Projects from './pages/Projects';
 
+import { I18nProvider } from './i18n';
+
 
 function Guarded({ children }: { children: React.ReactNode }){
   const { me, isLoading } = useAuth();
