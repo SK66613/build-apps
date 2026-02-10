@@ -2,8 +2,10 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './app/auth';
 import { AppStateProvider } from './app/appState';
+import { I18nProvider } from './i18n';          // ✅ ДОБАВЬ ЭТОТ ИМПОРТ
 import Shell from './components/Shell';
 import Login from './pages/Login';
+import Projects from './pages/Projects';
 import Overview from './pages/Overview';
 import Live from './pages/Live';
 import Customers from './pages/Customers';
@@ -18,11 +20,6 @@ import Game from './pages/Game';
 import Referrals from './pages/Referrals';
 import Broadcasts from './pages/Broadcasts';
 
-import Projects from './pages/Projects';
-
-import { I18nProvider } from './i18n';
-
-
 function Guarded({ children }: { children: React.ReactNode }){
   const { me, isLoading } = useAuth();
   if (isLoading) return <div style={{ padding: 18, fontWeight: 900 }}>Загрузка...</div>;
@@ -32,37 +29,34 @@ function Guarded({ children }: { children: React.ReactNode }){
 
 export default function App(){
   return (
-    <AuthProvider>
-      <AppStateProvider>
-<Routes>
-  <Route path="/login" element={<Login />} />
+    <I18nProvider>          {/* ✅ ВОТ ТУТ, САМОЕ ВНЕШНЕЕ */}
+      <AuthProvider>
+        <AppStateProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/cabinet" element={<Guarded><Projects /></Guarded>} />
 
-  {/* отдельная страница кабинета проектов (БЕЗ Shell) */}
-  <Route path="/cabinet" element={<Guarded><Projects /></Guarded>} />
+            <Route path="/" element={<Guarded><Shell /></Guarded>}>
+              <Route index element={<Overview />} />
+              <Route path="live" element={<Live />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="sales" element={<Sales />} />
+              <Route path="wheel" element={<Wheel />} />
+              <Route path="passport" element={<Passport />} />
+              <Route path="calendar" element={<Calendar />} />
+              <Route path="profit" element={<Profit />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="constructor" element={<Constructor />} />
+              <Route path="game" element={<Game />} />
+              <Route path="referrals" element={<Referrals />} />
+              <Route path="broadcasts" element={<Broadcasts />} />
+            </Route>
 
-  {/* панель (Shell) */}
-  <Route path="/" element={<Guarded><Shell /></Guarded>}>
-    <Route index element={<Overview />} />
-    <Route path="live" element={<Live />} />
-    <Route path="customers" element={<Customers />} />
-    <Route path="sales" element={<Sales />} />
-    <Route path="wheel" element={<Wheel />} />
-    <Route path="passport" element={<Passport />} />
-    <Route path="calendar" element={<Calendar />} />
-    <Route path="profit" element={<Profit />} />
-    <Route path="settings" element={<Settings />} />
-    <Route path="constructor" element={<Constructor />} />
-    <Route path="game" element={<Game />} />
-    <Route path="referrals" element={<Referrals />} />
-    <Route path="broadcasts" element={<Broadcasts />} />
-  </Route>
-
-  {/* fallback */}
-  <Route path="*" element={<Navigate to="/cabinet" replace />} />
-</Routes>
-
-    
-      </AppStateProvider>
-    </AuthProvider>
+            <Route path="*" element={<Navigate to="/cabinet" replace />} />
+          </Routes>
+        </AppStateProvider>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
+
