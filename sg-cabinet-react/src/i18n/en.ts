@@ -24,6 +24,21 @@ const EN: Record<string, string> = {
   "login.submit.login": "Sign in",
   "login.submit.register": "Create account",
 
+  "login.progress.signin": "Signing in…",
+"login.progress.register": "Creating account…",
+"login.progress.openCabinet": "Done. Opening cabinet…",
+
+"err.EMAIL_EXISTS": "This email is already registered. Try signing in.",
+"err.BAD_EMAIL": "Invalid email.",
+"err.WEAK_PASSWORD": "Password is too short.",
+"err.BAD_CREDENTIALS": "Wrong email or password.",
+"err.EMAIL_OR_PASSWORD_MISSING": "Enter email and password.",
+"err.BAD_INPUT": "Check email and password (password must be at least 6 characters).",
+"err.EMAIL_NOT_VERIFIED": "Email is not verified yet.",
+"err.GENERIC": "Error: {code}",
+"err.UNKNOWN": "Error",
+
+
   // cabinet/projects
   "cabinet.title": "Projects",
   "cabinet.newProject": "Create project",
@@ -48,3 +63,4 @@ const EN: Record<string, string> = {
 };
 
 export default EN;
+
