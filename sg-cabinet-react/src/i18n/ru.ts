@@ -127,9 +127,69 @@ const RU: Record<string, string> = {
 "ov.health": "Здоровье",
 "ov.liabilityCoins": "Обязательство (монеты)",
 
+
+
+
+
+
+    "cust.subtitle": "Поиск пользователей и чат как в диалогах.",
+  "cust.mode.users": "Пользователи",
+  "cust.mode.dialogs": "Диалоги",
+  "cust.range.today": "Сегодня",
+  "cust.range.7d": "7д",
+  "cust.range.30d": "30д",
+  "cust.range.all": "Все",
+  "cust.searchUsers": "Поиск: tg id / @username …",
+  "cust.searchDialogsHint": "Диалоги фильтруются диапазоном (поиск делай через пользователей).",
+  "cust.people": "Люди",
+  "cust.dialogs": "Диалоги",
+  "cust.found": "Найдено: {n}",
+  "cust.empty": "Ничего не найдено.",
+  "cust.pick": "Выбери пользователя",
+  "cust.pickHint": "Выбери пользователя слева — справа откроется чат.",
+  "cust.noMessages": "Сообщений пока нет.",
+  "cust.typeMessage": "Написать сообщение…",
+  "cust.send": "Отправить",
+  "cust.tipCtrlEnter": "Подсказка: Ctrl+Enter для отправки",
+  "cust.lastSeen": "Был(а)",
+
+  "bc.subtitle": "Кампании, рассылки и KPI.",
+  "bc.search": "Поиск по кампаниям…",
+  "bc.create": "Создать рассылку",
+  "bc.campaigns": "Кампании",
+  "bc.count": "Кампаний: {n}",
+  "bc.empty": "Кампаний пока нет. Нажми “Создать рассылку”.",
+  "bc.untitled": "Без названия",
+  "bc.segment": "Сегмент",
+  "bc.status": "Статус",
+  "bc.kpi": "KPI",
+  "bc.kpiSub": "Сводка по кампаниям",
+  "bc.kpi.campaigns": "Кампаний",
+  "bc.kpi.done": "Готово",
+  "bc.kpi.sent": "Отправлено",
+  "bc.kpi.failRate": "Ошибки",
+  "bc.selected": "Выбранная",
+  "bc.pick": "Выбери кампанию слева",
+  "bc.updated": "Обновлено",
+
+  "bc.drawer.title": "Новая рассылка",
+  "bc.drawer.sub": "Сначала текст, затем отправка",
+  "bc.drawer.campaignTitle": "Заголовок",
+  "bc.drawer.titlePh": "Например: Скидка на кофе сегодня",
+  "bc.drawer.segment": "Сегмент",
+  "bc.drawer.text": "Текст",
+  "bc.drawer.textPh": "Сообщение…",
+  "bc.drawer.btnText": "Кнопка — текст",
+  "bc.drawer.btnUrl": "Кнопка — URL",
+  "bc.drawer.preview": "Превью",
+  "bc.drawer.button": "Кнопка",
+  "bc.drawer.send": "Отправить",
+
+
 };
 
 export default RU;
+
 
 
 
