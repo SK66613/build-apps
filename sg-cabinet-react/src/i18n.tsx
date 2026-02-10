@@ -27,6 +27,35 @@ const RU: Dict = {
   "cabinet.projectName": "Название mini-app",
   "cabinet.open": "Открыть",
   "cabinet.empty": "Проектов пока нет — создай первый.",
+
+
+// brand / top
+"brand.name": "Sales Genius",
+"brand.sub": "Панель управления",
+"top.project": "Проект",
+"top.theme": "Тема",
+
+// common
+"common.logout": "Выйти",
+"common.light": "Light",   // или "Светлая"
+"common.dark": "Dark",     // или "Тёмная"
+
+// nav
+"nav.overview": "Overview",
+"nav.live": "Live",
+"nav.customers": "Customers",
+"nav.sales": "Sales",
+"nav.wheel": "Wheel",
+"nav.passport": "Passport",
+"nav.calendar": "Calendar",
+"nav.profit": "Profit / ROI",
+"nav.settings": "Settings",
+"nav.constructor": "Конструктор",
+"nav.game": "Game",
+"nav.referrals": "Referrals",
+"nav.broadcasts": "Broadcasts",
+
+  
 };
 
 const EN: Dict = {
@@ -53,6 +82,33 @@ const EN: Dict = {
   "cabinet.projectName": "Mini-app name",
   "cabinet.open": "Open",
   "cabinet.empty": "No projects yet — create your first one.",
+
+  // brand / top
+"brand.name": "Sales Genius",
+"brand.sub": "Control panel",
+"top.project": "Project",
+"top.theme": "Theme",
+
+// common
+"common.logout": "Log out",
+"common.light": "Light",
+"common.dark": "Dark",
+
+// nav
+"nav.overview": "Overview",
+"nav.live": "Live",
+"nav.customers": "Customers",
+"nav.sales": "Sales",
+"nav.wheel": "Wheel",
+"nav.passport": "Passport",
+"nav.calendar": "Calendar",
+"nav.profit": "Profit / ROI",
+"nav.settings": "Settings",
+"nav.constructor": "Constructor",
+"nav.game": "Game",
+"nav.referrals": "Referrals",
+"nav.broadcasts": "Broadcasts",
+
 };
 
 function detectDefaultLang(): Lang {
