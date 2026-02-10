@@ -6,33 +6,27 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import type { AppListItem } from '../lib/types';
 import { Button, Input, Pill } from '../components/ui';
+import { useI18n } from '../i18n';
 
 /** ===== UI blocks (оставляем твою логику) ===== */
 function ThemeToggle(){
+  const { t } = useI18n();
+
   const [theme, setTheme] = React.useState(() => {
     return document.documentElement.dataset.theme || 'light';
   });
+
   const toggle = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     setTheme(next);
     try{ localStorage.setItem('sg_theme', next); }catch(_){ }
   };
-  return (
-    <Button variant="ghost" onClick={toggle}>
-      {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
-    </Button>
-  );
-}
 
-function DateRange(){
-  const { range, setRange } = useAppState();
   return (
-    <div className="top__dates">
-      <Input type="date" value={range.from} onChange={e=>setRange({ from: e.target.value })} />
-      <span className="top__arrow">→</span>
-      <Input type="date" value={range.to} onChange={e=>setRange({ to: e.target.value })} />
-    </div>
+    <Button variant="ghost" onClick={toggle} title={t('top.theme')}>
+      {theme === 'dark' ? `🌙 ${t('common.dark')}` : `☀️ ${t('common.light')}`}
+    </Button>
   );
 }
 
@@ -53,6 +47,7 @@ function SideItem({ to, icon, label }: { to: string; icon: React.ReactNode; labe
 export default function AppShell(){
   const { logout, me } = useAuth();
   const { appId, setAppId, range, setRange } = useAppState();
+  const { t } = useI18n();
 
   const loc = useLocation();
   const isCtor = loc.pathname === '/constructor' || loc.pathname.startsWith('/constructor/');
@@ -86,32 +81,28 @@ export default function AppShell(){
         {/* scroll only for menu */}
         <div className="side__scroll">
           <nav className="side__nav">
-            <SideItem to="/"            icon="🏠" label="Overview" />
-            <SideItem to="/live"        icon="🟢" label="Live" />
-            <SideItem to="/customers"   icon="👥" label="Customers" />
-            <SideItem to="/sales"       icon="🧾" label="Sales" />
+            <SideItem to="/"            icon="🏠" label={t('nav.overview')} />
+            <SideItem to="/live"        icon="🟢" label={t('nav.live')} />
+            <SideItem to="/customers"   icon="👥" label={t('nav.customers')} />
+            <SideItem to="/sales"       icon="🧾" label={t('nav.sales')} />
 
             <div className="side__sep" />
 
-            <SideItem to="/wheel"       icon="🎡" label="Wheel" />
-            <SideItem to="/passport"    icon="🏁" label="Passport" />
-            <SideItem to="/calendar"    icon="📅" label="Calendar" />
+            <SideItem to="/wheel"       icon="🎡" label={t('nav.wheel')} />
+            <SideItem to="/passport"    icon="🏁" label={t('nav.passport')} />
+            <SideItem to="/calendar"    icon="📅" label={t('nav.calendar')} />
 
             <div className="side__sep" />
 
-            <SideItem to="/profit"      icon="💰" label="Profit / ROI" />
-            <SideItem to="/settings"    icon="⚙️" label="Settings" />
+            <SideItem to="/profit"      icon="💰" label={t('nav.profit')} />
+            <SideItem to="/settings"    icon="⚙️" label={t('nav.settings')} />
 
             <div className="side__sep" />
 
-            <SideItem to="/constructor" icon="🛠️" label="Конструктор" />
-
-            <SideItem to="/game" icon="🟢" label="Game" />
-
-            <SideItem to="/referrals" icon="🟢" label="Referrals" />
-
-            <SideItem to="/broadcasts" icon="🟢" label="Broadcasts" />
-            
+            <SideItem to="/constructor" icon="🛠️" label={t('nav.constructor')} />
+            <SideItem to="/game"        icon="🟢" label={t('nav.game')} />
+            <SideItem to="/referrals"   icon="🟢" label={t('nav.referrals')} />
+            <SideItem to="/broadcasts"  icon="🟢" label={t('nav.broadcasts')} />
           </nav>
         </div>
       </aside>
@@ -123,16 +114,17 @@ export default function AppShell(){
             {/* LEFT: бренд + проект + ДАТЫ */}
             <div className="top__left">
               <div className="top__brand">
-                <div className="top__brandTitle"></div>
-                <div className="top__brandSub"></div>
+                <div className="top__brandTitle">{t('brand.name')}</div>
+                <div className="top__brandSub">{t('brand.sub')}</div>
               </div>
 
               <div className="top__proj">
-                <div className="top__label"></div>
+                <div className="top__label">{t('top.project')}</div>
                 <select
                   value={appId || ''}
                   onChange={(e) => setAppId(e.target.value)}
                   className="top__select"
+                  title={t('top.project')}
                 >
                   {apps.map(a => (
                     <option key={a.id} value={a.id}>{a.title} ({a.id})</option>
@@ -148,11 +140,11 @@ export default function AppShell(){
               </div>
             </div>
 
-            {/* RIGHT: тема + email + выйти (выйти крайний справа) */}
+            {/* RIGHT: тема + email + выйти */}
             <div className="top__right">
               <ThemeToggle />
               <Pill>{email}</Pill>
-              <Button variant="ghost" onClick={() => logout()}>Выйти</Button>
+              <Button variant="ghost" onClick={() => logout()}>{t('common.logout')}</Button>
             </div>
           </header>
         )}
@@ -162,4 +154,3 @@ export default function AppShell(){
     </div>
   );
 }
-
