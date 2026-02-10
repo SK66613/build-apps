@@ -24,6 +24,22 @@ const RU: Record<string, string> = {
   "login.submit.login": "Войти",
   "login.submit.register": "Создать аккаунт",
 
+
+  "login.progress.signin": "Входим…",
+"login.progress.register": "Создаю аккаунт…",
+"login.progress.openCabinet": "Готово. Открываю кабинет…",
+
+"err.EMAIL_EXISTS": "Этот e-mail уже зарегистрирован. Попробуй войти.",
+"err.BAD_EMAIL": "Некорректный e-mail.",
+"err.WEAK_PASSWORD": "Пароль слишком короткий.",
+"err.BAD_CREDENTIALS": "Неверный e-mail или пароль.",
+"err.EMAIL_OR_PASSWORD_MISSING": "Заполни e-mail и пароль.",
+"err.BAD_INPUT": "Проверь e-mail и пароль (пароль минимум 6 символов).",
+"err.EMAIL_NOT_VERIFIED": "E-mail ещё не подтверждён.",
+"err.GENERIC": "Ошибка: {code}",
+"err.UNKNOWN": "Ошибка",
+
+
   // cabinet/projects
   "cabinet.title": "Кабинет проектов",
   "cabinet.newProject": "Создать проект",
@@ -48,4 +64,5 @@ const RU: Record<string, string> = {
 };
 
 export default RU;
+
 
