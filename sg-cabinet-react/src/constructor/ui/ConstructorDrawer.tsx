@@ -111,7 +111,8 @@ function NumField({ value, onChange, min, max, step }: any) {
   );
 }
 
-export default function ConstructorDrawer() {
+export function ConstructorDrawer() {
+
   const bp = useConstructorStore((s: any) => s.blueprint);
   const updateThemeTokens = useConstructorStore((s: any) => s.updateThemeTokens);
 
@@ -421,3 +422,6 @@ export default function ConstructorDrawer() {
     </div>
   );
 }
+
+export default ConstructorDrawer;
+
