@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
 import { Card, Input, Button } from '../components/ui';
-import { LanguageSelect } from '../components/LanguageSelect';
 import { useI18n } from '../i18n';
 
 type CabCustomer = {
@@ -77,7 +76,7 @@ export default function Customers() {
   const [text, setText] = React.useState('');
   const [sending, setSending] = React.useState(false);
 
-  // ===== LEFT LIST
+  // LEFT LIST
   const customersQ = useQuery({
     enabled: !!appId && mode === 'customers',
     queryKey: ['cust.search', appId, q],
@@ -95,19 +94,16 @@ export default function Customers() {
     staleTime: 8_000,
   });
 
-  const leftItems: Array<
-    | { kind: 'cust'; tgId: string; username?: string | null; last?: string | null; meta?: string }
-    | { kind: 'dlg'; tgId: string; username?: string | null; last?: string | null; meta?: string }
-  > = React.useMemo(() => {
+  const leftItems = React.useMemo(() => {
     if (mode === 'customers') {
       const arr = customersQ.data?.customers || [];
       return arr.map((x) => {
         const tgId = String(x.tg_user_id || '');
         return {
-          kind: 'cust',
+          kind: 'cust' as const,
           tgId,
           username: x.tg_username || null,
-          last: null,
+          last: null as string | null,
           meta: x.last_seen ? `${t('cust.lastSeen')}: ${fmtWhen(x.last_seen)}` : '—',
         };
       });
@@ -118,7 +114,7 @@ export default function Customers() {
       const tgId = String(x.tg_user_id || '');
       const seen = x.bot_last_seen || x.bot_started_at;
       return {
-        kind: 'dlg',
+        kind: 'dlg' as const,
         tgId,
         username: x.tg_username || null,
         last: x.last_text || null,
@@ -127,11 +123,12 @@ export default function Customers() {
     });
   }, [mode, customersQ.data, dialogsQ.data, t]);
 
-  // ===== RIGHT CHAT
+  // RIGHT CHAT
   const msgsQ = useQuery({
     enabled: !!appId && !!activeTgId,
     queryKey: ['dlg.msgs', appId, activeTgId],
-    queryFn: () => apiFetch<{ ok: true; items: DialogMsg[] }>(`/api/app/${appId}/dialog/${activeTgId}?${qs({ limit: 120 })}`),
+    queryFn: () =>
+      apiFetch<{ ok: true; items: DialogMsg[] }>(`/api/app/${appId}/dialog/${activeTgId}?${qs({ limit: 120 })}`),
     staleTime: 2_000,
   });
 
@@ -144,6 +141,7 @@ export default function Customers() {
     }
   }, [leftItems.length]); // eslint-disable-line
 
+  // autoscroll
   const chatRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
     const el = chatRef.current;
@@ -174,7 +172,6 @@ export default function Customers() {
 
   return (
     <div className="sg-page cuPage">
-      {/* Header */}
       <div className="cuHead">
         <div>
           <h1 className="sg-h1">{t('nav.customers')}</h1>
@@ -216,8 +213,6 @@ export default function Customers() {
               disabled={!appId}
             />
           </div>
-
-          <LanguageSelect className="top__select" />
         </div>
       </div>
 
@@ -270,7 +265,6 @@ export default function Customers() {
                         <div className="cuName">{displayUser(it.tgId, it.username)}</div>
                         {it.kind === 'cust' ? (
                           <div className="cuCoins" title="Coins">
-                            {/* coins only for customers list */}
                             {(() => {
                               const c = (customersQ.data?.customers || []).find((x) => String(x.tg_user_id) === it.tgId);
                               const coins = Number(c?.coins || 0);
