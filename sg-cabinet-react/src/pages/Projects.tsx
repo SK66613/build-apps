@@ -1,6 +1,7 @@
 import React from "react";
 import { apiFetch } from "../lib/api";
 import { useI18n } from "../i18n";
+import { LanguageSelect } from "../components/LanguageSelect";
 
 type AppRow = { id: string; title: string; public_id?: string; status?: string };
 type TemplateRow = { id?: string; key?: string; template_id?: string; title?: string; name?: string };
@@ -13,7 +14,7 @@ function getTplTitle(t: any){
 }
 
 export default function Projects() {
-  const { lang, setLang, t } = useI18n();
+  const { t } = useI18n();
 
   const [apps, setApps] = React.useState<AppRow[]>([]);
   const [templates, setTemplates] = React.useState<TemplateRow[]>([]);
@@ -69,18 +70,7 @@ export default function Projects() {
         </div>
 
         <div className="cab-actions">
-          {/* dropdown языков */}
-          <select
-            className="lang-select"
-            value={lang}
-            onChange={(e)=>setLang(e.target.value as any)}
-            disabled={busy}
-            aria-label="Language"
-            title="Language"
-          >
-            <option value="ru">RU</option>
-            <option value="en">EN</option>
-          </select>
+          <LanguageSelect disabled={busy} className="lang-select" />
 
           <button className="sg-btn ghost" onClick={load} disabled={busy}>
             {t("common.refresh")}
