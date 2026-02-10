@@ -3,35 +3,24 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../app/auth";
+import { useI18n } from "../i18n";
+import { LanguageSelect } from "../components/LanguageSelect";
 
 type MsgType = "error" | "success" | "";
 
-function mapError(code: string) {
-  switch (code) {
-    case "EMAIL_EXISTS": return "Этот e-mail уже зарегистрирован. Попробуй войти.";
-    case "BAD_EMAIL": return "Некорректный e-mail.";
-    case "WEAK_PASSWORD": return "Пароль слишком короткий.";
-    case "INVALID_CREDENTIALS":
-    case "BAD_CREDENTIALS": return "Неверный e-mail или пароль.";
-    case "EMAIL_OR_PASSWORD_MISSING": return "Заполни e-mail и пароль.";
-    case "BAD_INPUT": return "Проверь e-mail и пароль (пароль минимум 6 символов).";
-    case "EMAIL_NOT_VERIFIED": return "E-mail ещё не подтверждён.";
-    default: return code ? `Ошибка: ${code}` : "Ошибка";
-  }
-}
-
 function errToCode(e: any): string {
   // apiFetch бросает {status,message,payload}
-  if (e && typeof e === 'object') {
-    if (typeof e.message === 'string') return e.message;
-    if (typeof e.error === 'string') return e.error;
+  if (e && typeof e === "object") {
+    if (typeof e.message === "string") return e.message;
+    if (typeof e.error === "string") return e.error;
   }
-  return String(e?.message || e || 'ERROR');
+  return String(e?.message || e || "ERROR");
 }
 
 export default function Login() {
   const nav = useNavigate();
   const { refresh } = useAuth();
+  const { t } = useI18n();
 
   const [mode, setMode] = React.useState<"login" | "register">("login");
   const [busy, setBusy] = React.useState(false);
@@ -54,22 +43,36 @@ export default function Login() {
   const post = (path: string, body: any) =>
     apiFetch<any>(path, { method: "POST", body: JSON.stringify(body || {}) });
 
+  function mapError(code: string) {
+    switch (code) {
+      case "EMAIL_EXISTS": return t("err.EMAIL_EXISTS");
+      case "BAD_EMAIL": return t("err.BAD_EMAIL");
+      case "WEAK_PASSWORD": return t("err.WEAK_PASSWORD");
+      case "INVALID_CREDENTIALS":
+      case "BAD_CREDENTIALS": return t("err.BAD_CREDENTIALS");
+      case "EMAIL_OR_PASSWORD_MISSING": return t("err.EMAIL_OR_PASSWORD_MISSING");
+      case "BAD_INPUT": return t("err.BAD_INPUT");
+      case "EMAIL_NOT_VERIFIED": return t("err.EMAIL_NOT_VERIFIED");
+      default: return code ? t("err.GENERIC", { code }) : t("err.UNKNOWN");
+    }
+  }
+
   async function doLogin() {
     if (!email.trim() || !pass) {
-      setMsg({ text: "Заполни e-mail и пароль.", type: "error" });
+      setMsg({ text: t("err.EMAIL_OR_PASSWORD_MISSING"), type: "error" });
       return;
     }
     setBusy(true);
-    setMsg({ text: "Входим…", type: "" });
+    setMsg({ text: t("login.progress.signin"), type: "" });
 
     try {
       const r = await post("/api/auth/login", { email: email.trim(), password: pass });
       if (!r?.ok) throw new Error(r?.error || "LOGIN_FAILED");
 
-      // ✅ FIX: дождаться обновления me в react-query, чтобы Guarded сразу пропустил
+      // ✅ дождаться обновления me в react-query, чтобы Guarded сразу пропустил
       await refresh();
 
-      setMsg({ text: "Готово. Открываю кабинет…", type: "success" });
+      setMsg({ text: t("login.progress.openCabinet"), type: "success" });
       nav("/cabinet", { replace: true });
     } catch (e: any) {
       setMsg({ text: mapError(errToCode(e)), type: "error" });
@@ -80,11 +83,11 @@ export default function Login() {
 
   async function doRegister() {
     if (!email.trim() || !pass) {
-      setMsg({ text: "Заполни e-mail и пароль.", type: "error" });
+      setMsg({ text: t("err.EMAIL_OR_PASSWORD_MISSING"), type: "error" });
       return;
     }
     setBusy(true);
-    setMsg({ text: "Создаю аккаунт…", type: "" });
+    setMsg({ text: t("login.progress.register"), type: "" });
 
     try {
       const r = await post("/api/auth/register", { name: name.trim(), email: email.trim(), password: pass });
@@ -92,10 +95,10 @@ export default function Login() {
 
       await post("/api/auth/login", { email: email.trim(), password: pass });
 
-      // ✅ FIX: обновить me
+      // ✅ обновить me
       await refresh();
 
-      setMsg({ text: "Аккаунт создан. Открываю кабинет…", type: "success" });
+      setMsg({ text: t("login.progress.openCabinet"), type: "success" });
       nav("/cabinet", { replace: true });
     } catch (e: any) {
       setMsg({ text: mapError(errToCode(e)), type: "error" });
@@ -109,7 +112,10 @@ export default function Login() {
       <div className="auth-card">
         <div className="auth-head">
           <div className="brand">Sales Genius</div>
-          <div className="hint">Вход в кабинет</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div className="hint">{t("login.title")}</div>
+            <LanguageSelect className="lang-select" disabled={busy} />
+          </div>
         </div>
 
         <div className="auth-tabs">
@@ -118,14 +124,14 @@ export default function Login() {
             disabled={busy}
             onClick={() => { setMode("login"); setMsg({ text: "", type: "" }); }}
           >
-            Вход
+            {t("login.tab.login")}
           </button>
           <button
             className={mode === "register" ? "tab active" : "tab"}
             disabled={busy}
             onClick={() => { setMode("register"); setMsg({ text: "", type: "" }); }}
           >
-            Регистрация
+            {t("login.tab.register")}
           </button>
         </div>
 
@@ -139,17 +145,17 @@ export default function Login() {
         >
           {mode === "register" && (
             <>
-              <label>Имя</label>
+              <label>{t("login.name")}</label>
               <input className="sg-input" value={name} onChange={(e) => setName(e.target.value)} />
             </>
           )}
-          <label>Email</label>
+          <label>{t("login.email")}</label>
           <input className="sg-input" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <label>Пароль</label>
+          <label>{t("login.password")}</label>
           <input className="sg-input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} />
 
           <button className="sg-btn" disabled={busy} type="submit">
-            {mode === "login" ? "Войти" : "Создать аккаунт"}
+            {mode === "login" ? t("login.submit.login") : t("login.submit.register")}
           </button>
         </form>
       </div>
