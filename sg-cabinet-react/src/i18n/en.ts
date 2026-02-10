@@ -127,8 +127,66 @@ const EN: Record<string, string> = {
 "ov.health": "Health",
 "ov.liabilityCoins": "Liability (coins)",
 
+
+
+
+    "cust.subtitle": "Search users and chat like dialogs.",
+  "cust.mode.users": "Users",
+  "cust.mode.dialogs": "Dialogs",
+  "cust.range.today": "Today",
+  "cust.range.7d": "7d",
+  "cust.range.30d": "30d",
+  "cust.range.all": "All",
+  "cust.searchUsers": "Search: tg id / @username …",
+  "cust.searchDialogsHint": "Dialogs are filtered by range (search via users list).",
+  "cust.people": "People",
+  "cust.dialogs": "Dialogs",
+  "cust.found": "{n} found",
+  "cust.empty": "Nothing found.",
+  "cust.pick": "Select a user",
+  "cust.pickHint": "Pick a user on the left — chat opens here.",
+  "cust.noMessages": "No messages yet.",
+  "cust.typeMessage": "Type a message…",
+  "cust.send": "Send",
+  "cust.tipCtrlEnter": "Tip: Ctrl+Enter to send",
+  "cust.lastSeen": "Last seen",
+
+  "bc.subtitle": "Campaigns, broadcasts and KPIs.",
+  "bc.search": "Search campaigns…",
+  "bc.create": "Create broadcast",
+  "bc.campaigns": "Campaigns",
+  "bc.count": "{n} campaigns",
+  "bc.empty": "No campaigns yet. Click “Create broadcast”.",
+  "bc.untitled": "Untitled",
+  "bc.segment": "Segment",
+  "bc.status": "Status",
+  "bc.kpi": "KPI",
+  "bc.kpiSub": "Summary across campaigns",
+  "bc.kpi.campaigns": "Campaigns",
+  "bc.kpi.done": "Done",
+  "bc.kpi.sent": "Sent",
+  "bc.kpi.failRate": "Fail rate",
+  "bc.selected": "Selected",
+  "bc.pick": "Pick a campaign on the left",
+  "bc.updated": "Updated",
+
+  "bc.drawer.title": "New broadcast",
+  "bc.drawer.sub": "Write the text, then send",
+  "bc.drawer.campaignTitle": "Title",
+  "bc.drawer.titlePh": "e.g. Coffee discount today",
+  "bc.drawer.segment": "Segment",
+  "bc.drawer.text": "Text",
+  "bc.drawer.textPh": "Message…",
+  "bc.drawer.btnText": "Button text",
+  "bc.drawer.btnUrl": "Button URL",
+  "bc.drawer.preview": "Preview",
+  "bc.drawer.button": "Button",
+  "bc.drawer.send": "Send",
+
+
 };
 
 export default EN;
+
 
 
