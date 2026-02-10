@@ -18,6 +18,8 @@ import Game from './pages/Game';
 import Referrals from './pages/Referrals';
 import Broadcasts from './pages/Broadcasts';
 
+import Projects from './pages/Projects';
+
 
 function Guarded({ children }: { children: React.ReactNode }){
   const { me, isLoading } = useAuth();
@@ -34,7 +36,11 @@ export default function App(){
           <Route path="/login" element={<Login />} />
 
           <Route path="/" element={<Guarded><Shell /></Guarded>}>
-            <Route index element={<Overview />} />
+            <Route index element={<Projects />} />
+<Route path="projects" element={<Projects />} />
+
+
+            
             <Route path="live" element={<Live />} />
             <Route path="customers" element={<Customers />} />
             <Route path="sales" element={<Sales />} />
