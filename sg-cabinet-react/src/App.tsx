@@ -18,6 +18,8 @@ import Game from './pages/Game';
 import Referrals from './pages/Referrals';
 import Broadcasts from './pages/Broadcasts';
 
+import Projects from './pages/Projects';
+
 
 function Guarded({ children }: { children: React.ReactNode }){
   const { me, isLoading } = useAuth();
@@ -30,25 +32,34 @@ export default function App(){
   return (
     <AuthProvider>
       <AppStateProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+<Routes>
+  <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<Guarded><Shell /></Guarded>}>
-            <Route index element={<Overview />} />
-            <Route path="live" element={<Live />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="sales" element={<Sales />} />
-            <Route path="wheel" element={<Wheel />} />
-            <Route path="passport" element={<Passport />} />
-            <Route path="calendar" element={<Calendar />} />
-            <Route path="profit" element={<Profit />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="constructor" element={<Constructor />} />
-            <Route path="game" element={<Game />} />
-            <Route path="Referrals" element={<Referrals />} />
-            <Route path="Broadcasts" element={<Broadcasts />} />
-          </Route>
-        </Routes>
+  {/* отдельная страница кабинета проектов (БЕЗ Shell) */}
+  <Route path="/cabinet" element={<Guarded><Projects /></Guarded>} />
+
+  {/* панель (Shell) */}
+  <Route path="/" element={<Guarded><Shell /></Guarded>}>
+    <Route index element={<Overview />} />
+    <Route path="live" element={<Live />} />
+    <Route path="customers" element={<Customers />} />
+    <Route path="sales" element={<Sales />} />
+    <Route path="wheel" element={<Wheel />} />
+    <Route path="passport" element={<Passport />} />
+    <Route path="calendar" element={<Calendar />} />
+    <Route path="profit" element={<Profit />} />
+    <Route path="settings" element={<Settings />} />
+    <Route path="constructor" element={<Constructor />} />
+    <Route path="game" element={<Game />} />
+    <Route path="referrals" element={<Referrals />} />
+    <Route path="broadcasts" element={<Broadcasts />} />
+  </Route>
+
+  {/* fallback */}
+  <Route path="*" element={<Navigate to="/cabinet" replace />} />
+</Routes>
+
+    
       </AppStateProvider>
     </AuthProvider>
   );
