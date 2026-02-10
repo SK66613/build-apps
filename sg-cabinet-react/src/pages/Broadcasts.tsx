@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
 import { Card, Input, Button } from '../components/ui';
-import { LanguageSelect } from '../components/LanguageSelect';
 import { useI18n } from '../i18n';
 
 type BroadcastRow = {
@@ -53,7 +52,7 @@ export default function Broadcasts() {
   const [q, setQ] = React.useState('');
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
 
-  // drawer (composer)
+  // drawer
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [title, setTitle] = React.useState('');
@@ -73,10 +72,7 @@ export default function Broadcasts() {
   const items = React.useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return itemsRaw;
-    return itemsRaw.filter((x) => {
-      const hay = `${x.title || ''} ${x.segment || ''} ${x.status || ''} ${x.id}`.toLowerCase();
-      return hay.includes(s);
-    });
+    return itemsRaw.filter((x) => (`${x.title || ''} ${x.segment || ''} ${x.status || ''} ${x.id}`).toLowerCase().includes(s));
   }, [itemsRaw, q]);
 
   React.useEffect(() => {
@@ -88,7 +84,6 @@ export default function Broadcasts() {
     return itemsRaw.find((x) => x.id === selectedId) || null;
   }, [itemsRaw, selectedId]);
 
-  // KPI (aggregated)
   const kpi = React.useMemo(() => {
     const total = itemsRaw.reduce((a, x) => a + n(x.total), 0);
     const sent = itemsRaw.reduce((a, x) => a + n(x.sent), 0);
@@ -154,24 +149,16 @@ export default function Broadcasts() {
           <Button variant="primary" onClick={openCreate} disabled={!appId}>
             {t('bc.create')}
           </Button>
-
-          <LanguageSelect className="top__select" />
         </div>
       </div>
 
       <div className="bcGrid">
-        {/* LEFT: campaigns */}
+        {/* LEFT */}
         <div className="bcLeft">
           <Card className="bcCard">
             <div className="bcCardHead">
-              <div className="bcCardHeadRow">
-                <div>
-                  <div className="bcCardTitle">{t('bc.campaigns')}</div>
-                  <div className="bcCardSub">
-                    {listQ.isLoading ? t('common.loading') : t('bc.count', { n: items.length })}
-                  </div>
-                </div>
-              </div>
+              <div className="bcCardTitle">{t('bc.campaigns')}</div>
+              <div className="bcCardSub">{listQ.isLoading ? t('common.loading') : t('bc.count', { n: items.length })}</div>
             </div>
 
             {listQ.isError && (
@@ -191,6 +178,7 @@ export default function Broadcasts() {
                     key={x.id}
                     className={'bcAlert ' + (active ? 'is-active' : '')}
                     onClick={() => setSelectedId(x.id)}
+                    type="button"
                     style={{
                       textAlign: 'left',
                       cursor: 'pointer',
@@ -199,7 +187,6 @@ export default function Broadcasts() {
                       background: active ? 'rgba(255,255,255,.92)' : 'rgba(255,255,255,.72)',
                       padding: 12,
                     }}
-                    type="button"
                   >
                     <div className="bcUnderHead">
                       <div>
@@ -214,22 +201,10 @@ export default function Broadcasts() {
                     </div>
 
                     <div className="bcKpiRow" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginTop: 10 }}>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">total</div>
-                        <div className="bcKpiVal">{n(x.total)}</div>
-                      </div>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">sent</div>
-                        <div className="bcKpiVal">{n(x.sent)}</div>
-                      </div>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">failed</div>
-                        <div className="bcKpiVal">{n(x.failed)}</div>
-                      </div>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">blocked</div>
-                        <div className="bcKpiVal">{n(x.blocked)}</div>
-                      </div>
+                      <div className="bcKpi"><div className="bcKpiLbl">total</div><div className="bcKpiVal">{n(x.total)}</div></div>
+                      <div className="bcKpi"><div className="bcKpiLbl">sent</div><div className="bcKpiVal">{n(x.sent)}</div></div>
+                      <div className="bcKpi"><div className="bcKpiLbl">failed</div><div className="bcKpiVal">{n(x.failed)}</div></div>
+                      <div className="bcKpi"><div className="bcKpiLbl">blocked</div><div className="bcKpiVal">{n(x.blocked)}</div></div>
                     </div>
                   </button>
                 );
@@ -238,7 +213,7 @@ export default function Broadcasts() {
           </Card>
         </div>
 
-        {/* RIGHT: KPI + selected */}
+        {/* RIGHT */}
         <div className="bcRight">
           <Card className="bcCard" style={{ position: 'sticky', top: 14 }}>
             <div className="bcCardHead">
@@ -247,22 +222,10 @@ export default function Broadcasts() {
             </div>
 
             <div className="bcKpiRow">
-              <div className="bcKpi">
-                <div className="bcKpiLbl">{t('bc.kpi.campaigns')}</div>
-                <div className="bcKpiVal">{kpi.campaigns}</div>
-              </div>
-              <div className="bcKpi">
-                <div className="bcKpiLbl">{t('bc.kpi.done')}</div>
-                <div className="bcKpiVal">{kpi.done}</div>
-              </div>
-              <div className="bcKpi">
-                <div className="bcKpiLbl">{t('bc.kpi.sent')}</div>
-                <div className="bcKpiVal">{kpi.sent}</div>
-              </div>
-              <div className="bcKpi">
-                <div className="bcKpiLbl">{t('bc.kpi.failRate')}</div>
-                <div className="bcKpiVal">{kpi.failRate}</div>
-              </div>
+              <div className="bcKpi"><div className="bcKpiLbl">{t('bc.kpi.campaigns')}</div><div className="bcKpiVal">{kpi.campaigns}</div></div>
+              <div className="bcKpi"><div className="bcKpiLbl">{t('bc.kpi.done')}</div><div className="bcKpiVal">{kpi.done}</div></div>
+              <div className="bcKpi"><div className="bcKpiLbl">{t('bc.kpi.sent')}</div><div className="bcKpiVal">{kpi.sent}</div></div>
+              <div className="bcKpi"><div className="bcKpiLbl">{t('bc.kpi.failRate')}</div><div className="bcKpiVal">{kpi.failRate}</div></div>
             </div>
 
             <div className="bcUnder" style={{ marginTop: 14 }}>
@@ -275,9 +238,7 @@ export default function Broadcasts() {
                     </div>
                   </div>
                   <div className="bcBadgeRow">
-                    <Button variant="primary" onClick={openCreate}>
-                      {t('bc.create')}
-                    </Button>
+                    <Button variant="primary" onClick={openCreate}>{t('bc.create')}</Button>
                   </div>
                 </div>
 
@@ -289,22 +250,10 @@ export default function Broadcasts() {
                     </div>
 
                     <div className="bcKpiRow" style={{ marginTop: 12 }}>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">total</div>
-                        <div className="bcKpiVal">{n(selected.total)}</div>
-                      </div>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">sent</div>
-                        <div className="bcKpiVal">{n(selected.sent)}</div>
-                      </div>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">failed</div>
-                        <div className="bcKpiVal">{n(selected.failed)}</div>
-                      </div>
-                      <div className="bcKpi">
-                        <div className="bcKpiLbl">blocked</div>
-                        <div className="bcKpiVal">{n(selected.blocked)}</div>
-                      </div>
+                      <div className="bcKpi"><div className="bcKpiLbl">total</div><div className="bcKpiVal">{n(selected.total)}</div></div>
+                      <div className="bcKpi"><div className="bcKpiLbl">sent</div><div className="bcKpiVal">{n(selected.sent)}</div></div>
+                      <div className="bcKpi"><div className="bcKpiLbl">failed</div><div className="bcKpiVal">{n(selected.failed)}</div></div>
+                      <div className="bcKpi"><div className="bcKpiLbl">blocked</div><div className="bcKpiVal">{n(selected.blocked)}</div></div>
                     </div>
                   </div>
                 ) : null}
@@ -314,7 +263,6 @@ export default function Broadcasts() {
         </div>
       </div>
 
-      {/* Drawer */}
       {drawerOpen ? (
         <>
           <div className="sg-drawerMask" onClick={() => !sending && setDrawerOpen(false)} />
