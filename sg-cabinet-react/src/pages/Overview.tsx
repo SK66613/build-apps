@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
 import { Button, Card, Input } from '../components/ui';
+import { useI18n } from '../i18n';
 import {
   ResponsiveContainer,
   BarChart, Bar,
@@ -89,14 +90,6 @@ function pctDelta(cur: number, prev?: number){
   const p = n0(prev);
   if (!p) return null;
   return Math.round(((n0(cur) - p) / p) * 100);
-}
-function clamp01(n: number){ return Math.max(0, Math.min(1, n)); }
-function fmtMoney(n: number){
-  // под себя: можно заменить на Intl.NumberFormat, если валюта нужна
-  return n0(n).toLocaleString('ru-RU');
-}
-function fmtNum(n: number){
-  return n0(n).toLocaleString('ru-RU');
 }
 
 /** ===================== SVG Icons ===================== */
@@ -195,9 +188,10 @@ function KpiTile(props: {
 }
 
 function SeverityBadge({ s }: { s: 'ok'|'risk'|'bad' }){
+  const { t } = useI18n();
   return (
     <div className={'ov-badge ' + s}>
-      {s === 'ok' ? 'OK' : s === 'risk' ? 'RISK' : 'BAD'}
+      {s === 'ok' ? t('sev.ok') : s === 'risk' ? t('sev.risk') : t('sev.bad')}
     </div>
   );
 }
@@ -206,15 +200,16 @@ function SeverityBadge({ s }: { s: 'ok'|'risk'|'bad' }){
 
 export default function Overview(){
   const { appId, range } = useAppState();
+  const { t, lang } = useI18n();
 
   const [metric, setMetric] = React.useState<'sales'|'customers'|'loyalty'|'funnel'>('sales');
   const [chartMode, setChartMode] = React.useState<'bar'|'line'|'area'>('bar');
-
-  // under-chart panel: live vs alerts
   const [under, setUnder] = React.useState<'live'|'alerts'>('live');
-
-  // right sticky: which top list
   const [topTab, setTopTab] = React.useState<'customers'|'prizes'|'cashiers'>('customers');
+
+  const locale = lang === 'ru' ? 'ru-RU' : 'en-US';
+  const fmtNum = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const fmtMoney = React.useMemo(() => new Intl.NumberFormat(locale), [locale]); // если потом нужна валюта — сделаем currency
 
   const q = useQuery({
     enabled: !!appId,
@@ -237,7 +232,6 @@ export default function Overview(){
   const topPrizes = data?.top_prizes || [];
   const topCashiers = data?.top_cashiers || [];
 
-  // build chart dataset based on metric
   const chartData = React.useMemo(() => {
     return series.map(p => ({
       name: p.d,
@@ -252,41 +246,19 @@ export default function Overview(){
     }));
   }, [series]);
 
-  // chart keys + labels per metric
   const chartCfg = React.useMemo(() => {
     if (metric === 'sales') {
-      return {
-        aKey: 'revenue',
-        bKey: 'sales_count',
-        aLabel: 'Revenue',
-        bLabel: 'Checks',
-      };
+      return { aKey: 'revenue', bKey: 'sales_count', aLabel: t('ov.kpi.revenue'), bLabel: t('ov.kpi.checks') };
     }
     if (metric === 'customers') {
-      return {
-        aKey: 'new_customers',
-        bKey: 'active_customers',
-        aLabel: 'New',
-        bLabel: 'Active',
-      };
+      return { aKey: 'new_customers', bKey: 'active_customers', aLabel: t('ov.kpi.newCustomers'), bLabel: t('ov.kpi.activeCustomers') };
     }
     if (metric === 'loyalty') {
-      return {
-        aKey: 'coins_issued',
-        bKey: 'coins_redeemed',
-        aLabel: 'Issued',
-        bLabel: 'Redeemed',
-      };
+      return { aKey: 'coins_issued', bKey: 'coins_redeemed', aLabel: t('ov.kpi.coinsIssued'), bLabel: t('ov.kpi.coinsRedeemed') };
     }
-    return {
-      aKey: 'qr_scans',
-      bKey: 'sales_count',
-      aLabel: 'QR scans',
-      bLabel: 'Sales',
-    };
-  }, [metric]);
+    return { aKey: 'qr_scans', bKey: 'sales_count', aLabel: t('ov.metric.qrScans'), bLabel: t('ov.metric.sales') };
+  }, [metric, t]);
 
-  // deltas for KPI
   const dRevenue = kpi ? pctDelta(kpi.revenue, kpi.revenue_prev) : null;
   const dSales = kpi ? pctDelta(kpi.sales_count, kpi.sales_count_prev) : null;
   const dAvg = kpi ? pctDelta(kpi.avg_check, kpi.avg_check_prev) : null;
@@ -300,18 +272,25 @@ export default function Overview(){
     return Math.round((red / issued) * 100);
   }, [kpi]);
 
+  const metricSub = React.useMemo(() => {
+    if (metric === 'sales') return t('ov.metric.sales');
+    if (metric === 'customers') return t('ov.metric.customers');
+    if (metric === 'loyalty') return t('ov.metric.loyalty');
+    return t('ov.metric.funnel');
+  }, [metric, t]);
+
   return (
     <div className="sg-page ovPage">
       {/* Header */}
       <div className="ovHead">
         <div>
-          <h1 className="sg-h1">Overview</h1>
-          <div className="sg-sub">Главная панель: продажи, клиенты, лояльность, алерты.</div>
+          <h1 className="sg-h1">{t('ov.title')}</h1>
+          <div className="sg-sub">{t('ov.subtitle')}</div>
         </div>
 
         <div className="ovHeadRight">
           <div className="sg-pill ovPill">
-            <span className="ovPillBold">Range</span>
+            <span className="ovPillBold">{t('ov.range')}</span>
             <span className="ovPillMuted">{range.from} — {range.to}</span>
           </div>
         </div>
@@ -325,34 +304,34 @@ export default function Overview(){
           <Card className="ovCard">
             <div className="ovKpiRow">
               <KpiTile
-                label="Revenue"
-                value={kpi ? fmtMoney(kpi.revenue) : '—'}
+                label={t('ov.kpi.revenue')}
+                value={kpi ? fmtMoney.format(n0(kpi.revenue)) : '—'}
                 delta={dRevenue}
                 strong
-                hint="за период"
+                hint={t('ov.kpi.hint.period')}
               />
               <KpiTile
-                label="Checks"
-                value={kpi ? fmtNum(kpi.sales_count) : '—'}
+                label={t('ov.kpi.checks')}
+                value={kpi ? fmtNum.format(n0(kpi.sales_count)) : '—'}
                 delta={dSales}
               />
               <KpiTile
-                label="Avg check"
-                value={kpi ? fmtMoney(kpi.avg_check) : '—'}
+                label={t('ov.kpi.avgCheck')}
+                value={kpi ? fmtMoney.format(n0(kpi.avg_check)) : '—'}
                 delta={dAvg}
               />
               <KpiTile
-                label="Coins issued"
-                value={kpi ? fmtNum(kpi.coins_issued) : '—'}
+                label={t('ov.kpi.coinsIssued')}
+                value={kpi ? fmtNum.format(n0(kpi.coins_issued)) : '—'}
                 delta={dIssued}
               />
               <KpiTile
-                label="Coins redeemed"
-                value={kpi ? fmtNum(kpi.coins_redeemed) : '—'}
+                label={t('ov.kpi.coinsRedeemed')}
+                value={kpi ? fmtNum.format(n0(kpi.coins_redeemed)) : '—'}
                 delta={dRedeemed}
               />
               <KpiTile
-                label="Redeem rate"
+                label={t('ov.kpi.redeemRate')}
                 value={kpi ? `${redemptionRate}%` : '—'}
                 strong={redemptionRate >= 70}
               />
@@ -363,8 +342,8 @@ export default function Overview(){
           <Card className="ovCard">
             <div className="ovChartHead">
               <div>
-                <div className="ovTitle">Dynamics</div>
-                <div className="ovSub">{metric === 'sales' ? 'Sales' : metric === 'customers' ? 'Customers' : metric === 'loyalty' ? 'Loyalty' : 'Funnel'}</div>
+                <div className="ovTitle">{t('ov.dynamics')}</div>
+                <div className="ovSub">{metricSub}</div>
               </div>
 
               {/* metric segmented */}
@@ -373,25 +352,25 @@ export default function Overview(){
                 value={metric}
                 onChange={(v) => setMetric(v as any)}
                 items={[
-                  { key: 'sales', label: <span className="ovSegLbl">Sales</span> },
-                  { key: 'customers', label: <span className="ovSegLbl">Customers</span> },
-                  { key: 'loyalty', label: <span className="ovSegLbl">Loyalty</span> },
-                  { key: 'funnel', label: <span className="ovSegLbl">Funnel</span> },
+                  { key: 'sales', label: <span className="ovSegLbl">{t('ov.metric.sales')}</span> },
+                  { key: 'customers', label: <span className="ovSegLbl">{t('ov.metric.customers')}</span> },
+                  { key: 'loyalty', label: <span className="ovSegLbl">{t('ov.metric.loyalty')}</span> },
+                  { key: 'funnel', label: <span className="ovSegLbl">{t('ov.metric.funnel')}</span> },
                 ]}
               />
 
               {/* svg chart-mode buttons */}
-              <div className="ovChartBtns" role="tablist" aria-label="Chart type">
-                <button type="button" className={'ovChartBtn ' + (chartMode==='bar' ? 'is-active' : '')} onClick={() => setChartMode('bar')} title="Bars" aria-label="Bars"><IcoBars/></button>
-                <button type="button" className={'ovChartBtn ' + (chartMode==='line' ? 'is-active' : '')} onClick={() => setChartMode('line')} title="Line" aria-label="Line"><IcoLine/></button>
-                <button type="button" className={'ovChartBtn ' + (chartMode==='area' ? 'is-active' : '')} onClick={() => setChartMode('area')} title="Area" aria-label="Area"><IcoArea/></button>
+              <div className="ovChartBtns" role="tablist" aria-label={t('ov.chartType')}>
+                <button type="button" className={'ovChartBtn ' + (chartMode==='bar' ? 'is-active' : '')} onClick={() => setChartMode('bar')} title={t('ov.chart.bars')} aria-label={t('ov.chart.bars')}><IcoBars/></button>
+                <button type="button" className={'ovChartBtn ' + (chartMode==='line' ? 'is-active' : '')} onClick={() => setChartMode('line')} title={t('ov.chart.line')} aria-label={t('ov.chart.line')}><IcoLine/></button>
+                <button type="button" className={'ovChartBtn ' + (chartMode==='area' ? 'is-active' : '')} onClick={() => setChartMode('area')} title={t('ov.chart.area')} aria-label={t('ov.chart.area')}><IcoArea/></button>
               </div>
             </div>
 
             <div className="ovChart">
-              {!appId && <div className="sg-muted">Выбери проект.</div>}
-              {appId && q.isLoading && <div className="sg-muted">Загрузка…</div>}
-              {appId && q.isError && <div className="sg-muted">Ошибка: {(q.error as Error).message}</div>}
+              {!appId && <div className="sg-muted">{t('ov.pickProject')}</div>}
+              {appId && q.isLoading && <div className="sg-muted">{t('common.loading')}</div>}
+              {appId && q.isError && <div className="sg-muted">{t('ov.error', { msg: (q.error as Error).message })}</div>}
 
               {appId && !q.isLoading && !q.isError && (
                 <ResponsiveContainer width="100%" height="100%">
@@ -431,10 +410,10 @@ export default function Overview(){
             <div className="ovUnder">
               <div className="sg-tabs ovUnderTabs">
                 <button type="button" className={'sg-tab ' + (under==='live' ? 'is-active' : '')} onClick={() => setUnder('live')}>
-                  <span className="ovTabIco"><IcoBolt/></span> Live
+                  <span className="ovTabIco"><IcoBolt/></span> {t('ov.live')}
                 </button>
                 <button type="button" className={'sg-tab ' + (under==='alerts' ? 'is-active' : '')} onClick={() => setUnder('alerts')}>
-                  <span className="ovTabIco"><IcoBell/></span> Alerts
+                  <span className="ovTabIco"><IcoBell/></span> {t('ov.alerts')}
                   {!!alerts.length && <span className="ovTabCount">{alerts.length}</span>}
                 </button>
               </div>
@@ -444,14 +423,14 @@ export default function Overview(){
                 <div className="ovUnderPanel">
                   <div className="ovUnderHead">
                     <div>
-                      <div className="ovTitle">Live feed</div>
-                      <div className="ovSub">последние события</div>
+                      <div className="ovTitle">{t('ov.liveFeed')}</div>
+                      <div className="ovSub">{t('ov.liveFeedSub')}</div>
                     </div>
-                    <div className="sg-pill ovMiniPill">{q.isFetching ? 'обновляю…' : 'готово'}</div>
+                    <div className="sg-pill ovMiniPill">{q.isFetching ? t('ov.refreshing') : t('ov.ready')}</div>
                   </div>
 
                   {!live.length ? (
-                    <div className="sg-muted">Пока пусто.</div>
+                    <div className="sg-muted">{t('ov.empty')}</div>
                   ) : (
                     <div className="ovFeed">
                       {live.slice(0, 18).map((e, i) => (
@@ -471,14 +450,16 @@ export default function Overview(){
                 <div className="ovUnderPanel">
                   <div className="ovUnderHead">
                     <div>
-                      <div className="ovTitle">Alerts & insights</div>
-                      <div className="ovSub">что требует внимания</div>
+                      <div className="ovTitle">{t('ov.alertsTitle')}</div>
+                      <div className="ovSub">{t('ov.alertsSub')}</div>
                     </div>
-                    <div className="sg-pill ovMiniPill">{alerts.length ? `${alerts.length} items` : '0 items'}</div>
+                    <div className="sg-pill ovMiniPill">
+                      {alerts.length ? t('ov.items', { n: alerts.length }) : t('ov.items0')}
+                    </div>
                   </div>
 
                   {!alerts.length ? (
-                    <div className="sg-muted">Нет алертов. Всё ок.</div>
+                    <div className="sg-muted">{t('ov.noAlerts')}</div>
                   ) : (
                     <div className="ovAlerts">
                       {alerts.slice(0, 10).map((a) => (
@@ -509,34 +490,34 @@ export default function Overview(){
             {/* Quick actions */}
             <Card className="ovCard">
               <div className="ovCardHead">
-                <div className="ovTitle">Quick actions</div>
+                <div className="ovTitle">{t('ov.quickActions')}</div>
               </div>
 
               <div className="ovActions">
-                <Button variant="primary">Send message</Button>
-                <Button variant="primary">Create promo</Button>
-                <Button variant="primary">Cashback settings</Button>
+                <Button variant="primary">{t('ov.action.sendMessage')}</Button>
+                <Button variant="primary">{t('ov.action.createPromo')}</Button>
+                <Button variant="primary">{t('ov.action.cashbackSettings')}</Button>
               </div>
 
               <div className="ovActionHint">
-                <span className="sg-muted">Совет:</span> начни с winback для тех, кто не приходил 14+ дней.
+                <span className="sg-muted">{t('ov.tip')}:</span> {t('ov.tipText')}
               </div>
             </Card>
 
             {/* Top lists with tabs */}
             <Card className="ovCard">
               <div className="ovCardHead ovTopHead">
-                <div className="ovTitle">Top</div>
+                <div className="ovTitle">{t('ov.top')}</div>
 
                 <div className="sg-tabs ovMiniTabs">
                   <button type="button" className={'sg-tab ' + (topTab==='customers' ? 'is-active' : '')} onClick={() => setTopTab('customers')}>
-                    Customers
+                    {t('ov.top.customers')}
                   </button>
                   <button type="button" className={'sg-tab ' + (topTab==='prizes' ? 'is-active' : '')} onClick={() => setTopTab('prizes')}>
-                    Prizes
+                    {t('ov.top.prizes')}
                   </button>
                   <button type="button" className={'sg-tab ' + (topTab==='cashiers' ? 'is-active' : '')} onClick={() => setTopTab('cashiers')}>
-                    Cashiers
+                    {t('ov.top.cashiers')}
                   </button>
                 </div>
               </div>
@@ -544,54 +525,75 @@ export default function Overview(){
               <div className="ovTopList">
                 {topTab === 'customers' && (
                   <>
-                    {!topCustomers.length ? <div className="sg-muted">Нет данных.</div> : topCustomers.slice(0, 8).map((x, i) => (
-                      <div className={'ovTopRow' + (i < 3 ? ' is-top' : '')} key={x.id}>
-                        <div className={'ovMedal m' + (i+1)}>{i+1}</div>
-                        <div className="ovTopMid">
-                          <div className="ovTopTitle">{x.title}</div>
-                          <div className="ovTopSub">{x.sub || '—'}</div>
-                          <div className="ovTopBar"><div className="ovTopBarFill" style={{ width: `${Math.round((x.value / Math.max(1, topCustomers[0]?.value || 1)) * 100)}%` }} /></div>
+                    {!topCustomers.length
+                      ? <div className="sg-muted">{t('ov.noData')}</div>
+                      : topCustomers.slice(0, 8).map((x, i) => (
+                        <div className={'ovTopRow' + (i < 3 ? ' is-top' : '')} key={x.id}>
+                          <div className={'ovMedal m' + (i+1)}>{i+1}</div>
+                          <div className="ovTopMid">
+                            <div className="ovTopTitle">{x.title}</div>
+                            <div className="ovTopSub">{x.sub || '—'}</div>
+                            <div className="ovTopBar">
+                              <div
+                                className="ovTopBarFill"
+                                style={{ width: `${Math.round((x.value / Math.max(1, topCustomers[0]?.value || 1)) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="ovTopVal">{fmtNum.format(n0(x.value))}</div>
                         </div>
-                        <div className="ovTopVal">{fmtNum(x.value)}</div>
-                      </div>
-                    ))}
+                      ))
+                    }
                   </>
                 )}
 
                 {topTab === 'prizes' && (
                   <>
-                    {!topPrizes.length ? <div className="sg-muted">Нет данных.</div> : topPrizes.slice(0, 8).map((p, i) => {
-                      const val = n0(p.wins);
-                      const max = Math.max(1, n0(topPrizes[0]?.wins));
-                      const w = Math.round((val / max) * 100);
-                      return (
-                        <div className={'ovTopRow' + (i < 3 ? ' is-top' : '')} key={p.prize_code}>
-                          <div className={'ovMedal m' + (i+1)}>{i+1}</div>
-                          <div className="ovTopMid">
-                            <div className="ovTopTitle">{p.title}</div>
-                            <div className="ovTopSub">redeemed: {fmtNum(p.redeemed)}</div>
-                            <div className="ovTopBar"><div className="ovTopBarFill" style={{ width: `${w}%` }} /></div>
+                    {!topPrizes.length
+                      ? <div className="sg-muted">{t('ov.noData')}</div>
+                      : topPrizes.slice(0, 8).map((p, i) => {
+                        const val = n0(p.wins);
+                        const max = Math.max(1, n0(topPrizes[0]?.wins));
+                        const w = Math.round((val / max) * 100);
+                        return (
+                          <div className={'ovTopRow' + (i < 3 ? ' is-top' : '')} key={p.prize_code}>
+                            <div className={'ovMedal m' + (i+1)}>{i+1}</div>
+                            <div className="ovTopMid">
+                              <div className="ovTopTitle">{p.title}</div>
+                              <div className="ovTopSub">
+                                {t('ov.redeemed')}: {fmtNum.format(n0(p.redeemed))}
+                              </div>
+                              <div className="ovTopBar"><div className="ovTopBarFill" style={{ width: `${w}%` }} /></div>
+                            </div>
+                            <div className="ovTopVal">{fmtNum.format(val)}</div>
                           </div>
-                          <div className="ovTopVal">{fmtNum(val)}</div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    }
                   </>
                 )}
 
                 {topTab === 'cashiers' && (
                   <>
-                    {!topCashiers.length ? <div className="sg-muted">Нет данных.</div> : topCashiers.slice(0, 8).map((x, i) => (
-                      <div className={'ovTopRow' + (i < 3 ? ' is-top' : '')} key={x.id}>
-                        <div className={'ovMedal m' + (i+1)}>{i+1}</div>
-                        <div className="ovTopMid">
-                          <div className="ovTopTitle">{x.title}</div>
-                          <div className="ovTopSub">{x.sub || '—'}</div>
-                          <div className="ovTopBar"><div className="ovTopBarFill" style={{ width: `${Math.round((x.value / Math.max(1, topCashiers[0]?.value || 1)) * 100)}%` }} /></div>
+                    {!topCashiers.length
+                      ? <div className="sg-muted">{t('ov.noData')}</div>
+                      : topCashiers.slice(0, 8).map((x, i) => (
+                        <div className={'ovTopRow' + (i < 3 ? ' is-top' : '')} key={x.id}>
+                          <div className={'ovMedal m' + (i+1)}>{i+1}</div>
+                          <div className="ovTopMid">
+                            <div className="ovTopTitle">{x.title}</div>
+                            <div className="ovTopSub">{x.sub || '—'}</div>
+                            <div className="ovTopBar">
+                              <div
+                                className="ovTopBarFill"
+                                style={{ width: `${Math.round((x.value / Math.max(1, topCashiers[0]?.value || 1)) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="ovTopVal">{fmtNum.format(n0(x.value))}</div>
                         </div>
-                        <div className="ovTopVal">{fmtNum(x.value)}</div>
-                      </div>
-                    ))}
+                      ))
+                    }
                   </>
                 )}
               </div>
@@ -600,17 +602,17 @@ export default function Overview(){
             {/* Health card */}
             <Card className="ovCard">
               <div className="ovCardHead">
-                <div className="ovTitle">Health</div>
+                <div className="ovTitle">{t('ov.health')}</div>
               </div>
 
               <div className="ovHealth">
                 <div className="ovHealthRow">
-                  <span className="sg-muted">Redeem rate</span>
+                  <span className="sg-muted">{t('ov.kpi.redeemRate')}</span>
                   <span className="ovHealthStrong">{redemptionRate}%</span>
                 </div>
                 <div className="ovHealthRow">
-                  <span className="sg-muted">Liability (coins)</span>
-                  <span className="ovHealthStrong">{fmtNum(n0(kpi?.liability_coins))}</span>
+                  <span className="sg-muted">{t('ov.liabilityCoins')}</span>
+                  <span className="ovHealthStrong">{fmtNum.format(n0(kpi?.liability_coins))}</span>
                 </div>
               </div>
             </Card>
