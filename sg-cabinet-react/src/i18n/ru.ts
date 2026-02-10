@@ -5,8 +5,8 @@ const RU: Record<string, string> = {
   "common.cancel": "Отмена",
   "common.refresh": "Обновить",
   "common.logout": "Выйти",
-  "common.light": "Light", // можешь сделать "Светлая"
-  "common.dark": "Dark",   // можешь сделать "Тёмная"
+  "common.light": "Светлая", // можешь сделать "Светлая"
+  "common.dark": "Темная",   // можешь сделать "Тёмная"
 
   // brand/top
   "brand.name": "Sales Genius",
@@ -32,19 +32,20 @@ const RU: Record<string, string> = {
   "cabinet.empty": "Проектов пока нет — создай первый.",
 
   // nav (panel)
-  "nav.overview": "Overview",
-  "nav.live": "Live",
-  "nav.customers": "Customers",
-  "nav.sales": "Sales",
-  "nav.wheel": "Wheel",
-  "nav.passport": "Passport",
-  "nav.calendar": "Calendar",
-  "nav.profit": "Profit / ROI",
-  "nav.settings": "Settings",
+  "nav.overview": "Дашборд",
+  "nav.live": "Лайв",
+  "nav.customers": "Юзеры",
+  "nav.sales": "Продажиs",
+  "nav.wheel": "Колеса",
+  "nav.passport": "Паспорт",
+  "nav.calendar": "Календарь",
+  "nav.profit": "Профит",
+  "nav.settings": "Настройки",
   "nav.constructor": "Конструктор",
-  "nav.game": "Game",
-  "nav.referrals": "Referrals",
-  "nav.broadcasts": "Broadcasts",
+  "nav.game": "Игра",
+  "nav.referrals": "Рефералы",
+  "nav.broadcasts": "Рассылки",
 };
 
 export default RU;
+
