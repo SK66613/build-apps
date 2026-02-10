@@ -1,139 +1,121 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
 
-type MsgType = 'error' | 'success' | '';
+type MsgType = "error" | "success" | "";
 
-function mapError(code: string){
-  switch(code){
-    case 'EMAIL_EXISTS': return 'Этот e-mail уже зарегистрирован. Попробуй войти.';
-    case 'BAD_EMAIL': return 'Некорректный e-mail.';
-    case 'WEAK_PASSWORD': return 'Пароль слишком короткий.';
-    case 'INVALID_CREDENTIALS':
-    case 'BAD_CREDENTIALS': return 'Неверный e-mail или пароль.';
-    case 'EMAIL_OR_PASSWORD_MISSING': return 'Заполни e-mail и пароль.';
-    case 'BAD_INPUT': return 'Проверь e-mail и пароль (пароль минимум 6 символов).';
-    case 'EMAIL_NOT_VERIFIED': return 'E-mail ещё не подтверждён.';
-    default: return code ? `Ошибка: ${code}` : 'Ошибка';
+function mapError(code: string) {
+  switch (code) {
+    case "EMAIL_EXISTS": return "Этот e-mail уже зарегистрирован. Попробуй войти.";
+    case "BAD_EMAIL": return "Некорректный e-mail.";
+    case "WEAK_PASSWORD": return "Пароль слишком короткий.";
+    case "INVALID_CREDENTIALS":
+    case "BAD_CREDENTIALS": return "Неверный e-mail или пароль.";
+    case "EMAIL_OR_PASSWORD_MISSING": return "Заполни e-mail и пароль.";
+    case "BAD_INPUT": return "Проверь e-mail и пароль (пароль минимум 6 символов).";
+    case "EMAIL_NOT_VERIFIED": return "E-mail ещё не подтверждён.";
+    default: return code ? `Ошибка: ${code}` : "Ошибка";
   }
 }
 
-export default function Login(){
+export default function Login() {
   const nav = useNavigate();
-  const [mode, setMode] = React.useState<'login'|'register'>(() => {
-    const sp = new URLSearchParams(window.location.search);
-    return (sp.get('mode') === 'register') ? 'register' : 'login';
-  });
-
-  const [msg, setMsg] = React.useState<{text:string; type:MsgType}>({text:'', type:''});
+  const [mode, setMode] = React.useState<"login" | "register">("login");
   const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ text: string; type: MsgType }>({ text: "", type: "" });
 
-  const [loginEmail, setLoginEmail] = React.useState('');
-  const [loginPass, setLoginPass] = React.useState('');
+  const [email, setEmail] = React.useState("");
+  const [pass, setPass] = React.useState("");
+  const [name, setName] = React.useState("");
 
-  const [regName, setRegName] = React.useState('');
-  const [regEmail, setRegEmail] = React.useState('');
-  const [regPass, setRegPass] = React.useState('');
-
-  // если уже залогинен — сразу в projects
-  React.useEffect(()=>{
-    (async ()=>{
-      try{
-        const me = await apiFetch<any>('/api/auth/me');
-        if (me?.ok && me?.authenticated) nav('/projects', { replace:true });
-      }catch(_){}
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const me = await apiFetch<any>("/api/auth/me");
+        if (me?.ok && me?.authenticated) nav("/cabinet", { replace: true });
+      } catch (_) {}
     })();
   }, [nav]);
 
-  const apiPost = async (path: string, body: any) => {
-    return apiFetch<any>(path, { method:'POST', body: JSON.stringify(body||{}) });
-  };
+  const post = (path: string, body: any) =>
+    apiFetch<any>(path, { method: "POST", body: JSON.stringify(body || {}) });
 
-  const doLogin = async () => {
-    if (!loginEmail.trim() || !loginPass) {
-      setMsg({text:'Заполни e-mail и пароль.', type:'error'});
+  async function doLogin() {
+    if (!email.trim() || !pass) {
+      setMsg({ text: "Заполни e-mail и пароль.", type: "error" });
       return;
     }
     setBusy(true);
-    setMsg({text:'Проверяем данные…', type:''});
-    try{
-      const data = await apiPost('/api/auth/login', { email: loginEmail.trim(), password: loginPass });
-      if (!data?.ok) throw { message: data?.error || 'LOGIN_FAILED' };
-      try{ localStorage.setItem('sg_user_email', loginEmail.trim()); }catch(_){}
-      setMsg({text:'Готово, заходим в кабинет…', type:'success'});
-      setTimeout(()=> nav('/projects', { replace:true }), 250);
-    }catch(e:any){
-      setMsg({text: mapError(String(e?.message || e)), type:'error'});
-    }finally{
+    setMsg({ text: "Входим…", type: "" });
+    try {
+      const r = await post("/api/auth/login", { email: email.trim(), password: pass });
+      if (!r?.ok) throw new Error(r?.error || "LOGIN_FAILED");
+      setMsg({ text: "Готово. Открываю кабинет…", type: "success" });
+      nav("/cabinet", { replace: true });
+    } catch (e: any) {
+      setMsg({ text: mapError(String(e?.message || e)), type: "error" });
+    } finally {
       setBusy(false);
     }
-  };
+  }
 
-  const doRegister = async () => {
-    if (!regEmail.trim() || !regPass) {
-      setMsg({text:'Заполни e-mail и пароль.', type:'error'});
+  async function doRegister() {
+    if (!email.trim() || !pass) {
+      setMsg({ text: "Заполни e-mail и пароль.", type: "error" });
       return;
     }
     setBusy(true);
-    setMsg({text:'Создаём аккаунт…', type:''});
-    try{
-      const data = await apiPost('/api/auth/register', { name: regName.trim(), email: regEmail.trim(), password: regPass });
-      if (!data?.ok) throw { message: data?.error || 'REGISTER_FAILED' };
-      // авто-логин
-      setLoginEmail(regEmail.trim());
-      setLoginPass(regPass);
-      await apiPost('/api/auth/login', { email: regEmail.trim(), password: regPass });
-      setMsg({text:'Аккаунт создан. Заходим…', type:'success'});
-      setTimeout(()=> nav('/projects', { replace:true }), 250);
-    }catch(e:any){
-      setMsg({text: mapError(String(e?.message || e)), type:'error'});
-    }finally{
+    setMsg({ text: "Создаю аккаунт…", type: "" });
+    try {
+      const r = await post("/api/auth/register", { name: name.trim(), email: email.trim(), password: pass });
+      if (!r?.ok) throw new Error(r?.error || "REGISTER_FAILED");
+      await post("/api/auth/login", { email: email.trim(), password: pass });
+      setMsg({ text: "Аккаунт создан. Открываю кабинет…", type: "success" });
+      nav("/cabinet", { replace: true });
+    } catch (e: any) {
+      setMsg({ text: mapError(String(e?.message || e)), type: "error" });
+    } finally {
       setBusy(false);
     }
-  };
+  }
 
   return (
-    <div style={{ minHeight:'100vh', display:'grid', placeItems:'center', padding:16 }}>
-      <div style={{ width:'100%', maxWidth:420, borderRadius:18, border:'1px solid rgba(148,163,184,.35)', padding:18, background:'rgba(255,255,255,.92)' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
-          <div style={{ fontWeight:900 }}>Sales Genius</div>
-          <div style={{ fontSize:12, opacity:.7 }}>Вход в кабинет</div>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-head">
+          <div className="brand">Sales Genius</div>
+          <div className="hint">Вход в кабинет</div>
         </div>
 
-        <div style={{ display:'flex', gap:8, marginTop:14 }}>
-          <button disabled={busy} onClick={()=>{setMode('login'); setMsg({text:'',type:''});}} style={{ flex:1, padding:10, borderRadius:12, border:'1px solid rgba(15,23,42,.12)', fontWeight:900, background: mode==='login' ? 'rgba(34,211,238,.16)' : 'transparent' }}>Вход</button>
-          <button disabled={busy} onClick={()=>{setMode('register'); setMsg({text:'',type:''});}} style={{ flex:1, padding:10, borderRadius:12, border:'1px solid rgba(15,23,42,.12)', fontWeight:900, background: mode==='register' ? 'rgba(34,211,238,.16)' : 'transparent' }}>Регистрация</button>
+        <div className="auth-tabs">
+          <button className={mode === "login" ? "tab active" : "tab"} disabled={busy} onClick={() => { setMode("login"); setMsg({ text: "", type: "" }); }}>
+            Вход
+          </button>
+          <button className={mode === "register" ? "tab active" : "tab"} disabled={busy} onClick={() => { setMode("register"); setMsg({ text: "", type: "" }); }}>
+            Регистрация
+          </button>
         </div>
 
-        {msg.text && (
-          <div style={{ marginTop:12, padding:'10px 12px', borderRadius:12,
-            background: msg.type==='error' ? 'rgba(239,68,68,.12)' : 'rgba(34,197,94,.12)',
-            border: '1px solid rgba(15,23,42,.10)',
-            fontWeight:700
-          }}>
-            {msg.text}
-          </div>
+        {!!msg.text && (
+          <div className={`auth-msg ${msg.type || ""}`}>{msg.text}</div>
         )}
 
-        {mode==='login' ? (
-          <form onSubmit={(e)=>{e.preventDefault(); doLogin();}} style={{ display:'grid', gap:10, marginTop:14 }}>
-            <label style={{ fontSize:12, opacity:.7 }}>Email</label>
-            <input value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} className="sg-input" />
-            <label style={{ fontSize:12, opacity:.7 }}>Пароль</label>
-            <input value={loginPass} onChange={e=>setLoginPass(e.target.value)} type="password" className="sg-input" />
-            <button disabled={busy} className="sg-btn" type="submit">Войти</button>
-          </form>
-        ) : (
-          <form onSubmit={(e)=>{e.preventDefault(); doRegister();}} style={{ display:'grid', gap:10, marginTop:14 }}>
-            <label style={{ fontSize:12, opacity:.7 }}>Имя</label>
-            <input value={regName} onChange={e=>setRegName(e.target.value)} className="sg-input" />
-            <label style={{ fontSize:12, opacity:.7 }}>Email</label>
-            <input value={regEmail} onChange={e=>setRegEmail(e.target.value)} className="sg-input" />
-            <label style={{ fontSize:12, opacity:.7 }}>Пароль</label>
-            <input value={regPass} onChange={e=>setRegPass(e.target.value)} type="password" className="sg-input" />
-            <button disabled={busy} className="sg-btn" type="submit">Создать аккаунт</button>
-          </form>
-        )}
+        <form className="auth-form" onSubmit={(e) => { e.preventDefault(); mode === "login" ? doLogin() : doRegister(); }}>
+          {mode === "register" && (
+            <>
+              <label>Имя</label>
+              <input className="sg-input" value={name} onChange={(e) => setName(e.target.value)} />
+            </>
+          )}
+          <label>Email</label>
+          <input className="sg-input" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label>Пароль</label>
+          <input className="sg-input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} />
+
+          <button className="sg-btn" disabled={busy} type="submit">
+            {mode === "login" ? "Войти" : "Создать аккаунт"}
+          </button>
+        </form>
       </div>
     </div>
   );
