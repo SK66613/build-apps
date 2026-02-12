@@ -232,40 +232,33 @@ export function PreviewFrame(){
       </div>
 
       {/* publish modal */}
-      {pubOpen ? (
-        <div className="sgModalBackdrop" onClick={()=>setPubOpen(false)}>
-          <div className="sgModal" onClick={(e)=>e.stopPropagation()}>
-            <div className="sgModalTitle">Мини-апп опубликован 🚀</div>
+{pubOpen ? (
+  <div className="sgModalBackdrop sgModalBackdrop--top" onClick={()=>setPubOpen(false)}>
+    <div className="sgModal sgModal--wide" onClick={(e)=>e.stopPropagation()}>
+      <div className="sgModalTitle">Мини-апп опубликован 🚀</div>
 
-            <div className="sgModalRow">
-              <input className="sgModalInput" readOnly value={pubUrl || ''} />
-              <button
-                className="ctorSeg__btn is-active"
-                type="button"
-                onClick={onCopy}
-                title="Скопировать"
-              >
-                {copied ? '✓' : '📋'}
-              </button>
-            </div>
+      {/* ссылка на всю ширину */}
+      <input className="sgModalInput sgModalInput--full" readOnly value={pubUrl || ''} />
 
-            <div className="sgModalActions">
-              <button className="ctorSeg__btn" type="button" onClick={()=>setPubOpen(false)}>
-                Закрыть
-              </button>
+      <div className="sgModalActions sgModalActions--two">
+        <button className="ctorSeg__btn" type="button" onClick={()=>setPubOpen(false)}>
+          Закрыть
+        </button>
 
-              <button
-                className="ctorSeg__btn is-active"
-                type="button"
-                onClick={()=>{ if (pubUrl) window.open(pubUrl, '_blank'); }}
-                disabled={!pubUrl}
-              >
-                Открыть
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+        <button
+          className="ctorSeg__btn is-active"
+          type="button"
+          onClick={onCopy}
+          disabled={!pubUrl}
+          title="Скопировать ссылку"
+        >
+          {copied ? 'Скопировано ✓' : 'Скопировать'}
+        </button>
+      </div>
+    </div>
+  </div>
+) : null}
+
 
     </div>
   );
