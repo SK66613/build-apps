@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Blueprint, Selected, SaveState, RoutePage, BlockInst } from './types';
 import { clone, uid, makeDefaultBlueprint } from './utils';
 import { ensureThemeTokens, themeTokensToCss, type ThemeTokens } from '../design/theme';
+import { apiFetch } from '../../lib/api';
 
 type State = {
   appId: string | null;
@@ -9,11 +10,18 @@ type State = {
   selected: Selected;
   dirty: boolean;
   saveState: SaveState;
+  lastPublishedUrl?: string | null;
 
   setAppId(appId: string | null): void;
   setBlueprint(bp: Blueprint): void;
   setSaveState(st: SaveState): void;
   markSaved(): void;
+  saveNow(): Promise<void>;
+  publishNow(): Promise<{ publicUrl?: string; publicId?: string } | any>;
+
+  // server
+  saveNow(): Promise<void>;
+  publishNow(): Promise<{ publicId?: string; publicUrl?: string } | any>;
 
   selectRoute(path: string): void;
   selectBlock(path: string, id: string): void;
@@ -86,6 +94,7 @@ export const useConstructorStore = create<State>((set, get) => ({
   selected: { kind: 'route', path: '/' },
   dirty: false,
   saveState: 'idle',
+  lastPublishedUrl: null,
 
   setAppId(appId) {
     set({ appId });
@@ -104,6 +113,49 @@ export const useConstructorStore = create<State>((set, get) => ({
   markSaved() {
     set({ dirty: false, saveState: 'saved' });
   },
+
+  async saveNow() {
+    const st = get();
+    if (!st.appId) throw new Error('APP_NOT_SELECTED');
+
+    // avoid parallel saves
+    set({ saveState: 'saving' });
+    try {
+      await apiFetch<any>(`/api/app/${encodeURIComponent(st.appId)}/config`, {
+        method: 'PUT',
+        body: JSON.stringify({ config: st.blueprint }),
+      });
+      set({ dirty: false, saveState: 'saved' });
+    } catch (e) {
+      set({ saveState: 'error' });
+      throw e;
+    }
+  },
+
+  async publishNow() {
+    const st = get();
+    if (!st.appId) throw new Error('APP_NOT_SELECTED');
+
+    // auto-save before publish if there are unsaved changes
+    if (st.dirty) {
+      await (get() as any).saveNow();
+    }
+
+    set({ saveState: 'saving' });
+    try {
+      const res = await apiFetch<any>(`/api/app/${encodeURIComponent(st.appId)}/publish`, {
+        method: 'POST',
+      });
+      const url = res?.publicUrl || null;
+      set({ saveState: 'saved', lastPublishedUrl: url });
+      return res;
+    } catch (e) {
+      set({ saveState: 'error' });
+      throw e;
+    }
+  },
+
+
 
   selectRoute(path) {
     set({ selected: { kind: 'route', path } });
