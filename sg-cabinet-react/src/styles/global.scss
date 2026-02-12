@@ -5994,47 +5994,47 @@ body{
 
 // модалка в конструкторе 
 
-/* ВАЖНО: fixed + огромный z-index + portal-like behavior */
 .sgModalBackdrop--top{
-  position: fixed;
-  inset: 0;
-  z-index: 2147483647; /* поверх всего */
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: rgba(15, 23, 42, .38) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
 }
 
-/* на случай если у левой панели/контейнера есть transform/filter */
-.sgModalBackdrop{
-  background: rgba(15, 23, 42, .30);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sgModal{
+  background: var(--card, rgba(255,255,255,.92)) !important;
+  border: 1px solid var(--border, rgba(15,23,42,.12)) !important;
+  box-shadow: var(--shadow, 0 18px 52px rgba(2,6,23,.10)) !important;
 }
 
-/* модалка чуть шире и аккуратнее */
 .sgModal--wide{
-  width: min(720px, calc(100vw - 28px));
-  padding: 18px;
-  border-radius: 20px;
+  width: min(720px, calc(100vw - 28px)) !important;
+  padding: 18px !important;
+  border-radius: 20px !important;
 }
 
-/* инпут на всю ширину */
 .sgModalInput--full{
-  width: 100%;
-  margin-top: 10px;
+  width: 100% !important;
+  margin-top: 10px !important;
 }
 
-/* кнопки снизу в 2 колонки */
 .sgModalActions--two{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 14px;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+  margin-top: 14px !important;
 }
 
-/* чтобы кнопки были одинаковые по высоте */
 .sgModalActions--two .ctorSeg__btn{
-  height: 44px;
-  border-radius: 14px;
+  height: 44px !important;
+  border-radius: 14px !important;
 }
+
 
 
