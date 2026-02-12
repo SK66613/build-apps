@@ -57,6 +57,20 @@ export function PreviewFrame(){
   const [zoom, setZoom] = useLS<number>('ctor_zoom', 100);
   const p = PRESETS[preset];
 
+  // publish modal state
+  const [pubOpen, setPubOpen] = React.useState(false);
+  const [pubUrl, setPubUrl] = React.useState<string>('');
+  const [copied, setCopied] = React.useState(false);
+
+  // auto-open modal when store updates lastPublishedUrl
+  React.useEffect(()=>{
+    if (lastPublishedUrl) {
+      setPubUrl(String(lastPublishedUrl));
+      setPubOpen(true);
+      setCopied(false);
+    }
+  }, [lastPublishedUrl]);
+
   // push bp into preview
   const post = React.useCallback((msg:any)=>{
     try{ frameRef.current?.contentWindow?.postMessage(msg, '*'); }catch(_){ }
@@ -105,66 +119,81 @@ export function PreviewFrame(){
   const saveLabel = isSaving ? 'Сохранение…' : (dirty ? 'Сохранить' : 'Сохранено');
   const publishLabel = isSaving ? 'Публикация…' : 'Опубликовать';
 
+  async function onCopy(){
+    try{
+      await navigator.clipboard.writeText(pubUrl || '');
+      setCopied(true);
+      window.setTimeout(()=>setCopied(false), 1200);
+    }catch(_){
+      // если clipboard не доступен, просто игнор
+    }
+  }
+
   return (
     <div className="sg-card ctor-card ctor-preview ctor-preview--phone">
+
       {/* top controls like old, but style like Design/Panel */}
-<div className="ctor-preview__hdr">
-  {/* Плашка как у Дизайн/Панель */}
-  <div className="ctorSeg ctorPreviewSeg">
-    {Object.entries(PRESETS).map(([k, v]) => (
-      <button
-        key={k}
-        className={'ctorSeg__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
-        onClick={()=>setPreset(k as PresetKey)}
-        type="button"
-      >
-        {v.label}
-      </button>
-    ))}
+      <div className="ctor-preview__hdr">
+        {/* Плашка как у Дизайн/Панель */}
+        <div className="ctorSeg ctorPreviewSeg">
+          {Object.entries(PRESETS).map(([k, v]) => (
+            <button
+              key={k}
+              className={'ctorSeg__btn' + (preset === (k as PresetKey) ? ' is-active' : '')}
+              onClick={()=>setPreset(k as PresetKey)}
+              type="button"
+            >
+              {v.label}
+            </button>
+          ))}
 
-    {/* сюда потом добавим Undo/Redo/Save/Publish в том же стиле */}
-    <button
-      className="ctorSeg__btn"
-      type="button"
-      disabled={isSaving || !dirty || typeof saveNow !== 'function'}
-      onClick={async ()=>{
-        try{ await saveNow?.(); }
-        catch(e:any){
-          alert('Не удалось сохранить: ' + (e?.message || e?.error || String(e)));
-        }
-      }}
-    >
-      {saveLabel}
-    </button>
-    <button
-      className={'ctorSeg__btn' + (!isSaving ? ' is-active' : '')}
-      type="button"
-      disabled={isSaving || typeof publishNow !== 'function'}
-      onClick={async ()=>{
-        try{
-          const res = await publishNow?.();
-          const url = res?.publicUrl;
-          if (url) {
-            // удобный UX: открыть в новой вкладке
-            window.open(url, '_blank');
-          } else {
-            alert('Опубликовано');
-          }
-        }catch(e:any){
-          alert('Не удалось опубликовать: ' + (e?.message || e?.error || String(e)));
-        }
-      }}
-    >
-      {publishLabel}
-    </button>
-  </div>
+          {/* Save */}
+          <button
+            className="ctorSeg__btn"
+            type="button"
+            disabled={isSaving || !dirty || typeof saveNow !== 'function'}
+            onClick={async ()=>{
+              try{ await saveNow?.(); }
+              catch(e:any){
+                alert('Не удалось сохранить: ' + (e?.message || e?.error || String(e)));
+              }
+            }}
+          >
+            {saveLabel}
+          </button>
 
-  {lastPublishedUrl ? (
-    <div className="ctor-preview__pubLink">
-      Публичная ссылка: <a href={lastPublishedUrl} target="_blank" rel="noreferrer">{lastPublishedUrl}</a>
-    </div>
-  ) : null}
+          {/* Publish */}
+          <button
+            className={'ctorSeg__btn' + (!isSaving ? ' is-active' : '')}
+            type="button"
+            disabled={isSaving || typeof publishNow !== 'function'}
+            onClick={async ()=>{
+              try{
+                const res = await publishNow?.();
+                const url = res?.publicUrl;
+                if (url) {
+                  setPubUrl(String(url));
+                  setPubOpen(true);
+                  setCopied(false);
+                } else {
+                  // если воркер не вернул ссылку — покажем просто уведомление
+                  alert('Опубликовано');
+                }
+              }catch(e:any){
+                alert('Не удалось опубликовать: ' + (e?.message || e?.error || String(e)));
+              }
+            }}
+          >
+            {publishLabel}
+          </button>
+        </div>
 
+        {lastPublishedUrl ? (
+          <div className="ctor-preview__pubLink">
+            Публичная ссылка:{' '}
+            <a href={lastPublishedUrl} target="_blank" rel="noreferrer">{lastPublishedUrl}</a>
+          </div>
+        ) : null}
 
         {/* zoom как было */}
         <div className="ctor-preview__zoom">
@@ -206,6 +235,43 @@ export function PreviewFrame(){
           </div>
         </div>
       </div>
+
+      {/* publish modal */}
+      {pubOpen ? (
+        <div className="sgModalBackdrop" onClick={()=>setPubOpen(false)}>
+          <div className="sgModal" onClick={(e)=>e.stopPropagation()}>
+            <div className="sgModalTitle">Мини-апп опубликован 🚀</div>
+
+            <div className="sgModalRow">
+              <input className="sgModalInput" readOnly value={pubUrl || ''} />
+              <button
+                className="ctorSeg__btn is-active"
+                type="button"
+                onClick={onCopy}
+                title="Скопировать"
+              >
+                {copied ? '✓' : '📋'}
+              </button>
+            </div>
+
+            <div className="sgModalActions">
+              <button className="ctorSeg__btn" type="button" onClick={()=>setPubOpen(false)}>
+                Закрыть
+              </button>
+
+              <button
+                className="ctorSeg__btn is-active"
+                type="button"
+                onClick={()=>{ if (pubUrl) window.open(pubUrl, '_blank'); }}
+                disabled={!pubUrl}
+              >
+                Открыть
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </div>
   );
 }
