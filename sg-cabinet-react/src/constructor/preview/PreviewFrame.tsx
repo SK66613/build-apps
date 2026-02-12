@@ -2,6 +2,9 @@ import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
 import type { SaveState } from '../state/types';
 
+import { createPortal } from 'react-dom';
+
+
 const BASE_URL = (import.meta as any).env?.BASE_URL || '/';
 
 function buildPreviewUrl(appId?: string | null){
@@ -232,12 +235,11 @@ export function PreviewFrame(){
       </div>
 
       {/* publish modal */}
-{pubOpen ? (
+{pubOpen ? createPortal(
   <div className="sgModalBackdrop sgModalBackdrop--top" onClick={()=>setPubOpen(false)}>
     <div className="sgModal sgModal--wide" onClick={(e)=>e.stopPropagation()}>
-      <div className="sgModalTitle">Мини-апп опубликован 🚀</div>
+      <div className="sgModalTitle">Мини-апп опубликован</div>
 
-      {/* ссылка на всю ширину */}
       <input className="sgModalInput sgModalInput--full" readOnly value={pubUrl || ''} />
 
       <div className="sgModalActions sgModalActions--two">
@@ -252,12 +254,14 @@ export function PreviewFrame(){
           disabled={!pubUrl}
           title="Скопировать ссылку"
         >
-          {copied ? 'Скопировано ✓' : 'Скопировать'}
+          {copied ? 'Скопировано' : 'Скопировать'}
         </button>
       </div>
     </div>
-  </div>
+  </div>,
+  document.body
 ) : null}
+
 
 
     </div>
