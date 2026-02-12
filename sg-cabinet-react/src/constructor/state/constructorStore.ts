@@ -16,12 +16,10 @@ type State = {
   setBlueprint(bp: Blueprint): void;
   setSaveState(st: SaveState): void;
   markSaved(): void;
+
+  // server actions
   saveNow(): Promise<void>;
   publishNow(): Promise<{ publicUrl?: string; publicId?: string } | any>;
-
-  // server
-  saveNow(): Promise<void>;
-  publishNow(): Promise<{ publicId?: string; publicUrl?: string } | any>;
 
   selectRoute(path: string): void;
   selectBlock(path: string, id: string): void;
@@ -40,10 +38,7 @@ type State = {
       icon_img: string;
     }>
   ): void;
-  renameRoute(
-    path: string,
-    patch: Partial<{ title: string; nextPath: string }>
-  ): void;
+  renameRoute(path: string, patch: Partial<{ title: string; nextPath: string }>): void;
   deleteRoute(path: string): void;
 
   addBlock(path: string, key: string): void;
@@ -83,7 +78,6 @@ function normalizePath(p: string) {
   if (!s) s = '/';
   if (!s.startsWith('/')) s = '/' + s;
   s = s.replace(/\s+/g, '-');
-  // можно ещё почистить запрещённые символы:
   s = s.replace(/[^/a-zA-Z0-9_-]/g, '');
   return s || '/';
 }
@@ -118,7 +112,6 @@ export const useConstructorStore = create<State>((set, get) => ({
     const st = get();
     if (!st.appId) throw new Error('APP_NOT_SELECTED');
 
-    // avoid parallel saves
     set({ saveState: 'saving' });
     try {
       await apiFetch<any>(`/api/app/${encodeURIComponent(st.appId)}/config`, {
@@ -132,41 +125,34 @@ export const useConstructorStore = create<State>((set, get) => ({
     }
   },
 
-async publishNow() {
-  const st = get();
-  if (!st.appId) throw new Error('APP_NOT_SELECTED');
+  async publishNow() {
+    const st = get();
+    if (!st.appId) throw new Error('APP_NOT_SELECTED');
 
-  // 🟢 СНАЧАЛА SAVE если dirty
-  if (st.dirty) {
-    await get().saveNow();
-  }
+    // ✅ важно: публикация должна работать только из сохранённого draft
+    if (st.dirty) {
+      await get().saveNow();
+    }
 
-  set({ saveState: 'saving' });
+    set({ saveState: 'saving' });
+    try {
+      const res = await apiFetch<any>(`/api/app/${encodeURIComponent(st.appId)}/publish`, {
+        method: 'POST',
+      });
 
-  try {
-    const res = await apiFetch<any>(
-      `/api/app/${encodeURIComponent(st.appId)}/publish`,
-      { method: 'POST' }
-    );
+      const url = res?.publicUrl || null;
 
-    const url = res?.publicUrl || null;
+      set({
+        saveState: 'saved',
+        lastPublishedUrl: url,
+      });
 
-    set({
-      saveState: 'saved',
-      lastPublishedUrl: url
-    });
-
-    return res;
-
-  } catch (e) {
-    set({ saveState: 'error' });
-    throw e;
-  }
-}
-
+      return res;
+    } catch (e) {
+      set({ saveState: 'error' });
+      throw e;
+    }
   },
-
-
 
   selectRoute(path) {
     set({ selected: { kind: 'route', path } });
@@ -195,7 +181,12 @@ async publishNow() {
 
     ensureRoute(bp, p);
 
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'route', path: p } });
+    set({
+      blueprint: bp,
+      dirty: true,
+      saveState: 'idle',
+      selected: { kind: 'route', path: p },
+    });
   },
 
   renameRouteTitle(path, title) {
@@ -247,26 +238,21 @@ async publishNow() {
     const nr: any = bp.nav.routes.find((x) => x.path === path);
     if (!nr) return;
 
-    // title
     if (patch.title !== undefined) {
       const t = String(patch.title || '').trim();
       if (t) nr.title = t;
     }
 
-    // slug/path
     if (patch.nextPath !== undefined) {
       const nextPath = normalizePath(patch.nextPath);
       if (nextPath !== path) {
         const occupied = bp.nav.routes.some((x) => x.path === nextPath);
         if (!occupied) {
-          // nav route
           nr.path = nextPath;
 
-          // real route
           const rr = bp.routes.find((x) => x.path === path);
           if (rr) rr.path = nextPath;
 
-          // selected (аккуратно)
           const sel = st.selected;
           let nextSelected: Selected = sel;
           if (sel.kind === 'route' && sel.path === path) {
@@ -275,7 +261,12 @@ async publishNow() {
             nextSelected = { kind: 'block', path: nextPath, id: sel.id };
           }
 
-          set({ blueprint: bp, dirty: true, saveState: 'idle', selected: nextSelected });
+          set({
+            blueprint: bp,
+            dirty: true,
+            saveState: 'idle',
+            selected: nextSelected,
+          });
           return;
         }
       }
@@ -297,7 +288,12 @@ async publishNow() {
     const sel = st.selected;
     if (sel.path === path) {
       const fallback = bp.nav.routes[0]?.path || '/';
-      set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'route', path: fallback } });
+      set({
+        blueprint: bp,
+        dirty: true,
+        saveState: 'idle',
+        selected: { kind: 'route', path: fallback },
+      });
       return;
     }
 
@@ -314,7 +310,12 @@ async publishNow() {
     const b: BlockInst = { id: uid('b'), key, props: {}, hidden: false };
     r.blocks.push(b);
 
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'block', path, id: b.id } });
+    set({
+      blueprint: bp,
+      dirty: true,
+      saveState: 'idle',
+      selected: { kind: 'block', path, id: b.id },
+    });
   },
 
   updateBlockProps(path, id, props) {
@@ -338,7 +339,12 @@ async publishNow() {
     const r = ensureRoute(bp, path);
     r.blocks = r.blocks.filter((b) => b.id !== id);
 
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'route', path } });
+    set({
+      blueprint: bp,
+      dirty: true,
+      saveState: 'idle',
+      selected: { kind: 'route', path },
+    });
   },
 
   // ✅ move up/down
@@ -394,7 +400,12 @@ async publishNow() {
     };
 
     r.blocks.splice(i + 1, 0, copy);
-    set({ blueprint: bp, dirty: true, saveState: 'idle', selected: { kind: 'block', path, id: copy.id } });
+    set({
+      blueprint: bp,
+      dirty: true,
+      saveState: 'idle',
+      selected: { kind: 'block', path, id: copy.id },
+    });
   },
 
   // ✅ дизайн токены
