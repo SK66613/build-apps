@@ -1,5 +1,6 @@
 import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
+import type { SaveState } from '../state/types';
 
 const BASE_URL = (import.meta as any).env?.BASE_URL || '/';
 
@@ -40,8 +41,12 @@ export function PreviewFrame(){
   const appId = useConstructorStore(s=>s.appId);
   const bp = useConstructorStore(s=>s.blueprint);
   const dirty = useConstructorStore(s=>s.dirty);
+
   const saveState = useConstructorStore(s=>s.saveState);
+  const publishState = useConstructorStore(s=>(s as any).publishState) as SaveState;
+
   const lastPublishedUrl = useConstructorStore(s=>(s as any).lastPublishedUrl) as (string | null | undefined);
+
   const selected = useConstructorStore(s=>s.selected);
   const selectRoute = useConstructorStore(s=>s.selectRoute);
   const selectBlock = useConstructorStore(s=>s.selectBlock);
@@ -52,7 +57,7 @@ export function PreviewFrame(){
 
   const src = React.useMemo(()=>buildPreviewUrl(appId), [appId]);
 
-  // presets + zoom (как в старом)
+  // presets + zoom
   const [preset, setPreset] = useLS<PresetKey>('ctor_preset', 'iphone13');
   const [zoom, setZoom] = useLS<number>('ctor_zoom', 100);
   const p = PRESETS[preset];
@@ -62,7 +67,7 @@ export function PreviewFrame(){
   const [pubUrl, setPubUrl] = React.useState<string>('');
   const [copied, setCopied] = React.useState(false);
 
-  // auto-open modal when store updates lastPublishedUrl
+  // open modal when publish completed
   React.useEffect(()=>{
     if (lastPublishedUrl) {
       setPubUrl(String(lastPublishedUrl));
@@ -116,25 +121,23 @@ export function PreviewFrame(){
   const scale = Math.max(30, Math.min(130, Number(zoom) || 100)) / 100;
 
   const isSaving = saveState === 'saving';
+  const isPublishing = publishState === 'saving';
+
   const saveLabel = isSaving ? 'Сохранение…' : (dirty ? 'Сохранить' : 'Сохранено');
-  const publishLabel = isSaving ? 'Публикация…' : 'Опубликовать';
+  const publishLabel = isPublishing ? 'Публикация…' : 'Опубликовать';
 
   async function onCopy(){
     try{
       await navigator.clipboard.writeText(pubUrl || '');
       setCopied(true);
       window.setTimeout(()=>setCopied(false), 1200);
-    }catch(_){
-      // если clipboard не доступен, просто игнор
-    }
+    }catch(_){}
   }
 
   return (
     <div className="sg-card ctor-card ctor-preview ctor-preview--phone">
 
-      {/* top controls like old, but style like Design/Panel */}
       <div className="ctor-preview__hdr">
-        {/* Плашка как у Дизайн/Панель */}
         <div className="ctorSeg ctorPreviewSeg">
           {Object.entries(PRESETS).map(([k, v]) => (
             <button
@@ -151,7 +154,7 @@ export function PreviewFrame(){
           <button
             className="ctorSeg__btn"
             type="button"
-            disabled={isSaving || !dirty || typeof saveNow !== 'function'}
+            disabled={isSaving || isPublishing || !dirty || typeof saveNow !== 'function'}
             onClick={async ()=>{
               try{ await saveNow?.(); }
               catch(e:any){
@@ -164,9 +167,9 @@ export function PreviewFrame(){
 
           {/* Publish */}
           <button
-            className={'ctorSeg__btn' + (!isSaving ? ' is-active' : '')}
+            className={'ctorSeg__btn' + (!isPublishing && !isSaving ? ' is-active' : '')}
             type="button"
-            disabled={isSaving || typeof publishNow !== 'function'}
+            disabled={isPublishing || isSaving || typeof publishNow !== 'function'}
             onClick={async ()=>{
               try{
                 const res = await publishNow?.();
@@ -176,7 +179,6 @@ export function PreviewFrame(){
                   setPubOpen(true);
                   setCopied(false);
                 } else {
-                  // если воркер не вернул ссылку — покажем просто уведомление
                   alert('Опубликовано');
                 }
               }catch(e:any){
@@ -188,14 +190,7 @@ export function PreviewFrame(){
           </button>
         </div>
 
-        {lastPublishedUrl ? (
-          <div className="ctor-preview__pubLink">
-            Публичная ссылка:{' '}
-            <a href={lastPublishedUrl} target="_blank" rel="noreferrer">{lastPublishedUrl}</a>
-          </div>
-        ) : null}
-
-        {/* zoom как было */}
+        {/* zoom */}
         <div className="ctor-preview__zoom">
           <div className="ctor-preview__zoomLbl">Масштаб</div>
           <input
