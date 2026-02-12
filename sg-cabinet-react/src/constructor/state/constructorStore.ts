@@ -9,7 +9,11 @@ type State = {
   blueprint: Blueprint;
   selected: Selected;
   dirty: boolean;
+
+  // separate states
   saveState: SaveState;
+  publishState: SaveState;
+
   lastPublishedUrl?: string | null;
 
   setAppId(appId: string | null): void;
@@ -87,7 +91,10 @@ export const useConstructorStore = create<State>((set, get) => ({
   blueprint: makeDefaultBlueprint(),
   selected: { kind: 'route', path: '/' },
   dirty: false,
+
   saveState: 'idle',
+  publishState: 'idle',
+
   lastPublishedUrl: null,
 
   setAppId(appId) {
@@ -97,7 +104,12 @@ export const useConstructorStore = create<State>((set, get) => ({
   setBlueprint(bp) {
     const clean = clone(bp || ({} as any));
     ensureNav(clean);
-    set({ blueprint: clean, dirty: false, saveState: 'idle' });
+    set({
+      blueprint: clean,
+      dirty: false,
+      saveState: 'idle',
+      publishState: 'idle',
+    });
   },
 
   setSaveState(st) {
@@ -129,12 +141,12 @@ export const useConstructorStore = create<State>((set, get) => ({
     const st = get();
     if (!st.appId) throw new Error('APP_NOT_SELECTED');
 
-    // ✅ важно: публикация должна работать только из сохранённого draft
+    // publish uses saved draft; if dirty -> save first
     if (st.dirty) {
       await get().saveNow();
     }
 
-    set({ saveState: 'saving' });
+    set({ publishState: 'saving' });
     try {
       const res = await apiFetch<any>(`/api/app/${encodeURIComponent(st.appId)}/publish`, {
         method: 'POST',
@@ -143,13 +155,13 @@ export const useConstructorStore = create<State>((set, get) => ({
       const url = res?.publicUrl || null;
 
       set({
-        saveState: 'saved',
+        publishState: 'saved',
         lastPublishedUrl: url,
       });
 
       return res;
     } catch (e) {
-      set({ saveState: 'error' });
+      set({ publishState: 'error' });
       throw e;
     }
   },
@@ -201,7 +213,6 @@ export const useConstructorStore = create<State>((set, get) => ({
     set({ blueprint: bp, dirty: true, saveState: 'idle' });
   },
 
-  // ✅ СТРАНИЦЫ “как в старом”
   toggleRouteHidden(path) {
     const st = get();
     const bp = clone(st.blueprint);
@@ -347,7 +358,6 @@ export const useConstructorStore = create<State>((set, get) => ({
     });
   },
 
-  // ✅ move up/down
   moveBlock(path, id, dir) {
     const st = get();
     const bp = clone(st.blueprint);
@@ -367,7 +377,6 @@ export const useConstructorStore = create<State>((set, get) => ({
     set({ blueprint: bp, dirty: true, saveState: 'idle' });
   },
 
-  // ✅ hide/show
   toggleBlockHidden(path, id) {
     const st = get();
     const bp = clone(st.blueprint);
@@ -381,7 +390,6 @@ export const useConstructorStore = create<State>((set, get) => ({
     set({ blueprint: bp, dirty: true, saveState: 'idle' });
   },
 
-  // ✅ duplicate
   duplicateBlock(path, id) {
     const st = get();
     const bp = clone(st.blueprint);
@@ -408,7 +416,6 @@ export const useConstructorStore = create<State>((set, get) => ({
     });
   },
 
-  // ✅ дизайн токены
   updateThemeTokens(patch: ThemeTokens) {
     const st = get();
     const bp = clone(st.blueprint);
