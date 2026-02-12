@@ -132,27 +132,38 @@ export const useConstructorStore = create<State>((set, get) => ({
     }
   },
 
-  async publishNow() {
-    const st = get();
-    if (!st.appId) throw new Error('APP_NOT_SELECTED');
+async publishNow() {
+  const st = get();
+  if (!st.appId) throw new Error('APP_NOT_SELECTED');
 
-    // auto-save before publish if there are unsaved changes
-    if (st.dirty) {
-      await (get() as any).saveNow();
-    }
+  // 🟢 СНАЧАЛА SAVE если dirty
+  if (st.dirty) {
+    await get().saveNow();
+  }
 
-    set({ saveState: 'saving' });
-    try {
-      const res = await apiFetch<any>(`/api/app/${encodeURIComponent(st.appId)}/publish`, {
-        method: 'POST',
-      });
-      const url = res?.publicUrl || null;
-      set({ saveState: 'saved', lastPublishedUrl: url });
-      return res;
-    } catch (e) {
-      set({ saveState: 'error' });
-      throw e;
-    }
+  set({ saveState: 'saving' });
+
+  try {
+    const res = await apiFetch<any>(
+      `/api/app/${encodeURIComponent(st.appId)}/publish`,
+      { method: 'POST' }
+    );
+
+    const url = res?.publicUrl || null;
+
+    set({
+      saveState: 'saved',
+      lastPublishedUrl: url
+    });
+
+    return res;
+
+  } catch (e) {
+    set({ saveState: 'error' });
+    throw e;
+  }
+}
+
   },
 
 
