@@ -224,8 +224,8 @@ export function PagesTree(){
   return (
     <div className="pagesTree">
       <div className="ctor-panel__head">
-        <div className="ctor-panel__title">Страницы</div>
-        <button className="ctorSeg__btn is-active" type="button" onClick={()=>addRoute()}>
+        
+        <button className="ctorPillBtn" type="button" onClick={()=>addRoute()}>
   + Страница
 </button>
       </div>
