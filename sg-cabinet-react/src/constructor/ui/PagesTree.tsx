@@ -146,9 +146,6 @@ function LayersList({
         })}
       </div>
 
-      <div className="ctorLayers__footer">
-        <Button onClick={onRequestAddBlock}>+ Блок</Button>
-      </div>
     </div>
   );
 }
@@ -228,7 +225,9 @@ export function PagesTree(){
     <div className="pagesTree">
       <div className="ctor-panel__head">
         <div className="ctor-panel__title">Страницы</div>
-        <Button onClick={()=>addRoute()}>+ Страница</Button>
+        <button className="ctorSeg__btn is-active" type="button" onClick={()=>addRoute()}>
+  + Страница
+</button>
       </div>
 
       <div className="pagesTree__list">
@@ -331,14 +330,18 @@ export function PagesTree(){
                   />
 
                   {/* нижняя кнопка, как в старом — под блоками */}
-                  <div className="pageAcc__addUnder">
-                    <Button onClick={()=>{
-                      setCurPath(r.path);
-                      setLibOpen(true);
-                    }}>
-                      + Блок
-                    </Button>
-                  </div>
+<div className="pageAcc__addUnder">
+  <button
+    className="ctorSeg__btn is-active"
+    type="button"
+    onClick={()=>{
+      setCurPath(r.path);
+      setLibOpen(true);
+    }}
+  >
+    + Блок
+  </button>
+</div>
                 </div>
               )}
             </div>
