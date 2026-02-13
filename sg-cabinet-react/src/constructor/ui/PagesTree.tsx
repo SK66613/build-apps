@@ -331,8 +331,7 @@ export function PagesTree(){
 
                   {/* нижняя кнопка, как в старом — под блоками */}
 <div className="pageAcc__addUnder">
-  <button
-    className="ctorSeg__btn is-active"
+  <button className="ctorPillBtn"
     type="button"
     onClick={()=>{
       setCurPath(r.path);
