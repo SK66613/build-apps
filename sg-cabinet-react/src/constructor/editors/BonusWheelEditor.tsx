@@ -469,3 +469,52 @@ export function BonusWheelEditor({
           );
         })}
       </div>
+
+      {/* Minimal embedded styles (safe, scoped by .be*) */}
+      <style>{`
+        .be{ display:grid; gap:14px; }
+        .beGrid{ display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
+        .beGrid2{ display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
+        .beSpan2{ grid-column: 1 / -1; }
+        .beField{ display:grid; gap:6px; }
+        .beLab{ font-weight: 700; }
+        .beHint{ font-size: 12px; opacity: .75; line-height: 1.35; }
+        .beSep{ height:1px; opacity:.12; background: currentColor; }
+        .beHdrRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .beHdr{ font-weight: 800; font-size: 14px; }
+        .beAccList{ display:grid; gap:10px; }
+        .beAcc{ border-radius: 16px; border: 1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.6); overflow:hidden; }
+        .beAcc__hdr{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; cursor:pointer; }
+        .beAcc__left{ min-width:0; }
+        .beAcc__title{ font-weight: 800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .beAcc__sub{ display:flex; align-items:center; gap:8px; margin-top:2px; }
+        .beAcc__right{ display:flex; align-items:center; gap:8px; }
+        .beDot{ width:4px; height:4px; border-radius:999px; background: rgba(15,23,42,.35); }
+        .beTag{ font-size:12px; padding:2px 8px; border-radius:999px; background: rgba(34,211,238,.14); }
+        .beMut{ font-size:12px; opacity:.75; }
+        .beAcc__body{ padding:12px; border-top:1px solid rgba(15,23,42,.10); background: rgba(255,255,255,.55); }
+        .beMini{ border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); border-radius:10px; padding:6px 10px; cursor:pointer; }
+        .beMini:disabled{ opacity:.5; cursor:not-allowed; }
+        .beMiniBtn{ border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); border-radius:999px; padding:6px 10px; cursor:pointer; }
+        .beDanger{ border:1px solid rgba(239,68,68,.35); background: rgba(239,68,68,.10); border-radius:10px; padding:6px 10px; cursor:pointer; }
+        .beChevron{ border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); border-radius:10px; padding:6px 10px; cursor:pointer; }
+        .beRow{ display:flex; align-items:center; gap:10px; }
+        .beRow--tight{ gap:8px; }
+        .beChk{ display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; border:1px solid rgba(15,23,42,.10); background: rgba(255,255,255,.6); }
+        .beSlider{ width:100%; }
+        .bePctPresets{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+        .beUploadBtn{ display:inline-flex; align-items:center; justify-content:center; gap:8px;
+          border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65);
+          border-radius:999px; padding:6px 12px; cursor:pointer; }
+        .beImgRow{ margin-top:10px; display:flex; justify-content:flex-start; }
+        .beImg{ width:120px; height:120px; object-fit:cover; border-radius:14px; border:1px solid rgba(15,23,42,.10); }
+        @media (max-width: 900px){
+          .beGrid{ grid-template-columns: 1fr; }
+          .beGrid2{ grid-template-columns: 1fr; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default BonusWheelEditor;
