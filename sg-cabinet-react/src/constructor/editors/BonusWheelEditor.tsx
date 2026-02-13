@@ -5,11 +5,24 @@ import { Button, Input } from '../../components/ui';
 type Prize = {
   code: string;
   name: string;
+
+  // coins prize
   coins: number;
-  weight: number; // IMPORTANT: we store "configured chance" as weight = percent * 100 (basis points)
+
+  // physical prize fields
+  cost?: number;                 // себестоимость
+  currency?: string;             // 'RUB'|'EUR'|'USD'|...|'OTHER'
+  currency_custom?: string;      // если OTHER
+  stock_qty?: number;            // количество штук
+
+  // IMPORTANT: stored as weight = percent * 100 (basis points)
+  weight: number;
+
   img?: string;   // dataURL or URL
   active?: boolean;
-  kind?: 'coins' | 'physical'; // UI-only (still stored in props for convenience)
+
+  // UI + stored for convenience
+  kind?: 'coins' | 'physical';
 };
 
 function num(v: any, d: number) {
@@ -38,7 +51,6 @@ function calcRealPercentsFromWeights(prizes: Prize[]) {
 }
 
 function slugifyCode(name: string) {
-  // простая генерация code из названия
   let s = String(name || '')
     .trim()
     .toLowerCase()
@@ -48,7 +60,6 @@ function slugifyCode(name: string) {
     .replace(/_+/g, '_')
     .replace(/^_+|_+$/g, '');
   if (!s) s = 'prize';
-  // русские буквы тоже ок, но лучше латиница: подрежем до разумного
   s = s.slice(0, 32);
   return s;
 }
@@ -60,6 +71,28 @@ async function fileToDataUrl(file: File): Promise<string> {
     rd.onerror = () => rej(new Error('file_read_error'));
     rd.readAsDataURL(file);
   });
+}
+
+const CURRENCIES: Array<{ code: string; label: string; sym: string }> = [
+  { code: 'RUB', label: '₽ RUB', sym: '₽' },
+  { code: 'EUR', label: '€ EUR', sym: '€' },
+  { code: 'USD', label: '$ USD', sym: '$' },
+  { code: 'GBP', label: '£ GBP', sym: '£' },
+  { code: 'TRY', label: '₺ TRY', sym: '₺' },
+  { code: 'UAH', label: '₴ UAH', sym: '₴' },
+  { code: 'KZT', label: '₸ KZT', sym: '₸' },
+  { code: 'GEL', label: '₾ GEL', sym: '₾' },
+  { code: 'AED', label: 'AED', sym: 'AED' },
+  { code: 'OTHER', label: 'Другая…', sym: '' },
+];
+
+function getCurrencySym(p: Prize) {
+  const c = String(p.currency || 'RUB');
+  if (c === 'OTHER') {
+    const s = String(p.currency_custom || '').trim();
+    return s || '¤';
+  }
+  return CURRENCIES.find((x) => x.code === c)?.sym || c;
 }
 
 export function BonusWheelEditor({
@@ -75,21 +108,34 @@ export function BonusWheelEditor({
   // normalize prizes (safe defaults)
   const prizes: Prize[] = React.useMemo(
     () =>
-      prizesRaw.map((p) => ({
-        code: String(p?.code ?? ''),
-        name: String(p?.name ?? ''),
-        coins: Math.max(0, Math.floor(num((p as any)?.coins, 0))),
-        weight: Math.max(0, Math.floor(num((p as any)?.weight, 0))),
-        img: (p as any)?.img ? String((p as any)?.img) : '',
-        active: (p as any)?.active === undefined ? true : !!(p as any)?.active,
-        kind:
-          (p as any)?.kind === 'physical'
-            ? 'physical'
-            : (p as any)?.kind === 'coins'
+      prizesRaw.map((p) => {
+        const coins = Math.max(0, Math.floor(num((p as any)?.coins, 0)));
+        const kind: 'coins' | 'physical' =
+          (p as any)?.kind === 'coins'
             ? 'coins'
-            : // auto: if coins > 0 => coins prize, else physical by default
-              (Math.max(0, Math.floor(num((p as any)?.coins, 0))) > 0 ? 'coins' : 'physical'),
-      })),
+            : (p as any)?.kind === 'physical'
+            ? 'physical'
+            : coins > 0
+            ? 'coins'
+            : 'physical';
+
+        const currency = String((p as any)?.currency || 'RUB');
+        const stock_qty = Math.max(0, Math.floor(num((p as any)?.stock_qty, 0)));
+
+        return {
+          code: String((p as any)?.code ?? ''),
+          name: String((p as any)?.name ?? ''),
+          coins,
+          cost: Math.max(0, num((p as any)?.cost, 0)),
+          currency,
+          currency_custom: String((p as any)?.currency_custom ?? ''),
+          stock_qty,
+          weight: Math.max(0, Math.floor(num((p as any)?.weight, 0))),
+          img: (p as any)?.img ? String((p as any)?.img) : '',
+          active: (p as any)?.active === undefined ? true : !!(p as any)?.active,
+          kind,
+        };
+      }),
     [prizesRaw]
   );
 
@@ -105,7 +151,12 @@ export function BonusWheelEditor({
       code: 'prize',
       name: 'Приз',
       coins: 0,
-      // default configured chance = 10%
+
+      cost: 0,
+      currency: 'RUB',
+      currency_custom: '',
+      stock_qty: 1,
+
       weight: pctToWeightConfigured(10),
       img: '',
       active: true,
@@ -129,12 +180,17 @@ export function BonusWheelEditor({
     set({ prizes: next });
   };
 
+  const toggleActivePrize = (i: number) => {
+    const p = prizes[i];
+    const nextActive = p.active === false; // if was inactive -> make active
+    updPrize(i, { active: nextActive, weight: nextActive ? p.weight : 0 });
+  };
+
   const realPerc = React.useMemo(() => calcRealPercentsFromWeights(prizes), [prizes]);
 
   // UI: accordion open map
   const [openMap, setOpenMap] = React.useState<Record<number, boolean>>({});
   React.useEffect(() => {
-    // if nothing opened, open first
     setOpenMap((m) => {
       if (Object.keys(m).length) return m;
       return prizes.length ? { 0: true } : {};
@@ -167,7 +223,7 @@ export function BonusWheelEditor({
             }
           />
           <div className="beHint">
-            Важно: стоимость используется воркером из <b>wheel.spin_cost</b> (KV/D1 sync).
+            Важно: стоимость используется воркером из <b>wheel.spin_cost</b>.
           </div>
         </div>
       </div>
@@ -187,13 +243,14 @@ export function BonusWheelEditor({
           const cfgPct = weightToPctConfigured(p.weight);
           const real = realPerc[i] || 0;
 
-          // show file name if dataURL (we can’t know original file name after convert)
           const imgLabel =
             p.img && p.img.startsWith('data:')
-              ? 'Загружено (dataURL)'
+              ? 'Загружено'
               : p.img
               ? 'URL'
               : 'Нет';
+
+          const currencySym = getCurrencySym(p);
 
           return (
             <div key={i} className={'beAcc' + (isOpen ? ' is-open' : '')}>
@@ -209,6 +266,20 @@ export function BonusWheelEditor({
                     <span className="beTag">
                       {p.kind === 'coins' ? 'Монеты' : 'Физический'}
                     </span>
+
+                    {p.kind === 'physical' ? (
+                      <>
+                        <span className="beDot" />
+                        <span className="beMut">
+                          остаток: <b>{Math.max(0, Math.floor(num(p.stock_qty, 0)))}</b>
+                        </span>
+                        <span className="beDot" />
+                        <span className="beMut">
+                          себестоимость: <b>{Math.max(0, Math.floor(num(p.cost, 0)))} {currencySym}</b>
+                        </span>
+                      </>
+                    ) : null}
+
                     <span className="beDot" />
                     <span className="beMut">
                       Настройка: <b>{cfgPct.toFixed(1)}%</b>
@@ -247,14 +318,16 @@ export function BonusWheelEditor({
                   >
                     ↓
                   </button>
+
                   <button
                     type="button"
                     className="beMini"
-                    title={p.active === false ? 'Сделать активным' : 'Выключить'}
-                    onClick={() => updPrize(i, { active: !(p.active === false) })}
+                    title={p.active === false ? 'Сделать активным' : 'Выключить приз'}
+                    onClick={() => toggleActivePrize(i)}
                   >
                     {p.active === false ? '🙈' : '👁'}
                   </button>
+
                   <button
                     type="button"
                     className="beDanger"
@@ -264,6 +337,7 @@ export function BonusWheelEditor({
                   >
                     Удалить
                   </button>
+
                   <button
                     type="button"
                     className="beChevron"
@@ -285,7 +359,6 @@ export function BonusWheelEditor({
                         value={p.name ?? ''}
                         onChange={(e) => {
                           const name = e.target.value;
-                          // автокод: если code пустой или был автосгенерён из старого имени — перегенерим
                           const nextCode =
                             !p.code || p.code === slugifyCode(p.name || '')
                               ? slugifyCode(name)
@@ -293,9 +366,7 @@ export function BonusWheelEditor({
                           updPrize(i, { name, code: nextCode });
                         }}
                       />
-                      <div className="beHint">
-                        Код генерируем автоматически из названия (можно оставить как есть).
-                      </div>
+                      <div className="beHint">Код генерируем автоматически из названия.</div>
                     </div>
 
                     {/* Type */}
@@ -308,7 +379,6 @@ export function BonusWheelEditor({
                             name={`kind_${i}`}
                             checked={p.kind === 'coins'}
                             onChange={() => {
-                              // если переключили на coins — пусть coins не будет 0
                               const nextCoins = Math.max(1, Math.floor(num(p.coins, 0))) || 1;
                               updPrize(i, { kind: 'coins', coins: nextCoins });
                             }}
@@ -325,12 +395,9 @@ export function BonusWheelEditor({
                           <span>Физический</span>
                         </label>
                       </div>
-                      <div className="beHint">
-                        Если <b>Физический</b> — поле “монеты” скрываем. Если <b>Монеты</b> — показываем.
-                      </div>
                     </div>
 
-                    {/* Coins (only for coins kind) */}
+                    {/* ✅ Coins OR Physical fields */}
                     {p.kind === 'coins' ? (
                       <div className="beField">
                         <div className="beLab">Сколько монет начислять</div>
@@ -340,17 +407,68 @@ export function BonusWheelEditor({
                           step={1}
                           value={Math.max(1, Math.floor(num(p.coins, 1)))}
                           onChange={(e) =>
-                            updPrize(i, {
-                              coins: Math.max(1, Math.floor(num(e.target.value, 1))),
-                            })
+                            updPrize(i, { coins: Math.max(1, Math.floor(num(e.target.value, 1))) })
                           }
                         />
                       </div>
                     ) : (
-                      <div className="beField">
-                        <div className="beLab">Монеты</div>
-                        <div className="beHint">Физический приз — монеты не применяются.</div>
-                      </div>
+                      <>
+                        <div className="beField">
+                          <div className="beLab">Себестоимость</div>
+                          <div className="beRow">
+                            <Input
+                              type="number"
+                              min={0}
+                              step={1}
+                              value={Math.max(0, Math.floor(num(p.cost, 0)))}
+                              onChange={(e) =>
+                                updPrize(i, { cost: Math.max(0, Math.floor(num(e.target.value, 0))) })
+                              }
+                            />
+                            <select
+                              className="beSelect"
+                              value={String(p.currency || 'RUB')}
+                              onChange={(e) => updPrize(i, { currency: e.target.value })}
+                            >
+                              {CURRENCIES.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                  {c.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {String(p.currency || 'RUB') === 'OTHER' ? (
+                            <div className="beRow" style={{ marginTop: 8 }}>
+                              <Input
+                                placeholder="например: ₾ или GEL или руб."
+                                value={String(p.currency_custom || '')}
+                                onChange={(e) => updPrize(i, { currency_custom: e.target.value })}
+                              />
+                            </div>
+                          ) : null}
+
+                          <div className="beHint">
+                            Это для аналитики/прибыли. Пользователю не показываем.
+                          </div>
+                        </div>
+
+                        <div className="beField">
+                          <div className="beLab">Количество (штук)</div>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={Math.max(0, Math.floor(num(p.stock_qty, 0)))}
+                            onChange={(e) =>
+                              updPrize(i, { stock_qty: Math.max(0, Math.floor(num(e.target.value, 0))) })
+                            }
+                          />
+                          <div className="beHint">
+                            Если 0 — можно оставить приз активным, но лучше выключить 👁 (или поставить шанс 0%).
+                          </div>
+                        </div>
+                      </>
                     )}
 
                     {/* Chance (%) */}
@@ -364,7 +482,10 @@ export function BonusWheelEditor({
                           max={100}
                           step={0.1}
                           value={cfgPct.toFixed(1)}
-                          onChange={(e) => updPrize(i, { weight: pctToWeightConfigured(e.target.value) })}
+                          onChange={(e) =>
+                            updPrize(i, { weight: pctToWeightConfigured(e.target.value) })
+                          }
+                          disabled={p.active === false}
                         />
                         <div className="beHint" style={{ margin: 0 }}>
                           Реальный среди активных: <b>{real.toFixed(2)}%</b>
@@ -381,15 +502,17 @@ export function BonusWheelEditor({
                         onChange={(e) =>
                           updPrize(i, { weight: pctToWeightConfigured(e.target.value) })
                         }
+                        disabled={p.active === false}
                       />
 
                       <div className="bePctPresets">
-                        {[0, 1, 5, 10, 25, 50, 75, 100].map((v) => (
+                        {[0, 0.5, 1, 2, 5, 10, 25, 50, 75, 100].map((v) => (
                           <button
-                            key={v}
+                            key={String(v)}
                             type="button"
                             className="beMiniBtn"
                             onClick={() => updPrize(i, { weight: pctToWeightConfigured(v) })}
+                            disabled={p.active === false}
                             title={v === 0 ? 'Никогда не выпадет (weight=0)' : `Поставить ${v}%`}
                           >
                             {v}%
@@ -398,8 +521,8 @@ export function BonusWheelEditor({
                       </div>
 
                       <div className="beHint">
-                        0% = <b>weight 0</b> = приз никогда не выпадет. Мы храним вес как <b>% × 100</b>,
-                        чтобы работали маленькие значения (0.1%, 0.5% и т.д.).
+                        0% = <b>weight 0</b> = приз никогда не выпадет. Храним вес как <b>% × 100</b>,
+                        чтобы работали маленькие значения (0.5%, 1%…).
                       </div>
                     </div>
 
@@ -421,7 +544,10 @@ export function BonusWheelEditor({
                                 const dataUrl = await fileToDataUrl(f);
                                 updPrize(i, { img: dataUrl });
                               } catch (err: any) {
-                                alert('Не удалось загрузить картинку: ' + (err?.message || String(err)));
+                                alert(
+                                  'Не удалось загрузить картинку: ' +
+                                    (err?.message || String(err))
+                                );
                               }
                             }}
                           />
@@ -446,20 +572,16 @@ export function BonusWheelEditor({
                           <img className="beImg" src={p.img} alt="" />
                         </div>
                       ) : (
-                        <div className="beHint">Загрузи картинку — мы сохраним её как dataURL в blueprint.</div>
+                        <div className="beHint">Загрузи картинку — сохраним её как dataURL в blueprint.</div>
                       )}
                     </div>
 
-                    {/* Code (hidden-ish, but editable if needed) */}
+                    {/* ✅ Code (readOnly) */}
                     <div className="beField beSpan2">
-                      <div className="beLab">Код (служебный)</div>
-                      <Input
-                        value={p.code ?? ''}
-                        onChange={(e) => updPrize(i, { code: e.target.value })}
-                        placeholder="auto"
-                      />
+                      <div className="beLab">Код (служебный, readonly)</div>
+                      <Input value={p.code ?? ''} readOnly />
                       <div className="beHint">
-                        Обычно трогать не нужно: код будет совпадать с <b>wheel_prizes.code</b> на сервере.
+                        Код нужен серверу как <b>wheel_prizes.code</b>. Мы генерим автоматически из названия.
                       </div>
                     </div>
                   </div>
@@ -470,7 +592,7 @@ export function BonusWheelEditor({
         })}
       </div>
 
-      {/* Minimal embedded styles (safe, scoped by .be*) */}
+      {/* styles */}
       <style>{`
         .be{ display:grid; gap:14px; }
         .beGrid{ display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
@@ -487,7 +609,7 @@ export function BonusWheelEditor({
         .beAcc__hdr{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; cursor:pointer; }
         .beAcc__left{ min-width:0; }
         .beAcc__title{ font-weight: 800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .beAcc__sub{ display:flex; align-items:center; gap:8px; margin-top:2px; }
+        .beAcc__sub{ display:flex; align-items:center; gap:8px; margin-top:2px; flex-wrap:wrap; }
         .beAcc__right{ display:flex; align-items:center; gap:8px; }
         .beDot{ width:4px; height:4px; border-radius:999px; background: rgba(15,23,42,.35); }
         .beTag{ font-size:12px; padding:2px 8px; border-radius:999px; background: rgba(34,211,238,.14); }
@@ -496,6 +618,7 @@ export function BonusWheelEditor({
         .beMini{ border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); border-radius:10px; padding:6px 10px; cursor:pointer; }
         .beMini:disabled{ opacity:.5; cursor:not-allowed; }
         .beMiniBtn{ border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); border-radius:999px; padding:6px 10px; cursor:pointer; }
+        .beMiniBtn:disabled{ opacity:.5; cursor:not-allowed; }
         .beDanger{ border:1px solid rgba(239,68,68,.35); background: rgba(239,68,68,.10); border-radius:10px; padding:6px 10px; cursor:pointer; }
         .beChevron{ border:1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); border-radius:10px; padding:6px 10px; cursor:pointer; }
         .beRow{ display:flex; align-items:center; gap:10px; }
@@ -508,6 +631,7 @@ export function BonusWheelEditor({
           border-radius:999px; padding:6px 12px; cursor:pointer; }
         .beImgRow{ margin-top:10px; display:flex; justify-content:flex-start; }
         .beImg{ width:120px; height:120px; object-fit:cover; border-radius:14px; border:1px solid rgba(15,23,42,.10); }
+        .beSelect{ height: 40px; border-radius: 12px; padding: 0 10px; border: 1px solid rgba(15,23,42,.12); background: rgba(255,255,255,.65); }
         @media (max-width: 900px){
           .beGrid{ grid-template-columns: 1fr; }
           .beGrid2{ grid-template-columns: 1fr; }
