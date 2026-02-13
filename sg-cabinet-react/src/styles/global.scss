@@ -6077,4 +6077,33 @@ body{
   margin: 10px 0 14px; /* верх/низ */
 }
 
+//панель шторка в конструкторе что бы иконка отображалась
+
+.pageRow__icoImg{
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 8px 18px rgba(2,6,23,.10);
+}
+.pageRow__icoGlyph{
+  font-weight: 900;
+  opacity: .7;
+}
+
+.ctorImgPrev{
+  margin-top: 10px;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.6);
+}
+.ctorImgPrev img{
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
 
