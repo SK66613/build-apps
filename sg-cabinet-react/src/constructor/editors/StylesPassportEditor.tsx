@@ -40,6 +40,40 @@ async function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+function fmtYYYYMMDD(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function firstDayOfMonth(d = new Date()) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function lastDayOfMonth(d = new Date()) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+function addDays(d: Date, days: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+function genCampaignId(prefix = 'passport') {
+  const d = new Date();
+  const ym = `${d.getFullYear()}${pad2(d.getMonth() + 1)}`;
+  const rnd = Math.random().toString(16).slice(2, 6);
+  return `${prefix}_${ym}_${rnd}`;
+}
+
+// Простая “slug” для code штампа
+function toCodeSlug(s: string) {
+  const raw = String(s || '').trim().toLowerCase();
+  const rep = raw
+    .replace(/[ё]/g, 'e')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return rep || '';
+}
+
 function ensureDefaults(src: any) {
   const p = { ...(src || {}) };
 
@@ -69,16 +103,25 @@ function ensureDefaults(src: any) {
     p.reward_text = 'Приз будет отправлен вам в бот после завершения паспорта.';
   if (p.reward_prize_code === undefined) p.reward_prize_code = '';
 
-  // ===== PRO: period/deadline/reset (UI + config only) =====
-  // modes: none | days | weekly | monthly
-  if (p.deadline_mode === undefined) p.deadline_mode = 'none';
-  if (p.deadline_days === undefined) p.deadline_days = 30; // only for 'days'
-  if (p.deadline_title === undefined) p.deadline_title = '⏳ До конца акции';
-  if (p.deadline_text === undefined) p.deadline_text = 'Соберите все штампы до конца периода.';
+  // ===== campaign v2 (YYYY-MM-DD) =====
+  if (p.campaign_id === undefined) p.campaign_id = '';
+  if (p.campaign_enabled === undefined) p.campaign_enabled = false;
+  if (p.campaign_title === undefined) p.campaign_title = 'Акция';
+  if (p.campaign_start === undefined) p.campaign_start = ''; // YYYY-MM-DD
+  if (p.campaign_end === undefined) p.campaign_end = ''; // YYYY-MM-DD
+  // on_end: freeze | freeze_allow_claim | ignore
+  if (p.campaign_on_end === undefined) p.campaign_on_end = 'freeze_allow_claim';
+  if (p.campaign_grace_days === undefined) p.campaign_grace_days = 3;
+  if (p.campaign_badge_text === undefined) p.campaign_badge_text = '';
+  if (p.campaign_note === undefined) p.campaign_note = '';
 
-  // reset: none | on_deadline | daily
-  if (p.reset_mode === undefined) p.reset_mode = 'none';
-  if (p.reset_text === undefined) p.reset_text = 'Период завершён — прогресс сброшен.';
+  // ===== reward snapshot (avoid wheel changes trash) =====
+  if (!p.reward) p.reward = {};
+  if (p.reward.source === undefined) p.reward.source = 'wheel';
+  if (p.reward.prize_code === undefined) p.reward.prize_code = '';
+  if (p.reward.prize_title === undefined) p.reward.prize_title = '';
+  if (p.reward.coins === undefined) p.reward.coins = 0;
+  if (p.reward.wheel_campaign_id === undefined) p.reward.wheel_campaign_id = '';
 
   // normalize stamps
   p.styles = p.styles.map((st: any) => ({
@@ -136,7 +179,10 @@ function Toggle({
 }
 
 function IconBtn(
-  props: React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string; children: React.ReactNode }
+  props: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    title: string;
+    children: React.ReactNode;
+  }
 ) {
   const { title, children, className, ...rest } = props;
   return (
@@ -191,6 +237,12 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
     // ✅ всегда
     next.require_pin = true;
 
+    // ✅ keep legacy in sync (if reward snapshot is used)
+    if (next.reward && typeof next.reward === 'object') {
+      const snapCode = String(next.reward.prize_code || '').trim();
+      if (snapCode) next.reward_prize_code = snapCode;
+    }
+
     onChange(next);
   };
 
@@ -239,6 +291,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
   // ===== wheel prizes dropdown =====
   const [wheelPrizes, setWheelPrizes] = React.useState<WheelPrize[]>([]);
   const [wheelErr, setWheelErr] = React.useState<string>('');
+  const [wheelCampaignId, setWheelCampaignId] = React.useState<string>('');
 
   React.useEffect(() => {
     let alive = true;
@@ -247,7 +300,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
       if (!appId) return;
 
       try {
-        // ⬇️ если у тебя другой endpoint — поменяй ТУТ
+        // ⬇️ endpoint from worker: /api/app/:id/wheel/prizes
         const res = await apiFetch<any>(`/api/app/${encodeURIComponent(appId)}/wheel/prizes`, {
           method: 'GET',
         });
@@ -270,7 +323,10 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
           }))
           .filter((x) => x.code);
 
-        if (alive) setWheelPrizes(normalized);
+        if (alive) {
+          setWheelPrizes(normalized);
+          setWheelCampaignId(String(res?.campaign_id || ''));
+        }
       } catch (e: any) {
         if (alive) setWheelErr(e?.message || String(e));
       }
@@ -280,7 +336,25 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
     };
   }, [appId]);
 
-  const rewardWarn = !!v.reward_enabled && !String(v.reward_prize_code || '').trim();
+  // если старый конфиг без snapshot reward — подтягиваем в reward.prize_code
+  React.useEffect(() => {
+    const legacy = String(v.reward_prize_code || '').trim();
+    const snap = String(v.reward?.prize_code || '').trim();
+    if (legacy && !snap) {
+      setP({
+        reward: {
+          ...(v.reward || {}),
+          source: 'wheel',
+          prize_code: legacy,
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appId]);
+
+  const rewardWarn =
+    !!v.reward_enabled &&
+    (!String(v.reward?.prize_code || '').trim() && !String(v.reward_prize_code || '').trim());
 
   // ===== section accordions =====
   const [open, setOpen] = React.useState<Record<string, boolean>>({
@@ -288,7 +362,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
     cover: true,
     layout: true,
     reward: true,
-    period: false,
+    campaign: false,
     stamps: true,
   });
 
@@ -300,6 +374,19 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
       return v.styles?.length ? { 0: true } : {};
     });
   }, [v.styles?.length]);
+
+  const campaignSummary = (() => {
+    if (!v.campaign_enabled) return 'выключено';
+    const s = String(v.campaign_start || '').trim();
+    const e = String(v.campaign_end || '').trim();
+    const id = String(v.campaign_id || '').trim();
+    const parts = [
+      v.campaign_title ? String(v.campaign_title) : 'Акция',
+      s && e ? `${s} → ${e}` : s ? `c ${s}` : e ? `до ${e}` : 'без дат',
+      id ? `id: ${id}` : 'id: —',
+    ];
+    return parts.join(' · ');
+  })();
 
   return (
     <div className="be">
@@ -412,14 +499,13 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
             />
           </Field>
 
-          <Field
-            label="Монеты за штамп"
-            hint="server-side: начислять при каждом подтверждённом штампе"
-          >
+          <Field label="Монеты за штамп" hint="server-side: начислять при каждом подтверждённом штампе">
             <Input
               type="number"
               value={String(v.collect_coins)}
-              onChange={(e) => setP({ collect_coins: Math.max(0, Math.round(toNum(e.target.value, 0))) })}
+              onChange={(e) =>
+                setP({ collect_coins: Math.max(0, Math.round(toNum(e.target.value, 0))) })
+              }
               min={0}
               step={1}
             />
@@ -428,21 +514,194 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
       </Acc>
 
       <Acc
+        title="Акция / период"
+        sub={<span className="beMut">{campaignSummary}</span>}
+        open={!!open.campaign}
+        onToggle={() => setOpen((m) => ({ ...m, campaign: !m.campaign }))}
+        right={
+          <Toggle
+            checked={!!v.campaign_enabled}
+            onChange={(x) => setP({ campaign_enabled: !!x })}
+            label="Включено"
+            hint={null}
+          />
+        }
+      >
+        <div className="beRow" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="beMiniBtn"
+            onClick={() => {
+              const now = new Date();
+              const s = fmtYYYYMMDD(firstDayOfMonth(now));
+              const e = fmtYYYYMMDD(lastDayOfMonth(now));
+              setP({ campaign_start: s, campaign_end: e });
+            }}
+            disabled={!v.campaign_enabled}
+          >
+            Этот месяц
+          </button>
+
+          <button
+            type="button"
+            className="beMiniBtn"
+            onClick={() => {
+              const now = new Date();
+              const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+              const s = fmtYYYYMMDD(firstDayOfMonth(next));
+              const e = fmtYYYYMMDD(lastDayOfMonth(next));
+              setP({ campaign_start: s, campaign_end: e });
+            }}
+            disabled={!v.campaign_enabled}
+          >
+            Следующий месяц
+          </button>
+
+          <button
+            type="button"
+            className="beMiniBtn"
+            onClick={() => {
+              const s = fmtYYYYMMDD(new Date());
+              const e = fmtYYYYMMDD(addDays(new Date(), 7));
+              setP({ campaign_start: s, campaign_end: e });
+            }}
+            disabled={!v.campaign_enabled}
+          >
+            7 дней
+          </button>
+
+          <button
+            type="button"
+            className="beMiniBtn"
+            onClick={() => {
+              const s = fmtYYYYMMDD(new Date());
+              const e = fmtYYYYMMDD(addDays(new Date(), 14));
+              setP({ campaign_start: s, campaign_end: e });
+            }}
+            disabled={!v.campaign_enabled}
+          >
+            14 дней
+          </button>
+
+          <span style={{ flex: 1 }} />
+
+          <button
+            type="button"
+            className="beMiniBtn"
+            onClick={() => setP({ campaign_id: genCampaignId('passport') })}
+          >
+            Новая акция (id)
+          </button>
+        </div>
+
+        <div className="beGrid2" style={{ marginTop: 10 }}>
+          <Field label="Название акции" hint="Для кабинета/мини-аппа (бейдж/заголовок периода)">
+            <Input
+              value={toStr(v.campaign_title)}
+              onChange={(e) => setP({ campaign_title: e.target.value })}
+              disabled={!v.campaign_enabled}
+            />
+          </Field>
+
+          <Field
+            label="campaign_id"
+            hint="Ключ акции. Новый id = новый прогресс (не смешивается с прошлым)."
+          >
+            <Input
+              value={toStr(v.campaign_id)}
+              onChange={(e) => setP({ campaign_id: e.target.value })}
+              placeholder="passport_202602_ab12"
+              disabled={!v.campaign_enabled}
+            />
+          </Field>
+        </div>
+
+        <div className="beGrid2">
+          <Field label="Дата начала (YYYY-MM-DD)">
+            <Input
+              value={toStr(v.campaign_start)}
+              onChange={(e) => setP({ campaign_start: e.target.value })}
+              placeholder="2026-02-01"
+              disabled={!v.campaign_enabled}
+            />
+          </Field>
+
+          <Field label="Дата окончания (YYYY-MM-DD)">
+            <Input
+              value={toStr(v.campaign_end)}
+              onChange={(e) => setP({ campaign_end: e.target.value })}
+              placeholder="2026-02-29"
+              disabled={!v.campaign_enabled}
+            />
+          </Field>
+        </div>
+
+        <div className="beGrid2">
+          <Field
+            label="Поведение после окончания"
+            hint="freeze — блокируем штампы и выдачу. freeze_allow_claim — штампы блокируем, но приз можно забрать ещё N дней. ignore — только для аналитики/бейджа."
+          >
+            <select
+              className="beSelect"
+              value={toStr(v.campaign_on_end)}
+              onChange={(e) => setP({ campaign_on_end: e.target.value })}
+              disabled={!v.campaign_enabled}
+            >
+              <option value="freeze_allow_claim">freeze_allow_claim (рекоменд.)</option>
+              <option value="freeze">freeze (жёстко)</option>
+              <option value="ignore">ignore (только инфо)</option>
+            </select>
+          </Field>
+
+          <Field label="grace_days" hint="Сколько дней после окончания можно забрать приз (только для freeze_allow_claim)">
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={String(toNum(v.campaign_grace_days, 3))}
+              onChange={(e) => setP({ campaign_grace_days: clamp(toNum(e.target.value, 3), 0, 365) })}
+              disabled={!v.campaign_enabled || toStr(v.campaign_on_end) !== 'freeze_allow_claim'}
+            />
+          </Field>
+        </div>
+
+        <div className="beGrid2">
+          <Field label="Текст бейджа" hint="Короткий текст (например “до 2026-02-29”). Можно оставить пустым.">
+            <Input
+              value={toStr(v.campaign_badge_text)}
+              onChange={(e) => setP({ campaign_badge_text: e.target.value })}
+              placeholder="до 2026-02-29"
+              disabled={!v.campaign_enabled}
+            />
+          </Field>
+
+          <Field label="Комментарий" hint="Только для кабинета (внутренние заметки).">
+            <Input
+              value={toStr(v.campaign_note)}
+              onChange={(e) => setP({ campaign_note: e.target.value })}
+              placeholder="мартовская акция для бариста"
+              disabled={!v.campaign_enabled}
+            />
+          </Field>
+        </div>
+
+        <div className="beHint">
+          Важно: campaign_id нужен, чтобы новая акция (6 кофе → 10 пиво) начиналась с нуля и не смешивалась с прошлой.
+          Даты — для UI/аналитики + контроля поведения “после окончания” (это реализуем в воркере).
+        </div>
+      </Acc>
+
+      <Acc
         title="Приз за завершение"
         sub={
           <span className="beMut">
-            выбор приза по <b>wheel_prizes.code</b>
+            сохраняем <b>snapshot</b> приза (чтобы изменения колеса не ломали паспорт)
           </span>
         }
         open={!!open.reward}
         onToggle={() => setOpen((m) => ({ ...m, reward: !m.reward }))}
         right={
-          <Toggle
-            checked={!!v.reward_enabled}
-            onChange={(x) => setP({ reward_enabled: !!x })}
-            label="Включено"
-            hint={null}
-          />
+          <Toggle checked={!!v.reward_enabled} onChange={(x) => setP({ reward_enabled: !!x })} label="Включено" />
         }
       >
         <div className="beGrid2">
@@ -459,16 +718,31 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
           label="Приз из колеса"
           hint={
             <>
-              Мы подтягиваем список призов колеса и сохраняем <b>reward_prize_code</b>.
-              Если у выбранного приза <b>coins &gt; 0</b> — начислим монеты, иначе выдадим redeem-код и отправим в бот.
+              Подтягиваем призы колеса и сохраняем <b>snapshot</b> в <code>reward</code> (code/title/coins). Поэтому если
+              потом призы колеса поменяются — паспорт всё равно выдаст выбранный приз.
             </>
           }
         >
           <div className="beRow">
             <select
               className="beSelect"
-              value={toStr(v.reward_prize_code)}
-              onChange={(e) => setP({ reward_prize_code: e.target.value })}
+              value={toStr(v.reward?.prize_code || v.reward_prize_code)}
+              onChange={(e) => {
+                const code = e.target.value;
+                const pr = wheelPrizes.find((x) => x.code === code);
+                const coins = Math.max(0, Math.floor(Number(pr?.coins || 0)));
+
+                setP({
+                  reward_prize_code: code, // legacy
+                  reward: {
+                    source: 'wheel',
+                    prize_code: code,
+                    prize_title: String(pr?.title || code || ''),
+                    coins,
+                    wheel_campaign_id: wheelCampaignId || '',
+                  },
+                });
+              }}
               style={{ flex: 1 }}
               disabled={!v.reward_enabled}
             >
@@ -478,7 +752,9 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
                 .map((p) => {
                   const coins = Math.max(0, Math.floor(Number(p.coins || 0)));
                   const active = p.active === undefined ? true : !!Number(p.active);
-                  const label = `${p.title || p.code} — (${p.code})${coins > 0 ? ` · ${coins} мон.` : ''}${!active ? ' · OFF' : ''}`;
+                  const label = `${p.title || p.code} — (${p.code})${coins > 0 ? ` · ${coins} мон.` : ''}${
+                    !active ? ' · OFF' : ''
+                  }`;
                   return (
                     <option key={p.code} value={p.code}>
                       {label}
@@ -490,8 +766,13 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
             <button
               type="button"
               className="beMiniBtn"
-              onClick={() => setP({ reward_prize_code: '' })}
-              disabled={!v.reward_enabled || !v.reward_prize_code}
+              onClick={() =>
+                setP({
+                  reward_prize_code: '',
+                  reward: { ...(v.reward || {}), prize_code: '', prize_title: '', coins: 0 },
+                })
+              }
+              disabled={!v.reward_enabled || !(v.reward?.prize_code || v.reward_prize_code)}
             >
               Очистить
             </button>
@@ -505,7 +786,25 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
 
           {rewardWarn ? (
             <div className="beHint" style={{ marginTop: 8, color: '#ffcc66', opacity: 1 }}>
-              Включена выдача приза, но не выбран приз из колеса — приз не будет выдан.
+              Включена выдача приза, но не выбран приз — приз не будет выдан.
+            </div>
+          ) : null}
+
+          {v.reward?.prize_code ? (
+            <div className="beHint" style={{ marginTop: 8 }}>
+              Snapshot: <b>{toStr(v.reward.prize_title || v.reward.prize_code)}</b>
+              {Number(v.reward?.coins || 0) > 0 ? (
+                <>
+                  {' '}
+                  · <b>{Math.max(0, Math.floor(Number(v.reward.coins || 0)))} мон.</b>
+                </>
+              ) : null}
+              {v.reward?.wheel_campaign_id ? (
+                <>
+                  {' '}
+                  · wheel_campaign_id: <code>{toStr(v.reward.wheel_campaign_id)}</code>
+                </>
+              ) : null}
             </div>
           ) : null}
         </Field>
@@ -513,77 +812,17 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
         {/* fallback manual input (на всякий) */}
         <Field label="(Ручной ввод) reward_prize_code" hint="Если не хочешь зависеть от списка — можно вписать вручную.">
           <Input
-            value={toStr(v.reward_prize_code)}
-            onChange={(e) => setP({ reward_prize_code: e.target.value })}
+            value={toStr(v.reward?.prize_code || v.reward_prize_code)}
+            onChange={(e) =>
+              setP({
+                reward_prize_code: e.target.value,
+                reward: { ...(v.reward || {}), source: 'wheel', prize_code: e.target.value },
+              })
+            }
             placeholder="free_coffee_6"
             disabled={!v.reward_enabled}
           />
         </Field>
-      </Acc>
-
-      <Acc
-        title="Период, дедлайн, сброс"
-        sub={<span className="beMut">прокачка (нужна поддержка в runtime/worker)</span>}
-        open={!!open.period}
-        onToggle={() => setOpen((m) => ({ ...m, period: !m.period }))}
-      >
-        <div className="beGrid2">
-          <Field label="Дедлайн режим" hint="Пока это только конфиг. Если скажешь — допишу поддержку в мини-апп.">
-            <select
-              className="beSelect"
-              value={toStr(v.deadline_mode)}
-              onChange={(e) => setP({ deadline_mode: e.target.value })}
-            >
-              <option value="none">Нет дедлайна</option>
-              <option value="days">Срок в днях (с первого штампа)</option>
-              <option value="weekly">Каждую неделю</option>
-              <option value="monthly">Каждый месяц</option>
-            </select>
-          </Field>
-
-          <Field label="Срок (дней)" hint="Используется только если выбран режим “Срок в днях”.">
-            <Input
-              type="number"
-              min={1}
-              step={1}
-              value={String(toNum(v.deadline_days, 30))}
-              onChange={(e) => setP({ deadline_days: clamp(toNum(e.target.value, 30), 1, 365) })}
-              disabled={toStr(v.deadline_mode) !== 'days'}
-            />
-          </Field>
-        </div>
-
-        <div className="beGrid2">
-          <Field label="Заголовок дедлайна">
-            <Input value={toStr(v.deadline_title)} onChange={(e) => setP({ deadline_title: e.target.value })} />
-          </Field>
-          <Field label="Текст дедлайна">
-            <Input value={toStr(v.deadline_text)} onChange={(e) => setP({ deadline_text: e.target.value })} />
-          </Field>
-        </div>
-
-        <div className="beGrid2">
-          <Field label="Сброс прогресса" hint="Как вести себя, когда дедлайн истёк.">
-            <select
-              className="beSelect"
-              value={toStr(v.reset_mode)}
-              onChange={(e) => setP({ reset_mode: e.target.value })}
-            >
-              <option value="none">Не сбрасывать</option>
-              <option value="on_deadline">Сбросить при окончании периода</option>
-              <option value="daily">Сброс каждый день</option>
-            </select>
-          </Field>
-
-          <Field label="Текст при сбросе">
-            <Input value={toStr(v.reset_text)} onChange={(e) => setP({ reset_text: e.target.value })} />
-          </Field>
-        </div>
-
-        <div className="beHint">
-          Если хочешь “собрать за период иначе сброс” — это оно. Нужно только: (1) хранить старт периода у юзера,
-          (2) при open/collect проверять дедлайн и чистить stamps в D1.
-        </div>
       </Acc>
 
       <Acc
@@ -592,33 +831,57 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
         open={!!open.stamps}
         onToggle={() => setOpen((m) => ({ ...m, stamps: !m.stamps }))}
         right={
-          <button className="beMiniBtn" type="button" onClick={addStamp}>
-            + Добавить
-          </button>
+          <div className="beRow" style={{ gap: 8 }}>
+            <button
+              className="beMiniBtn"
+              type="button"
+              onClick={() => {
+                // автокоды, если пустые: name -> code
+                const next = clone(v);
+                next.styles = (next.styles || []).map((st: any, i: number) => {
+                  const code = String(st?.code || '').trim();
+                  if (code) return st;
+                  const name = String(st?.name || '').trim();
+                  const slug = toCodeSlug(name);
+                  return { ...st, code: slug || `item_${i + 1}` };
+                });
+                next.require_pin = true;
+                onChange(ensureDefaults(next));
+              }}
+              title="Заполнить пустые code из name"
+            >
+              Авто code
+            </button>
+
+            <button className="beMiniBtn" type="button" onClick={addStamp}>
+              + Добавить
+            </button>
+          </div>
         }
       >
         {v.styles.length ? (
           <div className="beAccList" style={{ marginTop: 4 }}>
             {v.styles.map((st: any, idx: number) => {
               const isOpen = !!stampOpen[idx];
-              const imgLabel = st?.image ? (String(st.image).startsWith('data:') ? 'Загружено' : 'URL') : 'Нет';
+              const imgLabel = st?.image
+                ? String(st.image).startsWith('data:')
+                  ? 'Загружено'
+                  : 'URL'
+                : 'Нет';
 
               return (
                 <div key={idx} className={'beAcc' + (isOpen ? ' is-open' : '')}>
-                  <div
-                    className="beAcc__hdr"
-                    onClick={() => setStampOpen((m) => ({ ...m, [idx]: !m[idx] }))}
-                  >
+                  <div className="beAcc__hdr" onClick={() => setStampOpen((m) => ({ ...m, [idx]: !m[idx] }))}>
                     <div className="beAcc__left">
-                      <div className="beAcc__title">
-                        {toStr(st?.name) ? toStr(st?.name) : `Карточка #${idx + 1}`}
-                      </div>
+                      <div className="beAcc__title">{toStr(st?.name) ? toStr(st?.name) : `Карточка #${idx + 1}`}</div>
                       <div className="beAcc__sub">
                         <span className="beMut">
                           code: <b>{toStr(st?.code) || '—'}</b>
                         </span>
                         <span className="beDot" />
-                        <span className="beMut">картинка: <b>{imgLabel}</b></span>
+                        <span className="beMut">
+                          картинка: <b>{imgLabel}</b>
+                        </span>
                       </div>
                     </div>
 
@@ -680,10 +943,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
                         />
                       </Field>
 
-                      <Field
-                        label="image"
-                        hint="Можно вставить ссылку или загрузить файлом (dataURL)."
-                      >
+                      <Field label="image" hint="Можно вставить ссылку или загрузить файлом (dataURL).">
                         <div className="beRow">
                           <Input
                             value={toStr(st?.image)}
