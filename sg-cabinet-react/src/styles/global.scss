@@ -6038,3 +6038,17 @@ body{
 
 
 
+// кнопки +страница +блок
+
+.ctorPillBtn{
+  appearance: none;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(34, 211, 238, .18);
+  color: rgba(15,23,42,.92);
+  font-weight: 800;
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: 0 10px 26px rgba(2,6,23,.08);
+}
+.ctorPillBtn:hover{ background: rgba(34, 211, 238, .24); }
+.ctorPillBtn:active{ transform: translateY(1px); }
