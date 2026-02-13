@@ -2,6 +2,7 @@ import React from 'react';
 import BonusWheelEditor from './BonusWheelEditor';
 import StarsProductEditor from './StarsProductEditor';
 import GameFlappyEditor from './GameFlappyEditor';
+import StylesPassportEditor from './StylesPassportEditor';
 
 
 import JsonPropsEditor from './JsonPropsEditor';
@@ -11,7 +12,8 @@ export function getEditorForKey(key: string){
   if (key === 'bonus_wheel_one') return BonusWheelEditor;
   if (key === 'shop_stars_product_one') return StarsProductEditor;
 
-  if (key === 'game_flappy_one') return GameFlappyEditor;
+  if (key === 'stales_pasport_one') return StylesPassportEditor;
+  
 
   
   return JsonPropsEditor;
