@@ -30,17 +30,6 @@ function normalizePathInput(v: string){
   return s || '/';
 }
 
-const GLYPHS: string[] = ['◌','●','■','▲','◆','★','♥','☻','✦','⚡','✚','☰'];
-
-const PRESET_KINDS: Array<{ kind: any; label: string; glyph: string }> = [
-  { kind: 'home',       label: 'Home',       glyph: '🏠' },
-  { kind: 'play',       label: 'Play',       glyph: '▶️' },
-  { kind: 'bonuses',    label: 'Bonuses',    glyph: '🎁' },
-  { kind: 'tournament', label: 'Tournament', glyph: '🏆' },
-  { kind: 'profile',    label: 'Profile',    glyph: '👤' },
-  { kind: 'custom',     label: 'Custom',     glyph: '◌' },
-];
-
 function InlineModal({
   open,
   title,
@@ -146,6 +135,11 @@ function LayersList({
         })}
       </div>
 
+      {/* (если захочешь вернуть верхнюю кнопку +Блок — вставим сюда)
+      <div className="ctorLayers__footer">
+        <button className="ctorPillBtn" type="button" onClick={onRequestAddBlock}>+ Блок</button>
+      </div>
+      */}
     </div>
   );
 }
@@ -160,7 +154,7 @@ export function PagesTree(){
   const addRoute = useConstructorStore(s=>s.addRoute);
 
   const toggleHidden = (useConstructorStore as any)(s=>s.toggleRouteHidden);
-  const setRouteIcon = (useConstructorStore as any)(s=>s.setRouteIcon);
+  const setRouteIcon = (useConstructorStore as any)(s=>s.setRouteIcon); // будем использовать ТОЛЬКО icon_img
   const renameRoute = (useConstructorStore as any)(s=>s.renameRoute);
   const deleteRoute = (useConstructorStore as any)(s=>s.deleteRoute);
 
@@ -185,7 +179,6 @@ export function PagesTree(){
 
   // modals
   const [editOpen, setEditOpen] = React.useState(false);
-  const [iconOpen, setIconOpen] = React.useState(false);
   const [libOpen, setLibOpen] = React.useState(false);
   const [curPath, setCurPath] = React.useState<string>('/');
 
@@ -207,42 +200,44 @@ export function PagesTree(){
   const editingBlock = blockEdit && editingRoute ? (editingRoute as any).blocks?.find((b:any)=>b.id===blockEdit.id) : null;
   const EditorCmp = editingBlock ? getEditorForKey(editingBlock.key) : null;
 
-  const applyIconImg = async (file: File)=>{
-    const toDataUrl = (f: File) => new Promise<string>((res, rej)=>{
-      const rd = new FileReader();
-      rd.onload = ()=>res(String(rd.result || ''));
-      rd.onerror = ()=>rej(new Error('file read error'));
-      rd.readAsDataURL(f);
-    });
+  // image upload -> dataURL (оставляем как было, без CDN)
+  const toDataUrl = (f: File) => new Promise<string>((res, rej)=>{
+    const rd = new FileReader();
+    rd.onload = ()=>res(String(rd.result || ''));
+    rd.onerror = ()=>rej(new Error('file read error'));
+    rd.readAsDataURL(f);
+  });
+
+  const applyRouteImage = async (file: File)=>{
+    if (!cur) return;
     const url = await toDataUrl(file);
-    if (typeof setRouteIcon === 'function' && cur) {
+    // убираем всю “иконковую” логику: используем только icon_img
+    if (typeof setRouteIcon === 'function') {
       setRouteIcon(cur.path, { kind:'custom', icon:'custom', icon_g:'', icon_img: url });
     }
-    setIconOpen(false);
+  };
+
+  const clearRouteImage = ()=>{
+    if (!cur) return;
+    if (typeof setRouteIcon === 'function') {
+      setRouteIcon(cur.path, { icon_img: '' });
+    }
   };
 
   return (
     <div className="pagesTree">
       <div className="ctor-panel__head">
-        
-<div className="ctorPages__addPage">
-  <button className="ctorPillBtn" type="button" onClick={()=>addRoute()}>
-    + Страница
-  </button>
-</div>
+        <div className="ctorPages__addPage">
+          <button className="ctorPillBtn" type="button" onClick={()=>addRoute()}>
+            + Страница
+          </button>
         </div>
+      </div>
 
       <div className="pagesTree__list">
         {nav.map(r=>{
           const isActive = activePath === r.path;
           const isHidden = !!(r as any).hidden;
-
-          const glyph =
-            ((r as any).icon_img && String((r as any).icon_img).trim()) ? '🖼' :
-            ((r as any).icon_g && String((r as any).icon_g).trim()) ? (r as any).icon_g :
-            ((r as any).kind ? PRESET_KINDS.find(k=>k.kind===(r as any).kind)?.glyph : '') ||
-            '◌';
-
           const isOpen = !!openMap[r.path];
 
           return (
@@ -256,7 +251,14 @@ export function PagesTree(){
                 }}
               >
                 <div className="pageAcc__left">
-                  <div className="pageRow__ico">{glyph}</div>
+                  <div className="pageRow__ico">
+                    {(r as any).icon_img ? (
+                      <img className="pageRow__icoImg" src={(r as any).icon_img} alt="" />
+                    ) : (
+                      <span className="pageRow__icoGlyph">◌</span>
+                    )}
+                  </div>
+
                   <div className="pageRow__meta">
                     <div className="pageRow__title">{(r as any).title}</div>
                     <div className="pageRow__slug">{r.path}</div>
@@ -273,15 +275,7 @@ export function PagesTree(){
                     {isHidden ? '🙈' : '👁'}
                   </IconBtn>
 
-                  <IconBtn
-                    title="Иконка"
-                    onClick={()=>{
-                      setCurPath(r.path);
-                      setIconOpen(true);
-                    }}
-                  >
-                    ico
-                  </IconBtn>
+                  {/* ❌ кнопка ico УДАЛЕНА */}
 
                   <IconBtn
                     title="Редактировать"
@@ -332,17 +326,18 @@ export function PagesTree(){
                   />
 
                   {/* нижняя кнопка, как в старом — под блоками */}
-<div className="pageAcc__addUnder">
-  <button className="ctorPillBtn"
-    type="button"
-    onClick={()=>{
-      setCurPath(r.path);
-      setLibOpen(true);
-    }}
-  >
-    + Блок
-  </button>
-</div>
+                  <div className="pageAcc__addUnder">
+                    <button
+                      className="ctorPillBtn"
+                      type="button"
+                      onClick={()=>{
+                        setCurPath(r.path);
+                        setLibOpen(true);
+                      }}
+                    >
+                      + Блок
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -350,7 +345,7 @@ export function PagesTree(){
         })}
       </div>
 
-      {/* ===== Modal: edit title + slug ===== */}
+      {/* ===== Modal: edit title + slug + image upload ===== */}
       <InlineModal
         open={editOpen}
         title={<>Редактировать страницу <span className="ctorModal__muted">{cur?.path}</span></>}
@@ -375,107 +370,66 @@ export function PagesTree(){
         <div className="ctorForm">
           <div className="ctorField">
             <div className="ctorLabel">Название</div>
-            <Input value={tmpTitle} onChange={(e)=>setTmpTitle(e.target.value)} />
+            <Input value={tmpTitle} onChange={(e)=>setTmpTitle((e as any).target?.value ?? '')} />
           </div>
 
           <div className="ctorField">
             <div className="ctorLabel">Slug / path</div>
             <Input
               value={tmpPath}
-              onChange={(e)=>setTmpPath(normalizePathInput(e.target.value))}
+              onChange={(e)=>setTmpPath(normalizePathInput((e as any).target?.value ?? ''))}
               placeholder="/"
             />
             <div className="ctorHelp">
               Пример: <b>/home</b>, <b>/bonus</b>. Для главной оставь <b>/</b>.
             </div>
           </div>
-        </div>
-      </InlineModal>
 
-      {/* ===== Modal: icon picker (kind / glyph / image upload) ===== */}
-      <InlineModal
-        open={iconOpen}
-        title={<>Иконка вкладки <span className="ctorModal__muted">{cur?.path}</span></>}
-        onClose={()=>setIconOpen(false)}
-        footer={
-          <>
-            <Button variant="ghost" onClick={()=>setIconOpen(false)}>Отмена</Button>
-            <Button
-              onClick={()=>{
-                if (cur && typeof setRouteIcon === 'function') {
-                  setRouteIcon(cur.path, { kind:'custom', icon:'custom', icon_g:'◌', icon_img:'' });
-                }
-                setIconOpen(false);
-              }}
-            >
-              Сбросить
-            </Button>
-          </>
-        }
-      >
-        <div className="iconPicker">
-          <div className="iconPicker__sec">
-            <div className="iconPicker__ttl">Пресеты (kind)</div>
-            <div className="iconPicker__grid">
-              {PRESET_KINDS.map(item=>(
-                <button
-                  key={item.kind}
-                  type="button"
-                  className={'iconPick' + ((cur as any)?.kind === item.kind ? ' is-active' : '')}
-                  onClick={()=>{
-                    if (!cur) return;
-                    if (typeof setRouteIcon === 'function') {
-                      setRouteIcon(cur.path, { kind: item.kind, icon: 'custom', icon_g: '', icon_img: '' });
-                    }
-                    setIconOpen(false);
-                  }}
-                >
-                  <div className="iconPick__glyph">{item.glyph}</div>
-                  <div className="iconPick__lbl">{item.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* ✅ Новое: картинка страницы (без иконок/глифов/kind) */}
+          <div className="ctorField">
+            <div className="ctorLabel">Картинка страницы</div>
 
-          <div className="iconPicker__sec">
-            <div className="iconPicker__ttl">Glyph (icon_g)</div>
-            <div className="iconPicker__grid">
-              {GLYPHS.map(g=>(
-                <button
-                  key={g}
-                  type="button"
-                  className={'iconPick' + ((cur as any)?.icon_g === g ? ' is-active' : '')}
-                  onClick={()=>{
-                    if (!cur) return;
-                    if (typeof setRouteIcon === 'function') {
-                      setRouteIcon(cur.path, { kind:'custom', icon:'custom', icon_g: g, icon_img: '' });
-                    }
-                    setIconOpen(false);
-                  }}
-                >
-                  <div className="iconPick__glyph">{g}</div>
-                  <div className="iconPick__lbl">glyph</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="iconPicker__sec">
-            <div className="iconPicker__ttl">Своя картинка (icon_img)</div>
-            <div className="iconUpload">
+            <div className="ctorRow">
               <input
+                id="routeImgInput"
                 type="file"
                 accept="image/*"
-                onChange={(e)=>{
-                  const f = e.target.files?.[0];
-                  if (f) applyIconImg(f);
-                  e.currentTarget.value = '';
+                style={{ display: 'none' }}
+                onChange={async (e)=>{
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  (e.target as HTMLInputElement).value = '';
+                  if (!file) return;
+                  try{ await applyRouteImage(file); }catch(_e){}
                 }}
               />
-              <div className="ctorHelp">
-                Сейчас сохраняем как <b>data:</b> (внутри blueprint). Позже можем сделать загрузку на CDN и хранить URL.
-              </div>
+
+              <button
+                type="button"
+                className="ctorSeg__btn is-active"
+                onClick={()=>document.getElementById('routeImgInput')?.click()}
+              >
+                Загрузить
+              </button>
+
+              <button
+                type="button"
+                className="ctorSeg__btn"
+                disabled={!cur || !(cur as any)?.icon_img}
+                onClick={clearRouteImage}
+              >
+                Удалить
+              </button>
             </div>
+
+            {(cur as any)?.icon_img ? (
+              <div className="ctorImgPrev">
+                <img src={(cur as any).icon_img} alt="" />
+              </div>
+            ) : (
+              <div className="ctorHelp">
+                Загрузите картинку — она появится в футере мини-аппа и слева у названия страницы в панели.
+              </div>
+            )}
           </div>
         </div>
       </InlineModal>
