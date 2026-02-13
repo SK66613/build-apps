@@ -1,9 +1,7 @@
 import React from 'react';
 import { useConstructorStore } from '../state/constructorStore';
 import type { SaveState } from '../state/types';
-
 import { createPortal } from 'react-dom';
-
 
 const BASE_URL = (import.meta as any).env?.BASE_URL || '/';
 
@@ -57,6 +55,7 @@ export function PreviewFrame(){
   // actions
   const saveNow = useConstructorStore((s:any)=>s.saveNow);
   const publishNow = useConstructorStore((s:any)=>s.publishNow);
+  const clearLastPublishedUrl = useConstructorStore((s:any)=>s.clearLastPublishedUrl);
 
   const src = React.useMemo(()=>buildPreviewUrl(appId), [appId]);
 
@@ -136,6 +135,12 @@ export function PreviewFrame(){
       window.setTimeout(()=>setCopied(false), 1200);
     }catch(_){}
   }
+
+  const closePublishModal = React.useCallback(()=>{
+    setPubOpen(false);
+    // IMPORTANT: prevent the modal from re-opening after navigating away/back
+    try{ clearLastPublishedUrl?.(); }catch(_e){}
+  }, [clearLastPublishedUrl]);
 
   return (
     <div className="sg-card ctor-card ctor-preview ctor-preview--phone">
@@ -235,35 +240,32 @@ export function PreviewFrame(){
       </div>
 
       {/* publish modal */}
-{pubOpen ? createPortal(
-  <div className="sgModalBackdrop sgModalBackdrop--top" onClick={()=>setPubOpen(false)}>
-    <div className="sgModal sgModal--wide" onClick={(e)=>e.stopPropagation()}>
-      <div className="sgModalTitle">Мини-апп опубликован</div>
+      {pubOpen ? createPortal(
+        <div className="sgModalBackdrop sgModalBackdrop--top" onClick={closePublishModal}>
+          <div className="sgModal sgModal--wide" onClick={(e)=>e.stopPropagation()}>
+            <div className="sgModalTitle">Мини-апп опубликован</div>
 
-      <input className="sgModalInput sgModalInput--full" readOnly value={pubUrl || ''} />
+            <input className="sgModalInput sgModalInput--full" readOnly value={pubUrl || ''} />
 
-      <div className="sgModalActions sgModalActions--two">
-        <button className="ctorSeg__btn" type="button" onClick={()=>setPubOpen(false)}>
-          Закрыть
-        </button>
+            <div className="sgModalActions sgModalActions--two">
+              <button className="ctorSeg__btn" type="button" onClick={closePublishModal}>
+                Закрыть
+              </button>
 
-        <button
-          className="ctorSeg__btn is-active"
-          type="button"
-          onClick={onCopy}
-          disabled={!pubUrl}
-          title="Скопировать ссылку"
-        >
-          {copied ? 'Скопировано' : 'Скопировать'}
-        </button>
-      </div>
-    </div>
-  </div>,
-  document.body
-) : null}
-
-
-
+              <button
+                className="ctorSeg__btn is-active"
+                type="button"
+                onClick={onCopy}
+                disabled={!pubUrl}
+                title="Скопировать ссылку"
+              >
+                {copied ? 'Скопировано' : 'Скопировать'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }
