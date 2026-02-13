@@ -10,20 +10,23 @@ type State = {
   selected: Selected;
   dirty: boolean;
 
-  // separate states
+  // states
   saveState: SaveState;
   publishState: SaveState;
 
   lastPublishedUrl?: string | null;
+
+  // UI helper: prevent publish modal from re-opening after navigate
+  clearLastPublishedUrl(): void;
 
   setAppId(appId: string | null): void;
   setBlueprint(bp: Blueprint): void;
   setSaveState(st: SaveState): void;
   markSaved(): void;
 
-  // server actions
+  // server
   saveNow(): Promise<void>;
-  publishNow(): Promise<{ publicUrl?: string; publicId?: string } | any>;
+  publishNow(): Promise<{ publicId?: string; publicUrl?: string } | any>;
 
   selectRoute(path: string): void;
   selectBlock(path: string, id: string): void;
@@ -75,6 +78,17 @@ function ensureNav(bp: Blueprint) {
   }
   if (!Array.isArray(bp.routes)) (bp as any).routes = makeDefaultBlueprint().routes;
   if (!bp.app) (bp as any).app = makeDefaultBlueprint().app;
+
+  // legacy-compatible blocks map (preview/runtime reads bp.blocks[id])
+  if (!(bp as any).blocks || typeof (bp as any).blocks !== 'object') (bp as any).blocks = {};
+}
+
+function ensureBlockProps(bp: Blueprint, id: string, fallback: any = {}) {
+  ensureNav(bp);
+  const blocks: any = (bp as any).blocks;
+  const k = String(id);
+  if (!blocks[k] || typeof blocks[k] !== 'object') blocks[k] = clone(fallback || {});
+  return blocks[k];
 }
 
 function normalizePath(p: string) {
@@ -96,6 +110,10 @@ export const useConstructorStore = create<State>((set, get) => ({
   publishState: 'idle',
 
   lastPublishedUrl: null,
+
+  clearLastPublishedUrl() {
+    set({ lastPublishedUrl: null });
+  },
 
   setAppId(appId) {
     set({ appId });
@@ -321,6 +339,9 @@ export const useConstructorStore = create<State>((set, get) => ({
     const b: BlockInst = { id: uid('b'), key, props: {}, hidden: false };
     r.blocks.push(b);
 
+    // legacy-compatible props store (used by preview/runtime)
+    (bp as any).blocks[String(b.id)] = clone(b.props || {});
+
     set({
       blueprint: bp,
       dirty: true,
@@ -339,6 +360,13 @@ export const useConstructorStore = create<State>((set, get) => ({
     if (!b) return;
 
     b.props = props;
+
+    // keep bp.blocks in sync for preview/runtime
+    (bp as any).blocks[String(id)] = clone(props || {});
+
+    // preserve hidden flag if needed
+    if (b.hidden) (bp as any).blocks[String(id)].__hidden = true;
+
     set({ blueprint: bp, dirty: true, saveState: 'idle' });
   },
 
@@ -349,6 +377,10 @@ export const useConstructorStore = create<State>((set, get) => ({
 
     const r = ensureRoute(bp, path);
     r.blocks = r.blocks.filter((b) => b.id !== id);
+
+    try {
+      delete (bp as any).blocks[String(id)];
+    } catch (_e) {}
 
     set({
       blueprint: bp,
@@ -387,6 +419,11 @@ export const useConstructorStore = create<State>((set, get) => ({
     if (!b) return;
 
     b.hidden = !b.hidden;
+
+    // preview/runtime uses __hidden flag inside bp.blocks[id]
+    const p = ensureBlockProps(bp, id, b.props || {});
+    p.__hidden = !!b.hidden;
+
     set({ blueprint: bp, dirty: true, saveState: 'idle' });
   },
 
@@ -406,6 +443,11 @@ export const useConstructorStore = create<State>((set, get) => ({
       props: clone(src.props || {}),
       hidden: !!src.hidden,
     };
+
+    (bp as any).blocks[String(copy.id)] = clone(copy.props || {});
+    if (copy.hidden) {
+      (bp as any).blocks[String(copy.id)].__hidden = true;
+    }
 
     r.blocks.splice(i + 1, 0, copy);
     set({
