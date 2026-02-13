@@ -230,6 +230,7 @@ export function PagesTree(){
     + Страница
   </button>
 </div>
+        </div>
 
       <div className="pagesTree__list">
         {nav.map(r=>{
