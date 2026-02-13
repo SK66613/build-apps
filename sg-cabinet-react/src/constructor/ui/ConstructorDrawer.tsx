@@ -220,17 +220,9 @@ export function ConstructorDrawer(){
 
       {mode === 'panel' ? (
         <div className="ctorDrawer__stack">
-          <Accordion title="Страницы" defaultOpen>
+
             <PagesTree />
-          </Accordion>
 
-          <Accordion title="Блоки" defaultOpen>
-            <BlocksPalette />
-          </Accordion>
-
-          <Accordion title="Инспектор" defaultOpen>
-            <Inspector />
-          </Accordion>
         </div>
       ) : (
         <div className="ctorDrawer__stack">
