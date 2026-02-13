@@ -225,10 +225,11 @@ export function PagesTree(){
     <div className="pagesTree">
       <div className="ctor-panel__head">
         
-        <button className="ctorPillBtn" type="button" onClick={()=>addRoute()}>
-  + Страница
-</button>
-      </div>
+<div className="ctorPages__addPage">
+  <button className="ctorPillBtn" type="button" onClick={()=>addRoute()}>
+    + Страница
+  </button>
+</div>
 
       <div className="pagesTree__list">
         {nav.map(r=>{
