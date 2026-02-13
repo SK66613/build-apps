@@ -12,7 +12,7 @@ export function getEditorForKey(key: string){
   if (key === 'bonus_wheel_one') return BonusWheelEditor;
   if (key === 'shop_stars_product_one') return StarsProductEditor;
 
-  if (key === 'stales_pasport_one') return StylesPassportEditor;
+  if (key === 'styles_passport_one') return StylesPassportEditor;
   
 
   
