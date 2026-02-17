@@ -17,9 +17,17 @@ type PrizeStat = {
   title: string;
   wins: number;
   redeemed: number;
-  cost?: number;
+
+  // optional props from backend (если есть)
+  cost?: number;     // себестоимость (в рублях или в копейках — см. normalizeCostCent ниже)
   weight?: number;
   active?: number;
+
+  // если у тебя уже отдаётся:
+  coins?: number;    // монеты в призе (для coin-prize)
+  kind?: string;     // "coins" | "item"
+  cost_cent?: number;
+  cost_currency?: string;
 };
 
 type ActivityItem = {
@@ -49,6 +57,19 @@ function clampN(n: any, min: number, max: number){
   return Math.max(min, Math.min(max, x));
 }
 
+function fmtPct(x: number | null | undefined, d = '—'){
+  if (x === null || x === undefined || !Number.isFinite(Number(x))) return d;
+  return `${(Number(x) * 100).toFixed(1)}%`;
+}
+
+function rubFromCent(cent: number | null | undefined){
+  const v = Number(cent);
+  if (!Number.isFinite(v)) return '—';
+  const r = v / 100;
+  // компактно, но без Intl чтобы не тянуть локаль
+  return `${r.toFixed(2)} ₽`;
+}
+
 /* ===== SVG icons for chart mode ===== */
 function IcoBars(){
   return (
@@ -76,6 +97,38 @@ function IcoArea(){
   );
 }
 
+/**
+ * Нормализация себестоимости в копейки.
+ * У тебя может быть:
+ *  - cost_cent (уже копейки)
+ *  - cost (иногда рубли, иногда копейки — зависит как ты отдавал)
+ *
+ * Правило:
+ *  - если есть cost_cent → берём его
+ *  - иначе если cost <= 1_000_000 → считаем, что это РУБЛИ и умножаем на 100
+ *  - иначе считаем, что уже копейки
+ */
+function normalizeCostCent(p: PrizeStat): number {
+  const cc = Number((p as any).cost_cent);
+  if (Number.isFinite(cc) && cc >= 0) return Math.floor(cc);
+
+  const c = Number((p as any).cost);
+  if (!Number.isFinite(c) || c < 0) return 0;
+
+  if (c <= 1_000_000) return Math.floor(c * 100);
+  return Math.floor(c);
+}
+
+function normalizeCoins(p: PrizeStat): number {
+  const v = Number((p as any).coins);
+  return Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
+}
+
+function normalizeKind(p: PrizeStat): 'coins'|'item' {
+  const k = String((p as any).kind || '').trim().toLowerCase();
+  return k === 'coins' ? 'coins' : 'item';
+}
+
 export default function Wheel(){
   const { appId, range } = useAppState();
   const qc = useQueryClient();
@@ -86,6 +139,17 @@ export default function Wheel(){
   const [panel, setPanel] = React.useState<'live'|'settings'>('live');
 
   const [topMetric, setTopMetric] = React.useState<'wins'|'redeemed'>('wins');
+
+  // ===== Project-level coin cost (RUB per coin) =====
+  // сейчас по дефолту 1₽ = 1 coin
+  // позже привяжем к воркеру (GET/PUT /wheel/settings) и будем хранить в D1
+  const [coinRub, setCoinRub] = React.useState<string>('1');
+  const coinCostCentPerCoin = Math.max(0, Math.floor(Number(coinRub || '0') * 100));
+
+  // Spin cost (в монетах) — если у тебя есть в состоянии/эндпоинте, позже подтянем.
+  // Пока даём ручной ввод в настройках, чтобы EV/ROI считать реалистично.
+  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10');
+  const spinCostCoins = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
 
   const qStats = useQuery({
     enabled: !!appId,
@@ -124,10 +188,9 @@ export default function Wheel(){
   }));
 
   // Top prizes
-const top = [...items]
-  .sort((a,b) => (Number((b as any)[topMetric])||0) - (Number((a as any)[topMetric])||0))
-  .slice(0, 7);
-
+  const top = [...items]
+    .sort((a,b) => (Number((b as any)[topMetric])||0) - (Number((a as any)[topMetric])||0))
+    .slice(0, 7);
 
   // ===== Settings form draft =====
   const [draft, setDraft] = React.useState<Record<string, { weight: string; active: boolean }>>({});
@@ -202,12 +265,70 @@ const top = [...items]
     }
   }
 
+  // ===== EV / ROI calculations (client-side) =====
+  // EV payout per spin = sum(P(prize) * costCent(prize))
+  // costCent(prize):
+  //   - kind=coins => coins * coinCostCentPerCoin
+  //   - kind=item  => cost_cent (or cost)
+  const ev = React.useMemo(() => {
+    const active = items.filter(p => (Number(p.active) || 0) ? true : false);
+    const weights = active.map(p => Math.max(0, Number(p.weight) || 0));
+    const wSum = weights.reduce((s, w) => s + w, 0);
+
+    const spinRevenueCent = spinCostCoins * coinCostCentPerCoin;
+
+    let evPayoutCent = 0;
+    const perPrize = active.map((p) => {
+      const w = Math.max(0, Number(p.weight) || 0);
+      const prob = wSum > 0 ? (w / wSum) : 0;
+
+      const kind = normalizeKind(p);
+      const coins = normalizeCoins(p);
+
+      const costCent =
+        kind === 'coins'
+          ? coins * coinCostCentPerCoin
+          : normalizeCostCent(p);
+
+      const expCent = prob * costCent;
+      evPayoutCent += expCent;
+
+      return {
+        prize_code: p.prize_code,
+        title: p.title || p.prize_code,
+        prob,
+        kind,
+        coins,
+        costCent,
+        expCent,
+      };
+    });
+
+    const evProfitCent = spinRevenueCent - evPayoutCent;
+    const roi = spinRevenueCent > 0 ? (evProfitCent / spinRevenueCent) : null; // margin-ish
+    const paybackSpins = evProfitCent > 0 ? Math.ceil(evPayoutCent / evProfitCent) : null;
+
+    // риск (грубо): "дорогие * вероятные" — expCent / revenue
+    const riskRows = [...perPrize].sort((a, b) => (b.expCent - a.expCent));
+
+    return {
+      wSum,
+      spinRevenueCent,
+      evPayoutCent: Math.round(evPayoutCent),
+      evProfitCent: Math.round(evProfitCent),
+      roi,
+      paybackSpins,
+      perPrize,
+      riskRows,
+    };
+  }, [items, spinCostCoins, coinCostCentPerCoin]);
+
   return (
     <div className="sg-page wheelPage">
       <div className="wheelHead">
         <div>
           <h1 className="sg-h1">Wheel</h1>
-          <div className="sg-sub">График + KPI + топы + live + настройка весов (runtime override).</div>
+          <div className="sg-sub">График + KPI + топы + live + настройка весов (runtime override) + EV/ROI.</div>
         </div>
       </div>
 
@@ -215,8 +336,6 @@ const top = [...items]
         {/* LEFT */}
         <div className="wheelLeft">
           {/* CHART ALWAYS VISIBLE */}
-
-          
           <Card className="wheelCard">
             <div className="wheelCardHead wheelCardHeadRow">
               <div>
@@ -253,7 +372,6 @@ const top = [...items]
             </div>
 
             <div className={'wheelChart ' + (chartMode === 'bar' ? 'is-bar' : chartMode === 'line' ? 'is-line' : 'is-area')}>
-
               {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
               {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
 
@@ -278,8 +396,7 @@ const top = [...items]
                       <Line type="monotone" dataKey="redeemed" stroke="var(--accent2)" strokeWidth={3} dot={false} />
                     </LineChart>
                   ) : (
-                    
-                      <AreaChart data={chartData}>
+                    <AreaChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
                       <XAxis dataKey="title" tick={{ fontSize: 12 }} interval={0} height={44} />
                       <YAxis tick={{ fontSize: 12 }} />
@@ -373,6 +490,24 @@ const top = [...items]
                     </div>
                   </div>
 
+                  {/* NEW: финансовые настройки (пока локально) */}
+                  <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <div className="sg-muted" style={{ marginBottom: 6 }}>Стоимость 1 монеты (₽)</div>
+                      <Input value={coinRub} onChange={(e: any) => setCoinRub(e.target.value)} placeholder="1" />
+                      <div className="sg-muted" style={{ marginTop: 6 }}>
+                        Сейчас используется для EV/ROI. Позже сохраним в D1.
+                      </div>
+                    </div>
+                    <div>
+                      <div className="sg-muted" style={{ marginBottom: 6 }}>Стоимость спина (в монетах)</div>
+                      <Input value={spinCostCoinsDraft} onChange={(e: any) => setSpinCostCoinsDraft(e.target.value)} placeholder="10" />
+                      <div className="sg-muted" style={{ marginTop: 6 }}>
+                        До подключения state/config берём отсюда.
+                      </div>
+                    </div>
+                  </div>
+
                   {qStats.isError && (
                     <div style={{ marginTop: 10, fontWeight: 900 }}>
                       Ошибка загрузки. Проверь эндпоинт <code>/wheel/stats</code> в воркере.
@@ -426,6 +561,12 @@ const top = [...items]
                       </tbody>
                     </table>
                   </div>
+
+                  {/* NEW: мини-пояснение EV/ROI прямо в настройках */}
+                  <div className="sg-muted" style={{ marginTop: 12 }}>
+                    EV/ROI считается по активным призам и их weight. Для coin-призов берём <b>coins × стоимость монеты</b>.
+                    Для item-призов — <b>cost_cent/cost</b> из базы (если отдаёшь).
+                  </div>
                 </div>
               )}
             </div>
@@ -434,124 +575,184 @@ const top = [...items]
 
         {/* RIGHT */}
         <div className="wheelRight">
+          {/* Summary (как было) */}
+          <Card className="wheelCard">
+            <div className="wheelCardHead">
+              <div className="wheelCardTitle">Сводка</div>
+            </div>
 
+            <div className="wheelSummaryPro">
+              <div className="wheelSummaryTiles">
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Активных</div>
+                  <div className="wheelSumVal">{items.filter(i => (Number(i.active)||0) ? true : false).length}</div>
+                </div>
 
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Всего</div>
+                  <div className="wheelSumVal">{items.length}</div>
+                </div>
 
+                <div className="wheelSumTile is-strong">
+                  <div className="wheelSumLbl">Redeem</div>
+                  <div className="wheelSumVal">{redeemRate}%</div>
+                </div>
+              </div>
 
-<Card className="wheelCard">
-  <div className="wheelCardHead">
-    <div className="wheelCardTitle">Сводка</div>
-  </div>
+              <div className="wheelRedeemBar">
+                <div className="wheelRedeemTop">
+                  <div className="wheelRedeemName">Redeem rate</div>
+                  <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
+                    {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
+                  </div>
+                </div>
 
-  <div className="wheelSummaryPro">
-    <div className="wheelSummaryTiles">
-      <div className="wheelSumTile">
-        <div className="wheelSumLbl">Активных</div>
-        <div className="wheelSumVal">{items.filter(i => (Number(i.active)||0) ? true : false).length}</div>
-      </div>
+                <div className="wheelBarTrack" aria-hidden="true">
+                  <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
+                </div>
 
-      <div className="wheelSumTile">
-        <div className="wheelSumLbl">Всего</div>
-        <div className="wheelSumVal">{items.length}</div>
-      </div>
+                <div className="wheelRedeemMeta">
+                  <span className="sg-muted">Wins: <b>{totalWins}</b></span>
+                  <span className="sg-muted">Redeemed: <b>{totalRedeemed}</b></span>
+                </div>
+              </div>
+            </div>
+          </Card>
 
-      <div className="wheelSumTile is-strong">
-        <div className="wheelSumLbl">Redeem</div>
-        <div className="wheelSumVal">{redeemRate}%</div>
-      </div>
-    </div>
+          {/* NEW: EV / ROI card (похоже по стилю на твои карточки) */}
+          <Card className="wheelCard">
+            <div className="wheelCardHead">
+              <div>
+                <div className="wheelCardTitle">Expected Value / ROI</div>
+                <div className="wheelCardSub">на основе weight + себестоимости + стоимости монеты</div>
+              </div>
+            </div>
 
-    <div className="wheelRedeemBar">
-      <div className="wheelRedeemTop">
-        <div className="wheelRedeemName">Redeem rate</div>
-        <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
-          {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
-        </div>
-      </div>
+            <div className="wheelSummaryPro">
+              <div className="wheelSummaryTiles">
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Spin revenue</div>
+                  <div className="wheelSumVal">{rubFromCent(ev.spinRevenueCent)}</div>
+                </div>
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">EV payout</div>
+                  <div className="wheelSumVal">{rubFromCent(ev.evPayoutCent)}</div>
+                </div>
+                <div className={'wheelSumTile is-strong'}>
+                  <div className="wheelSumLbl">EV profit</div>
+                  <div className="wheelSumVal">{rubFromCent(ev.evProfitCent)}</div>
+                </div>
+              </div>
 
-      <div className="wheelBarTrack" aria-hidden="true">
-        <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
-      </div>
+              <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="sg-pill" style={{ padding: '10px 12px' }}>
+                  <span className="sg-muted">ROI (margin): </span>
+                  <b>{ev.roi === null ? '—' : fmtPct(ev.roi)}</b>
+                </div>
+                <div className="sg-pill" style={{ padding: '10px 12px' }}>
+                  <span className="sg-muted">Окупаемость: </span>
+                  <b>{ev.paybackSpins === null ? '∞' : `${ev.paybackSpins} спинов`}</b>
+                </div>
+              </div>
 
-      <div className="wheelRedeemMeta">
-        <span className="sg-muted">Wins: <b>{totalWins}</b></span>
-        <span className="sg-muted">Redeemed: <b>{totalRedeemed}</b></span>
-      </div>
-    </div>
-  </div>
-</Card>
+              <div className="sg-muted" style={{ marginTop: 10 }}>
+                Revenue = <b>{spinCostCoins}</b> монет × <b>{rubFromCent(coinCostCentPerCoin)}</b>/монета.
+              </div>
 
+              {/* Risk / biggest EV contributors */}
+              <div style={{ marginTop: 12 }}>
+                <div className="wheelCardTitle" style={{ fontSize: 14, marginBottom: 6 }}>Топ вкладов в EV payout</div>
+                <div className="wheelTableWrap">
+                  <table className="sg-table">
+                    <thead>
+                      <tr>
+                        <th>Prize</th>
+                        <th style={{ width: 90 }}>P</th>
+                        <th style={{ width: 130 }}>Cost</th>
+                        <th style={{ width: 140 }}>EV contrib</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ev.riskRows.slice(0, 6).map((r) => (
+                        <tr key={r.prize_code}>
+                          <td><b>{r.title}</b></td>
+                          <td>{fmtPct(r.prob, '0.0%')}</td>
+                          <td>{rubFromCent(r.costCent)}</td>
+                          <td><b>{rubFromCent(Math.round(r.expCent))}</b></td>
+                        </tr>
+                      ))}
+                      {!ev.riskRows.length && (
+                        <tr><td colSpan={4} style={{ opacity: 0.7, padding: 14 }}>Нет активных призов или весов.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
+                <div className="sg-muted" style={{ marginTop: 8 }}>
+                  Если cost у item-призов не заполнен — EV будет занижен (ставь себестоимость в редакторе/таблице).
+                </div>
+              </div>
+            </div>
+          </Card>
 
-          
-
+          {/* Top prizes (как было) */}
           <Card className="wheelCard wheelStickyTop">
-  <div className="wheelCardHead wheelTopHead">
-    <div className="wheelCardTitle">Топ призов</div>
+            <div className="wheelCardHead wheelTopHead">
+              <div className="wheelCardTitle">Топ призов</div>
 
-    <div className="sg-tabs wheelMiniTabs">
-      <button
-        type="button"
-        className={'sg-tab ' + (topMetric==='wins' ? 'is-active' : '')}
-        onClick={() => setTopMetric('wins')}
-      >
-        Wins
-      </button>
-      <button
-        type="button"
-        className={'sg-tab ' + (topMetric==='redeemed' ? 'is-active' : '')}
-        onClick={() => setTopMetric('redeemed')}
-      >
-        Redeemed
-      </button>
-    </div>
-  </div>
-
-  <div className="wheelTopList">
-    {top.map((p, idx) => {
-      const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
-      const val = Number((p as any)[topMetric]) || 0;
-      const w = Math.round((val / max) * 100);
-
-      return (
-        <div className={"wheelTopRowPro " + (idx < 3 ? "is-top" : "")} key={p.prize_code}>
-          <div className={"wheelTopMedal m" + (idx+1)}>{idx+1}</div>
-
-          <div className="wheelTopMid">
-            <div className="wheelTopTitle">{p.title}</div>
-
-            <div className="wheelTopMini">
-              {topMetric === 'wins'
-                ? `redeemed: ${Number(p.redeemed)||0}`
-                : `wins: ${Number(p.wins)||0}`
-              }
+              <div className="sg-tabs wheelMiniTabs">
+                <button
+                  type="button"
+                  className={'sg-tab ' + (topMetric==='wins' ? 'is-active' : '')}
+                  onClick={() => setTopMetric('wins')}
+                >
+                  Wins
+                </button>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (topMetric==='redeemed' ? 'is-active' : '')}
+                  onClick={() => setTopMetric('redeemed')}
+                >
+                  Redeemed
+                </button>
+              </div>
             </div>
 
-            <div className="wheelTopBar">
-              <div className="wheelTopBarFill" style={{ width: `${w}%` }} />
+            <div className="wheelTopList">
+              {top.map((p, idx) => {
+                const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
+                const val = Number((p as any)[topMetric]) || 0;
+                const w = Math.round((val / max) * 100);
+
+                return (
+                  <div className={"wheelTopRowPro " + (idx < 3 ? "is-top" : "")} key={p.prize_code}>
+                    <div className={"wheelTopMedal m" + (idx+1)}>{idx+1}</div>
+
+                    <div className="wheelTopMid">
+                      <div className="wheelTopTitle">{p.title}</div>
+
+                      <div className="wheelTopMini">
+                        {topMetric === 'wins'
+                          ? `redeemed: ${Number(p.redeemed)||0}`
+                          : `wins: ${Number(p.wins)||0}`
+                        }
+                      </div>
+
+                      <div className="wheelTopBar">
+                        <div className="wheelTopBarFill" style={{ width: `${w}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="wheelTopRight">
+                      <div className="wheelTopCount">{val}</div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {!top.length && <div className="sg-muted">Пока пусто</div>}
             </div>
-          </div>
-
-          <div className="wheelTopRight">
-            <div className="wheelTopCount">{val}</div>
-          </div>
-        </div>
-      );
-    })}
-
-    {!top.length && <div className="sg-muted">Пока пусто</div>}
-  </div>
-</Card>
-
-
-
-
-
-
-
-
-
-          
+          </Card>
         </div>
       </div>
     </div>
