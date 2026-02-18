@@ -10,6 +10,7 @@ import {
   LineChart, Line,
   AreaChart, Area,
   XAxis, YAxis, Tooltip, CartesianGrid,
+  ReferenceLine,
 } from 'recharts';
 
 type PrizeStat = {
@@ -18,16 +19,14 @@ type PrizeStat = {
   wins: number;
   redeemed: number;
 
-  // runtime/config props (optional)
   weight?: number;
   active?: number;
 
-  // finance props (optional, if backend returns)
   kind?: string;          // "coins" | "item"
   coins?: number;         // for coins-prize
   cost_cent?: number;     // item cost in cents
   cost_currency?: string; // not used yet in UI calc
-  cost?: number;          // legacy: sometimes rub, sometimes cent (normalizeCostCent handles)
+  cost?: number;          // legacy: sometimes rub, sometimes cent
 };
 
 type ActivityItem = {
@@ -145,12 +144,27 @@ export default function Wheel(){
   const [topMetric, setTopMetric] = React.useState<'wins'|'redeemed'>('wins');
 
   // Finance settings (for EV/ROI & Forecast)
-  const [coinRub, setCoinRub] = React.useState<string>('1');            // ₽ per coin
+  const [coinRub, setCoinRub] = React.useState<string>('1');                 // ₽ per coin
   const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // spin cost in coins
-  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');      // empty => auto
+  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');       // empty => auto
+
+  // расход считать: issued или redeemed
+  const [costBasis, setCostBasis] = React.useState<'issued'|'redeemed'>('issued');
 
   const coinCostCentPerCoin = Math.max(0, Math.floor(Number(coinRub || '0') * 100));
   const spinCostCoins = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
+
+  // Forecast scenario + chart toggles
+  const [scenario, setScenario] = React.useState<'low'|'base'|'high'>('base');
+  const [showRevenue, setShowRevenue] = React.useState<boolean>(true);
+  const [showPayout, setShowPayout] = React.useState<boolean>(false);
+  const [showCumulative, setShowCumulative] = React.useState<boolean>(true);
+
+  const scenarioMul = React.useMemo(() => {
+    if (scenario === 'low') return 0.7;
+    if (scenario === 'high') return 1.3;
+    return 1.0;
+  }, [scenario]);
 
   const qStats = useQuery({
     enabled: !!appId,
@@ -179,7 +193,8 @@ export default function Wheel(){
   // KPI
   const totalWins = items.reduce((s, p) => s + (Number(p.wins) || 0), 0);
   const totalRedeemed = items.reduce((s, p) => s + (Number(p.redeemed) || 0), 0);
-  const redeemRate = totalWins > 0 ? Math.round((totalRedeemed / totalWins) * 100) : 0;
+  const redeemRate = totalWins > 0 ? Math.max(0, Math.min(1, totalRedeemed / totalWins)) : 0; // 0..1
+  const redeemRatePct = totalWins > 0 ? Math.round(redeemRate * 100) : 0;
 
   // Chart data
   const chartData = items.map(p => ({
@@ -267,14 +282,16 @@ export default function Wheel(){
   }
 
   // EV/ROI + per-prize economics
+  // IMPORTANT: we compute split EV into coinsEV and itemEV so that "redeemed basis" can discount itemEV by redeemRate.
   const ev = React.useMemo(() => {
     const active = items.filter(p => (Number(p.active) || 0) ? true : false);
-    const weights = active.map(p => Math.max(0, Number(p.weight) || 0));
-    const wSum = weights.reduce((s, w) => s + w, 0);
+    const wSum = active.reduce((s, p) => s + Math.max(0, Number(p.weight) || 0), 0);
 
     const spinRevenueCent = spinCostCoins * coinCostCentPerCoin;
 
-    let evPayoutCentAcc = 0;
+    let coinsEvAcc = 0;
+    let itemEvAcc = 0;
+
     const perPrize = active.map((p) => {
       const w = Math.max(0, Number(p.weight) || 0);
       const prob = wSum > 0 ? (w / wSum) : 0;
@@ -288,7 +305,11 @@ export default function Wheel(){
           : normalizeCostCent(p);
 
       const expCent = prob * costCent;
-      evPayoutCentAcc += expCent;
+
+      if (kind === 'coins') coinsEvAcc += expCent;
+      else itemEvAcc += expCent;
+
+      const hasCost = kind === 'coins' ? true : (normalizeCostCent(p) > 0);
 
       return {
         prize_code: p.prize_code,
@@ -299,15 +320,26 @@ export default function Wheel(){
         coins,
         costCent,
         expCent,
-        hasCost: kind === 'coins' ? true : (normalizeCostCent(p) > 0),
+        hasCost,
       };
     });
 
-    const evPayoutCent = Math.round(evPayoutCentAcc);
-    const evProfitCent = Math.round(spinRevenueCent - evPayoutCent);
+    const coinsEvCent = Math.round(coinsEvAcc);
+    const itemEvCent = Math.round(itemEvAcc);
 
-    const roi = spinRevenueCent > 0 ? (evProfitCent / spinRevenueCent) : null;
-    const breakEvenSpins = evProfitCent > 0 ? Math.ceil(evPayoutCent / evProfitCent) : null;
+    // payout depending on basis:
+    // - issued: coins + item
+    // - redeemed: coins (always) + item * redeemRate
+    const payoutCentIssued = coinsEvCent + itemEvCent;
+    const payoutCentRedeemed = coinsEvCent + Math.round(itemEvCent * redeemRate);
+
+    const payoutCent = (costBasis === 'redeemed') ? payoutCentRedeemed : payoutCentIssued;
+
+    const profitCent = Math.round(spinRevenueCent - payoutCent);
+    const roi = spinRevenueCent > 0 ? (profitCent / spinRevenueCent) : null;
+
+    // break-even spins = payout / profit (if profit>0)
+    const breakEvenSpins = profitCent > 0 ? Math.ceil(payoutCent / profitCent) : null;
 
     const riskRows = [...perPrize].sort((a, b) => (b.expCent - a.expCent));
     const costCoverage = perPrize.length
@@ -317,26 +349,41 @@ export default function Wheel(){
     return {
       wSum,
       spinRevenueCent,
-      evPayoutCent,
-      evProfitCent,
+
+      coinsEvCent,
+      itemEvCent,
+
+      payoutCentIssued,
+      payoutCentRedeemed,
+      payoutCent,
+
+      profitCent,
       roi,
       breakEvenSpins,
       perPrize,
       riskRows,
       costCoverage,
     };
-  }, [items, spinCostCoins, coinCostCentPerCoin]);
+  }, [
+    items,
+    spinCostCoins,
+    coinCostCentPerCoin,
+    redeemRate,
+    costBasis,
+  ]);
 
-  // Forecast (7/30)
+  // Forecast + profit chart series (30 days) + cumulative series + break-even day
   const forecast = React.useMemo(() => {
     const days = daysBetweenISO(range.from, range.to);
     const autoSpinsPerDay = totalWins > 0 ? (totalWins / days) : 0;
 
     const manual = Number(spinsPerDayDraft || '');
-    const spinsPerDay =
+    const baseSpinsPerDay =
       Number.isFinite(manual) && manual >= 0
         ? manual
         : autoSpinsPerDay;
+
+    const spinsPerDay = baseSpinsPerDay * scenarioMul;
 
     const proj = (d: number) => {
       const spins = spinsPerDay * d;
@@ -344,18 +391,60 @@ export default function Wheel(){
         days: d,
         spins,
         revenue: Math.round(spins * ev.spinRevenueCent),
-        payout: Math.round(spins * ev.evPayoutCent),
-        profit: Math.round(spins * ev.evProfitCent),
+        payout: Math.round(spins * ev.payoutCent),
+        profit: Math.round(spins * ev.profitCent),
       };
     };
+
+    let cum = 0;
+    const series30 = Array.from({ length: 30 }).map((_, i) => {
+      const day = i + 1;
+      const spins = spinsPerDay;
+
+      const revenue = Math.round(spins * ev.spinRevenueCent);
+      const payout = Math.round(spins * ev.payoutCent);
+      const profit = Math.round(spins * ev.profitCent);
+
+      cum += profit;
+
+      return {
+        day,
+        label: `D${day}`,
+        spins,
+        revenue,
+        payout,
+        profit,
+        cum_profit: cum,
+      };
+    });
+
+    // break-even day from breakEvenSpins -> days
+    let breakEvenDay: number | null = null;
+    if (ev.breakEvenSpins !== null && spinsPerDay > 0){
+      const d = Math.ceil(ev.breakEvenSpins / spinsPerDay);
+      if (Number.isFinite(d) && d >= 1 && d <= 30) breakEvenDay = d;
+    }
 
     return {
       daysInRange: days,
       autoSpinsPerDay,
+      baseSpinsPerDay,
       spinsPerDay,
       wip: [proj(7), proj(30)],
+      series30,
+      breakEvenDay,
     };
-  }, [range.from, range.to, totalWins, spinsPerDayDraft, ev.spinRevenueCent, ev.evPayoutCent, ev.evProfitCent]);
+  }, [
+    range.from,
+    range.to,
+    totalWins,
+    spinsPerDayDraft,
+    scenarioMul,
+    ev.spinRevenueCent,
+    ev.payoutCent,
+    ev.profitCent,
+    ev.breakEvenSpins,
+  ]);
 
   return (
     <div className="sg-page wheelPage">
@@ -363,7 +452,7 @@ export default function Wheel(){
         <div>
           <h1 className="sg-h1">Wheel</h1>
           <div className="sg-sub">
-            График + KPI + топы + live + настройки весов + экономика (EV/ROI) + прогноз.
+            График + KPI + топы + live + настройки весов + экономика (EV/ROI) + прогноз (сценарии) + profit chart (cumulative + break-even).
           </div>
         </div>
       </div>
@@ -454,7 +543,7 @@ export default function Wheel(){
               </div>
               <div className="wheelKpi">
                 <div className="wheelKpiLbl">Redeem rate</div>
-                <div className="wheelKpiVal">{redeemRate}%</div>
+                <div className="wheelKpiVal">{redeemRatePct}%</div>
               </div>
             </div>
 
@@ -512,7 +601,7 @@ export default function Wheel(){
                     <div>
                       <div className="wheelCardTitle">Настройки (runtime override)</div>
                       <div className="wheelCardSub">
-                        Вес/активность — сохраняем в воркер. Экономика — пока локально (для EV/прогноза).
+                        Вес/активность — сохраняем в воркер. Экономика/прогноз — локально (пока не привязали к D1).
                       </div>
                     </div>
 
@@ -524,7 +613,6 @@ export default function Wheel(){
                     </div>
                   </div>
 
-                  {/* Finance settings */}
                   <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                     <div>
                       <div className="sg-muted" style={{ marginBottom: 6 }}>Стоимость 1 монеты (₽)</div>
@@ -550,6 +638,35 @@ export default function Wheel(){
                       <div className="sg-muted" style={{ marginTop: 6 }}>
                         авто: {forecast.autoSpinsPerDay.toFixed(2)} / day
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Cost basis switch */}
+                  <div style={{ marginTop: 12, display:'flex', alignItems:'center', gap: 12, flexWrap:'wrap' }}>
+                    <div className="sg-muted" style={{ fontWeight: 900 }}>Расход считать:</div>
+
+                    <div className="sg-tabs wheelMiniTabs">
+                      <button
+                        type="button"
+                        className={'sg-tab ' + (costBasis==='issued' ? 'is-active' : '')}
+                        onClick={() => setCostBasis('issued')}
+                        title="Расход фиксируем в момент выигрыша (issued)"
+                      >
+                        issued
+                      </button>
+                      <button
+                        type="button"
+                        className={'sg-tab ' + (costBasis==='redeemed' ? 'is-active' : '')}
+                        onClick={() => setCostBasis('redeemed')}
+                        title="Расход фиксируем только когда приз забрали (redeemed). Item EV умножаем на redeem rate"
+                      >
+                        redeemed
+                      </button>
+                    </div>
+
+                    <div className="sg-pill" style={{ padding:'8px 12px' }}>
+                      <span className="sg-muted">item EV × redeemRate: </span>
+                      <b>{fmtPct(redeemRate, '—')}</b>
                     </div>
                   </div>
 
@@ -602,8 +719,7 @@ export default function Wheel(){
                   </div>
 
                   <div className="sg-muted" style={{ marginTop: 12 }}>
-                    EV/ROI считается по активным призам и weight. Coin-призы: <b>coins × стоимость монеты</b>. Item-призы: <b>cost_cent/cost</b>.
-                    Покрытие себестоимости: <b>{ev.costCoverage}%</b>.
+                    Покрытие себестоимости: <b>{ev.costCoverage}%</b>. В режиме <b>redeemed</b> coin-призы всё равно считаются расходом сразу.
                   </div>
                 </div>
               )}
@@ -633,20 +749,20 @@ export default function Wheel(){
 
                 <div className="wheelSumTile is-strong">
                   <div className="wheelSumLbl">Redeem</div>
-                  <div className="wheelSumVal">{redeemRate}%</div>
+                  <div className="wheelSumVal">{redeemRatePct}%</div>
                 </div>
               </div>
 
               <div className="wheelRedeemBar">
                 <div className="wheelRedeemTop">
                   <div className="wheelRedeemName">Redeem rate</div>
-                  <div className={"wheelRedeemBadge " + (redeemRate >= 70 ? 'ok' : redeemRate >= 40 ? 'mid' : 'bad')}>
-                    {redeemRate >= 70 ? 'OK' : redeemRate >= 40 ? 'RISK' : 'BAD'}
+                  <div className={"wheelRedeemBadge " + (redeemRatePct >= 70 ? 'ok' : redeemRatePct >= 40 ? 'mid' : 'bad')}>
+                    {redeemRatePct >= 70 ? 'OK' : redeemRatePct >= 40 ? 'RISK' : 'BAD'}
                   </div>
                 </div>
 
                 <div className="wheelBarTrack" aria-hidden="true">
-                  <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRate))}%` }} />
+                  <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, redeemRatePct))}%` }} />
                 </div>
 
                 <div className="wheelRedeemMeta">
@@ -662,7 +778,9 @@ export default function Wheel(){
             <div className="wheelCardHead">
               <div>
                 <div className="wheelCardTitle">Expected Value / ROI</div>
-                <div className="wheelCardSub">weight + себестоимость + стоимость монеты</div>
+                <div className="wheelCardSub">
+                  basis: <b>{costBasis}</b> (issued vs redeemed)
+                </div>
               </div>
             </div>
 
@@ -674,11 +792,11 @@ export default function Wheel(){
                 </div>
                 <div className="wheelSumTile">
                   <div className="wheelSumLbl">EV payout</div>
-                  <div className="wheelSumVal">{rubFromCent(ev.evPayoutCent)}</div>
+                  <div className="wheelSumVal">{rubFromCent(ev.payoutCent)}</div>
                 </div>
                 <div className="wheelSumTile is-strong">
                   <div className="wheelSumLbl">EV profit</div>
-                  <div className="wheelSumVal">{rubFromCent(ev.evProfitCent)}</div>
+                  <div className="wheelSumVal">{rubFromCent(ev.profitCent)}</div>
                 </div>
               </div>
 
@@ -694,14 +812,13 @@ export default function Wheel(){
               </div>
 
               <div className="sg-muted" style={{ marginTop: 10 }}>
-                Revenue/spin = <b>{spinCostCoins}</b> coin × <b>{rubFromCent(coinCostCentPerCoin)}</b>/coin.
-                &nbsp; | &nbsp; Cost coverage: <b>{ev.costCoverage}%</b>
+                payout split: coins EV <b>{rubFromCent(ev.coinsEvCent)}</b> + item EV <b>{rubFromCent(ev.itemEvCent)}</b>
+                {costBasis === 'redeemed' ? <> × redeemRate <b>{fmtPct(redeemRate)}</b></> : null}
               </div>
 
-              {/* EV risk rows */}
               <div style={{ marginTop: 12 }}>
                 <div className="wheelCardTitle" style={{ fontSize: 14, marginBottom: 6 }}>
-                  Топ вкладов в EV payout (кто “съедает” экономику)
+                  Топ вкладов в EV payout
                 </div>
                 <div className="wheelTableWrap">
                   <table className="sg-table">
@@ -728,37 +845,156 @@ export default function Wheel(){
                     </tbody>
                   </table>
                 </div>
-
-                <div className="sg-muted" style={{ marginTop: 8 }}>
-                  Если у item-призов cost не заполнен — EV будет слишком “розовый”.
-                </div>
               </div>
             </div>
           </Card>
 
-          {/* Forecast */}
+          {/* Forecast + Scenarios + Profit chart */}
           <Card className="wheelCard">
             <div className="wheelCardHead">
               <div>
-                <div className="wheelCardTitle">Прогноз (7 / 30 дней)</div>
-                <div className="wheelCardSub">на базе EV (средняя экономика на 1 спин)</div>
+                <div className="wheelCardTitle">Прогноз + Profit chart</div>
+                <div className="wheelCardSub">daily profit + cumulative profit + break-even line</div>
               </div>
             </div>
 
             <div className="wheelSummaryPro">
-              <div className="sg-muted" style={{ marginBottom: 8 }}>
-                База: <b>{forecast.spinsPerDay.toFixed(2)}</b> спина/день (пусто = авто по диапазону)
+              {/* Scenario tabs */}
+              <div className="sg-tabs wheelMiniTabs" style={{ marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (scenario==='low' ? 'is-active' : '')}
+                  onClick={() => setScenario('low')}
+                >Low</button>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (scenario==='base' ? 'is-active' : '')}
+                  onClick={() => setScenario('base')}
+                >Base</button>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (scenario==='high' ? 'is-active' : '')}
+                  onClick={() => setScenario('high')}
+                >High</button>
               </div>
 
-              <div className="wheelTableWrap">
+              <div className="sg-muted" style={{ marginBottom: 8 }}>
+                Spins/day base: <b>{forecast.baseSpinsPerDay.toFixed(2)}</b>
+                &nbsp; × <b>{scenarioMul.toFixed(2)}x</b>
+                &nbsp; → <b>{forecast.spinsPerDay.toFixed(2)}</b> / day
+              </div>
+
+              {/* Chart toggles */}
+              <div style={{ display:'flex', gap: 14, alignItems:'center', marginBottom: 10, flexWrap:'wrap' }}>
+                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
+                  <input type="checkbox" checked={showRevenue} onChange={() => setShowRevenue(v => !v)} />
+                  <span style={{ fontWeight: 800 }}>Revenue</span>
+                </label>
+                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
+                  <input type="checkbox" checked={showPayout} onChange={() => setShowPayout(v => !v)} />
+                  <span style={{ fontWeight: 800 }}>Payout</span>
+                </label>
+                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
+                  <input type="checkbox" checked={showCumulative} onChange={() => setShowCumulative(v => !v)} />
+                  <span style={{ fontWeight: 800 }}>Cumulative</span>
+                </label>
+
+                <div className="sg-pill" style={{ padding:'8px 12px', marginLeft:'auto' }}>
+                  <span className="sg-muted">Profit/day: </span>
+                  <b>{rubFromCent(Math.round(forecast.spinsPerDay * ev.profitCent))}</b>
+                </div>
+              </div>
+
+              {/* Profit chart (30 days) */}
+              <div style={{ width:'100%', height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={forecast.series30}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
+                    <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
+                    <YAxis tick={{ fontSize: 12 }} />
+
+                    <Tooltip
+                      formatter={(val: any, name: any) => {
+                        if (name === 'profit') return [rubFromCent(val), 'Profit/day'];
+                        if (name === 'cum_profit') return [rubFromCent(val), 'Cumulative profit'];
+                        if (name === 'revenue') return [rubFromCent(val), 'Revenue/day'];
+                        if (name === 'payout') return [rubFromCent(val), 'Payout/day'];
+                        return [val, name];
+                      }}
+                      labelFormatter={(label: any) => `Day ${label}`}
+                    />
+
+                    {/* Break-even vertical line */}
+                    {forecast.breakEvenDay !== null && (
+                      <ReferenceLine
+                        x={forecast.breakEvenDay}
+                        stroke="var(--accent2)"
+                        strokeDasharray="6 4"
+                        label={{
+                          value: `BE ~ D${forecast.breakEvenDay}`,
+                          position: 'insideTopRight',
+                          fill: 'var(--accent2)',
+                          fontSize: 12,
+                        }}
+                      />
+                    )}
+
+                    {/* Profit/day always visible */}
+                    <Area
+                      type="monotone"
+                      dataKey="profit"
+                      stroke="var(--accent)"
+                      fill="var(--accent)"
+                      fillOpacity={0.16}
+                      strokeWidth={3}
+                    />
+
+                    {/* Optional cumulative profit line */}
+                    {showCumulative && (
+                      <Line
+                        type="monotone"
+                        dataKey="cum_profit"
+                        stroke="var(--accent)"
+                        strokeWidth={2}
+                        dot={false}
+                        strokeDasharray="0"
+                      />
+                    )}
+
+                    {showRevenue && (
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+
+                    {showPayout && (
+                      <Line
+                        type="monotone"
+                        dataKey="payout"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                      />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* 7/30 table */}
+              <div className="wheelTableWrap" style={{ marginTop: 12 }}>
                 <table className="sg-table">
                   <thead>
                     <tr>
                       <th>Период</th>
                       <th style={{ width: 110 }}>Спины</th>
                       <th style={{ width: 150 }}>Revenue</th>
-                      <th style={{ width: 150 }}>EV payout</th>
-                      <th style={{ width: 150 }}>EV profit</th>
+                      <th style={{ width: 150 }}>Payout</th>
+                      <th style={{ width: 150 }}>Profit</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -776,7 +1012,7 @@ export default function Wheel(){
               </div>
 
               <div className="sg-muted" style={{ marginTop: 10 }}>
-                Это матожидание. Волатильность дают редкие дорогие призы и остатки (если трекаешь qty).
+                Break-even line = ceil(breakEvenSpins / spinsPerDay). Если profit ≤ 0 — линии не будет.
               </div>
             </div>
           </Card>
