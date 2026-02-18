@@ -600,80 +600,98 @@ export default function Wheel(){
 
               {!qStats.isLoading && !qStats.isError && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={moneySeries.series}
-                    // важно: левее, чтобы совпал с бордером карточки (как ты просил)
-                    margin={{ top: 8, right: 12, left: -10, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
-                    <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
-                    <YAxis tick={{ fontSize: 12 }} width={44} />
+<AreaChart
+  data={moneySeries.series}
+  margin={{ top: 8, right: 18, left: 0, bottom: 0 }}
+>
+  <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
+  <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
+  
+  {/* Левая ось: дневные значения */}
+  <YAxis yAxisId="day" tick={{ fontSize: 12 }} width={44} />
 
-                    <Tooltip
-                      formatter={(val: any, name: any) => {
-                        if (name === 'profit') return [rubFromCent(val), 'Прибыль/день'];
-                        if (name === 'cum_profit') return [rubFromCent(val), 'Накопительная прибыль'];
-                        if (name === 'revenue') return [rubFromCent(val), 'Выручка/день'];
-                        if (name === 'payout') return [rubFromCent(val), 'Расход/день'];
-                        return [val, name];
-                      }}
-                      labelFormatter={(label: any) => `День ${label}`}
-                    />
+  {/* Правая ось: накопительная прибыль */}
+  {showCumulative && (
+    <YAxis
+      yAxisId="cum"
+      orientation="right"
+      tick={{ fontSize: 12 }}
+      width={56}
+    />
+  )}
 
-                    {moneySeries.breakEvenDay !== null && (
-                      <ReferenceLine
-                        x={moneySeries.breakEvenDay}
-                        stroke="var(--accent2)"
-                        strokeDasharray="6 4"
-                        label={{
-                          value: `Окупаемость ~ D${moneySeries.breakEvenDay}`,
-                          position: 'insideTopRight',
-                          fill: 'var(--accent2)',
-                          fontSize: 12,
-                        }}
-                      />
-                    )}
+  <Tooltip
+    formatter={(val: any, name: any) => {
+      if (name === 'profit') return [rubFromCent(val), 'Прибыль/день'];
+      if (name === 'cum_profit') return [rubFromCent(val), 'Накопительная прибыль'];
+      if (name === 'revenue') return [rubFromCent(val), 'Выручка/день'];
+      if (name === 'payout') return [rubFromCent(val), 'Расход/день'];
+      return [val, name];
+    }}
+    labelFormatter={(label: any) => `День ${label}`}
+  />
 
-                    <Area
-                      type="monotone"
-                      dataKey="profit"
-                      stroke="var(--accent)"
-                      fill="var(--accent)"
-                      fillOpacity={0.16}
-                      strokeWidth={3}
-                    />
+  {moneySeries.breakEvenDay !== null && (
+    <ReferenceLine
+      x={moneySeries.breakEvenDay}
+      stroke="var(--accent2)"
+      strokeDasharray="6 4"
+      label={{
+        value: `Окупаемость ~ D${moneySeries.breakEvenDay}`,
+        position: 'insideTopRight',
+        fill: 'var(--accent2)',
+        fontSize: 12,
+      }}
+    />
+  )}
 
-                    {showCumulative && (
-                      <Line
-                        type="monotone"
-                        dataKey="cum_profit"
-                        stroke="var(--accent)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    )}
+  {/* Прибыль/день */}
+  <Area
+    yAxisId="day"
+    type="monotone"
+    dataKey="profit"
+    stroke="var(--accent)"
+    fill="var(--accent)"
+    fillOpacity={0.16}
+    strokeWidth={3}
+  />
 
-                    {showRevenue && (
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    )}
+  {/* Накопительная прибыль — на правой оси */}
+  {showCumulative && (
+    <Line
+      yAxisId="cum"
+      type="monotone"
+      dataKey="cum_profit"
+      stroke="var(--accent)"
+      strokeWidth={2}
+      dot={false}
+    />
+  )}
 
-                    {showPayout && (
-                      <Line
-                        type="monotone"
-                        dataKey="payout"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
-                        dot={false}
-                      />
-                    )}
-                  </AreaChart>
+  {showRevenue && (
+    <Line
+      yAxisId="day"
+      type="monotone"
+      dataKey="revenue"
+      stroke="var(--accent2)"
+      strokeWidth={2}
+      dot={false}
+    />
+  )}
+
+  {showPayout && (
+    <Line
+      yAxisId="day"
+      type="monotone"
+      dataKey="payout"
+      stroke="var(--accent2)"
+      strokeWidth={2}
+      strokeDasharray="6 4"
+      dot={false}
+    />
+  )}
+</AreaChart>
+
                 </ResponsiveContainer>
               )}
             </div>
