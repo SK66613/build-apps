@@ -225,7 +225,7 @@ export default function Wheel(){
   // Денежный график: кнопки слоёв (залипающие)
   const [showRevenue, setShowRevenue] = React.useState<boolean>(true);
   const [showPayout, setShowPayout] = React.useState<boolean>(false);
-  const [showCumulative, setShowCumulative] = React.useState<boolean>(true);
+  const [showProfitBars, setShowProfitBars] = React.useState<boolean>(true);
 
   // Быстрые периоды (в шапке справа)
   const [quick, setQuick] = React.useState<'day'|'week'|'month'|'custom'>('custom');
@@ -709,13 +709,13 @@ export default function Wheel(){
                   aria-label="Расход"
                 ><IcoPay/></button>
 
-                <button
-                  type="button"
-                  className={'wheelChartBtn ' + (showCumulative ? 'is-active' : '')}
-                  onClick={() => setShowCumulative(v => !v)}
-                  title="Накопительная прибыль"
-                  aria-label="Накопительно"
-                ><IcoSigma/></button>
+<button
+  type="button"
+  className={'wheelChartBtn ' + (showProfitBars ? 'is-active' : '')}
+  onClick={() => setShowProfitBars(v => !v)}
+  title="Прибыль (столбики)"
+  aria-label="Прибыль"
+>П</button>
               </div>
             </div>
 
@@ -744,20 +744,12 @@ export default function Wheel(){
                     {/* Левая ось: дневные значения */}
                     <YAxis yAxisId="day" tick={{ fontSize: 12 }} width={44} />
 
-                    {/* Правая ось: накопительная прибыль */}
-                    {showCumulative && (
-                      <YAxis
-                        yAxisId="cum"
-                        orientation="right"
-                        tick={{ fontSize: 12 }}
-                        width={56}
-                      />
-                    )}
+
 
                     <Tooltip
                       formatter={(val: any, name: any) => {
                         if (name === 'profit') return [rubFromCent(val), 'Прибыль/день'];
-                        if (name === 'cum_profit') return [rubFromCent(val), 'Накопительная прибыль'];
+                     
                         if (name === 'revenue') return [rubFromCent(val), 'Выручка/день'];
                         if (name === 'payout') return [rubFromCent(val), 'Расход/день'];
                         return [val, name];
@@ -769,27 +761,19 @@ export default function Wheel(){
                     />
 
                     {/* MAIN: Profit/day (bars) */}
-                    <Bar
-                      yAxisId="day"
-                      dataKey="profit"
-                      name="profit"
-                      fill="var(--accent)"
-                      fillOpacity={0.22}
-                      radius={[10, 10, 10, 10]}
-                    />
+{showProfitBars && (
+  <Bar
+    yAxisId="day"
+    dataKey="profit"
+    name="profit"
+    fill="var(--accent)"
+    fillOpacity={0.22}
+    radius={[10, 10, 10, 10]}
+  />
+)}
 
-                    {/* CumProfit (right axis) */}
-                    {showCumulative && (
-                      <Line
-                        yAxisId="cum"
-                        type="monotone"
-                        dataKey="cum_profit"
-                        name="cum_profit"
-                        stroke="var(--accent)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    )}
+
+
 
                     {/* Optional: Revenue / Payout */}
                     {showRevenue && (
