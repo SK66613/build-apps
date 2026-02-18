@@ -196,7 +196,7 @@ export default function Wheel(){
   const redeemRate = totalWins > 0 ? Math.max(0, Math.min(1, totalRedeemed / totalWins)) : 0; // 0..1
   const redeemRatePct = totalWins > 0 ? Math.round(redeemRate * 100) : 0;
 
-  // Chart data
+  // Chart data (distribution)
   const chartData = items.map(p => ({
     title: p.title || p.prize_code,
     wins: Number(p.wins) || 0,
@@ -372,6 +372,15 @@ export default function Wheel(){
     costBasis,
   ]);
 
+  // Period money KPI (за выбранный период) — считаем через totalWins (1 spin = 1 win)
+  const periodMoney = React.useMemo(() => {
+    const spins = totalWins; // spin -> prize issued -> wins
+    const revenue = Math.round(spins * ev.spinRevenueCent);
+    const payout = Math.round(spins * ev.payoutCent);
+    const profit = Math.round(spins * ev.profitCent);
+    return { spins, revenue, payout, profit };
+  }, [totalWins, ev.spinRevenueCent, ev.payoutCent, ev.profitCent]);
+
   // Forecast + profit chart series (30 days) + cumulative series + break-even day
   const forecast = React.useMemo(() => {
     const days = daysBetweenISO(range.from, range.to);
@@ -452,7 +461,7 @@ export default function Wheel(){
         <div>
           <h1 className="sg-h1">Wheel</h1>
           <div className="sg-sub">
-            График + KPI + топы + live + настройки весов + экономика (EV/ROI) + прогноз (сценарии) + profit chart (cumulative + break-even).
+            Главный график денег сверху + распределение призов + KPI + топы + live + настройки весов + экономика (EV/ROI).
           </div>
         </div>
       </div>
@@ -460,6 +469,176 @@ export default function Wheel(){
       <div className="wheelGrid">
         {/* LEFT */}
         <div className="wheelLeft">
+
+          {/* ====== MAIN: Forecast + Profit chart (перенесено наверх как главный график) ====== */}
+          <Card className="wheelCard">
+            <div className="wheelCardHead">
+              <div>
+                <div className="wheelCardTitle">Деньги: Profit chart + прогноз</div>
+                <div className="wheelCardSub">daily profit + cumulative profit + break-even line</div>
+              </div>
+            </div>
+
+            <div className="wheelSummaryPro">
+              {/* Scenario tabs */}
+              <div className="sg-tabs wheelMiniTabs" style={{ marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (scenario==='low' ? 'is-active' : '')}
+                  onClick={() => setScenario('low')}
+                >Low</button>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (scenario==='base' ? 'is-active' : '')}
+                  onClick={() => setScenario('base')}
+                >Base</button>
+                <button
+                  type="button"
+                  className={'sg-tab ' + (scenario==='high' ? 'is-active' : '')}
+                  onClick={() => setScenario('high')}
+                >High</button>
+              </div>
+
+              <div className="sg-muted" style={{ marginBottom: 8 }}>
+                Spins/day base: <b>{forecast.baseSpinsPerDay.toFixed(2)}</b>
+                &nbsp; × <b>{scenarioMul.toFixed(2)}x</b>
+                &nbsp; → <b>{forecast.spinsPerDay.toFixed(2)}</b> / day
+              </div>
+
+              {/* Chart toggles */}
+              <div style={{ display:'flex', gap: 14, alignItems:'center', marginBottom: 10, flexWrap:'wrap' }}>
+                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
+                  <input type="checkbox" checked={showRevenue} onChange={() => setShowRevenue(v => !v)} />
+                  <span style={{ fontWeight: 800 }}>Revenue</span>
+                </label>
+                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
+                  <input type="checkbox" checked={showPayout} onChange={() => setShowPayout(v => !v)} />
+                  <span style={{ fontWeight: 800 }}>Payout</span>
+                </label>
+                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
+                  <input type="checkbox" checked={showCumulative} onChange={() => setShowCumulative(v => !v)} />
+                  <span style={{ fontWeight: 800 }}>Cumulative</span>
+                </label>
+
+                <div className="sg-pill" style={{ padding:'8px 12px', marginLeft:'auto' }}>
+                  <span className="sg-muted">Profit/day: </span>
+                  <b>{rubFromCent(Math.round(forecast.spinsPerDay * ev.profitCent))}</b>
+                </div>
+              </div>
+
+              {/* Profit chart (30 days) */}
+              <div style={{ width:'100%', height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={forecast.series30}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
+                    <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
+                    <YAxis tick={{ fontSize: 12 }} />
+
+                    <Tooltip
+                      formatter={(val: any, name: any) => {
+                        if (name === 'profit') return [rubFromCent(val), 'Profit/day'];
+                        if (name === 'cum_profit') return [rubFromCent(val), 'Cumulative profit'];
+                        if (name === 'revenue') return [rubFromCent(val), 'Revenue/day'];
+                        if (name === 'payout') return [rubFromCent(val), 'Payout/day'];
+                        return [val, name];
+                      }}
+                      labelFormatter={(label: any) => `Day ${label}`}
+                    />
+
+                    {/* Break-even vertical line */}
+                    {forecast.breakEvenDay !== null && (
+                      <ReferenceLine
+                        x={forecast.breakEvenDay}
+                        stroke="var(--accent2)"
+                        strokeDasharray="6 4"
+                        label={{
+                          value: `BE ~ D${forecast.breakEvenDay}`,
+                          position: 'insideTopRight',
+                          fill: 'var(--accent2)',
+                          fontSize: 12,
+                        }}
+                      />
+                    )}
+
+                    {/* Profit/day always visible */}
+                    <Area
+                      type="monotone"
+                      dataKey="profit"
+                      stroke="var(--accent)"
+                      fill="var(--accent)"
+                      fillOpacity={0.16}
+                      strokeWidth={3}
+                    />
+
+                    {/* Optional cumulative profit line */}
+                    {showCumulative && (
+                      <Line
+                        type="monotone"
+                        dataKey="cum_profit"
+                        stroke="var(--accent)"
+                        strokeWidth={2}
+                        dot={false}
+                        strokeDasharray="0"
+                      />
+                    )}
+
+                    {showRevenue && (
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+
+                    {showPayout && (
+                      <Line
+                        type="monotone"
+                        dataKey="payout"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                      />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* 7/30 table */}
+              <div className="wheelTableWrap" style={{ marginTop: 12 }}>
+                <table className="sg-table">
+                  <thead>
+                    <tr>
+                      <th>Период</th>
+                      <th style={{ width: 110 }}>Спины</th>
+                      <th style={{ width: 150 }}>Revenue</th>
+                      <th style={{ width: 150 }}>Payout</th>
+                      <th style={{ width: 150 }}>Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {forecast.wip.map((r) => (
+                      <tr key={r.days}>
+                        <td><b>{r.days} дней</b></td>
+                        <td>{r.spins.toFixed(0)}</td>
+                        <td><b>{rubFromCent(r.revenue)}</b></td>
+                        <td>{rubFromCent(r.payout)}</td>
+                        <td><b>{rubFromCent(r.profit)}</b></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="sg-muted" style={{ marginTop: 10 }}>
+                Break-even line = ceil(breakEvenSpins / spinsPerDay). Если profit ≤ 0 — линии не будет.
+              </div>
+            </div>
+          </Card>
+
+          {/* ====== Distribution (оставляем кнопки вида графика) ====== */}
           <Card className="wheelCard">
             <div className="wheelCardHead wheelCardHeadRow">
               <div>
@@ -532,6 +711,7 @@ export default function Wheel(){
               )}
             </div>
 
+            {/* KPI под распределением — расширили деньгами за период */}
             <div className="wheelKpiRow">
               <div className="wheelKpi">
                 <div className="wheelKpiLbl">Wins</div>
@@ -544,6 +724,18 @@ export default function Wheel(){
               <div className="wheelKpi">
                 <div className="wheelKpiLbl">Redeem rate</div>
                 <div className="wheelKpiVal">{redeemRatePct}%</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Revenue</div>
+                <div className="wheelKpiVal">{rubFromCent(periodMoney.revenue)}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Payout</div>
+                <div className="wheelKpiVal">{rubFromCent(periodMoney.payout)}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Profit</div>
+                <div className="wheelKpiVal">{rubFromCent(periodMoney.profit)}</div>
               </div>
             </div>
 
@@ -845,174 +1037,6 @@ export default function Wheel(){
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Forecast + Scenarios + Profit chart */}
-          <Card className="wheelCard">
-            <div className="wheelCardHead">
-              <div>
-                <div className="wheelCardTitle">Прогноз + Profit chart</div>
-                <div className="wheelCardSub">daily profit + cumulative profit + break-even line</div>
-              </div>
-            </div>
-
-            <div className="wheelSummaryPro">
-              {/* Scenario tabs */}
-              <div className="sg-tabs wheelMiniTabs" style={{ marginBottom: 10 }}>
-                <button
-                  type="button"
-                  className={'sg-tab ' + (scenario==='low' ? 'is-active' : '')}
-                  onClick={() => setScenario('low')}
-                >Low</button>
-                <button
-                  type="button"
-                  className={'sg-tab ' + (scenario==='base' ? 'is-active' : '')}
-                  onClick={() => setScenario('base')}
-                >Base</button>
-                <button
-                  type="button"
-                  className={'sg-tab ' + (scenario==='high' ? 'is-active' : '')}
-                  onClick={() => setScenario('high')}
-                >High</button>
-              </div>
-
-              <div className="sg-muted" style={{ marginBottom: 8 }}>
-                Spins/day base: <b>{forecast.baseSpinsPerDay.toFixed(2)}</b>
-                &nbsp; × <b>{scenarioMul.toFixed(2)}x</b>
-                &nbsp; → <b>{forecast.spinsPerDay.toFixed(2)}</b> / day
-              </div>
-
-              {/* Chart toggles */}
-              <div style={{ display:'flex', gap: 14, alignItems:'center', marginBottom: 10, flexWrap:'wrap' }}>
-                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
-                  <input type="checkbox" checked={showRevenue} onChange={() => setShowRevenue(v => !v)} />
-                  <span style={{ fontWeight: 800 }}>Revenue</span>
-                </label>
-                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
-                  <input type="checkbox" checked={showPayout} onChange={() => setShowPayout(v => !v)} />
-                  <span style={{ fontWeight: 800 }}>Payout</span>
-                </label>
-                <label style={{ display:'flex', gap: 8, alignItems:'center', cursor:'pointer' }}>
-                  <input type="checkbox" checked={showCumulative} onChange={() => setShowCumulative(v => !v)} />
-                  <span style={{ fontWeight: 800 }}>Cumulative</span>
-                </label>
-
-                <div className="sg-pill" style={{ padding:'8px 12px', marginLeft:'auto' }}>
-                  <span className="sg-muted">Profit/day: </span>
-                  <b>{rubFromCent(Math.round(forecast.spinsPerDay * ev.profitCent))}</b>
-                </div>
-              </div>
-
-              {/* Profit chart (30 days) */}
-              <div style={{ width:'100%', height: 240 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecast.series30}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
-                    <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
-                    <YAxis tick={{ fontSize: 12 }} />
-
-                    <Tooltip
-                      formatter={(val: any, name: any) => {
-                        if (name === 'profit') return [rubFromCent(val), 'Profit/day'];
-                        if (name === 'cum_profit') return [rubFromCent(val), 'Cumulative profit'];
-                        if (name === 'revenue') return [rubFromCent(val), 'Revenue/day'];
-                        if (name === 'payout') return [rubFromCent(val), 'Payout/day'];
-                        return [val, name];
-                      }}
-                      labelFormatter={(label: any) => `Day ${label}`}
-                    />
-
-                    {/* Break-even vertical line */}
-                    {forecast.breakEvenDay !== null && (
-                      <ReferenceLine
-                        x={forecast.breakEvenDay}
-                        stroke="var(--accent2)"
-                        strokeDasharray="6 4"
-                        label={{
-                          value: `BE ~ D${forecast.breakEvenDay}`,
-                          position: 'insideTopRight',
-                          fill: 'var(--accent2)',
-                          fontSize: 12,
-                        }}
-                      />
-                    )}
-
-                    {/* Profit/day always visible */}
-                    <Area
-                      type="monotone"
-                      dataKey="profit"
-                      stroke="var(--accent)"
-                      fill="var(--accent)"
-                      fillOpacity={0.16}
-                      strokeWidth={3}
-                    />
-
-                    {/* Optional cumulative profit line */}
-                    {showCumulative && (
-                      <Line
-                        type="monotone"
-                        dataKey="cum_profit"
-                        stroke="var(--accent)"
-                        strokeWidth={2}
-                        dot={false}
-                        strokeDasharray="0"
-                      />
-                    )}
-
-                    {showRevenue && (
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    )}
-
-                    {showPayout && (
-                      <Line
-                        type="monotone"
-                        dataKey="payout"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
-                        dot={false}
-                      />
-                    )}
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* 7/30 table */}
-              <div className="wheelTableWrap" style={{ marginTop: 12 }}>
-                <table className="sg-table">
-                  <thead>
-                    <tr>
-                      <th>Период</th>
-                      <th style={{ width: 110 }}>Спины</th>
-                      <th style={{ width: 150 }}>Revenue</th>
-                      <th style={{ width: 150 }}>Payout</th>
-                      <th style={{ width: 150 }}>Profit</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {forecast.wip.map((r) => (
-                      <tr key={r.days}>
-                        <td><b>{r.days} дней</b></td>
-                        <td>{r.spins.toFixed(0)}</td>
-                        <td><b>{rubFromCent(r.revenue)}</b></td>
-                        <td>{rubFromCent(r.payout)}</td>
-                        <td><b>{rubFromCent(r.profit)}</b></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="sg-muted" style={{ marginTop: 10 }}>
-                Break-even line = ceil(breakEvenSpins / spinsPerDay). Если profit ≤ 0 — линии не будет.
               </div>
             </div>
           </Card>
