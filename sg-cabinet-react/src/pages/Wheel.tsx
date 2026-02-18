@@ -747,10 +747,11 @@ const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
                   >
                     <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
                     <XAxis
-                      dataKey="x"
-                      tick={{ fontSize: 12 }}
-                      interval="preserveStartEnd"
-                    />
+  dataKey="date"
+  tick={{ fontSize: 12 }}
+  interval="preserveStartEnd"
+  tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
+/>
 
                     {/* Левая ось: дневные значения */}
                     <YAxis yAxisId="day" tick={{ fontSize: 12 }} width={44} />
@@ -780,17 +781,17 @@ const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
                     />
 
 {breakEvenX && (
-  <ReferenceLine
-    x={breakEvenX}
-    stroke="var(--accent2)"
-    strokeDasharray="6 4"
-    label={{
-      value: `Окупаемость`,
-      position: 'insideTopRight',
-      fill: 'var(--accent2)',
-      fontSize: 12,
-    }}
-  />
+<ReferenceLine
+  x={moneySeries.series[moneySeries.breakEvenIdx]?.date}
+  stroke="var(--accent2)"
+  strokeDasharray="6 4"
+  label={{
+    value: `Окупаемость`,
+    position: 'insideTopRight',
+    fill: 'var(--accent2)',
+    fontSize: 12,
+  }}
+/>
 )}
 
 
