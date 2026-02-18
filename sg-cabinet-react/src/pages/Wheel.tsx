@@ -640,14 +640,18 @@ const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
     return Math.round(spinsPerDay * ev.profitCent);
   }, [spinsPerDayDraft, period.days, totalWins, ev.profitCent]);
 
-  const breakEvenX = React.useMemo(() => {
+const breakEvenDate = React.useMemo(() => {
   const idx = moneySeries.breakEvenIdx;
   if (idx === null || idx === undefined) return null;
-  const x = moneySeries.series?.[idx]?.x;
-  if (!x) return null;
-  const exists = moneySeries.series?.some((s: any) => s?.x === x);
-  return exists ? x : null;
+
+  const d = moneySeries.series?.[idx]?.date;
+  if (!d) return null;
+
+  // должен существовать среди точек на оси X (domain)
+  const exists = moneySeries.series?.some((s: any) => s?.date === d);
+  return exists ? d : null;
 }, [moneySeries.breakEvenIdx, moneySeries.series]);
+
 
   return (
     <div className="sg-page wheelPage">
@@ -780,19 +784,20 @@ const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
                       }}
                     />
 
-{breakEvenX && (
-<ReferenceLine
-  x={moneySeries.series[moneySeries.breakEvenIdx]?.date}
-  stroke="var(--accent2)"
-  strokeDasharray="6 4"
-  label={{
-    value: `Окупаемость`,
-    position: 'insideTopRight',
-    fill: 'var(--accent2)',
-    fontSize: 12,
-  }}
-/>
+{breakEvenDate && (
+  <ReferenceLine
+    x={breakEvenDate}
+    stroke="var(--accent2)"
+    strokeDasharray="6 4"
+    label={{
+      value: `Окупаемость`,
+      position: 'insideTopRight',
+      fill: 'var(--accent2)',
+      fontSize: 12,
+    }}
+  />
 )}
+
 
 
                     {/* MAIN: Profit/day (bars) */}
