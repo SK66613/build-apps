@@ -742,7 +742,17 @@ export default function Wheel(){
                     />
 
                     {/* Левая ось: дневные значения */}
-                    <YAxis yAxisId="day" tick={{ fontSize: 12 }} width={44} />
+                    <YAxis
+  yAxisId="day"
+  tick={{ fontSize: 12 }}
+  width={54}
+  tickFormatter={(v: any) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.round(n / 100)); // показываем рубли (без копеек)
+  }}
+/>
+
 
 
 
