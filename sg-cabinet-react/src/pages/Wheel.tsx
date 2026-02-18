@@ -18,16 +18,16 @@ type PrizeStat = {
   wins: number;
   redeemed: number;
 
-  // optional props from backend (если есть)
-  cost?: number;     // себестоимость (в рублях или в копейках — см. normalizeCostCent ниже)
+  // runtime/config props (optional)
   weight?: number;
   active?: number;
 
-  // если у тебя уже отдаётся:
-  coins?: number;    // монеты в призе (для coin-prize)
-  kind?: string;     // "coins" | "item"
-  cost_cent?: number;
-  cost_currency?: string;
+  // finance props (optional, if backend returns)
+  kind?: string;          // "coins" | "item"
+  coins?: number;         // for coins-prize
+  cost_cent?: number;     // item cost in cents
+  cost_currency?: string; // not used yet in UI calc
+  cost?: number;          // legacy: sometimes rub, sometimes cent (normalizeCostCent handles)
 };
 
 type ActivityItem = {
@@ -65,12 +65,10 @@ function fmtPct(x: number | null | undefined, d = '—'){
 function rubFromCent(cent: number | null | undefined){
   const v = Number(cent);
   if (!Number.isFinite(v)) return '—';
-  const r = v / 100;
-  return `${r.toFixed(2)} ₽`;
+  return `${(v / 100).toFixed(2)} ₽`;
 }
 
 function daysBetweenISO(fromISO: string, toISO: string){
-  // from/to like YYYY-MM-DD
   try{
     const a = new Date(fromISO + 'T00:00:00Z').getTime();
     const b = new Date(toISO + 'T00:00:00Z').getTime();
@@ -111,7 +109,11 @@ function IcoArea(){
 }
 
 /**
- * Нормализация себестоимости в копейки.
+ * Normalize item cost to cents.
+ * Rule:
+ *  - if cost_cent exists -> use it
+ *  - else if cost <= 1_000_000 -> treat as RUB and *100
+ *  - else treat as cents (legacy)
  */
 function normalizeCostCent(p: PrizeStat): number {
   const cc = Number((p as any).cost_cent);
@@ -139,22 +141,16 @@ export default function Wheel(){
   const qc = useQueryClient();
 
   const [chartMode, setChartMode] = React.useState<'bar'|'line'|'area'>('bar');
-
-  // под графиком переключаем только Live / Settings
   const [panel, setPanel] = React.useState<'live'|'settings'>('live');
-
   const [topMetric, setTopMetric] = React.useState<'wins'|'redeemed'>('wins');
 
-  // ===== Project-level coin cost (RUB per coin) =====
-  const [coinRub, setCoinRub] = React.useState<string>('1');
+  // Finance settings (for EV/ROI & Forecast)
+  const [coinRub, setCoinRub] = React.useState<string>('1');            // ₽ per coin
+  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // spin cost in coins
+  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');      // empty => auto
+
   const coinCostCentPerCoin = Math.max(0, Math.floor(Number(coinRub || '0') * 100));
-
-  // Spin cost (в монетах)
-  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10');
   const spinCostCoins = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
-
-  // NEW: forecast input (spins/day)
-  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>(''); // empty => auto
 
   const qStats = useQuery({
     enabled: !!appId,
@@ -197,7 +193,7 @@ export default function Wheel(){
     .sort((a,b) => (Number((b as any)[topMetric])||0) - (Number((a as any)[topMetric])||0))
     .slice(0, 7);
 
-  // ===== Settings form draft =====
+  // Settings form draft (weight/active)
   const [draft, setDraft] = React.useState<Record<string, { weight: string; active: boolean }>>({});
   const [saving, setSaving] = React.useState(false);
   const [saveMsg, setSaveMsg] = React.useState<string>('');
@@ -270,7 +266,7 @@ export default function Wheel(){
     }
   }
 
-  // ===== EV / ROI calculations (client-side) =====
+  // EV/ROI + per-prize economics
   const ev = React.useMemo(() => {
     const active = items.filter(p => (Number(p.active) || 0) ? true : false);
     const weights = active.map(p => Math.max(0, Number(p.weight) || 0));
@@ -278,7 +274,7 @@ export default function Wheel(){
 
     const spinRevenueCent = spinCostCoins * coinCostCentPerCoin;
 
-    let evPayoutCent = 0;
+    let evPayoutCentAcc = 0;
     const perPrize = active.map((p) => {
       const w = Math.max(0, Number(p.weight) || 0);
       const prob = wSum > 0 ? (w / wSum) : 0;
@@ -292,43 +288,46 @@ export default function Wheel(){
           : normalizeCostCent(p);
 
       const expCent = prob * costCent;
-      evPayoutCent += expCent;
+      evPayoutCentAcc += expCent;
 
       return {
         prize_code: p.prize_code,
         title: p.title || p.prize_code,
+        weight: w,
         prob,
         kind,
         coins,
         costCent,
         expCent,
+        hasCost: kind === 'coins' ? true : (normalizeCostCent(p) > 0),
       };
     });
 
-    const evProfitCent = spinRevenueCent - evPayoutCent;
+    const evPayoutCent = Math.round(evPayoutCentAcc);
+    const evProfitCent = Math.round(spinRevenueCent - evPayoutCent);
+
     const roi = spinRevenueCent > 0 ? (evProfitCent / spinRevenueCent) : null;
-    const paybackSpins = evProfitCent > 0 ? Math.ceil(evPayoutCent / evProfitCent) : null;
+    const breakEvenSpins = evProfitCent > 0 ? Math.ceil(evPayoutCent / evProfitCent) : null;
 
     const riskRows = [...perPrize].sort((a, b) => (b.expCent - a.expCent));
-
-    // break-even spins: сколько спинов до 0 (если profit per spin > 0)
-    const profitPerSpin = Math.round(evProfitCent);
-    const breakEvenSpins = profitPerSpin > 0 ? Math.ceil(Math.round(evPayoutCent) / profitPerSpin) : null;
+    const costCoverage = perPrize.length
+      ? Math.round((perPrize.filter(x => x.hasCost).length / perPrize.length) * 100)
+      : 0;
 
     return {
       wSum,
       spinRevenueCent,
-      evPayoutCent: Math.round(evPayoutCent),
-      evProfitCent: Math.round(evProfitCent),
+      evPayoutCent,
+      evProfitCent,
       roi,
-      paybackSpins,
       breakEvenSpins,
       perPrize,
       riskRows,
+      costCoverage,
     };
   }, [items, spinCostCoins, coinCostCentPerCoin]);
 
-  // ===== Forecast (7/30 days) =====
+  // Forecast (7/30)
   const forecast = React.useMemo(() => {
     const days = daysBetweenISO(range.from, range.to);
     const autoSpinsPerDay = totalWins > 0 ? (totalWins / days) : 0;
@@ -339,18 +338,14 @@ export default function Wheel(){
         ? manual
         : autoSpinsPerDay;
 
-    const revenuePerSpin = ev.spinRevenueCent;
-    const payoutPerSpin = ev.evPayoutCent;
-    const profitPerSpin = ev.evProfitCent;
-
     const proj = (d: number) => {
       const spins = spinsPerDay * d;
       return {
         days: d,
         spins,
-        revenue: Math.round(spins * revenuePerSpin),
-        payout: Math.round(spins * payoutPerSpin),
-        profit: Math.round(spins * profitPerSpin),
+        revenue: Math.round(spins * ev.spinRevenueCent),
+        payout: Math.round(spins * ev.evPayoutCent),
+        profit: Math.round(spins * ev.evProfitCent),
       };
     };
 
@@ -358,9 +353,6 @@ export default function Wheel(){
       daysInRange: days,
       autoSpinsPerDay,
       spinsPerDay,
-      revenuePerSpin,
-      payoutPerSpin,
-      profitPerSpin,
       wip: [proj(7), proj(30)],
     };
   }, [range.from, range.to, totalWins, spinsPerDayDraft, ev.spinRevenueCent, ev.evPayoutCent, ev.evProfitCent]);
@@ -370,7 +362,9 @@ export default function Wheel(){
       <div className="wheelHead">
         <div>
           <h1 className="sg-h1">Wheel</h1>
-          <div className="sg-sub">График + KPI + топы + live + настройка весов + EV/ROI + прогноз.</div>
+          <div className="sg-sub">
+            График + KPI + топы + live + настройки весов + экономика (EV/ROI) + прогноз.
+          </div>
         </div>
       </div>
 
@@ -487,7 +481,6 @@ export default function Wheel(){
                   </div>
 
                   {qLive.isLoading && <div className="sg-muted">Загрузка…</div>}
-
                   {qLive.isError && (
                     <div className="sg-muted">
                       Ошибка: {(qLive.error as Error).message}
@@ -518,7 +511,9 @@ export default function Wheel(){
                   <div className="wheelUnderHead">
                     <div>
                       <div className="wheelCardTitle">Настройки (runtime override)</div>
-                      <div className="wheelCardSub">Меняешь weight/active → сохраняешь → воркер применяет в рантайме.</div>
+                      <div className="wheelCardSub">
+                        Вес/активность — сохраняем в воркер. Экономика — пока локально (для EV/прогноза).
+                      </div>
                     </div>
 
                     <div className="wheelSave">
@@ -529,19 +524,31 @@ export default function Wheel(){
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {/* Finance settings */}
+                  <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                     <div>
                       <div className="sg-muted" style={{ marginBottom: 6 }}>Стоимость 1 монеты (₽)</div>
                       <Input value={coinRub} onChange={(e: any) => setCoinRub(e.target.value)} placeholder="1" />
                       <div className="sg-muted" style={{ marginTop: 6 }}>
-                        Используется для EV/ROI и прогноза.
+                        = {rubFromCent(coinCostCentPerCoin)} / coin
                       </div>
                     </div>
                     <div>
-                      <div className="sg-muted" style={{ marginBottom: 6 }}>Стоимость спина (в монетах)</div>
+                      <div className="sg-muted" style={{ marginBottom: 6 }}>Spin cost (монет)</div>
                       <Input value={spinCostCoinsDraft} onChange={(e: any) => setSpinCostCoinsDraft(e.target.value)} placeholder="10" />
                       <div className="sg-muted" style={{ marginTop: 6 }}>
-                        Revenue = spin_cost × coin_value.
+                        Revenue/spin = {rubFromCent(spinCostCoins * coinCostCentPerCoin)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="sg-muted" style={{ marginBottom: 6 }}>Spins/day (для прогноза)</div>
+                      <Input
+                        value={spinsPerDayDraft}
+                        onChange={(e: any) => setSpinsPerDayDraft(e.target.value)}
+                        placeholder="пусто = авто"
+                      />
+                      <div className="sg-muted" style={{ marginTop: 6 }}>
+                        авто: {forecast.autoSpinsPerDay.toFixed(2)} / day
                       </div>
                     </div>
                   </div>
@@ -595,8 +602,8 @@ export default function Wheel(){
                   </div>
 
                   <div className="sg-muted" style={{ marginTop: 12 }}>
-                    EV/ROI считается по активным призам и их weight. Для coin-призов берём <b>coins × стоимость монеты</b>.
-                    Для item-призов — <b>cost_cent/cost</b>.
+                    EV/ROI считается по активным призам и weight. Coin-призы: <b>coins × стоимость монеты</b>. Item-призы: <b>cost_cent/cost</b>.
+                    Покрытие себестоимости: <b>{ev.costCoverage}%</b>.
                   </div>
                 </div>
               )}
@@ -606,6 +613,7 @@ export default function Wheel(){
 
         {/* RIGHT */}
         <div className="wheelRight">
+          {/* Summary */}
           <Card className="wheelCard">
             <div className="wheelCardHead">
               <div className="wheelCardTitle">Сводка</div>
@@ -649,11 +657,12 @@ export default function Wheel(){
             </div>
           </Card>
 
+          {/* EV / ROI */}
           <Card className="wheelCard">
             <div className="wheelCardHead">
               <div>
                 <div className="wheelCardTitle">Expected Value / ROI</div>
-                <div className="wheelCardSub">на основе weight + себестоимости + стоимости монеты</div>
+                <div className="wheelCardSub">weight + себестоимость + стоимость монеты</div>
               </div>
             </div>
 
@@ -667,7 +676,7 @@ export default function Wheel(){
                   <div className="wheelSumLbl">EV payout</div>
                   <div className="wheelSumVal">{rubFromCent(ev.evPayoutCent)}</div>
                 </div>
-                <div className={'wheelSumTile is-strong'}>
+                <div className="wheelSumTile is-strong">
                   <div className="wheelSumLbl">EV profit</div>
                   <div className="wheelSumVal">{rubFromCent(ev.evProfitCent)}</div>
                 </div>
@@ -685,18 +694,22 @@ export default function Wheel(){
               </div>
 
               <div className="sg-muted" style={{ marginTop: 10 }}>
-                Revenue = <b>{spinCostCoins}</b> монет × <b>{rubFromCent(coinCostCentPerCoin)}</b>/монета.
+                Revenue/spin = <b>{spinCostCoins}</b> coin × <b>{rubFromCent(coinCostCentPerCoin)}</b>/coin.
+                &nbsp; | &nbsp; Cost coverage: <b>{ev.costCoverage}%</b>
               </div>
 
+              {/* EV risk rows */}
               <div style={{ marginTop: 12 }}>
-                <div className="wheelCardTitle" style={{ fontSize: 14, marginBottom: 6 }}>Топ вкладов в EV payout</div>
+                <div className="wheelCardTitle" style={{ fontSize: 14, marginBottom: 6 }}>
+                  Топ вкладов в EV payout (кто “съедает” экономику)
+                </div>
                 <div className="wheelTableWrap">
                   <table className="sg-table">
                     <thead>
                       <tr>
                         <th>Prize</th>
                         <th style={{ width: 90 }}>P</th>
-                        <th style={{ width: 130 }}>Cost</th>
+                        <th style={{ width: 120 }}>Cost</th>
                         <th style={{ width: 140 }}>EV contrib</th>
                       </tr>
                     </thead>
@@ -717,47 +730,27 @@ export default function Wheel(){
                 </div>
 
                 <div className="sg-muted" style={{ marginTop: 8 }}>
-                  Если cost у item-призов не заполнен — EV будет занижен.
+                  Если у item-призов cost не заполнен — EV будет слишком “розовый”.
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* ✅ NEW: Forecast card */}
+          {/* Forecast */}
           <Card className="wheelCard">
             <div className="wheelCardHead">
               <div>
-                <div className="wheelCardTitle">Прогноз прибыли</div>
+                <div className="wheelCardTitle">Прогноз (7 / 30 дней)</div>
                 <div className="wheelCardSub">на базе EV (средняя экономика на 1 спин)</div>
               </div>
             </div>
 
             <div className="wheelSummaryPro">
               <div className="sg-muted" style={{ marginBottom: 8 }}>
-                Диапазон: <b>{range.from} — {range.to}</b> ({forecast.daysInRange} дн.)
+                База: <b>{forecast.spinsPerDay.toFixed(2)}</b> спина/день (пусто = авто по диапазону)
               </div>
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 10 }}>
-                <div className="sg-pill" style={{ padding:'10px 12px' }}>
-                  <div className="sg-muted">Авто (wins/day)</div>
-                  <b>{forecast.autoSpinsPerDay.toFixed(2)}</b>
-                </div>
-
-                <div>
-                  <div className="sg-muted" style={{ marginBottom: 6 }}>Спинов в день (оверрайд)</div>
-                  <Input
-                    value={spinsPerDayDraft}
-                    onChange={(e: any) => setSpinsPerDayDraft(e.target.value)}
-                    placeholder="пусто = авто"
-                  />
-                </div>
-              </div>
-
-              <div className="sg-muted" style={{ marginTop: 10 }}>
-                Используется: <b>{forecast.spinsPerDay.toFixed(2)}</b> спина/день.
-              </div>
-
-              <div className="wheelTableWrap" style={{ marginTop: 12 }}>
+              <div className="wheelTableWrap">
                 <table className="sg-table">
                   <thead>
                     <tr>
@@ -783,11 +776,12 @@ export default function Wheel(){
               </div>
 
               <div className="sg-muted" style={{ marginTop: 10 }}>
-                Это “средняя” модель. В реальности волатильность дают редкие дорогие призы и трекинг остатков.
+                Это матожидание. Волатильность дают редкие дорогие призы и остатки (если трекаешь qty).
               </div>
             </div>
           </Card>
 
+          {/* Top prizes */}
           <Card className="wheelCard wheelStickyTop">
             <div className="wheelCardHead wheelTopHead">
               <div className="wheelCardTitle">Топ призов</div>
