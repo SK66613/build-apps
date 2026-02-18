@@ -588,7 +588,9 @@ export default function Wheel(){
 
     const series = dates.map((iso) => {
       const r = map.get(iso);
-      const spins = Number(r?.spins || 0);
+      const spinsRaw = Number((r as any)?.spins);
+const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
+
 
       const revenue = Math.round(spins * ev.spinRevenueCent);
       const payout = Math.round(spins * ev.payoutCent);
@@ -637,6 +639,15 @@ export default function Wheel(){
         : (totalWins > 0 ? (totalWins / days) : 0);
     return Math.round(spinsPerDay * ev.profitCent);
   }, [spinsPerDayDraft, period.days, totalWins, ev.profitCent]);
+
+  const breakEvenX = React.useMemo(() => {
+  const idx = moneySeries.breakEvenIdx;
+  if (idx === null || idx === undefined) return null;
+  const x = moneySeries.series?.[idx]?.x;
+  if (!x) return null;
+  const exists = moneySeries.series?.some((s: any) => s?.x === x);
+  return exists ? x : null;
+}, [moneySeries.breakEvenIdx, moneySeries.series]);
 
   return (
     <div className="sg-page wheelPage">
@@ -768,19 +779,20 @@ export default function Wheel(){
                       }}
                     />
 
-                    {moneySeries.breakEvenIdx !== null && moneySeries.breakEvenIdx !== undefined && (
-                      <ReferenceLine
-                        x={moneySeries.series[moneySeries.breakEvenIdx]?.x}
-                        stroke="var(--accent2)"
-                        strokeDasharray="6 4"
-                        label={{
-                          value: `Окупаемость`,
-                          position: 'insideTopRight',
-                          fill: 'var(--accent2)',
-                          fontSize: 12,
-                        }}
-                      />
-                    )}
+{breakEvenX && (
+  <ReferenceLine
+    x={breakEvenX}
+    stroke="var(--accent2)"
+    strokeDasharray="6 4"
+    label={{
+      value: `Окупаемость`,
+      position: 'insideTopRight',
+      fill: 'var(--accent2)',
+      fontSize: 12,
+    }}
+  />
+)}
+
 
                     {/* MAIN: Profit/day (bars) */}
                     <Bar
