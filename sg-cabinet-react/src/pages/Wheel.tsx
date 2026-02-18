@@ -538,7 +538,7 @@ export default function Wheel(){
                 <AreaChart
                   data={moneySeries.series}
                   // смещаем график левее, чтобы совпал с рамкой карточки
-                  margin={{ top: 8, right: 10, left: -18, bottom: 0 }}
+                  margin={{ top: 8, right: 10, left: -8, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
