@@ -71,6 +71,19 @@ function daysBetweenISO(fromISO: string, toISO: string){
   }
 }
 
+function isoAddDays(iso: string, deltaDays: number){
+  try{
+    const d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + deltaDays);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth()+1).padStart(2,'0');
+    const day = String(d.getUTCDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }catch(_){
+    return iso;
+  }
+}
+
 /* Иконки для кнопок-линий в денежном графике */
 function IcoMoney(){
   return (
@@ -140,7 +153,8 @@ function redeemBadge(redeemRatePct: number){
 }
 
 export default function Wheel(){
-  const { appId, range } = useAppState();
+  // ожидаем, что setRange есть в appState (если иначе — скажи имя, подставлю)
+  const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
   const [panel, setPanel] = React.useState<'roi'|'settings'>('roi');
@@ -161,6 +175,44 @@ export default function Wheel(){
   const [showRevenue, setShowRevenue] = React.useState<boolean>(true);
   const [showPayout, setShowPayout] = React.useState<boolean>(false);
   const [showCumulative, setShowCumulative] = React.useState<boolean>(true);
+
+  // Быстрые периоды (в шапке справа)
+  const [quick, setQuick] = React.useState<'day'|'week'|'month'|'custom'>('custom');
+  const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
+  const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
+
+  React.useEffect(() => {
+    setCustomFrom(range?.from || '');
+    setCustomTo(range?.to || '');
+    setQuick('custom');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range?.from, range?.to]);
+
+  function applyRange(nextFrom: string, nextTo: string){
+    if (!nextFrom || !nextTo) return;
+    if (typeof setRange === 'function'){
+      setRange({ from: nextFrom, to: nextTo });
+    }
+  }
+
+  function pickQuick(kind: 'day'|'week'|'month'|'custom'){
+    setQuick(kind);
+    if (kind === 'custom') return;
+
+    const anchor = range?.to || new Date().toISOString().slice(0,10);
+    if (kind === 'day'){
+      applyRange(anchor, anchor);
+      return;
+    }
+    if (kind === 'week'){
+      applyRange(isoAddDays(anchor, -6), anchor);
+      return;
+    }
+    if (kind === 'month'){
+      applyRange(isoAddDays(anchor, -29), anchor);
+      return;
+    }
+  }
 
   const qStats = useQuery({
     enabled: !!appId,
@@ -343,7 +395,7 @@ export default function Wheel(){
   // Период (по общему range)
   const period = React.useMemo(() => {
     const days = daysBetweenISO(range.from, range.to);
-    const spins = totalWins; // 1 spin -> 1 win (issued)
+    const spins = totalWins;
     const revenue = Math.round(spins * ev.spinRevenueCent);
     const payout = Math.round(spins * ev.payoutCent);
     const profit = Math.round(spins * ev.profitCent);
@@ -356,7 +408,6 @@ export default function Wheel(){
 
   const activeCount = items.filter(i => (Number(i.active)||0) ? true : false).length;
 
-  // Денежный график (модельный, 30 точек)
   const moneySeries = React.useMemo(() => {
     const days = Math.max(1, period.days);
     const manual = Number(spinsPerDayDraft);
@@ -393,17 +444,53 @@ export default function Wheel(){
     return `${ev.breakEvenSpins} спинов`;
   }, [ev.breakEvenSpins]);
 
-  // Верхний “самый рискованный” приз (если есть)
   const topRisk = ev.riskRows?.[0] || null;
+
+  const profitPerDay = React.useMemo(() => {
+    const v = Math.round((moneySeries.spinsPerDay || 0) * ev.profitCent);
+    return v;
+  }, [moneySeries.spinsPerDay, ev.profitCent]);
 
   return (
     <div className="sg-page wheelPage">
       <div className="wheelHead">
         <div>
           <h1 className="sg-h1">Колесо</h1>
-          <div className="sg-sub">
-            Деньги + окупаемость + топы + настройки.
+          <div className="sg-sub">Деньги + окупаемость + топы + настройки.</div>
+        </div>
+
+        {/* Быстрые периоды справа */}
+        <div style={{ marginLeft: 'auto', display:'flex', alignItems:'center', gap: 10, flexWrap:'wrap' }}>
+          <div className="sg-tabs wheelMiniTabs">
+            <button type="button" className={'sg-tab ' + (quick==='day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>
+              День
+            </button>
+            <button type="button" className={'sg-tab ' + (quick==='week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>
+              Неделя
+            </button>
+            <button type="button" className={'sg-tab ' + (quick==='month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>
+              Месяц
+            </button>
+            <button type="button" className={'sg-tab ' + (quick==='custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>
+              Свой период
+            </button>
           </div>
+
+          {quick === 'custom' && (
+            <div className="sg-pill" style={{ padding:'8px 10px', display:'flex', alignItems:'center', gap: 8, flexWrap:'wrap' }}>
+              <span className="sg-muted">от</span>
+              <Input type="date" value={customFrom} onChange={(e: any) => setCustomFrom(e.target.value)} style={{ width: 150 }} />
+              <span className="sg-muted">до</span>
+              <Input type="date" value={customTo} onChange={(e: any) => setCustomTo(e.target.value)} style={{ width: 150 }} />
+              <Button
+                variant="primary"
+                onClick={() => applyRange(customFrom, customTo)}
+                disabled={!customFrom || !customTo}
+              >
+                Применить
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -448,11 +535,14 @@ export default function Wheel(){
 
             <div className={'wheelChart is-area'}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={moneySeries.series}>
+                <AreaChart
+                  data={moneySeries.series}
+                  // смещаем график левее, чтобы совпал с рамкой карточки
+                  margin={{ top: 8, right: 10, left: -18, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
-                  <YAxis tick={{ fontSize: 12 }} />
-
+                  <YAxis tick={{ fontSize: 12 }} width={40} />
                   <Tooltip
                     formatter={(val: any, name: any) => {
                       if (name === 'profit') return [rubFromCent(val), 'Прибыль/день'];
@@ -521,34 +611,12 @@ export default function Wheel(){
               </ResponsiveContainer>
             </div>
 
-            <div className="wheelKpiRow">
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Дней</div>
-                <div className="wheelKpiVal">{period.days}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Спинов</div>
-                <div className="wheelKpiVal">{period.spins}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Спинов/день</div>
-                <div className="wheelKpiVal">{period.spinsPerDay.toFixed(2)}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Выручка</div>
-                <div className="wheelKpiVal">{rubFromCent(period.revenue)}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Расход</div>
-                <div className="wheelKpiVal">{rubFromCent(period.payout)}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Прибыль</div>
-                <div className="wheelKpiVal">{rubFromCent(period.profit)}</div>
-              </div>
+            {/* УМНО: вместо дублей карточек — компактная строка */}
+            <div className="sg-muted" style={{ padding: '10px 16px 0' }}>
+              Период: <b>{period.days}</b> дн · Спинов/день: <b>{period.spinsPerDay.toFixed(2)}</b> · Прибыль/день: <b>{rubFromCent(profitPerDay)}</b>
             </div>
 
-            {/* ====== ВНИЗУ: вкладки ====== */}
+            {/* ВКЛАДКИ */}
             <div className="wheelUnderTabs">
               <div className="sg-tabs wheelUnderTabs__seg">
                 <button className={'sg-tab ' + (panel==='roi' ? 'is-active' : '')} onClick={() => setPanel('roi')}>
@@ -566,7 +634,7 @@ export default function Wheel(){
                       <div className="wheelCardTitle">Окупаемость и экономика</div>
                       <div className="wheelCardSub">
                         База расхода: <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b>
-                        {costBasis === 'redeemed' ? <> (item EV × redeem rate)</> : null}
+                        {costBasis === 'redeemed' ? <> (item EV × доля выдачи)</> : null}
                       </div>
                     </div>
                   </div>
@@ -598,50 +666,14 @@ export default function Wheel(){
                       </div>
                     </div>
 
-                    <div className="sg-muted" style={{ marginTop: 10 }}>
-                      Разбивка расхода: coin EV <b>{rubFromCent(ev.coinsEvCent)}</b> + item EV <b>{rubFromCent(ev.itemEvCent)}</b>
-                      {costBasis === 'redeemed' ? <> × redeem rate <b>{fmtPct(redeemRate)}</b></> : null}
-                    </div>
-
                     {topRisk ? (
                       <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 10 }}>
-                        <span className="sg-muted">Главный риск: </span>
+                        <span className="sg-muted">Главный риск по расходу: </span>
                         <b>{topRisk.title}</b>
-                        <span className="sg-muted"> · вклад в EV: </span>
+                        <span className="sg-muted"> · EV вклад: </span>
                         <b>{rubFromCent(Math.round(topRisk.expCent))}</b>
                       </div>
                     ) : null}
-
-                    <div style={{ marginTop: 12 }}>
-                      <div className="wheelCardTitle" style={{ fontSize: 14, marginBottom: 6 }}>
-                        Топ вкладов в ожидаемый расход
-                      </div>
-                      <div className="wheelTableWrap">
-                        <table className="sg-table">
-                          <thead>
-                            <tr>
-                              <th>Приз</th>
-                              <th style={{ width: 90 }}>Вероятность</th>
-                              <th style={{ width: 120 }}>Себестоимость</th>
-                              <th style={{ width: 140 }}>EV вклад</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {ev.riskRows.slice(0, 6).map((r) => (
-                              <tr key={r.prize_code}>
-                                <td><b>{r.title}</b></td>
-                                <td>{fmtPct(r.prob, '0.0%')}</td>
-                                <td>{rubFromCent(r.costCent)}</td>
-                                <td><b>{rubFromCent(Math.round(r.expCent))}</b></td>
-                              </tr>
-                            ))}
-                            {!ev.riskRows.length && (
-                              <tr><td colSpan={4} style={{ opacity: 0.7, padding: 14 }}>Нет активных призов или весов.</td></tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
 
                     <div className="sg-muted" style={{ marginTop: 12 }}>
                       Покрытие себестоимости (у приза указан cost): <b>{ev.costCoverage}%</b>.
@@ -704,7 +736,6 @@ export default function Wheel(){
                         type="button"
                         className={'sg-tab ' + (costBasis==='issued' ? 'is-active' : '')}
                         onClick={() => setCostBasis('issued')}
-                        title="Расход фиксируем в момент выигрыша"
                       >
                         при выигрыше
                       </button>
@@ -712,14 +743,13 @@ export default function Wheel(){
                         type="button"
                         className={'sg-tab ' + (costBasis==='redeemed' ? 'is-active' : '')}
                         onClick={() => setCostBasis('redeemed')}
-                        title="Расход фиксируем только когда приз забрали"
                       >
                         при выдаче
                       </button>
                     </div>
 
                     <div className="sg-pill" style={{ padding:'8px 12px' }}>
-                      <span className="sg-muted">Доля выдачи (redeem): </span>
+                      <span className="sg-muted">Доля выдачи: </span>
                       <b>{fmtPct(redeemRate, '—')}</b>
                     </div>
                   </div>
@@ -783,14 +813,13 @@ export default function Wheel(){
 
         {/* RIGHT */}
         <div className="wheelRight">
-          {/* Сводка — ПЕРЕДЕЛАНО */}
+          {/* Сводка */}
           <Card className="wheelCard">
             <div className="wheelCardHead">
               <div className="wheelCardTitle">Сводка</div>
             </div>
 
             <div className="wheelSummaryPro">
-              {/* Ряд 1: деньги */}
               <div className="wheelSummaryTiles">
                 <div className="wheelSumTile">
                   <div className="wheelSumLbl">Спинов</div>
@@ -819,7 +848,6 @@ export default function Wheel(){
                 </div>
               </div>
 
-              {/* Ряд 2: здоровье механики */}
               <div className="wheelSummaryTiles" style={{ marginTop: 10 }}>
                 <div className="wheelSumTile">
                   <div className="wheelSumLbl">Маржа (ROI)</div>
@@ -845,7 +873,6 @@ export default function Wheel(){
                 </div>
               </div>
 
-              {/* Полоска выдачи — оставляем как “визуал” */}
               <div className="wheelRedeemBar" style={{ marginTop: 12 }}>
                 <div className="wheelRedeemTop">
                   <div className="wheelRedeemName">Выдача призов</div>
@@ -864,7 +891,6 @@ export default function Wheel(){
                 </div>
               </div>
 
-              {/* Мини-инсайт */}
               {topRisk ? (
                 <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 12 }}>
                   <span className="sg-muted">Главный риск по расходу: </span>
