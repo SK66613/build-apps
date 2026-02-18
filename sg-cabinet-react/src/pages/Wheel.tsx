@@ -13,7 +13,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  ReferenceLine,
 } from 'recharts';
 
 type PrizeStat = {
@@ -215,7 +214,7 @@ export default function Wheel(){
   // Finance settings (для EV/ROI и денежного графика)
   const [coinRub, setCoinRub] = React.useState<string>('1');                 // ₽ per coin (PERSIST)
   const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // local
-  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');       // local (теперь почти не нужен, но оставим как “прогноз” в карточках)
+  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');       // local
 
   // расход считать: при выигрыше или при выдаче
   const [costBasis, setCostBasis] = React.useState<'issued'|'redeemed'>('issued');
@@ -251,11 +250,9 @@ export default function Wheel(){
 
     // если юзер уже менял вручную — не перетираем
     setCoinRub(prev => {
-      // если prev = дефолт "1" и settings != 100, обновим
       const prevN = Number(prev);
       if (!Number.isFinite(prevN)) return prev;
       if (Math.floor(prevN * 100) === Math.floor(Number(cents))) return prev;
-      // если prev уже “не дефолт”, не трогаем
       if (prev !== '1' && prev !== '1.0' && prev !== '1.00') return prev;
       return String(rub);
     });
@@ -522,9 +519,14 @@ export default function Wheel(){
   const period = React.useMemo(() => {
     const days = daysBetweenISO(range.from, range.to);
     const spins = totalWins;
-    const revenue = Math.round(spins * ev.spinRevenueCent);
-    const payout = Math.round(spins * ev.payoutCent);
-    const profit = Math.round(spins * ev.profitCent);
+    const revenueRaw = spins * ev.spinRevenueCent;
+    const payoutRaw = spins * ev.payoutCent;
+    const profitRaw = spins * ev.profitCent;
+
+    const revenue = Number.isFinite(revenueRaw) ? Math.round(revenueRaw) : 0;
+    const payout = Number.isFinite(payoutRaw) ? Math.round(payoutRaw) : 0;
+    const profit = Number.isFinite(profitRaw) ? Math.round(profitRaw) : 0;
+
     const spinsPerDay = days > 0 ? (spins / days) : 0;
     return { days, spins, revenue, payout, profit, spinsPerDay };
   }, [range.from, range.to, totalWins, ev.spinRevenueCent, ev.payoutCent, ev.profitCent]);
@@ -589,38 +591,31 @@ export default function Wheel(){
     const series = dates.map((iso) => {
       const r = map.get(iso);
       const spinsRaw = Number((r as any)?.spins);
-const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
+      const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
 
+      const revenueRaw = spins * ev.spinRevenueCent;
+      const payoutRaw  = spins * ev.payoutCent;
+      const profitRaw  = spins * ev.profitCent;
 
-      const revenue = Math.round(spins * ev.spinRevenueCent);
-      const payout = Math.round(spins * ev.payoutCent);
-      const profit = Math.round(spins * ev.profitCent);
+      const revenue = Number.isFinite(revenueRaw) ? Math.round(revenueRaw) : 0;
+      const payout  = Number.isFinite(payoutRaw)  ? Math.round(payoutRaw)  : 0;
+      const profit  = Number.isFinite(profitRaw)  ? Math.round(profitRaw)  : 0;
 
       cum += profit;
 
+      const cum_profit = Number.isFinite(cum) ? cum : 0;
+
       return {
-        date: iso,         // full ISO for tooltip
-        x: fmtDDMM(iso),   // axis label
+        date: iso,         // ISO for axis + tooltip
         spins,
         revenue,
         payout,
         profit,
-        cum_profit: cum,
+        cum_profit,
       };
     });
 
-    // break-even line: по факту накопительной прибыли
-    let breakEvenIdx: number | null = null;
-    if (series.length){
-      for (let i=0; i<series.length; i++){
-        if (Number(series[i].cum_profit || 0) >= 0){
-          breakEvenIdx = i;
-          break;
-        }
-      }
-    }
-
-    return { series, breakEvenIdx };
+    return { series };
   }, [qTs.data?.days, range.from, range.to, ev.spinRevenueCent, ev.payoutCent, ev.profitCent]);
 
   const breakEvenLabel = React.useMemo(() => {
@@ -637,21 +632,10 @@ const spins = Number.isFinite(spinsRaw) ? spinsRaw : 0;
       (Number.isFinite(manual) && manual >= 0)
         ? manual
         : (totalWins > 0 ? (totalWins / days) : 0);
-    return Math.round(spinsPerDay * ev.profitCent);
+
+    const raw = spinsPerDay * ev.profitCent;
+    return Number.isFinite(raw) ? Math.round(raw) : 0;
   }, [spinsPerDayDraft, period.days, totalWins, ev.profitCent]);
-
-const breakEvenDate = React.useMemo(() => {
-  const idx = moneySeries.breakEvenIdx;
-  if (idx === null || idx === undefined) return null;
-
-  const d = moneySeries.series?.[idx]?.date;
-  if (!d) return null;
-
-  // должен существовать среди точек на оси X (domain)
-  const exists = moneySeries.series?.some((s: any) => s?.date === d);
-  return exists ? d : null;
-}, [moneySeries.breakEvenIdx, moneySeries.series]);
-
 
   return (
     <div className="sg-page wheelPage">
@@ -751,11 +735,11 @@ const breakEvenDate = React.useMemo(() => {
                   >
                     <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
                     <XAxis
-  dataKey="date"
-  tick={{ fontSize: 12 }}
-  interval="preserveStartEnd"
-  tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
-/>
+                      dataKey="date"
+                      tick={{ fontSize: 12 }}
+                      interval="preserveStartEnd"
+                      tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
+                    />
 
                     {/* Левая ось: дневные значения */}
                     <YAxis yAxisId="day" tick={{ fontSize: 12 }} width={44} />
@@ -783,22 +767,6 @@ const breakEvenDate = React.useMemo(() => {
                         return d ? `Дата ${d}` : 'Дата';
                       }}
                     />
-
-{breakEvenDate && (
-  <ReferenceLine
-    x={breakEvenDate}
-    stroke="var(--accent2)"
-    strokeDasharray="6 4"
-    label={{
-      value: `Окупаемость`,
-      position: 'insideTopRight',
-      fill: 'var(--accent2)',
-      fontSize: 12,
-    }}
-  />
-)}
-
-
 
                     {/* MAIN: Profit/day (bars) */}
                     <Bar
