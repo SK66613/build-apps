@@ -25,6 +25,11 @@ type PrizeStat = {
   cost_cent?: number;     // item cost in cents
   cost_currency?: string; // not used yet in UI calc
   cost?: number;          // legacy: sometimes rub, sometimes cent
+
+  // IMPORTANT: остатки (их должен отдать воркер в /wheel/stats)
+  track_qty?: number;       // 0|1
+  qty_left?: number | null; // number
+  stop_when_zero?: number;  // 0|1
 };
 
 function qs(obj: Record<string, string | number | undefined | null>){
@@ -152,20 +157,32 @@ function redeemBadge(redeemRatePct: number){
   return { text: 'ПЛОХО', cls: 'bad' };
 }
 
+function isTracked(p: PrizeStat){
+  return Number(p.track_qty || 0) ? true : false;
+}
+function isStopWhenZero(p: PrizeStat){
+  return Number(p.stop_when_zero || 0) ? true : false;
+}
+function qtyLeft(p: PrizeStat){
+  const q = (p as any).qty_left;
+  const n = Number(q);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function Wheel(){
-  // ожидаем, что setRange есть в appState (если иначе — скажи имя, подставлю)
+  // ожидаем, что setRange есть в appState
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
   const [panel, setPanel] = React.useState<'roi'|'settings'>('roi');
   const [topMetric, setTopMetric] = React.useState<'wins'|'redeemed'>('wins');
 
-  // Finance settings (for EV/ROI & Forecast)
+  // Finance settings (для EV/ROI и денежного графика)
   const [coinRub, setCoinRub] = React.useState<string>('1');                 // ₽ per coin
   const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // spin cost in coins
-  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');       // empty => auto
+  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');       // пусто => авто
 
-  // расход считать: issued или redeemed
+  // расход считать: при выигрыше или при выдаче
   const [costBasis, setCostBasis] = React.useState<'issued'|'redeemed'>('issued');
 
   const coinCostCentPerCoin = Math.max(0, Math.floor(Number(coinRub || '0') * 100));
@@ -225,7 +242,7 @@ export default function Wheel(){
 
   const items = qStats.data?.items || [];
 
-  // KPI
+  // KPI по факту периода (wins/redeemed приходят агрегатами)
   const totalWins = items.reduce((s, p) => s + (Number(p.wins) || 0), 0);
   const totalRedeemed = items.reduce((s, p) => s + (Number(p.redeemed) || 0), 0);
   const redeemRate = totalWins > 0 ? Math.max(0, Math.min(1, totalRedeemed / totalWins)) : 0; // 0..1
@@ -408,6 +425,51 @@ export default function Wheel(){
 
   const activeCount = items.filter(i => (Number(i.active)||0) ? true : false).length;
 
+  // ===== ОСТАТКИ / ИНВЕНТАРЬ (умная сводка без дублей) =====
+  const inventory = React.useMemo(() => {
+    const tracked = items.filter(p => isTracked(p));
+    const trackedCount = tracked.length;
+
+    const outOfStock = tracked.filter(p => {
+      const q = qtyLeft(p);
+      return q !== null && q <= 0;
+    });
+    const outOfStockCount = outOfStock.length;
+
+    const lowThreshold = 3; // можно потом вынести в настройку
+    const lowStock = tracked.filter(p => {
+      const q = qtyLeft(p);
+      return q !== null && q > 0 && q <= lowThreshold;
+    });
+    const lowStockCount = lowStock.length;
+
+    // “Авто-выкл по нулю”: track_qty=1, stop_when_zero=1, qty_left<=0
+    const autoOff = tracked.filter(p => isStopWhenZero(p) && (() => {
+      const q = qtyLeft(p);
+      return q !== null && q <= 0;
+    })());
+    const autoOffCount = autoOff.length;
+
+    // риск: топ-3 по wins среди тех, у кого мало/ноль
+    const risky = [...tracked]
+      .filter(p => {
+        const q = qtyLeft(p);
+        return q !== null && q <= lowThreshold;
+      })
+      .sort((a,b) => (Number(b.wins)||0) - (Number(a.wins)||0))
+      .slice(0, 3);
+
+    return {
+      trackedCount,
+      outOfStockCount,
+      lowStockCount,
+      autoOffCount,
+      lowThreshold,
+      risky,
+    };
+  }, [items]);
+
+  // Денежный график: “прогноз 30 дней” по спинам/день
   const moneySeries = React.useMemo(() => {
     const days = Math.max(1, period.days);
     const manual = Number(spinsPerDayDraft);
@@ -447,8 +509,7 @@ export default function Wheel(){
   const topRisk = ev.riskRows?.[0] || null;
 
   const profitPerDay = React.useMemo(() => {
-    const v = Math.round((moneySeries.spinsPerDay || 0) * ev.profitCent);
-    return v;
+    return Math.round((moneySeries.spinsPerDay || 0) * ev.profitCent);
   }, [moneySeries.spinsPerDay, ev.profitCent]);
 
   return (
@@ -511,7 +572,7 @@ export default function Wheel(){
                   type="button"
                   className={'wheelChartBtn ' + (showRevenue ? 'is-active' : '')}
                   onClick={() => setShowRevenue(v => !v)}
-                  title="Показать/скрыть выручку"
+                  title="Выручка"
                   aria-label="Выручка"
                 ><IcoMoney/></button>
 
@@ -519,7 +580,7 @@ export default function Wheel(){
                   type="button"
                   className={'wheelChartBtn ' + (showPayout ? 'is-active' : '')}
                   onClick={() => setShowPayout(v => !v)}
-                  title="Показать/скрыть расход"
+                  title="Расход"
                   aria-label="Расход"
                 ><IcoPay/></button>
 
@@ -527,93 +588,126 @@ export default function Wheel(){
                   type="button"
                   className={'wheelChartBtn ' + (showCumulative ? 'is-active' : '')}
                   onClick={() => setShowCumulative(v => !v)}
-                  title="Показать/скрыть накопительную прибыль"
+                  title="Накопительная прибыль"
                   aria-label="Накопительно"
                 ><IcoSigma/></button>
               </div>
             </div>
 
             <div className={'wheelChart is-area'}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={moneySeries.series}
-                  // смещаем график левее, чтобы совпал с рамкой карточки
-                  margin={{ top: 8, right: 10, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
-                  <YAxis tick={{ fontSize: 12 }} width={40} />
-                  <Tooltip
-                    formatter={(val: any, name: any) => {
-                      if (name === 'profit') return [rubFromCent(val), 'Прибыль/день'];
-                      if (name === 'cum_profit') return [rubFromCent(val), 'Накопительная прибыль'];
-                      if (name === 'revenue') return [rubFromCent(val), 'Выручка/день'];
-                      if (name === 'payout') return [rubFromCent(val), 'Расход/день'];
-                      return [val, name];
-                    }}
-                    labelFormatter={(label: any) => `День ${label}`}
-                  />
+              {qStats.isLoading && <div className="sg-muted">Загрузка…</div>}
+              {qStats.isError && <div className="sg-muted">Ошибка: {(qStats.error as Error).message}</div>}
 
-                  {moneySeries.breakEvenDay !== null && (
-                    <ReferenceLine
-                      x={moneySeries.breakEvenDay}
-                      stroke="var(--accent2)"
-                      strokeDasharray="6 4"
-                      label={{
-                        value: `Окупаемость ~ D${moneySeries.breakEvenDay}`,
-                        position: 'insideTopRight',
-                        fill: 'var(--accent2)',
-                        fontSize: 12,
+              {!qStats.isLoading && !qStats.isError && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={moneySeries.series}
+                    // важно: левее, чтобы совпал с бордером карточки (как ты просил)
+                    margin={{ top: 8, right: 12, left: -10, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
+                    <XAxis dataKey="day" tick={{ fontSize: 12 }} interval={4} />
+                    <YAxis tick={{ fontSize: 12 }} width={44} />
+
+                    <Tooltip
+                      formatter={(val: any, name: any) => {
+                        if (name === 'profit') return [rubFromCent(val), 'Прибыль/день'];
+                        if (name === 'cum_profit') return [rubFromCent(val), 'Накопительная прибыль'];
+                        if (name === 'revenue') return [rubFromCent(val), 'Выручка/день'];
+                        if (name === 'payout') return [rubFromCent(val), 'Расход/день'];
+                        return [val, name];
                       }}
+                      labelFormatter={(label: any) => `День ${label}`}
                     />
-                  )}
 
-                  <Area
-                    type="monotone"
-                    dataKey="profit"
-                    stroke="var(--accent)"
-                    fill="var(--accent)"
-                    fillOpacity={0.16}
-                    strokeWidth={3}
-                  />
+                    {moneySeries.breakEvenDay !== null && (
+                      <ReferenceLine
+                        x={moneySeries.breakEvenDay}
+                        stroke="var(--accent2)"
+                        strokeDasharray="6 4"
+                        label={{
+                          value: `Окупаемость ~ D${moneySeries.breakEvenDay}`,
+                          position: 'insideTopRight',
+                          fill: 'var(--accent2)',
+                          fontSize: 12,
+                        }}
+                      />
+                    )}
 
-                  {showCumulative && (
-                    <Line
+                    <Area
                       type="monotone"
-                      dataKey="cum_profit"
+                      dataKey="profit"
                       stroke="var(--accent)"
-                      strokeWidth={2}
-                      dot={false}
+                      fill="var(--accent)"
+                      fillOpacity={0.16}
+                      strokeWidth={3}
                     />
-                  )}
 
-                  {showRevenue && (
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="var(--accent2)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
+                    {showCumulative && (
+                      <Line
+                        type="monotone"
+                        dataKey="cum_profit"
+                        stroke="var(--accent)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
 
-                  {showPayout && (
-                    <Line
-                      type="monotone"
-                      dataKey="payout"
-                      stroke="var(--accent2)"
-                      strokeWidth={2}
-                      strokeDasharray="6 4"
-                      dot={false}
-                    />
-                  )}
-                </AreaChart>
-              </ResponsiveContainer>
+                    {showRevenue && (
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+
+                    {showPayout && (
+                      <Line
+                        type="monotone"
+                        dataKey="payout"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                      />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
-            {/* УМНО: вместо дублей карточек — компактная строка */}
-            <div className="sg-muted" style={{ padding: '10px 16px 0' }}>
-              Период: <b>{period.days}</b> дн · Спинов/день: <b>{period.spinsPerDay.toFixed(2)}</b> · Прибыль/день: <b>{rubFromCent(profitPerDay)}</b>
+            {/* ВМЕСТО дублей под графиком — умные карточки */}
+            <div className="wheelKpiRow">
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Спинов (за период)</div>
+                <div className="wheelKpiVal">{period.spins}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Прибыль/день (прогноз)</div>
+                <div className="wheelKpiVal">{rubFromCent(profitPerDay)}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Призы с учётом остатков</div>
+                <div className="wheelKpiVal">{inventory.trackedCount}</div>
+              </div>
+            </div>
+
+            {/* Ещё ряд (остатки) */}
+            <div className="wheelKpiRow" style={{ paddingTop: 0 }}>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Закончились</div>
+                <div className="wheelKpiVal">{inventory.outOfStockCount}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Мало (≤ {inventory.lowThreshold})</div>
+                <div className="wheelKpiVal">{inventory.lowStockCount}</div>
+              </div>
+              <div className="wheelKpi">
+                <div className="wheelKpiLbl">Авто-выкл при нуле</div>
+                <div className="wheelKpiVal">{inventory.autoOffCount}</div>
+              </div>
             </div>
 
             {/* ВКЛАДКИ */}
@@ -633,8 +727,8 @@ export default function Wheel(){
                     <div>
                       <div className="wheelCardTitle">Окупаемость и экономика</div>
                       <div className="wheelCardSub">
-                        База расхода: <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b>
-                        {costBasis === 'redeemed' ? <> (item EV × доля выдачи)</> : null}
+                        Расход считаем: <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b>
+                        {costBasis === 'redeemed' ? <> (вещевые призы учитываем через долю выдачи)</> : null}
                       </div>
                     </div>
                   </div>
@@ -670,8 +764,15 @@ export default function Wheel(){
                       <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 10 }}>
                         <span className="sg-muted">Главный риск по расходу: </span>
                         <b>{topRisk.title}</b>
-                        <span className="sg-muted"> · EV вклад: </span>
+                        <span className="sg-muted"> · вклад EV: </span>
                         <b>{rubFromCent(Math.round(topRisk.expCent))}</b>
+                      </div>
+                    ) : null}
+
+                    {inventory.risky.length ? (
+                      <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 10 }}>
+                        <span className="sg-muted">Риск по остаткам (топ): </span>
+                        <b>{inventory.risky.map(x => x.title || x.prize_code).join(', ')}</b>
                       </div>
                     ) : null}
 
@@ -689,6 +790,8 @@ export default function Wheel(){
                       <div className="wheelCardTitle">Настройки</div>
                       <div className="wheelCardSub">
                         Вес/активность — сохраняем в воркер. Экономика/график — локально.
+                        <br/>
+                        Остатки и авто-выкл показываем, если воркер отдаёт track_qty/qty_left/stop_when_zero.
                       </div>
                     </div>
 
@@ -716,7 +819,7 @@ export default function Wheel(){
                       </div>
                     </div>
                     <div>
-                      <div className="sg-muted" style={{ marginBottom: 6 }}>Спинов/день (для графика)</div>
+                      <div className="sg-muted" style={{ marginBottom: 6 }}>Спинов/день (для прогноза)</div>
                       <Input
                         value={spinsPerDayDraft}
                         onChange={(e: any) => setSpinsPerDayDraft(e.target.value)}
@@ -736,6 +839,7 @@ export default function Wheel(){
                         type="button"
                         className={'sg-tab ' + (costBasis==='issued' ? 'is-active' : '')}
                         onClick={() => setCostBasis('issued')}
+                        title="Расход считаем в момент выигрыша"
                       >
                         при выигрыше
                       </button>
@@ -743,6 +847,7 @@ export default function Wheel(){
                         type="button"
                         className={'sg-tab ' + (costBasis==='redeemed' ? 'is-active' : '')}
                         onClick={() => setCostBasis('redeemed')}
+                        title="Вещевые призы считаем по факту выдачи (через долю выдачи)"
                       >
                         при выдаче
                       </button>
@@ -762,19 +867,45 @@ export default function Wheel(){
                           <th>Название</th>
                           <th>Выигрыши</th>
                           <th>Выдачи</th>
-                          <th style={{ minWidth: 240 }}>Вес</th>
+                          <th style={{ minWidth: 220 }}>Остаток</th>
+                          <th style={{ minWidth: 220 }}>Вес</th>
                           <th style={{ minWidth: 120 }}>Активен</th>
                         </tr>
                       </thead>
                       <tbody>
                         {items.map((p) => {
                           const d = draft[p.prize_code] || { weight: String(p.weight ?? ''), active: !!p.active };
+
+                          const tracked = isTracked(p);
+                          const q = qtyLeft(p);
+                          const swz = isStopWhenZero(p);
+                          const out = tracked && (q !== null && q <= 0);
+                          const low = tracked && (q !== null && q > 0 && q <= inventory.lowThreshold);
+
                           return (
                             <tr key={p.prize_code}>
                               <td><b>{p.prize_code}</b></td>
                               <td>{p.title}</td>
                               <td>{p.wins}</td>
                               <td>{p.redeemed}</td>
+
+                              <td>
+                                {tracked ? (
+                                  <div style={{ display:'flex', alignItems:'center', gap: 10, flexWrap:'wrap' }}>
+                                    <span style={{ fontWeight: 900 }}>
+                                      {q === null ? '—' : q}
+                                    </span>
+                                    <span className="sg-muted">
+                                      {swz ? '· авто-выкл при нуле' : '· без авто-выкл'}
+                                    </span>
+                                    {out ? <span className="sg-pill" style={{ padding:'6px 10px' }}><b>ноль</b></span> : null}
+                                    {low ? <span className="sg-pill" style={{ padding:'6px 10px' }}><b>мало</b></span> : null}
+                                  </div>
+                                ) : (
+                                  <span className="sg-muted">не учитываем</span>
+                                )}
+                              </td>
+
                               <td>
                                 <Input
                                   value={d.weight}
@@ -782,6 +913,7 @@ export default function Wheel(){
                                   placeholder="weight"
                                 />
                               </td>
+
                               <td>
                                 <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
                                   <input
@@ -796,14 +928,14 @@ export default function Wheel(){
                           );
                         })}
                         {!items.length && !qStats.isLoading && (
-                          <tr><td colSpan={6} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
+                          <tr><td colSpan={7} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
                         )}
                       </tbody>
                     </table>
                   </div>
 
                   <div className="sg-muted" style={{ marginTop: 12 }}>
-                    Покрытие себестоимости: <b>{ev.costCoverage}%</b>. В режиме <b>при выдаче</b> coin-призы всё равно считаются расходом сразу.
+                    Подсказка: если приз учитывает остатки и включён “авто-выкл при нуле”, то при qty_left=0 он фактически перестаёт выпадать в мини-аппе.
                   </div>
                 </div>
               )}
@@ -873,6 +1005,26 @@ export default function Wheel(){
                 </div>
               </div>
 
+              {/* Остатки (важное и недублируемое) */}
+              <div className="wheelSummaryTiles" style={{ marginTop: 10 }}>
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Учитываем остатки</div>
+                  <div className="wheelSumVal">{inventory.trackedCount}</div>
+                </div>
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Закончились</div>
+                  <div className="wheelSumVal">{inventory.outOfStockCount}</div>
+                </div>
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Мало (≤ {inventory.lowThreshold})</div>
+                  <div className="wheelSumVal">{inventory.lowStockCount}</div>
+                </div>
+                <div className="wheelSumTile">
+                  <div className="wheelSumLbl">Авто-выкл при нуле</div>
+                  <div className="wheelSumVal">{inventory.autoOffCount}</div>
+                </div>
+              </div>
+
               <div className="wheelRedeemBar" style={{ marginTop: 12 }}>
                 <div className="wheelRedeemTop">
                   <div className="wheelRedeemName">Выдача призов</div>
@@ -895,7 +1047,7 @@ export default function Wheel(){
                 <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 12 }}>
                   <span className="sg-muted">Главный риск по расходу: </span>
                   <b>{topRisk.title}</b>
-                  <span className="sg-muted"> · EV вклад: </span>
+                  <span className="sg-muted"> · вклад EV: </span>
                   <b>{rubFromCent(Math.round(topRisk.expCent))}</b>
                 </div>
               ) : null}
