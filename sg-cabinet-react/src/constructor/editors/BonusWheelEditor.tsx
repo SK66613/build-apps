@@ -16,10 +16,21 @@ type Prize = {
 
   // coins (if kind='coins')
   coins?: number;
+
+  // ✅ weight (structure)
+  weight?: number;
+
+  // ✅ cost of item prize in coins (structure)
+  cost_coins?: number;
 };
 
 function num(v: any, d: number) {
   const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+
+function i0(v: any, d = 0) {
+  const n = Math.floor(num(v, d));
   return Number.isFinite(n) ? n : d;
 }
 
@@ -68,7 +79,11 @@ function normalizePrize(p: any): Prize {
     title,
     img: p?.img ? String(p.img) : '',
     kind: baseKind,
-    coins: baseKind === 'coins' ? Math.max(1, Math.floor(num(p?.coins, 1))) : 0,
+    coins: baseKind === 'coins' ? Math.max(1, i0(p?.coins, 1)) : 0,
+
+    // ✅ structure knobs
+    weight: Math.max(0, i0(p?.weight, 0)),
+    cost_coins: Math.max(0, i0(p?.cost_coins, 0)),
   };
 }
 
@@ -110,6 +125,8 @@ export function BonusWheelEditor({
       kind: 'item',
       coins: 0,
       img: '',
+      weight: 0,
+      cost_coins: 0,
     };
     setPrizes([...prizes, next]);
   };
@@ -135,7 +152,7 @@ export function BonusWheelEditor({
     });
   }, [prizes.length]);
 
-  const spinCost = Math.max(0, Math.floor(num(props.spin_cost, 10)));
+  const spinCost = Math.max(0, i0(props.spin_cost, 10));
 
   return (
     <div className="sg-editor">
@@ -155,12 +172,12 @@ export function BonusWheelEditor({
             type="number"
             value={spinCost}
             onChange={(e: any) =>
-              set({ spin_cost: Math.max(0, Math.floor(num(e.target.value, 10))) })
+              set({ spin_cost: Math.max(0, i0(e.target.value, 10)) })
             }
           />
           <div className="sg-editor__hint">
-            Тонкие настройки (вес/себестоимость/остатки/активность) — в аналитике/тюнинге (D1 live).
-            Publish их не перетирает (вариант A).
+            Тонкие настройки (активность/остатки/stop_when_zero/track_qty) — в аналитике/тюнинге (D1 live).
+            Publish их не перетирает.
           </div>
         </div>
       </div>
@@ -172,7 +189,6 @@ export function BonusWheelEditor({
           <Button onClick={addPrize}>+ Добавить приз</Button>
         </div>
 
-        {/* ===== Prizes list ===== */}
         {prizes.map((p, i) => {
           const isOpen = !!openMap[i];
           const imgLabel =
@@ -190,7 +206,8 @@ export function BonusWheelEditor({
                   </div>
                   <div className="sg-acc__headMeta">
                     <span>{p.kind === 'coins' ? 'Монеты' : 'Физический'}</span>
-                    {p.kind === 'coins' ? <span>· {Math.max(1, Math.floor(num(p.coins, 1)))} монет</span> : null}
+                    <span>· вес: {Math.max(0, i0(p.weight, 0))}</span>
+                    {p.kind === 'coins' ? <span>· {Math.max(1, i0(p.coins, 1))} монет</span> : <span>· себест: {Math.max(0, i0(p.cost_coins, 0))} монет</span>}
                     {p.img ? <span>· img: {imgLabel}</span> : null}
                   </div>
                 </div>
@@ -233,6 +250,19 @@ export function BonusWheelEditor({
                     </div>
                   </div>
 
+                  {/* Weight */}
+                  <div className="sg-editor__row">
+                    <div className="sg-editor__label">Вес (weight)</div>
+                    <Input
+                      type="number"
+                      value={Math.max(0, i0(p.weight, 0))}
+                      onChange={(e: any) => updPrize(i, { weight: Math.max(0, i0(e.target.value, 0)) })}
+                    />
+                    <div className="sg-editor__hint">
+                      Вес — часть структуры (будет публиковаться в D1).
+                    </div>
+                  </div>
+
                   {/* Type */}
                   <div className="sg-editor__row">
                     <div className="sg-editor__label">Тип приза</div>
@@ -241,7 +271,7 @@ export function BonusWheelEditor({
                         type="radio"
                         checked={p.kind === 'coins'}
                         onChange={() =>
-                          updPrize(i, { kind: 'coins', coins: Math.max(1, Math.floor(num(p.coins, 1))) })
+                          updPrize(i, { kind: 'coins', coins: Math.max(1, i0(p.coins, 1)), cost_coins: 0 })
                         }
                       />
                       {' '}Монеты
@@ -256,21 +286,32 @@ export function BonusWheelEditor({
                     </label>
                   </div>
 
-                  {/* coins */}
+                  {/* coins or cost_coins */}
                   {p.kind === 'coins' ? (
                     <div className="sg-editor__row">
                       <div className="sg-editor__label">Сколько монет начислять</div>
                       <Input
                         type="number"
-                        value={Math.max(1, Math.floor(num(p.coins, 1)))}
+                        value={Math.max(1, i0(p.coins, 1))}
                         onChange={(e: any) =>
-                          updPrize(i, { coins: Math.max(1, Math.floor(num(e.target.value, 1))) })
+                          updPrize(i, { coins: Math.max(1, i0(e.target.value, 1)) })
                         }
                       />
                     </div>
                   ) : (
-                    <div className="sg-editor__hint">
-                      Себестоимость/остатки/активность/вес — настраиваются в аналитике (D1 live).
+                    <div className="sg-editor__row">
+                      <div className="sg-editor__label">Себестоимость приза (в монетах)</div>
+                      <Input
+                        type="number"
+                        value={Math.max(0, i0(p.cost_coins, 0))}
+                        onChange={(e: any) =>
+                          updPrize(i, { cost_coins: Math.max(0, i0(e.target.value, 0)) })
+                        }
+                      />
+                      <div className="sg-editor__hint">
+                        Денежную сумму кабинет покажет по настройке “стоимость 1 монеты”.
+                        История фиксируется снапшотом (coin_value_cents + prize_cost_coins) в wheel_spins.
+                      </div>
                     </div>
                   )}
 
