@@ -26,7 +26,12 @@ type PrizeStat = {
 
   kind?: string;          // "coins" | "item"
   coins?: number;         // for coins-prize
-  cost_cent?: number;     // item cost in cents
+
+  // ✅ new source of truth for item cost (in coins)
+  cost_coins?: number;
+
+  // legacy for UI (may be present)
+  cost_cent?: number;
   cost_currency?: string;
 
   track_qty?: number;       // 0|1
@@ -36,20 +41,25 @@ type PrizeStat = {
 
 type WheelTimeseriesDay = {
   date: string; // YYYY-MM-DD
-
   spins: number;
-  spin_cost_coins: number;
-
   wins: number;
   redeemed: number;
 
-  // FACT money snapshots (cents) from wheel_spins
+  // ✅ coins (ROI without currency)
+  revenue_coins: number;
+  payout_issued_coins: number;
+  payout_redeemed_coins: number;
+  profit_issued_coins: number;
+  profit_redeemed_coins: number;
+  cum_profit_issued_coins?: number;
+  cum_profit_redeemed_coins?: number;
+
+  // ✅ money snapshots (cents) from wheel_spins
   revenue_cents: number;
   payout_issued_cents: number;
   payout_redeemed_cents: number;
   profit_issued_cents: number;
   profit_redeemed_cents: number;
-
   cum_profit_issued_cents?: number;
   cum_profit_redeemed_cents?: number;
 };
@@ -59,70 +69,69 @@ type AppSettings = {
   currency?: string;
 };
 
-function qs(obj: Record<string, string | number | undefined | null>){
+function qs(obj: Record<string, string | number | undefined | null>) {
   const p = new URLSearchParams();
-  for (const [k,v] of Object.entries(obj)){
+  for (const [k, v] of Object.entries(obj)) {
     if (v !== undefined && v !== null && String(v) !== '') p.set(k, String(v));
   }
   return p.toString();
 }
 
-function toInt(v: any, d = 0){
+function toInt(v: any, d = 0) {
   const n = Number(v);
   if (!Number.isFinite(n)) return d;
   return Math.trunc(n);
 }
 
-function clampN(n: any, min: number, max: number){
+function clampN(n: any, min: number, max: number) {
   const x = Number(n);
   if (!Number.isFinite(x)) return min;
   return Math.max(min, Math.min(max, x));
 }
 
-function fmtPct(x: number | null | undefined, d = '—'){
+function fmtPct(x: number | null | undefined, d = '—') {
   if (x === null || x === undefined || !Number.isFinite(Number(x))) return d;
   return `${(Number(x) * 100).toFixed(1)}%`;
 }
 
-function moneyFromCent(cent: number | null | undefined, currency = '₽'){
+function moneyFromCent(cent: number | null | undefined, currency = '₽') {
   const v = Number(cent);
   if (!Number.isFinite(v)) return '—';
-  // оставляем рубли форматированием как у тебя было
   if (currency.toUpperCase() === 'RUB' || currency === '₽') return `${(v / 100).toFixed(2)} ₽`;
   return `${(v / 100).toFixed(2)} ${currency}`;
 }
 
-function daysBetweenISO(fromISO: string, toISO: string){
-  try{
+function daysBetweenISO(fromISO: string, toISO: string) {
+  try {
     const a = new Date(fromISO + 'T00:00:00Z').getTime();
     const b = new Date(toISO + 'T00:00:00Z').getTime();
     if (!Number.isFinite(a) || !Number.isFinite(b)) return 1;
     const diff = Math.abs(b - a);
-    const days = Math.floor(diff / (24*3600*1000)) + 1;
+    const days = Math.floor(diff / (24 * 3600 * 1000)) + 1;
     return Math.max(1, days);
-  }catch(_){
+  } catch (_) {
     return 1;
   }
 }
 
-function isoAddDays(iso: string, deltaDays: number){
-  try{
+function isoAddDays(iso: string, deltaDays: number) {
+  try {
     const d = new Date(iso + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() + deltaDays);
     const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth()+1).padStart(2,'0');
-    const day = String(d.getUTCDate()).padStart(2,'0');
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
-  }catch(_){
+  } catch (_) {
     return iso;
   }
 }
 
-function listDaysISO(fromISO: string, toISO: string){
+function listDaysISO(fromISO: string, toISO: string) {
   const out: string[] = [];
   if (!fromISO || !toISO) return out;
   let cur = fromISO;
-  for (let i=0; i<400; i++){
+  for (let i = 0; i < 400; i++) {
     out.push(cur);
     if (cur === toISO) break;
     cur = isoAddDays(cur, 1);
@@ -130,45 +139,29 @@ function listDaysISO(fromISO: string, toISO: string){
   return out;
 }
 
-function fmtDDMM(iso: string){
+function fmtDDMM(iso: string) {
   const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   return `${m[3]}.${m[2]}`;
 }
 
 /* Иконки для кнопок-линий в денежном графике */
-function IcoMoney(){
+function IcoMoney() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 5h10v6H3V5z" stroke="currentColor" strokeWidth="2" opacity="0.9"/>
-      <path d="M6 8h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M3 5h10v6H3V5z" stroke="currentColor" strokeWidth="2" opacity="0.9" />
+      <path d="M6 8h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
-function IcoPay(){
+function IcoPay() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 6h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <path d="M4 10h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.9"/>
-      <path d="M6 3h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
+      <path d="M3 6h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M4 10h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+      <path d="M6 3h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
     </svg>
   );
-}
-
-/**
- * Normalize item cost to cents.
- * Rule:
- *  - if cost_cent exists -> use it
- *  - else if cost <= 1_000_000 -> treat as RUB and *100
- *  - else treat as cents (legacy)
- */
-function normalizeCostCent(p: PrizeStat): number {
-  const cc = Number((p as any).cost_cent);
-  if (Number.isFinite(cc) && cc >= 0) return Math.floor(cc);
-  const c = Number((p as any).cost);
-  if (!Number.isFinite(c) || c < 0) return 0;
-  if (c <= 1_000_000) return Math.floor(c * 100);
-  return Math.floor(c);
 }
 
 function normalizeCoins(p: PrizeStat): number {
@@ -176,12 +169,26 @@ function normalizeCoins(p: PrizeStat): number {
   return Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
 }
 
-function normalizeKind(p: PrizeStat): 'coins'|'item' {
+function normalizeKind(p: PrizeStat): 'coins' | 'item' {
   const k = String((p as any).kind || '').trim().toLowerCase();
   return k === 'coins' ? 'coins' : 'item';
 }
 
-function profitBadge(profitCent: number, revenueCent: number){
+// ✅ cost in coins (source of truth):
+// - coins prize: cost == coins
+// - item prize: cost == cost_coins (fallback to 0)
+function normalizeCostCoins(p: PrizeStat): number {
+  const kind = normalizeKind(p);
+  if (kind === 'coins') return normalizeCoins(p);
+
+  const cc = Number((p as any).cost_coins);
+  if (Number.isFinite(cc) && cc >= 0) return Math.floor(cc);
+
+  // legacy fallback: if backend still sends cost_cent, convert to coins via coin_value outside
+  return 0;
+}
+
+function profitBadge(profitCent: number, revenueCent: number) {
   if (revenueCent <= 0) return { text: '—', cls: 'mid' };
   const m = profitCent / revenueCent;
   if (m >= 0.25) return { text: 'ОК', cls: 'ok' };
@@ -189,38 +196,48 @@ function profitBadge(profitCent: number, revenueCent: number){
   return { text: 'ПЛОХО', cls: 'bad' };
 }
 
-function redeemBadge(redeemRatePct: number){
+function redeemBadge(redeemRatePct: number) {
   if (redeemRatePct >= 70) return { text: 'ОК', cls: 'ok' };
   if (redeemRatePct >= 40) return { text: 'РИСК', cls: 'mid' };
   return { text: 'ПЛОХО', cls: 'bad' };
 }
 
-function isTracked(p: PrizeStat){
+function isTracked(p: PrizeStat) {
   return Number(p.track_qty || 0) ? true : false;
 }
-function isStopWhenZero(p: PrizeStat){
+function isStopWhenZero(p: PrizeStat) {
   return Number(p.stop_when_zero || 0) ? true : false;
 }
-function qtyLeft(p: PrizeStat){
+function qtyLeft(p: PrizeStat) {
   const q = (p as any).qty_left;
   const n = Number(q);
   return Number.isFinite(n) ? n : null;
 }
 
-export default function Wheel(){
+// ✅ mimic mini-runtime effWeight (only the crucial part for analytics)
+// if track_qty + stop_when_zero + qty_left<=0 => effective weight = 0
+function effWeight(p: PrizeStat, w: number) {
+  const tracked = isTracked(p);
+  const swz = isStopWhenZero(p);
+  const q = qtyLeft(p);
+  if (tracked && swz && q !== null && q <= 0) return 0;
+  return Math.max(0, w);
+}
+
+export default function Wheel() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
-  const [panel, setPanel] = React.useState<'roi'|'settings'>('roi');
-  const [topMetric, setTopMetric] = React.useState<'wins'|'redeemed'>('wins');
+  const [panel, setPanel] = React.useState<'roi' | 'settings'>('roi');
+  const [topMetric, setTopMetric] = React.useState<'wins' | 'redeemed'>('wins');
 
-  // Finance settings (для EV/ROI и "прогноза")
-  const [coinRub, setCoinRub] = React.useState<string>('1');                 // ₽ per coin (PERSIST)
-  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // local
-  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');       // local
+  // Finance settings
+  const [coinRub, setCoinRub] = React.useState<string>('1'); // ₽ per coin (PERSIST)
+  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // forecast only
+  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>(''); // forecast only
 
-  // расход считать: при выигрыше или при выдаче (в факте — переключает payout/profit из timeseries)
-  const [costBasis, setCostBasis] = React.useState<'issued'|'redeemed'>('issued');
+  // расход считать: при выигрыше или при выдаче (переключает payout/profit из timeseries)
+  const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
   const coinCostCentPerCoin = Math.max(0, Math.floor(Number(String(coinRub).replace(',', '.')) * 100));
   const spinCostCoins = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
@@ -230,8 +247,8 @@ export default function Wheel(){
   const [showPayout, setShowPayout] = React.useState<boolean>(false);
   const [showProfitBars, setShowProfitBars] = React.useState<boolean>(true);
 
-  // Быстрые периоды (в шапке справа)
-  const [quick, setQuick] = React.useState<'day'|'week'|'month'|'custom'>('custom');
+  // Быстрые периоды
+  const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
   const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
 
@@ -243,7 +260,6 @@ export default function Wheel(){
     staleTime: 30_000,
   });
 
-  // применяем в UI только при первом успешном приходе
   React.useEffect(() => {
     const cents = qSettings.data?.settings?.coin_value_cents;
     if (cents === undefined || cents === null) return;
@@ -251,7 +267,6 @@ export default function Wheel(){
     const rub = Number(cents) / 100;
     if (!Number.isFinite(rub) || rub <= 0) return;
 
-    // если юзер уже менял вручную — не перетираем
     setCoinRub(prev => {
       const prevN = Number(prev);
       if (!Number.isFinite(prevN)) return prev;
@@ -265,20 +280,20 @@ export default function Wheel(){
   const [savingCoin, setSavingCoin] = React.useState(false);
   const [coinMsg, setCoinMsg] = React.useState<string>('');
 
-  async function saveCoinValue(){
+  async function saveCoinValue() {
     if (!appId) return;
     setCoinMsg('');
 
     const rub = Number(String(coinRub).replace(',', '.'));
     const cents = Math.floor(rub * 100);
 
-    if (!Number.isFinite(rub) || rub <= 0 || !Number.isFinite(cents) || cents <= 0){
+    if (!Number.isFinite(rub) || rub <= 0 || !Number.isFinite(cents) || cents <= 0) {
       setCoinMsg('Введите корректную стоимость монеты.');
       return;
     }
 
     setSavingCoin(true);
-    try{
+    try {
       await apiFetch(`/api/cabinet/apps/${appId}/settings`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -289,9 +304,9 @@ export default function Wheel(){
 
       setCoinMsg('Сохранено');
       await qc.invalidateQueries({ queryKey: ['app_settings', appId] });
-    }catch(e: any){
+    } catch (e: any) {
       setCoinMsg('Ошибка: ' + String(e?.message || e));
-    }finally{
+    } finally {
       setSavingCoin(false);
     }
   }
@@ -303,27 +318,27 @@ export default function Wheel(){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range?.from, range?.to]);
 
-  function applyRange(nextFrom: string, nextTo: string){
+  function applyRange(nextFrom: string, nextTo: string) {
     if (!nextFrom || !nextTo) return;
-    if (typeof setRange === 'function'){
+    if (typeof setRange === 'function') {
       setRange({ from: nextFrom, to: nextTo });
     }
   }
 
-  function pickQuick(kind: 'day'|'week'|'month'|'custom'){
+  function pickQuick(kind: 'day' | 'week' | 'month' | 'custom') {
     setQuick(kind);
     if (kind === 'custom') return;
 
-    const anchor = range?.to || new Date().toISOString().slice(0,10);
-    if (kind === 'day'){
+    const anchor = range?.to || new Date().toISOString().slice(0, 10);
+    if (kind === 'day') {
       applyRange(anchor, anchor);
       return;
     }
-    if (kind === 'week'){
+    if (kind === 'week') {
       applyRange(isoAddDays(anchor, -6), anchor);
       return;
     }
-    if (kind === 'month'){
+    if (kind === 'month') {
       applyRange(isoAddDays(anchor, -29), anchor);
       return;
     }
@@ -345,7 +360,7 @@ export default function Wheel(){
   const qTs = useQuery({
     enabled: !!appId,
     queryKey: ['wheel_ts', appId, range.from, range.to],
-    queryFn: () => apiFetch<{ ok: true; days: WheelTimeseriesDay[]; settings?: AppSettings }>(
+    queryFn: () => apiFetch<{ ok: true; days: WheelTimeseriesDay[]; settings?: AppSettings; meta?: any }>(
       `/api/cabinet/apps/${appId}/wheel/timeseries?${qs(range)}`
     ),
     staleTime: 10_000,
@@ -353,43 +368,64 @@ export default function Wheel(){
 
   const currency = String(qTs.data?.settings?.currency || qSettings.data?.settings?.currency || 'RUB');
 
-  // ===== FACT totals (ONLY from timeseries = wheel_spins history) =====
+  // ===== FACT totals (from timeseries) =====
   const fact = React.useMemo(() => {
     const days = qTs.data?.days || [];
     const spins = days.reduce((s, d) => s + (Number(d.spins) || 0), 0);
     const wins = days.reduce((s, d) => s + (Number(d.wins) || 0), 0);
     const redeemed = days.reduce((s, d) => s + (Number(d.redeemed) || 0), 0);
 
-    const revenue = days.reduce((s, d) => s + (Number(d.revenue_cents) || 0), 0);
+    const revenue_cents = days.reduce((s, d) => s + (Number(d.revenue_cents) || 0), 0);
+    const payoutIssued_cents = days.reduce((s, d) => s + (Number(d.payout_issued_cents) || 0), 0);
+    const payoutRedeemed_cents = days.reduce((s, d) => s + (Number(d.payout_redeemed_cents) || 0), 0);
+    const payout_cents = (costBasis === 'redeemed') ? payoutRedeemed_cents : payoutIssued_cents;
 
-    const payoutIssued = days.reduce((s, d) => s + (Number(d.payout_issued_cents) || 0), 0);
-    const payoutRedeemed = days.reduce((s, d) => s + (Number(d.payout_redeemed_cents) || 0), 0);
+    const profitIssued_cents = days.reduce((s, d) => s + (Number(d.profit_issued_cents) || 0), 0);
+    const profitRedeemed_cents = days.reduce((s, d) => s + (Number(d.profit_redeemed_cents) || 0), 0);
+    const profit_cents = (costBasis === 'redeemed') ? profitRedeemed_cents : profitIssued_cents;
 
-    const payout = (costBasis === 'redeemed') ? payoutRedeemed : payoutIssued;
+    const revenue_coins = days.reduce((s, d) => s + (Number(d.revenue_coins) || 0), 0);
+    const payoutIssued_coins = days.reduce((s, d) => s + (Number(d.payout_issued_coins) || 0), 0);
+    const payoutRedeemed_coins = days.reduce((s, d) => s + (Number(d.payout_redeemed_coins) || 0), 0);
+    const payout_coins = (costBasis === 'redeemed') ? payoutRedeemed_coins : payoutIssued_coins;
 
-    const profitIssued = days.reduce((s, d) => s + (Number(d.profit_issued_cents) || 0), 0);
-    const profitRedeemed = days.reduce((s, d) => s + (Number(d.profit_redeemed_cents) || 0), 0);
-    const profit = (costBasis === 'redeemed') ? profitRedeemed : profitIssued;
+    const profitIssued_coins = days.reduce((s, d) => s + (Number(d.profit_issued_coins) || 0), 0);
+    const profitRedeemed_coins = days.reduce((s, d) => s + (Number(d.profit_redeemed_coins) || 0), 0);
+    const profit_coins = (costBasis === 'redeemed') ? profitRedeemed_coins : profitIssued_coins;
 
     const redeemRate = wins > 0 ? Math.max(0, Math.min(1, redeemed / wins)) : 0;
 
     return {
       spins, wins, redeemed,
-      revenue,
-      payout,
-      profit,
+      revenue_cents,
+      payout_cents,
+      profit_cents,
+
+      revenue_coins,
+      payout_coins,
+      profit_coins,
+
       redeemRate,
       redeemRatePct: wins > 0 ? Math.round(redeemRate * 100) : 0,
     };
   }, [qTs.data?.days, costBasis]);
 
-  // Top prizes (таблица из stats)
+  // Top prizes
   const top = [...items]
-    .sort((a,b) => (Number((b as any)[topMetric])||0) - (Number((a as any)[topMetric])||0))
+    .sort((a, b) => (Number((b as any)[topMetric]) || 0) - (Number((a as any)[topMetric]) || 0))
     .slice(0, 7);
 
-  // Settings form draft (weight/active)
-  const [draft, setDraft] = React.useState<Record<string, { weight: string; active: boolean }>>({});
+  // ===== Settings draft (тонкие настройки) =====
+  type DraftRow = {
+    active: boolean;
+    weight: string;
+    cost_coins: string;
+    track_qty: boolean;
+    qty_left: string; // empty => don't send
+    stop_when_zero: boolean;
+  };
+
+  const [draft, setDraft] = React.useState<Record<string, DraftRow>>({});
   const [saving, setSaving] = React.useState(false);
   const [saveMsg, setSaveMsg] = React.useState<string>('');
 
@@ -397,13 +433,17 @@ export default function Wheel(){
     if (!items.length) return;
     setDraft(prev => {
       const next = { ...prev };
-      for (const p of items){
-        const key = p.prize_code;
-        if (!key) continue;
-        if (next[key] === undefined){
-          next[key] = {
-            weight: (p.weight ?? '') === null || (p.weight ?? '') === undefined ? '' : String(p.weight),
+      for (const p of items) {
+        const code = p.prize_code;
+        if (!code) continue;
+        if (next[code] === undefined) {
+          next[code] = {
             active: !!p.active,
+            weight: (p.weight ?? '') === null || (p.weight ?? '') === undefined ? '' : String(p.weight),
+            cost_coins: (p.cost_coins ?? '') === null || (p.cost_coins ?? '') === undefined ? '' : String(p.cost_coins),
+            track_qty: !!p.track_qty,
+            qty_left: (p.qty_left === null || p.qty_left === undefined) ? '' : String(p.qty_left),
+            stop_when_zero: !!p.stop_when_zero,
           };
         }
       }
@@ -412,14 +452,22 @@ export default function Wheel(){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qStats.data?.items]);
 
-  function setWeight(code: string, v: string){
-    setDraft(d => ({ ...d, [code]: { weight: v, active: !!d[code]?.active } }));
-  }
-  function toggleActive(code: string){
-    setDraft(d => ({ ...d, [code]: { weight: d[code]?.weight ?? '', active: !d[code]?.active } }));
+  function patchDraft(code: string, patch: Partial<DraftRow>) {
+    setDraft(d => ({
+      ...d,
+      [code]: {
+        active: !!d[code]?.active,
+        weight: d[code]?.weight ?? '',
+        cost_coins: d[code]?.cost_coins ?? '',
+        track_qty: !!d[code]?.track_qty,
+        qty_left: d[code]?.qty_left ?? '',
+        stop_when_zero: !!d[code]?.stop_when_zero,
+        ...patch,
+      }
+    }));
   }
 
-  async function save(){
+  async function save() {
     if (!appId) return;
     setSaveMsg('');
 
@@ -432,17 +480,43 @@ export default function Wheel(){
         const weight = clampN(toInt(d.weight, 0), 0, 1_000_000);
         const active = d.active ? 1 : 0;
 
-        return { prize_code: code, weight, active };
-      })
-      .filter(Boolean) as Array<{ prize_code: string; weight: number; active: 0 | 1 }>;
+        const track_qty = d.track_qty ? 1 : 0;
+        const stop_when_zero = d.stop_when_zero ? 1 : 0;
 
-    if (!payloadItems.length){
+        // qty_left: если пусто => не трогаем (undefined)
+        const qty_left_raw = String(d.qty_left ?? '').trim();
+        const qty_left =
+          qty_left_raw === ''
+            ? undefined
+            : Math.max(0, toInt(qty_left_raw, 0));
+
+        const cost_coins_raw = String(d.cost_coins ?? '').trim();
+        const cost_coins =
+          cost_coins_raw === ''
+            ? undefined
+            : Math.max(0, toInt(cost_coins_raw, 0));
+
+        return {
+          prize_code: code,
+          weight,
+          active,
+
+          track_qty,
+          stop_when_zero,
+
+          ...(qty_left === undefined ? {} : { qty_left }),
+          ...(cost_coins === undefined ? {} : { cost_coins }),
+        };
+      })
+      .filter(Boolean) as Array<any>;
+
+    if (!payloadItems.length) {
       setSaveMsg('Нечего сохранять.');
       return;
     }
 
     setSaving(true);
-    try{
+    try {
       const r = await apiFetch<{ ok: true; updated: number }>(
         `/api/cabinet/apps/${appId}/wheel/prizes`,
         {
@@ -454,86 +528,124 @@ export default function Wheel(){
 
       setSaveMsg(`Сохранено: ${r.updated}`);
       await qc.invalidateQueries({ queryKey: ['wheel', appId] });
-    }catch(e: any){
+      await qc.invalidateQueries({ queryKey: ['wheel_ts', appId] });
+    } catch (e: any) {
       setSaveMsg('Ошибка сохранения: ' + String(e?.message || e));
-    }finally{
+    } finally {
       setSaving(false);
     }
   }
 
   // ===== PROGNOSIS EV/ROI (current config; НЕ влияет на факт) =====
   const ev = React.useMemo(() => {
-    const active = items.filter(p => (Number(p.active) || 0) ? true : false);
-    const wSum = active.reduce((s, p) => s + Math.max(0, Number(p.weight) || 0), 0);
+    // используем draft если есть, чтобы прогноз сразу реагировал на правки
+    const merged = items.map(p => {
+      const d = draft[p.prize_code];
+      if (!d) return p;
 
+      const next: PrizeStat = { ...p };
+      next.active = d.active ? 1 : 0;
+      next.weight = d.weight === '' ? (p.weight ?? 0) : toInt(d.weight, Number(p.weight ?? 0));
+      next.track_qty = d.track_qty ? 1 : 0;
+      next.stop_when_zero = d.stop_when_zero ? 1 : 0;
+
+      if (String(d.qty_left ?? '').trim() !== '') next.qty_left = Math.max(0, toInt(d.qty_left, 0));
+      if (String(d.cost_coins ?? '').trim() !== '') next.cost_coins = Math.max(0, toInt(d.cost_coins, 0));
+
+      return next;
+    });
+
+    const active = merged.filter(p => (Number(p.active) || 0) ? true : false);
+
+    // eff weights учитывают stop_when_zero+qty_left (как в рантайме)
+    const wSum = active.reduce((s, p) => s + effWeight(p, Math.max(0, Number(p.weight) || 0)), 0);
+
+    // выручка за спин (в монетах и в центах)
+    const spinRevenueCoins = spinCostCoins;
     const spinRevenueCent = spinCostCoins * coinCostCentPerCoin;
 
-    let coinsEvAcc = 0;
-    let itemEvAcc = 0;
+    let evCoinsAcc = 0;
 
     const perPrize = active.map((p) => {
-      const w = Math.max(0, Number(p.weight) || 0);
+      const wRaw = Math.max(0, Number(p.weight) || 0);
+      const w = effWeight(p, wRaw);
       const prob = wSum > 0 ? (w / wSum) : 0;
 
       const kind = normalizeKind(p);
       const coins = normalizeCoins(p);
 
-      const costCent =
-        kind === 'coins'
-          ? coins * coinCostCentPerCoin
-          : normalizeCostCent(p);
+      const costCoins = (kind === 'coins') ? coins : Math.max(0, Number(p.cost_coins ?? 0) || 0);
+      const expCoins = prob * costCoins;
 
-      const expCent = prob * costCent;
+      evCoinsAcc += expCoins;
 
-      if (kind === 'coins') coinsEvAcc += expCent;
-      else itemEvAcc += expCent;
+      // money projection just for UI
+      const costCent = Math.round(costCoins * coinCostCentPerCoin);
+      const expCent = Math.round(expCoins * coinCostCentPerCoin);
 
-      const hasCost = kind === 'coins' ? true : (normalizeCostCent(p) > 0);
+      const tracked = isTracked(p);
+      const swz = isStopWhenZero(p);
+      const q = qtyLeft(p);
+      const disabledByStock = tracked && swz && q !== null && q <= 0;
 
       return {
         prize_code: p.prize_code,
         title: p.title || p.prize_code,
-        weight: w,
+        weight: wRaw,
+        eff_weight: w,
         prob,
         kind,
         coins,
+        costCoins,
+        expCoins,
         costCent,
         expCent,
-        hasCost,
+        disabledByStock,
       };
     });
 
-    const coinsEvCent = Math.round(coinsEvAcc);
-    const itemEvCent = Math.round(itemEvAcc);
-
-    // для прогноза долю выдачи берём из факта (wheel_spins), чтобы было реалистичнее
+    const payoutCoinsIssued = evCoinsAcc;
+    // ✅ redeemed-basis: apply redeemRate to ALL payouts (coins + items),
+    // because payout happens on cashier confirmation
     const redeemRate = fact.redeemRate;
+    const payoutCoinsRedeemed = evCoinsAcc * redeemRate;
 
-    const payoutCentIssued = coinsEvCent + itemEvCent;
-    const payoutCentRedeemed = coinsEvCent + Math.round(itemEvCent * redeemRate);
+    const payoutCoins = (costBasis === 'redeemed') ? payoutCoinsRedeemed : payoutCoinsIssued;
 
+    const profitCoins = spinRevenueCoins - payoutCoins;
+    const roiCoins = spinRevenueCoins > 0 ? (profitCoins / spinRevenueCoins) : null;
+
+    // money view (for existing UI blocks)
+    const payoutCentIssued = Math.round(payoutCoinsIssued * coinCostCentPerCoin);
+    const payoutCentRedeemed = Math.round(payoutCoinsRedeemed * coinCostCentPerCoin);
     const payoutCent = (costBasis === 'redeemed') ? payoutCentRedeemed : payoutCentIssued;
-
     const profitCent = Math.round(spinRevenueCent - payoutCent);
     const roi = spinRevenueCent > 0 ? (profitCent / spinRevenueCent) : null;
 
     const breakEvenSpins = profitCent > 0 ? Math.ceil(payoutCent / profitCent) : null;
 
-    const riskRows = [...perPrize].sort((a, b) => (b.expCent - a.expCent));
+    const riskRows = [...perPrize].sort((a, b) => (b.expCoins - a.expCoins));
+
     const costCoverage = perPrize.length
-      ? Math.round((perPrize.filter(x => x.hasCost).length / perPrize.length) * 100)
+      ? Math.round((perPrize.filter(x => x.costCoins > 0).length / perPrize.length) * 100)
       : 0;
 
     return {
       wSum,
+      spinRevenueCoins,
+      payoutCoinsIssued,
+      payoutCoinsRedeemed,
+      payoutCoins,
+      profitCoins,
+      roiCoins,
+
       spinRevenueCent,
-      coinsEvCent,
-      itemEvCent,
       payoutCentIssued,
       payoutCentRedeemed,
       payoutCent,
       profitCent,
       roi,
+
       breakEvenSpins,
       perPrize,
       riskRows,
@@ -541,27 +653,33 @@ export default function Wheel(){
     };
   }, [
     items,
+    draft,
     spinCostCoins,
     coinCostCentPerCoin,
     fact.redeemRate,
     costBasis,
   ]);
 
-  // ===== FACT period (from wheel_spins) =====
+  // ===== FACT period (money) =====
   const period = React.useMemo(() => {
     const days = daysBetweenISO(range.from, range.to);
     const spins = fact.spins;
-    const revenue = fact.revenue;
-    const payout = fact.payout;
-    const profit = fact.profit;
+
+    const revenue = fact.revenue_cents;
+    const payout = fact.payout_cents;
+    const profit = fact.profit_cents;
+
     const spinsPerDay = days > 0 ? (spins / days) : 0;
     return { days, spins, revenue, payout, profit, spinsPerDay };
-  }, [range.from, range.to, fact.spins, fact.revenue, fact.payout, fact.profit]);
+  }, [range.from, range.to, fact.spins, fact.revenue_cents, fact.payout_cents, fact.profit_cents]);
 
-  const profitTag = React.useMemo(() => profitBadge(period.profit, Math.max(0, period.revenue)), [period.profit, period.revenue]);
+  const profitTag = React.useMemo(
+    () => profitBadge(period.profit, Math.max(0, period.revenue)),
+    [period.profit, period.revenue]
+  );
   const redeemTag = React.useMemo(() => redeemBadge(fact.redeemRatePct), [fact.redeemRatePct]);
 
-  const activeCount = items.filter(i => (Number(i.active)||0) ? true : false).length;
+  const activeCount = items.filter(i => (Number(i.active) || 0) ? true : false).length;
 
   // ===== ОСТАТКИ / ИНВЕНТАРЬ =====
   const inventory = React.useMemo(() => {
@@ -592,7 +710,7 @@ export default function Wheel(){
         const q = qtyLeft(p);
         return q !== null && q <= lowThreshold;
       })
-      .sort((a,b) => (Number(b.wins)||0) - (Number(a.wins)||0))
+      .sort((a, b) => (Number(b.wins) || 0) - (Number(a.wins) || 0))
       .slice(0, 3);
 
     return {
@@ -608,7 +726,7 @@ export default function Wheel(){
   // ===== MONEY SERIES (FACT DAYS from wheel_spins) =====
   const moneySeries = React.useMemo(() => {
     const map = new Map<string, WheelTimeseriesDay>();
-    for (const r of (qTs.data?.days || [])){
+    for (const r of (qTs.data?.days || [])) {
       if (r?.date) map.set(String(r.date), r);
     }
 
@@ -619,7 +737,6 @@ export default function Wheel(){
       const r = map.get(iso);
 
       const spins = Number(r?.spins || 0);
-
       const revenue = Number(r?.revenue_cents || 0);
 
       const payout =
@@ -654,7 +771,7 @@ export default function Wheel(){
 
   const topRisk = ev.riskRows?.[0] || null;
 
-  // FACT average profit/spin for forecast
+  // FACT avg profit/spin for forecast (money)
   const profitPerSpinFact = React.useMemo(() => {
     if (period.spins <= 0) return 0;
     return Math.round(period.profit / Math.max(1, period.spins));
@@ -678,28 +795,27 @@ export default function Wheel(){
       <div className="wheelHead">
         <div>
           <h1 className="sg-h1">Колесо</h1>
-          <div className="sg-sub">Факт по спинам (wheel_spins) + прогноз EV/ROI.</div>
+          <div className="sg-sub">Факт по спинам (wheel_spins) + прогноз EV/ROI (по тонким настройкам из wheel_prizes).</div>
         </div>
 
-        {/* Быстрые периоды справа */}
-        <div style={{ marginLeft: 'auto', display:'flex', alignItems:'center', gap: 10, flexWrap:'wrap' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div className="sg-tabs wheelMiniTabs">
-            <button type="button" className={'sg-tab ' + (quick==='day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>
+            <button type="button" className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>
               День
             </button>
-            <button type="button" className={'sg-tab ' + (quick==='week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>
+            <button type="button" className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>
               Неделя
             </button>
-            <button type="button" className={'sg-tab ' + (quick==='month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>
+            <button type="button" className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>
               Месяц
             </button>
-            <button type="button" className={'sg-tab ' + (quick==='custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>
+            <button type="button" className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>
               Свой период
             </button>
           </div>
 
           {quick === 'custom' && (
-            <div className="sg-pill" style={{ padding:'8px 10px', display:'flex', alignItems:'center', gap: 8, flexWrap:'wrap' }}>
+            <div className="sg-pill" style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span className="sg-muted">от</span>
               <Input type="date" value={customFrom} onChange={(e: any) => setCustomFrom(e.target.value)} style={{ width: 150 }} />
               <span className="sg-muted">до</span>
@@ -735,7 +851,7 @@ export default function Wheel(){
                   onClick={() => setShowRevenue(v => !v)}
                   title="Выручка"
                   aria-label="Выручка"
-                ><IcoMoney/></button>
+                ><IcoMoney /></button>
 
                 <button
                   type="button"
@@ -743,7 +859,7 @@ export default function Wheel(){
                   onClick={() => setShowPayout(v => !v)}
                   title="Расход"
                   aria-label="Расход"
-                ><IcoPay/></button>
+                ><IcoPay /></button>
 
                 <button
                   type="button"
@@ -871,13 +987,13 @@ export default function Wheel(){
               </div>
             </div>
 
-            <div style={{ marginTop: 12, display:'flex', alignItems:'center', gap: 12, flexWrap:'wrap' }}>
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div className="sg-muted" style={{ fontWeight: 900 }}>Расход считать (ФАКТ):</div>
 
               <div className="sg-tabs wheelMiniTabs">
                 <button
                   type="button"
-                  className={'sg-tab ' + (costBasis==='issued' ? 'is-active' : '')}
+                  className={'sg-tab ' + (costBasis === 'issued' ? 'is-active' : '')}
                   onClick={() => setCostBasis('issued')}
                   title="Факт расхода считаем в момент выигрыша"
                 >
@@ -885,7 +1001,7 @@ export default function Wheel(){
                 </button>
                 <button
                   type="button"
-                  className={'sg-tab ' + (costBasis==='redeemed' ? 'is-active' : '')}
+                  className={'sg-tab ' + (costBasis === 'redeemed' ? 'is-active' : '')}
                   onClick={() => setCostBasis('redeemed')}
                   title="Факт расхода считаем по факту выдачи"
                 >
@@ -893,18 +1009,24 @@ export default function Wheel(){
                 </button>
               </div>
 
-              <div className="sg-pill" style={{ padding:'8px 12px' }}>
+              <div className="sg-pill" style={{ padding: '8px 12px' }}>
                 <span className="sg-muted">Доля выдачи: </span>
                 <b>{fmtPct(fact.redeemRate, '—')}</b>
               </div>
+
+              {qTs.data?.meta?.used_snapshots === 0 ? (
+                <div className="sg-pill" style={{ padding: '8px 12px' }}>
+                  <span className="sg-muted">⚠️ Важно: нет снапшотов (колонки в wheel_spins)</span>
+                </div>
+              ) : null}
             </div>
 
             <div className="wheelUnderTabs">
               <div className="sg-tabs wheelUnderTabs__seg">
-                <button className={'sg-tab ' + (panel==='roi' ? 'is-active' : '')} onClick={() => setPanel('roi')}>
+                <button className={'sg-tab ' + (panel === 'roi' ? 'is-active' : '')} onClick={() => setPanel('roi')}>
                   Прогноз: окупаемость и экономика
                 </button>
-                <button className={'sg-tab ' + (panel==='settings' ? 'is-active' : '')} onClick={() => setPanel('settings')}>
+                <button className={'sg-tab ' + (panel === 'settings' ? 'is-active' : '')} onClick={() => setPanel('settings')}>
                   Настройки
                 </button>
               </div>
@@ -925,14 +1047,23 @@ export default function Wheel(){
                       <div className="wheelSumTile">
                         <div className="wheelSumLbl">Выручка за 1 спин (прогноз)</div>
                         <div className="wheelSumVal">{moneyFromCent(ev.spinRevenueCent, currency)}</div>
+                        <div className="sg-muted" style={{ marginTop: 4 }}>
+                          {ev.spinRevenueCoins} монет / спин
+                        </div>
                       </div>
                       <div className="wheelSumTile">
                         <div className="wheelSumLbl">Ожидаемый расход (EV)</div>
                         <div className="wheelSumVal">{moneyFromCent(ev.payoutCent, currency)}</div>
+                        <div className="sg-muted" style={{ marginTop: 4 }}>
+                          {ev.payoutCoins.toFixed(2)} монет / спин
+                        </div>
                       </div>
                       <div className="wheelSumTile is-strong">
                         <div className="wheelSumLbl">Ожидаемая прибыль (EV)</div>
                         <div className="wheelSumVal">{moneyFromCent(ev.profitCent, currency)}</div>
+                        <div className="sg-muted" style={{ marginTop: 4 }}>
+                          {ev.profitCoins.toFixed(2)} монет / спин
+                        </div>
                       </div>
                     </div>
 
@@ -948,23 +1079,25 @@ export default function Wheel(){
                     </div>
 
                     {topRisk ? (
-                      <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 10 }}>
+                      <div className="sg-pill" style={{ padding: '10px 12px', marginTop: 10 }}>
                         <span className="sg-muted">Главный риск по EV: </span>
                         <b>{topRisk.title}</b>
                         <span className="sg-muted"> · вклад EV: </span>
                         <b>{moneyFromCent(Math.round(topRisk.expCent), currency)}</b>
+                        <span className="sg-muted"> · </span>
+                        <b>{topRisk.expCoins.toFixed(2)} монет</b>
                       </div>
                     ) : null}
 
                     {inventory.risky.length ? (
-                      <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 10 }}>
+                      <div className="sg-pill" style={{ padding: '10px 12px', marginTop: 10 }}>
                         <span className="sg-muted">Риск по остаткам (топ): </span>
                         <b>{inventory.risky.map(x => x.title || x.prize_code).join(', ')}</b>
                       </div>
                     ) : null}
 
                     <div className="sg-muted" style={{ marginTop: 12 }}>
-                      Покрытие себестоимости (у приза указан cost): <b>{ev.costCoverage}%</b>.
+                      Покрытие себестоимости (cost_coins &gt; 0): <b>{ev.costCoverage}%</b>.
                     </div>
                   </div>
                 </div>
@@ -974,11 +1107,11 @@ export default function Wheel(){
                 <div className="wheelUnderPanel">
                   <div className="wheelUnderHead">
                     <div>
-                      <div className="wheelCardTitle">Настройки</div>
+                      <div className="wheelCardTitle">Настройки (тонкие)</div>
                       <div className="wheelCardSub">
-                        Вес/активность — сохраняем в воркер. “Стоимость монеты” — в app_settings.
-                        <br/>
-                        Экономика EV/ROI ниже — прогноз (локально), история не меняется.
+                        Тут правим live-поля в <b>wheel_prizes</b>: weight/active/cost_coins/track_qty/qty_left/stop_when_zero.
+                        <br />
+                        “Стоимость монеты” — в app_settings. История (wheel_spins) не переписывается.
                       </div>
                     </div>
 
@@ -998,7 +1131,7 @@ export default function Wheel(){
                         = {moneyFromCent(coinCostCentPerCoin, currency)} / монета
                       </div>
 
-                      <div style={{ marginTop: 10, display:'flex', gap: 10, alignItems:'center', flexWrap:'wrap' }}>
+                      <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                         <Button variant="primary" onClick={saveCoinValue} disabled={savingCoin || !appId}>
                           {savingCoin ? 'Сохраняю…' : 'Сохранить стоимость монеты'}
                         </Button>
@@ -1036,75 +1169,145 @@ export default function Wheel(){
                           <th>Название</th>
                           <th>Выигрыши</th>
                           <th>Выдачи</th>
-                          <th style={{ minWidth: 220 }}>Остаток</th>
-                          <th style={{ minWidth: 220 }}>Вес</th>
+
+                          <th style={{ minWidth: 170 }}>Cost (монет)</th>
+                          <th style={{ minWidth: 160 }}>Вес</th>
                           <th style={{ minWidth: 120 }}>Активен</th>
+
+                          <th style={{ minWidth: 140 }}>Учёт остатков</th>
+                          <th style={{ minWidth: 150 }}>Остаток</th>
+                          <th style={{ minWidth: 170 }}>Авто-выкл при 0</th>
                         </tr>
                       </thead>
                       <tbody>
                         {items.map((p) => {
-                          const d = draft[p.prize_code] || { weight: String(p.weight ?? ''), active: !!p.active };
+                          const d = draft[p.prize_code] || {
+                            active: !!p.active,
+                            weight: String(p.weight ?? ''),
+                            cost_coins: String(p.cost_coins ?? ''),
+                            track_qty: !!p.track_qty,
+                            qty_left: (p.qty_left === null || p.qty_left === undefined) ? '' : String(p.qty_left),
+                            stop_when_zero: !!p.stop_when_zero,
+                          };
 
-                          const tracked = isTracked(p);
-                          const q = qtyLeft(p);
-                          const swz = isStopWhenZero(p);
-                          const out = tracked && (q !== null && q <= 0);
-                          const low = tracked && (q !== null && q > 0 && q <= inventory.lowThreshold);
+                          const kind = normalizeKind(p);
+                          const isCoinsPrize = kind === 'coins';
+
+                          const tracked = !!d.track_qty;
+                          const qRaw = String(d.qty_left ?? '').trim();
+                          const qNum = qRaw === '' ? qtyLeft(p) : Math.max(0, toInt(qRaw, 0));
+                          const swz = !!d.stop_when_zero;
+
+                          const out = tracked && (qNum !== null && qNum <= 0);
+                          const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
 
                           return (
                             <tr key={p.prize_code}>
                               <td><b>{p.prize_code}</b></td>
-                              <td>{p.title}</td>
+                              <td>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  <div>{p.title}</div>
+                                  <div className="sg-muted" style={{ fontSize: 12 }}>
+                                    {kind === 'coins' ? `coins: ${normalizeCoins(p)}` : 'item'}
+                                  </div>
+                                </div>
+                              </td>
                               <td>{p.wins}</td>
                               <td>{p.redeemed}</td>
 
                               <td>
-                                {tracked ? (
-                                  <div style={{ display:'flex', alignItems:'center', gap: 10, flexWrap:'wrap' }}>
-                                    <span style={{ fontWeight: 900 }}>
-                                      {q === null ? '—' : q}
-                                    </span>
-                                    <span className="sg-muted">
-                                      {swz ? '· авто-выкл при нуле' : '· без авто-выкл'}
-                                    </span>
-                                    {out ? <span className="sg-pill" style={{ padding:'6px 10px' }}><b>ноль</b></span> : null}
-                                    {low ? <span className="sg-pill" style={{ padding:'6px 10px' }}><b>мало</b></span> : null}
-                                  </div>
+                                {isCoinsPrize ? (
+                                  <div className="sg-muted">= coins ({normalizeCoins(p)})</div>
                                 ) : (
-                                  <span className="sg-muted">не учитываем</span>
+                                  <Input
+                                    value={d.cost_coins}
+                                    onChange={(e: any) => patchDraft(p.prize_code, { cost_coins: e.target.value })}
+                                    placeholder="0"
+                                  />
                                 )}
                               </td>
 
                               <td>
                                 <Input
                                   value={d.weight}
-                                  onChange={(e: any) => setWeight(p.prize_code, e.target.value)}
+                                  onChange={(e: any) => patchDraft(p.prize_code, { weight: e.target.value })}
                                   placeholder="weight"
                                 />
                               </td>
 
                               <td>
-                                <label style={{ display:'flex', alignItems:'center', gap: 10 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                   <input
                                     type="checkbox"
                                     checked={!!d.active}
-                                    onChange={() => toggleActive(p.prize_code)}
+                                    onChange={() => patchDraft(p.prize_code, { active: !d.active })}
                                   />
                                   <span style={{ fontWeight: 800 }}>{d.active ? 'вкл' : 'выкл'}</span>
                                 </label>
+                              </td>
+
+                              <td>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!d.track_qty}
+                                    onChange={() => patchDraft(p.prize_code, { track_qty: !d.track_qty })}
+                                    disabled={isCoinsPrize ? false : false}
+                                  />
+                                  <span style={{ fontWeight: 800 }}>{d.track_qty ? 'да' : 'нет'}</span>
+                                </label>
+                              </td>
+
+                              <td>
+                                {tracked ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                    <Input
+                                      value={d.qty_left}
+                                      onChange={(e: any) => patchDraft(p.prize_code, { qty_left: e.target.value })}
+                                      placeholder="qty_left"
+                                      style={{ width: 120 }}
+                                    />
+                                    <span className="sg-muted">
+                                      {out ? '· ноль' : low ? `· мало (≤${inventory.lowThreshold})` : ''}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="sg-muted">—</span>
+                                )}
+                              </td>
+
+                              <td>
+                                {tracked ? (
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!d.stop_when_zero}
+                                      onChange={() => patchDraft(p.prize_code, { stop_when_zero: !d.stop_when_zero })}
+                                    />
+                                    <span style={{ fontWeight: 800 }}>{d.stop_when_zero ? 'да' : 'нет'}</span>
+                                    {out && d.stop_when_zero ? (
+                                      <span className="sg-pill" style={{ padding: '6px 10px' }}>
+                                        <b>выключен по нулю</b>
+                                      </span>
+                                    ) : null}
+                                  </label>
+                                ) : (
+                                  <span className="sg-muted">—</span>
+                                )}
                               </td>
                             </tr>
                           );
                         })}
                         {!items.length && !qStats.isLoading && (
-                          <tr><td colSpan={7} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
+                          <tr><td colSpan={10} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
                         )}
                       </tbody>
                     </table>
                   </div>
 
                   <div className="sg-muted" style={{ marginTop: 12 }}>
-                    Подсказка: если приз учитывает остатки и включён “авто-выкл при нуле”, то при qty_left=0 он фактически перестаёт выпадать в мини-аппе.
+                    Подсказка: в прогнозе EV вес обнуляется только если включены <b>track_qty</b> и <b>stop_when_zero</b>, и <b>qty_left ≤ 0</b>.
+                    Это повторяет ключевую логику выпадения в мини-аппе.
                   </div>
                 </div>
               )}
@@ -1140,7 +1343,7 @@ export default function Wheel(){
                 </div>
 
                 <div className="wheelSumTile is-strong">
-                  <div className="wheelSumLbl" style={{ display:'flex', alignItems:'center', gap: 8 }}>
+                  <div className="wheelSumLbl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     Прибыль
                     <span className={'wheelRedeemBadge ' + profitTag.cls}>{profitTag.text}</span>
                   </div>
@@ -1189,7 +1392,7 @@ export default function Wheel(){
               </div>
 
               {topRisk ? (
-                <div className="sg-pill" style={{ padding:'10px 12px', marginTop: 12 }}>
+                <div className="sg-pill" style={{ padding: '10px 12px', marginTop: 12 }}>
                   <span className="sg-muted">Главный риск по EV: </span>
                   <b>{topRisk.title}</b>
                   <span className="sg-muted"> · вклад EV: </span>
@@ -1206,14 +1409,14 @@ export default function Wheel(){
               <div className="sg-tabs wheelMiniTabs">
                 <button
                   type="button"
-                  className={'sg-tab ' + (topMetric==='wins' ? 'is-active' : '')}
+                  className={'sg-tab ' + (topMetric === 'wins' ? 'is-active' : '')}
                   onClick={() => setTopMetric('wins')}
                 >
                   Выигрыши
                 </button>
                 <button
                   type="button"
-                  className={'sg-tab ' + (topMetric==='redeemed' ? 'is-active' : '')}
+                  className={'sg-tab ' + (topMetric === 'redeemed' ? 'is-active' : '')}
                   onClick={() => setTopMetric('redeemed')}
                 >
                   Выдачи
@@ -1229,15 +1432,15 @@ export default function Wheel(){
 
                 return (
                   <div className={"wheelTopRowPro " + (idx < 3 ? "is-top" : "")} key={p.prize_code}>
-                    <div className={"wheelTopMedal m" + (idx+1)}>{idx+1}</div>
+                    <div className={"wheelTopMedal m" + (idx + 1)}>{idx + 1}</div>
 
                     <div className="wheelTopMid">
                       <div className="wheelTopTitle">{p.title}</div>
 
                       <div className="wheelTopMini">
                         {topMetric === 'wins'
-                          ? `выдачи: ${Number(p.redeemed)||0}`
-                          : `выигрыши: ${Number(p.wins)||0}`
+                          ? `выдачи: ${Number(p.redeemed) || 0}`
+                          : `выигрыши: ${Number(p.wins) || 0}`
                         }
                       </div>
 
