@@ -836,21 +836,27 @@ React.useEffect(() => {
   border-radius:12px; /* такой же как у обычных wheelChartBtn */
 }
 
-/* ===== PERIOD SEGMENT + DATES (CLEAN, NO JUMP, NO SEAM) ===== */
+/* =====================================================
+   PERIOD SWITCH + CUSTOM RANGE (STABLE FINAL VERSION)
+   ===================================================== */
 
 .wheelQuickWrap{
   display:flex;
-  align-items:center;     /* НЕ stretch => высота не прыгает */
+  align-items:center;
   gap:0;
   flex-wrap:nowrap;
+
+  height:46px;                 /* фикс высоты — убирает прыжок */
+  box-sizing:border-box;
 
   border:1px solid rgba(15,23,42,.12);
   border-radius:12px;
   background:rgba(255,255,255,.60);
-  overflow:hidden;        /* убирает “шов” и линии */
+  overflow:hidden;
 }
 
-/* табы: убираем внешнюю рамку, чтобы рамка была одна общая */
+
+/* убираем внешние стили у tabs чтобы рамка была одна */
 .wheelQuickTabs{
   border:0 !important;
   border-radius:0 !important;
@@ -858,49 +864,67 @@ React.useEffect(() => {
   box-shadow:none !important;
 }
 
-/* правая часть: тоже без внешней рамки */
+
+/* правая часть */
 .wheelQuickRange{
   display:flex;
   align-items:center;
   gap:8px;
-  padding:6px 10px;
 
+  height:100%;
+  padding:0 12px;
   border:0;
   background:transparent;
-}
 
-/* вертикальный разделитель (аккуратный) */
-.wheelQuickRange{
   position:relative;
 }
+
+
+/* вертикальный разделитель */
 .wheelQuickRange::before{
   content:"";
   position:absolute;
   left:0;
-  top:8px;
-  bottom:8px;
+  top:50%;
+  transform:translateY(-50%);
+  height:26px;
   width:1px;
   background:rgba(15,23,42,.10);
 }
 
-/* подписи от/до */
+
+/* подписи */
 .wheelQuickLbl{
   font-weight:900;
   opacity:.75;
   font-size:12px;
+  font-family:inherit;
 }
 
-/* инпуты дат */
+
+/* date inputs */
 .wheelQuickDate{
   width:150px;
+
   height:34px;
   padding:0 12px;
+  box-sizing:border-box;
+
   border-radius:12px;
   border:1px solid rgba(15,23,42,.12);
   background:rgba(255,255,255,.90);
+
+  font:inherit;
   font-weight:900;
   font-size:13px;
+  font-family:inherit !important;
+  font-variant-numeric:tabular-nums;
+
+  line-height:32px;
+  appearance:none;
+  -webkit-appearance:none;
 }
+
 
 /* иконка календаря */
 .wheelQuickDate::-webkit-calendar-picker-indicator{
@@ -908,80 +932,49 @@ React.useEffect(() => {
   cursor:pointer;
 }
 
-/* кнопка применить (если делаешь её sg-tab) */
-.wheelApplyBtn{ margin-left:6px; }
 
-/* адаптив */
-@media (max-width:1100px){
-  .wheelQuickWrap{
-    flex-wrap:wrap;
-    gap:10px;
-    padding:6px;
-  }
-
-  .wheelQuickRange{
-    width:100%;
-    padding:8px 6px 6px;
-  }
-
-  .wheelQuickRange::before{
-    display:none; /* на переносе не нужна вертикальная линия */
-  }
-}
-
-/* Apply button must NOT change toolbar height */
+/* APPLY button */
 .wheelApplyBtn{
-  height:34px;           /* как у sg-tab */
+  height:34px;
   line-height:34px;
-  padding:0 14px;        /* как у табов */
-  border-radius:12px;    /* как у дат/контрола */
-  flex:0 0 auto;
+  padding:0 14px;
+  margin-left:6px;
+
+  border-radius:12px;
+  box-sizing:border-box;
+
+  font:inherit;
+  font-weight:900;
+  font-size:13px;
   white-space:nowrap;
 }
 
-/* если кнопка disabled — чтобы не “плыла” */
 .wheelApplyBtn:disabled{
   opacity:.55;
   cursor:not-allowed;
 }
 
-/* ===== FORCE SAME FONT AS sg-tab ===== */
 
-/* кнопка применить */
-.wheelApplyBtn{
-  font: inherit;
-  font-weight:900;
-  font-size:13px;
-  letter-spacing:0;
-}
+/* ========= responsive ========= */
 
-/* инпут дат */
-.wheelQuickDate{
-  font: inherit;
-  font-weight:900;
-  font-size:13px;
-  letter-spacing:0;
-  font-variant-numeric: tabular-nums;
-}
+@media (max-width:1100px){
 
-/* чтобы браузер не подменял системный шрифт */
-.wheelQuickDate input,
-.wheelQuickDate{
-  font-family: inherit !important;
-}
+  .wheelQuickWrap{
+    flex-wrap:wrap;
+    height:auto;
+    padding:6px;
+    gap:10px;
+  }
 
-.wheelQuickDate{
-  box-sizing:border-box;
-  vertical-align:middle;
-}
+  .wheelQuickRange{
+    width:100%;
+    height:auto;
+    padding:6px 8px;
+  }
 
-.wheelApplyBtn{
-  box-sizing:border-box;
-}
-.wheelQuickDate{
-  height:34px;
-  line-height:32px;  /* на 2px меньше из-за border */
-  padding:0 12px;
+  .wheelQuickRange::before{
+    display:none;
+  }
 }
 
         
