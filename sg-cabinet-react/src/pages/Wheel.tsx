@@ -1808,18 +1808,22 @@ React.useEffect(() => {
                   ? (out ? 'stockRowState is-out' : (low ? 'stockRowState is-low' : 'stockRowState is-on'))
                   : 'stockRowState is-on';
 
-            // подписи под контролами
-            const activeTitle = active ? 'Включен' : 'Выключен';
-            const activeDesc = active ? 'приз участвует' : 'приз не выпадает';
+            // tooltips
+            const tipActive = active ? 'Включен · приз участвует' : 'Выключен · приз не выпадает';
 
-            const trackTitle = tracked ? 'Включен' : 'Выключен';
-            const trackDesc = !active ? 'включи приз' : (tracked ? 'учитываем qty_left' : 'склад не считаем');
+            const tipTrack = !active
+              ? 'Выключено · сначала включи приз'
+              : (tracked ? 'Включен · учитываем qty_left' : 'Выключен · склад не считаем');
 
-            const qtyTitle = tracked ? 'Ввод' : 'Выключено';
-            const qtyDesc = !active ? 'включи приз' : (tracked ? 'кол-во на складе' : 'включи учёт');
+            const tipQty = !active
+              ? 'Выключено · сначала включи приз'
+              : (tracked ? 'Ввод · кол-во на складе' : 'Выключено · включи учёт остатков');
 
-            const swzTitle = swz ? 'Включен' : 'Выключен';
-            const swzDesc = !active ? 'включи приз' : (!tracked ? 'включи учёт' : (swz ? 'при 0 не выпадает' : 'при 0 может выпадать'));
+            const tipSwz = !active
+              ? 'Выключено · сначала включи приз'
+              : (!tracked
+                ? 'Выключено · включи учёт остатков'
+                : (swz ? 'Включен · при 0 приз не выпадает' : 'Выключен · при 0 приз может выпадать'));
 
             return (
               <tr key={code} className={rowCls}>
@@ -1838,32 +1842,26 @@ React.useEffect(() => {
                 {/* ACTIVE */}
                 <td className="stockTdCtr">
                   <div className="stockCtlCtr">
-                    <div className="stockCtl">
-                      <div
-                        className="stockTip"
-                        data-tip="Выключенный приз не выпадает. При выключении — склад/авто-выкл сбрасываются."
-                      >
-                        <Switch
-                          checked={active}
-                          disabled={false}
-                          onChange={(v: boolean) => {
-                            if (!v) {
-                              patchDraft(code, {
-                                active: false,
-                                track_qty: false,
-                                stop_when_zero: false,
-                                qty_left: '',
-                              });
-                              return;
-                            }
-                            patchDraft(code, { active: true });
-                          }}
-                        />
-                      </div>
-
-                      <div className="stockHintLine">
-                        <b>{activeTitle}</b> · {activeDesc}
-                      </div>
+                    <div
+                      className="stockTip"
+                      data-tip={tipActive}
+                    >
+                      <Switch
+                        checked={active}
+                        disabled={false}
+                        onChange={(v: boolean) => {
+                          if (!v) {
+                            patchDraft(code, {
+                              active: false,
+                              track_qty: false,
+                              stop_when_zero: false,
+                              qty_left: '',
+                            });
+                            return;
+                          }
+                          patchDraft(code, { active: true });
+                        }}
+                      />
                     </div>
                   </div>
                 </td>
@@ -1871,32 +1869,22 @@ React.useEffect(() => {
                 {/* TRACK_QTY */}
                 <td className="stockTdCtr">
                   <div className="stockCtlCtr">
-                    <div className="stockCtl">
-                      <div
-                        className={'stockTip ' + (!active ? 'is-disabled' : '')}
-                        data-tip={
-                          active
-                            ? 'Если включено — используем qty_left. Если выключено — остатки не учитываются.'
-                            : 'Сначала включи приз.'
-                        }
-                      >
-                        <Switch
-                          checked={tracked}
-                          disabled={!active}
-                          onChange={(v: boolean) => {
-                            if (!active) return;
-                            if (!v) {
-                              patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
-                              return;
-                            }
-                            patchDraft(code, { track_qty: true });
-                          }}
-                        />
-                      </div>
-
-                      <div className="stockHintLine">
-                        <b>{trackTitle}</b> · {trackDesc}
-                      </div>
+                    <div
+                      className={'stockTip ' + (!active ? 'is-disabled' : '')}
+                      data-tip={tipTrack}
+                    >
+                      <Switch
+                        checked={tracked}
+                        disabled={!active}
+                        onChange={(v: boolean) => {
+                          if (!active) return;
+                          if (!v) {
+                            patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
+                            return;
+                          }
+                          patchDraft(code, { track_qty: true });
+                        }}
+                      />
                     </div>
                   </div>
                 </td>
@@ -1913,7 +1901,10 @@ React.useEffect(() => {
                       <div className="stockWarn is-low">Скоро закончатся (≤ {inventory.lowThreshold})</div>
                     ) : null}
 
-                    <div className="stockCtl" style={{ alignItems: 'center' }}>
+                    <div
+                      className={'stockTip ' + (!tracked ? 'is-disabled' : '')}
+                      data-tip={tipQty}
+                    >
                       <Input
                         type="number"
                         inputMode="numeric"
@@ -1923,10 +1914,6 @@ React.useEffect(() => {
                         placeholder={tracked ? '0' : '—'}
                         className="stockQtyInput"
                       />
-
-                      <div className="stockHintLine">
-                        <b>{qtyTitle}</b> · {qtyDesc}
-                      </div>
                     </div>
                   </div>
                 </td>
@@ -1934,28 +1921,18 @@ React.useEffect(() => {
                 {/* STOP_WHEN_ZERO */}
                 <td className="stockTdCtr">
                   <div className="stockCtlCtr">
-                    <div className="stockCtl">
-                      <div
-                        className={'stockTip ' + (!tracked ? 'is-disabled' : '')}
-                        data-tip={
-                          tracked
-                            ? 'Если включено и qty_left ≤ 0 — приз исключается из выпадения.'
-                            : 'Сначала включи “Учёт остатков”.'
-                        }
-                      >
-                        <Switch
-                          checked={swz}
-                          disabled={!tracked}
-                          onChange={(v: boolean) => {
-                            if (!tracked) return;
-                            patchDraft(code, { stop_when_zero: v });
-                          }}
-                        />
-                      </div>
-
-                      <div className="stockHintLine">
-                        <b>{swzTitle}</b> · {swzDesc}
-                      </div>
+                    <div
+                      className={'stockTip ' + (!tracked ? 'is-disabled' : '')}
+                      data-tip={tipSwz}
+                    >
+                      <Switch
+                        checked={swz}
+                        disabled={!tracked}
+                        onChange={(v: boolean) => {
+                          if (!tracked) return;
+                          patchDraft(code, { stop_when_zero: v });
+                        }}
+                      />
                     </div>
                   </div>
                 </td>
