@@ -1115,13 +1115,30 @@ React.useEffect(() => {
               </div>
             </div>
 
-            <div className={'wheelChart is-area'}>
-              {isLoading && <div className="sg-muted">Загрузка…</div>}
-              {isError && (
-                <div className="sg-muted">
-                  Ошибка: {String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
-                </div>
-              )}
+<div className="wheelChartWrap">
+  <div className={'wheelChart is-area'}>
+    {!isLoading && !isError && (
+      <ResponsiveContainer width="100%" height="100%">
+        {/* chart */}
+      </ResponsiveContainer>
+    )}
+  </div>
+
+  {isLoading && (
+    <div className="wheelChartOverlay" aria-live="polite">
+      <div className="wheelSpinner" aria-hidden="true" />
+      <div className="wheelChartOverlayText">Загрузка…</div>
+    </div>
+  )}
+
+  {isError && (
+    <div className="wheelChartOverlay">
+      <div className="wheelChartOverlayText">
+        Ошибка: {String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
+      </div>
+    </div>
+  )}
+</div>
 
               {!isLoading && !isError && (
                 <ResponsiveContainer width="100%" height="100%">
