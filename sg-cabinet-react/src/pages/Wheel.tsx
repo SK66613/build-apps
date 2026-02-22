@@ -1770,6 +1770,275 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
 }
 .summaryTopMoney{ font-weight:900; }
 .summaryTopPct{ font-size:12px; opacity:.7; font-weight:800; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================================
+   SG PREMIUM UI — Wheel (Summary/Forecast/Stock)
+   Paste at the END of <style> to override
+   ========================================= */
+
+:root{
+  /* radii */
+  --sg-r-xl: 18px;
+  --sg-r-lg: 16px;
+  --sg-r-md: 14px;
+  --sg-r-sm: 12px;
+  --sg-r-xs: 10px;
+
+  /* borders / surfaces */
+  --sg-bd: rgba(15,23,42,.10);
+  --sg-bd2: rgba(15,23,42,.08);
+  --sg-bg: rgba(255,255,255,.62);
+  --sg-bg2: rgba(255,255,255,.78);
+  --sg-bg3: rgba(15,23,42,.03);
+
+  /* shadows (premium, soft) */
+  --sg-sh1: 0 10px 24px rgba(15,23,42,.06);
+  --sg-sh2: 0 16px 40px rgba(15,23,42,.08);
+  --sg-in1: inset 0 1px 0 rgba(255,255,255,.55);
+
+  /* semantic tones (very soft) */
+  --sg-ok-bg: rgba(34,197,94,.10);
+  --sg-ok-bd: rgba(34,197,94,.20);
+
+  --sg-warn-bg: rgba(245,158,11,.10);
+  --sg-warn-bd: rgba(245,158,11,.22);
+
+  --sg-bad-bg: rgba(239,68,68,.09);
+  --sg-bad-bd: rgba(239,68,68,.20);
+}
+
+/* ---------- Base “glass panel” wrapper ---------- */
+.wheelUnderPanel{
+  border:1px solid var(--sg-bd) !important;
+  border-radius: var(--sg-r-xl) !important;
+  background: var(--sg-bg) !important;
+  box-shadow: var(--sg-sh1), var(--sg-in1) !important;
+  padding:14px !important;
+}
+
+/* head separator (premium) */
+.wheelUnderHead{
+  padding-bottom:10px;
+  margin-bottom:12px;
+  border-bottom:1px solid rgba(15,23,42,.08);
+}
+
+/* ---------- Generic pill/card alignment ---------- */
+.sg-pill{
+  border:1px solid var(--sg-bd2) !important;
+  border-radius: var(--sg-r-lg) !important;
+  background: var(--sg-bg2) !important;
+  box-shadow: var(--sg-in1) !important;
+}
+
+/* make inside cards consistent */
+.summaryCard,
+.forecastCard,
+.forecastCardMini,
+.forecastRisk,
+.forecastScenarios{
+  border:1px solid var(--sg-bd2) !important;
+  border-radius: var(--sg-r-lg) !important;
+  background: var(--sg-bg2) !important;
+  box-shadow: var(--sg-in1) !important;
+}
+
+/* ---------- Summary: rows and tiles ---------- */
+.summaryRow{
+  border:1px solid rgba(15,23,42,.08) !important;
+  background: rgba(255,255,255,.70) !important;
+  border-radius: var(--sg-r-md) !important;
+  box-shadow: var(--sg-in1) !important;
+}
+
+/* Summary KPI tiles (if you use wheelSummaryTiles) */
+.wheelSummaryTiles{
+  gap:10px !important;
+}
+.wheelSumTile{
+  border:1px solid rgba(15,23,42,.08) !important;
+  background: rgba(255,255,255,.72) !important;
+  border-radius: var(--sg-r-lg) !important;
+  box-shadow: var(--sg-in1) !important;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.wheelSumTile:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--sg-sh1), var(--sg-in1);
+  border-color: rgba(15,23,42,.12);
+}
+.wheelSumTile.is-strong{
+  box-shadow: var(--sg-sh2), var(--sg-in1) !important;
+  border-color: rgba(15,23,42,.12) !important;
+}
+
+/* ---------- Badges: premium, not “plastic” ---------- */
+.sumBadge,
+.wheelRedeemBadge{
+  height:22px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.78);
+  font-weight:900;
+  font-size:12px;
+  box-shadow: var(--sg-in1);
+}
+
+/* semantic */
+.sumBadge.is-good,
+.wheelRedeemBadge.is-good{
+  background: var(--sg-ok-bg);
+  border-color: var(--sg-ok-bd);
+}
+.sumBadge.is-warn,
+.wheelRedeemBadge.is-warn{
+  background: var(--sg-warn-bg);
+  border-color: var(--sg-warn-bd);
+}
+.sumBadge.is-bad,
+.wheelRedeemBadge.is-bad{
+  background: var(--sg-bad-bg);
+  border-color: var(--sg-bad-bd);
+}
+
+/* if you have old cls: ok/mid/bad */
+.wheelRedeemBadge.ok{ background: var(--sg-ok-bg); border-color: var(--sg-ok-bd); }
+.wheelRedeemBadge.mid{ background: var(--sg-warn-bg); border-color: var(--sg-warn-bd); }
+.wheelRedeemBadge.bad{ background: var(--sg-bad-bg); border-color: var(--sg-bad-bd); }
+
+/* ---------- Forecast: “one frame for recommendations” ---------- */
+.forecastRecs{
+  border:1px solid var(--sg-bd) !important;
+  border-radius: var(--sg-r-xl) !important;
+  padding:14px !important;
+  background: var(--sg-bg) !important;
+  box-shadow: var(--sg-sh1), var(--sg-in1) !important;
+}
+
+/* remove nested borders, keep nice inner surface */
+.forecastRecs .forecastRecCard{
+  border:none !important;
+  border-radius: var(--sg-r-lg) !important;
+  background: rgba(15,23,42,.03) !important;
+  box-shadow: none !important;
+}
+
+/* semantic tone for rec cards */
+.forecastRecCard.is-good{ background: rgba(34,197,94,.08) !important; }
+.forecastRecCard.is-warn{ background: rgba(245,158,11,.08) !important; }
+.forecastRecCard.is-bad{  background: rgba(239,68,68,.07) !important; }
+
+/* ---------- Forecast: tabs look like premium segmented ---------- */
+.forecastTabs{
+  border:1px solid rgba(15,23,42,.10) !important;
+  border-radius: var(--sg-r-lg) !important;
+  background: rgba(255,255,255,.62) !important;
+  box-shadow: var(--sg-in1) !important;
+}
+.forecastTabBtn{
+  border-radius: var(--sg-r-md) !important;
+}
+.forecastTabBtn.is-active{
+  background: rgba(15,23,42,.04) !important;
+  border-color: rgba(15,23,42,.12) !important;
+  box-shadow: 0 12px 22px rgba(15,23,42,.06), var(--sg-in1) !important;
+}
+
+/* ---------- Stock: table rows feel premium cards ---------- */
+.stockTable tbody td{
+  background: rgba(255,255,255,.78) !important;
+  border-top:1px solid rgba(15,23,42,.06) !important;
+  border-bottom:1px solid rgba(15,23,42,.06) !important;
+}
+.stockTable tbody tr td:first-child,
+.stockTable tbody tr td:last-child{
+  box-shadow: var(--sg-in1);
+}
+.stockTable tbody tr:hover{
+  transform: translateY(-1px);
+}
+
+/* stock row states — softer */
+.stockRowState.is-off td{ background: rgba(15,23,42,.03) !important; }
+.stockRowState.is-low td{ background: rgba(245,158,11,.05) !important; }
+.stockRowState.is-out td{ background: rgba(239,68,68,.05) !important; }
+
+/* switches look more premium (subtle) */
+.sgSwitch{
+  border-radius:999px !important;
+  box-shadow: var(--sg-in1) !important;
+}
+.sgSwitch__knob{
+  box-shadow: 0 8px 16px rgba(15,23,42,.10) !important;
+}
+
+/* Inputs unify */
+.stockQtyInput,
+.wheelQuickDate,
+.sg-input{
+  border-radius: var(--sg-r-xs) !important;
+  border-color: rgba(15,23,42,.12) !important;
+  background: rgba(255,255,255,.85) !important;
+  box-shadow: var(--sg-in1) !important;
+}
+
+/* Tooltips a bit more “premium” */
+.stockTip::after,
+.forecastTip::after,
+.forecastInlineTip::after{
+  border-radius: 14px !important;
+  border-color: rgba(15,23,42,.14) !important;
+  box-shadow: 0 18px 40px rgba(15,23,42,.14) !important;
+}
+
+/* ---------- Reduce “too round” in your shown screenshots ---------- */
+/* those huge ovals were from big radius on wrappers */
+.summaryCard,
+.forecastScenarios,
+.forecastRisk,
+.forecastRecs{
+  border-radius: var(--sg-r-xl) !important;
+}
+
+/* ---------- Micro polish ---------- */
+.sg-muted{ opacity:.78; }
+.wheelCardTitle{ letter-spacing:.01em; }
+.wheelCardSub{ opacity:.82; }
+
+/* keep layout stable */
+.summaryGrid2,
+.forecastGrid2{ gap:12px !important; }
         
       `}</style>
 
