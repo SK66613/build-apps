@@ -348,12 +348,14 @@ export default function Wheel() {
     }
   }
 
-  React.useEffect(() => {
-    setCustomFrom(range?.from || '');
-    setCustomTo(range?.to || '');
-    setQuick('custom');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range?.from, range?.to]);
+React.useEffect(() => {
+  setCustomFrom(range?.from || '');
+  setCustomTo(range?.to || '');
+  // ВАЖНО: quick здесь НЕ трогаем.
+  // Иначе при выборе День/Неделя/Месяц (они меняют range) quick снова станет 'custom'
+  // и блок дат будет показываться всегда.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [range?.from, range?.to]);
 
   function applyRange(nextFrom: string, nextTo: string) {
     if (!nextFrom || !nextTo) return;
@@ -834,6 +836,7 @@ export default function Wheel() {
   border-radius:12px; /* такой же как у обычных wheelChartBtn */
 }
 
+///даты 
 .wheelQuickWrap{
   display:flex;
   align-items:stretch;
@@ -846,34 +849,54 @@ export default function Wheel() {
   border-bottom-right-radius:0 !important;
 }
 
+/* правая часть рядом с табами */
 .wheelQuickRange{
   display:flex;
   align-items:center;
   gap:8px;
-  padding:8px 10px;
+  padding:6px 10px;
   border:1px solid rgba(15,23,42,.12);
   border-left:0;
   border-top-right-radius:999px;
   border-bottom-right-radius:999px;
-  background:rgba(255,255,255,.6);
+  background:rgba(255,255,255,.0);
 }
 
 .wheelQuickLbl{
   font-weight:900;
-  opacity:.7;
+  opacity:.75;
   font-size:12px;
 }
 
+/* ВАЖНО: инпуты дат выглядят как кнопки sg-tab */
 .wheelQuickDate{
   width:150px;
+
+  height:34px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.12);
+  background:rgba(255,255,255,.85);
+
+  font-weight:900;
+  font-size:13px;
+  line-height:34px;
+}
+
+/* иконка календаря аккуратнее */
+.wheelQuickDate::-webkit-calendar-picker-indicator{
+  opacity:.7;
+  cursor:pointer;
 }
 
 @media (max-width:1100px){
   .wheelQuickWrap{ flex-wrap:wrap; gap:10px; }
+
   .wheelQuickTabs{
     border-top-right-radius:999px !important;
     border-bottom-right-radius:999px !important;
   }
+
   .wheelQuickRange{
     border-left:1px solid rgba(15,23,42,.12);
     border-radius:999px;
@@ -891,24 +914,38 @@ export default function Wheel() {
     </div>
   </div>
 
-  <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-    
+  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
     <div className="wheelQuickWrap">
-
       <div className="sg-tabs wheelMiniTabs wheelQuickTabs">
-        <button type="button" className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>
+        <button
+          type="button"
+          className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')}
+          onClick={() => pickQuick('day')}
+        >
           День
         </button>
 
-        <button type="button" className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>
+        <button
+          type="button"
+          className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')}
+          onClick={() => pickQuick('week')}
+        >
           Неделя
         </button>
 
-        <button type="button" className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>
+        <button
+          type="button"
+          className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')}
+          onClick={() => pickQuick('month')}
+        >
           Месяц
         </button>
 
-        <button type="button" className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>
+        <button
+          type="button"
+          className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')}
+          onClick={() => pickQuick('custom')}
+        >
           Свой период
         </button>
       </div>
@@ -920,7 +957,7 @@ export default function Wheel() {
           <Input
             type="date"
             value={customFrom}
-            onChange={(e:any)=>setCustomFrom(e.target.value)}
+            onChange={(e: any) => setCustomFrom(e.target.value)}
             className="wheelQuickDate"
           />
 
@@ -929,22 +966,20 @@ export default function Wheel() {
           <Input
             type="date"
             value={customTo}
-            onChange={(e:any)=>setCustomTo(e.target.value)}
+            onChange={(e: any) => setCustomTo(e.target.value)}
             className="wheelQuickDate"
           />
 
           <Button
             variant="primary"
-            onClick={()=>applyRange(customFrom, customTo)}
+            onClick={() => applyRange(customFrom, customTo)}
             disabled={!customFrom || !customTo}
           >
             Применить
           </Button>
         </div>
       )}
-
     </div>
-
   </div>
 </div>
 
