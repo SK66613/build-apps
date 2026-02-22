@@ -1798,9 +1798,7 @@ React.useEffect(() => {
     </div>
   </div>
 )}
-            </div>
-          </Card>
-        </div>
+
 
         {/* RIGHT */}
         <div className="wheelRight">
