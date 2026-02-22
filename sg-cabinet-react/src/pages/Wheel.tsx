@@ -970,6 +970,11 @@ React.useEffect(() => {
   font-family: inherit !important;
 }
 
+.wheelQuickDate{
+  box-sizing:border-box;
+  vertical-align:middle;
+}
+
         
       `}</style>
 
