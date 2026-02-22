@@ -1021,6 +1021,124 @@ React.useEffect(() => {
   to{ transform:rotate(360deg); }
 }
 
+
+/* =========================
+   STOCK — TOP UI (Switch + Badges + No-jump hints)
+   ========================= */
+
+.sg-switch{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  height:34px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.12);
+  background:rgba(255,255,255,.70);
+  box-shadow:0 1px 0 rgba(15,23,42,.04);
+  cursor:pointer;
+  user-select:none;
+}
+.sg-switch.is-disabled{ opacity:.45; cursor:not-allowed; }
+
+.sg-switch__track{
+  width:44px;
+  height:24px;
+  border-radius:999px;
+  background:rgba(15,23,42,.14);
+  position:relative;
+  box-sizing:border-box;
+}
+.sg-switch__thumb{
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  background:#fff;
+  position:absolute;
+  top:2px;
+  left:2px;
+  box-shadow:0 2px 6px rgba(15,23,42,.18);
+  transition:transform .18s ease;
+}
+.sg-switch.is-on .sg-switch__track{ background:rgba(0,180,255,.35); }
+.sg-switch.is-on .sg-switch__thumb{ transform:translateX(20px); }
+
+.sg-switch__txt{
+  font-weight:900;
+  font-size:12px;
+  opacity:.9;
+  min-width:36px;
+}
+
+/* cells */
+.stockCell{ display:flex; flex-direction:column; gap:6px; }
+.stockRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+.stockQtyInput{
+  width:120px;
+  height:34px;
+  border-radius:12px;
+  font-weight:900;
+}
+
+/* badges */
+.stockBadges{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:18px;
+}
+
+.stockBadge{
+  display:inline-flex;
+  align-items:center;
+  height:18px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.70);
+  opacity:.9;
+}
+
+.stockBadge.is-out{
+  border-color:rgba(239,68,68,.22);
+  background:rgba(239,68,68,.10);
+}
+.stockBadge.is-low{
+  border-color:rgba(245,158,11,.22);
+  background:rgba(245,158,11,.10);
+}
+
+/* reserve hint line => no layout jump */
+.stockHintLine{
+  min-height:16px;
+  font-size:12px;
+  opacity:.72;
+}
+
+/* row highlight */
+.stockRowState{
+  transition:background .15s ease;
+}
+.stockRowState.is-out{
+  background:rgba(239,68,68,.05);
+}
+.stockRowState.is-low{
+  background:rgba(245,158,11,.05);
+}
+
+/* save button sizing like tabs/apply */
+.stockSaveBtn{
+  height:34px;
+  line-height:34px;
+  padding:0 14px;
+  border-radius:12px;
+  font-weight:900;
+  white-space:nowrap;
+}
+
         
       `}</style>
 
@@ -1480,193 +1598,208 @@ React.useEffect(() => {
                 </div>
               )}
 
-              {/* ===== TAB: STOCK (ТОЛЬКО СКЛАД) ===== */}
-              {tab === 'stock' && (
-                <div className="wheelUnderPanel">
-                  <div className="wheelUnderHead">
-                    <div>
-                      <div className="wheelCardTitle">Склад призов</div>
-                      <div className="wheelCardSub">
-                        Тут правим live-поля в <b>wheel_prizes</b>: <b>active / track_qty / qty_left / stop_when_zero</b>.
-                        <br />
-                        Если включены <b>track_qty</b> + <b>stop_when_zero</b> и <b>qty_left ≤ 0</b> — приз <b>не выпадает</b> (и монетный тоже).
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="wheelTableWrap" style={{ marginTop: 12 }}>
-                    <table className="sg-table">
-                      <thead>
-                        <tr>
-                          <th>Название</th>
-                          <th style={{ minWidth: 120 }}>Активен</th>
-                          <th style={{ minWidth: 150 }}>Учёт остатков</th>
-                          <th style={{ minWidth: 160 }}>Остаток</th>
-                          <th style={{ minWidth: 180 }}>Авто-выкл при 0</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((p) => {
-                          const d = draft[p.prize_code] || {
-                            active: !!p.active,
-                            track_qty: !!p.track_qty,
-                            qty_left: (p.qty_left === null || p.qty_left === undefined) ? '' : String(p.qty_left),
-                            stop_when_zero: !!p.stop_when_zero,
-                          };
-
-                          const tracked = !!d.track_qty;
-                          const qRaw = String(d.qty_left ?? '').trim();
-                          const qNum = qRaw === '' ? qtyLeft(p) : Math.max(0, toInt(qRaw, 0));
-                          const swz = !!d.stop_when_zero;
-
-                          const out = tracked && (qNum !== null && qNum <= 0);
-                          const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
-
-                          return (
-                            <tr key={p.prize_code}>
-                              <td>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  <div style={{ fontWeight: 900 }}>{p.title || p.prize_code}</div>
-                                  <div className="sg-muted" style={{ fontSize: 12 }}>
-                                    {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'}
-                                    <span className="sg-muted"> · код: </span>
-                                    <b>{p.prize_code}</b>
-                                  </div>
-                                </div>
-                              </td>
-
-                              <td>
-                                <Toggle
-                                  checked={!!d.active}
-                                  onChange={(v) => patchDraft(p.prize_code, { active: v })}
-                                  labelOn="вкл"
-                                  labelOff="выкл"
-                                />
-                              </td>
-
-                              <td>
-                                <Toggle
-                                  checked={!!d.track_qty}
-                                  onChange={(v) => patchDraft(p.prize_code, { track_qty: v })}
-                                  labelOn="да"
-                                  labelOff="нет"
-                                />
-                              </td>
-
-                              <td>
-                                {tracked ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                      <Input
-                                        value={d.qty_left}
-                                        onChange={(e: any) => patchDraft(p.prize_code, { qty_left: e.target.value })}
-                                        placeholder="0"
-                                        style={{ width: 120 }}
-                                      />
-                                      {out ? <span className="sg-muted">ноль</span> : null}
-                                      {!out && low ? <span className="sg-muted">мало (≤ {inventory.lowThreshold})</span> : null}
-                                    </div>
-                                    {out && swz ? (
-                                      <div className="sg-muted" style={{ fontSize: 12 }}>
-                                        подсказка: при нуле + авто-выкл — приз не выпадает
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                ) : (
-                                  <span className="sg-muted">—</span>
-                                )}
-                              </td>
-
-                              <td>
-                                {tracked ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <Toggle
-                                      checked={!!d.stop_when_zero}
-                                      onChange={(v) => patchDraft(p.prize_code, { stop_when_zero: v })}
-                                      labelOn="да"
-                                      labelOff="нет"
-                                    />
-                                    {out && d.stop_when_zero ? (
-                                      <div className="sg-muted" style={{ fontSize: 12 }}>
-                                        подсказка: сейчас выключен по нулю
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                ) : (
-                                  <span className="sg-muted">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-
-                        {!items.length && !qStats.isLoading && (
-                          <tr><td colSpan={5} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* save button at bottom (как ты просил) */}
-                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                    <div className="sg-muted">
-                      {saveMsg ? <b>{saveMsg}</b> : 'Подсказка: если склад не включён — прочерки это нормально.'}
-                    </div>
-                    <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={saveStock}>
-                      {saving ? 'Сохраняю…' : 'Сохранить склад'}
-                    </Button>
-                  </div>
-
-                  {/* app_settings block BELOW stock (как обсудили) */}
-                  <div className="sg-pill" style={{ padding: '12px 12px', marginTop: 12 }}>
-                    <div style={{ fontWeight: 900, marginBottom: 10 }}>Стоимость монеты и валюта</div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12, alignItems: 'end' }}>
-                      <div>
-                        <div className="sg-muted" style={{ marginBottom: 6 }}>
-                          Стоимость 1 монеты ({currencyLabel(currencyDraft)})
-                        </div>
-                        <Input
-                          value={coinValueDraft}
-                          onChange={(e: any) => setCoinValueDraft(e.target.value)}
-                          placeholder="1.00"
-                        />
-                        <div className="sg-muted" style={{ marginTop: 6 }}>
-                          = {moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="sg-muted" style={{ marginBottom: 6 }}>Валюта</div>
-                        <select
-                          value={currencyDraft}
-                          onChange={(e: any) => setCurrencyDraft(String(e.target.value || 'RUB').toUpperCase())}
-                          className="sg-input"
-                          style={{ height: 38, width: '100%' }}
-                        >
-                          <option value="RUB">RUB (₽)</option>
-                          <option value="USD">USD ($)</option>
-                          <option value="EUR">EUR (€)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Button variant="primary" onClick={saveAppSettings} disabled={savingCoin || !appId}>
-                        {savingCoin ? 'Сохраняю…' : 'Сохранить'}
-                      </Button>
-                      {coinMsg ? <span className="sg-muted">{coinMsg}</span> : null}
-                      {qSettings.isError ? <span className="sg-muted">settings: ошибка</span> : null}
-                      <span className="sg-muted" style={{ marginLeft: 'auto' }}>
-                        пример: USD + 0.10 = “1 монета = 10 центов” ✅
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
+             
+/* ===== TAB: STOCK (ТОЛЬКО СКЛАД) ===== */
+{tab === 'stock' && (
+  <div className="wheelUnderPanel">
+    <div className="wheelUnderHead">
+      <div>
+        <div className="wheelCardTitle">Склад призов</div>
+        <div className="wheelCardSub">
+          Тут правим live-поля в <b>wheel_prizes</b>: <b>active / track_qty / qty_left / stop_when_zero</b>.
+          <br />
+          Если включены <b>track_qty</b> + <b>stop_when_zero</b> и <b>qty_left ≤ 0</b> — приз <b>не выпадает</b> (и монетный тоже).
         </div>
+      </div>
+    </div>
+
+    <div className="wheelTableWrap" style={{ marginTop: 12 }}>
+      <table className="sg-table">
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th style={{ minWidth: 120 }}>Активен</th>
+            <th style={{ minWidth: 150 }}>Учёт остатков</th>
+            <th style={{ minWidth: 200 }}>Остаток</th>
+            <th style={{ minWidth: 220 }}>Авто-выкл при 0</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {items.map((p) => {
+            const d = draft[p.prize_code] || {
+              active: !!p.active,
+              track_qty: !!p.track_qty,
+              qty_left: (p.qty_left === null || p.qty_left === undefined) ? '' : String(p.qty_left),
+              stop_when_zero: !!p.stop_when_zero,
+            };
+
+            const tracked = !!d.track_qty;
+
+            const qRaw = String(d.qty_left ?? '').trim();
+            const qNum = qRaw === '' ? qtyLeft(p) : Math.max(0, toInt(qRaw, 0));
+
+            const out = tracked && (qNum !== null && qNum <= 0);
+            const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
+
+            const rowCls =
+              tracked
+                ? (out ? 'stockRowState is-out' : (low ? 'stockRowState is-low' : 'stockRowState'))
+                : '';
+
+            return (
+              <tr key={p.prize_code} className={rowCls}>
+                <td>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div style={{ fontWeight: 900 }}>{p.title || p.prize_code}</div>
+                    <div className="sg-muted" style={{ fontSize: 12 }}>
+                      {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'}
+                      <span className="sg-muted"> · код: </span>
+                      <b>{p.prize_code}</b>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <Switch
+                    checked={!!d.active}
+                    onChange={(v) => patchDraft(p.prize_code, { active: v })}
+                    labelOn="вкл"
+                    labelOff="выкл"
+                  />
+                </td>
+
+                <td>
+                  <Switch
+                    checked={!!d.track_qty}
+                    onChange={(v) => patchDraft(p.prize_code, { track_qty: v })}
+                    labelOn="да"
+                    labelOff="нет"
+                  />
+                </td>
+
+                <td>
+                  {tracked ? (
+                    <div className="stockCell">
+                      <div className="stockRow">
+                        <Input
+                          value={d.qty_left}
+                          onChange={(e: any) => patchDraft(p.prize_code, { qty_left: e.target.value })}
+                          placeholder="0"
+                          className="stockQtyInput"
+                        />
+
+                        <div className="stockBadges">
+                          {out ? <span className="stockBadge is-out">Ноль</span> : null}
+                          {!out && low ? (
+                            <span className="stockBadge is-low">Мало ≤ {inventory.lowThreshold}</span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="stockHintLine">
+                        {out && d.stop_when_zero ? 'Подсказка: при нуле + авто-выкл — приз не выпадает' : ''}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="sg-muted">—</span>
+                  )}
+                </td>
+
+                <td>
+                  {tracked ? (
+                    <div className="stockCell">
+                      <Switch
+                        checked={!!d.stop_when_zero}
+                        onChange={(v) => patchDraft(p.prize_code, { stop_when_zero: v })}
+                        labelOn="да"
+                        labelOff="нет"
+                      />
+
+                      <div className="stockHintLine">
+                        {out && d.stop_when_zero ? 'Подсказка: сейчас приз авто-выключен по нулю' : ''}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="sg-muted">—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+
+          {!items.length && !qStats.isLoading && (
+            <tr>
+              <td colSpan={5} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    {/* save button at bottom */}
+    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div className="sg-muted">
+        {saveMsg ? <b>{saveMsg}</b> : 'Подсказка: если склад не включён — прочерки это нормально.'}
+      </div>
+
+      <Button
+        variant="primary"
+        className="stockSaveBtn"
+        disabled={saving || qStats.isLoading || !appId}
+        onClick={saveStock}
+      >
+        {saving ? 'Сохраняю…' : 'Сохранить склад'}
+      </Button>
+    </div>
+
+    {/* app_settings block BELOW stock (как обсудили) */}
+    <div className="sg-pill" style={{ padding: '12px 12px', marginTop: 12 }}>
+      <div style={{ fontWeight: 900, marginBottom: 10 }}>Стоимость монеты и валюта</div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12, alignItems: 'end' }}>
+        <div>
+          <div className="sg-muted" style={{ marginBottom: 6 }}>
+            Стоимость 1 монеты ({currencyLabel(currencyDraft)})
+          </div>
+          <Input
+            value={coinValueDraft}
+            onChange={(e: any) => setCoinValueDraft(e.target.value)}
+            placeholder="1.00"
+          />
+          <div className="sg-muted" style={{ marginTop: 6 }}>
+            = {moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета
+          </div>
+        </div>
+
+        <div>
+          <div className="sg-muted" style={{ marginBottom: 6 }}>Валюта</div>
+          <select
+            value={currencyDraft}
+            onChange={(e: any) => setCurrencyDraft(String(e.target.value || 'RUB').toUpperCase())}
+            className="sg-input"
+            style={{ height: 38, width: '100%' }}
+          >
+            <option value="RUB">RUB (₽)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Button variant="primary" onClick={saveAppSettings} disabled={savingCoin || !appId}>
+          {savingCoin ? 'Сохраняю…' : 'Сохранить'}
+        </Button>
+        {coinMsg ? <span className="sg-muted">{coinMsg}</span> : null}
+        {qSettings.isError ? <span className="sg-muted">settings: ошибка</span> : null}
+        <span className="sg-muted" style={{ marginLeft: 'auto' }}>
+          пример: USD + 0.10 = “1 монета = 10 центов” ✅
+        </span>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* RIGHT */}
         <div className="wheelRight">
