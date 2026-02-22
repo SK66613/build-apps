@@ -237,10 +237,11 @@ function Switch({
     <button
       type="button"
       className={'sgSwitch ' + (checked ? 'is-on' : 'is-off') + (disabled ? ' is-disabled' : '')}
-      onClick={() => {
-        if (disabled) return;
-        onChange(!checked);
-      }}
+onClick={(e) => {
+  if (disabled) return;
+  try { (e.currentTarget as any).blur?.(); } catch (_) {}
+  onChange(!checked);
+}}
       aria-pressed={checked}
       aria-disabled={!!disabled}
     >
@@ -1715,11 +1716,11 @@ React.useEffect(() => {
       <table className="sg-table stockTable">
         {/* фиксируем ширины колонок, чтобы “Активен” не уезжал */}
         <colgroup>
-          <col style={{ width: '46%' }} />
-          <col style={{ width: '14%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '8%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '20%' }} />
         </colgroup>
 
         <thead>
