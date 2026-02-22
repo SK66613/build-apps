@@ -1824,36 +1824,28 @@ React.useEffect(() => {
                   </div>
                 </td>
 
-              
 {/* QTY_LEFT */}
-<td>
-  {tracked ? (
-    <div className="stockQtyCell">
-      {/* подсказка над полем — только когда low/out */}
-      {out ? (
-        <div className="stockWarn is-out">Закончились</div>
-      ) : low ? (
-        <div className="stockWarn is-low">Скоро закончатся (≤ {inventory.lowThreshold})</div>
-      ) : null}
+<td className="stockTdCtr">
+  <div className="stockQtyCell">
+    {/* всплывашки над полем: только когда реально нужно */}
+    {out && swz ? (
+      <div className="stockWarn is-out">Закончились — приз не выпадает</div>
+    ) : null}
 
-      <Input
-        type="number"
-        inputMode="numeric"
-        value={d.qty_left}
-        disabled={disQty}
-        onChange={(e: any) => patchDraft(code, { qty_left: e.target.value })}
-        placeholder="0"
-        className="stockQtyInput"
-      />
-    </div>
-  ) : (
+    {!out && low ? (
+      <div className="stockWarn is-low">Скоро закончатся (≤ {inventory.lowThreshold})</div>
+    ) : null}
+
     <Input
-      value=""
-      disabled
-      placeholder="—"
-      className="stockQtyInput stockQtyInput--disabled"
+      type="number"
+      inputMode="numeric"
+      value={tracked ? d.qty_left : ''}
+      disabled={!tracked}
+      onChange={(e: any) => patchDraft(code, { qty_left: e.target.value })}
+      placeholder={tracked ? '0' : '—'}
+      className={'stockQtyInput ' + (!tracked ? 'stockQtyInput--disabled' : '')}
     />
-  )}
+  </div>
 </td>
 
                 {/* STOP_WHEN_ZERO */}
