@@ -828,11 +828,10 @@ export default function Wheel() {
 
 .wheelChartBtn--text{
   width:auto;
-  padding_slice:0 12px;
   padding:0 12px;
   font-weight:800;
   font-size:13px;
-  border-radius:999px;
+  border-radius:inherit;
 }
 
         
