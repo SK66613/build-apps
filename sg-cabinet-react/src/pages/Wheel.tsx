@@ -1143,23 +1143,7 @@ export default function Wheel() {
                       </div>
                     </div>
 
-                    <div className="wheelRedeemBar" style={{ marginTop: 12 }}>
-                      <div className="wheelRedeemTop">
-                        <div className="wheelRedeemName">Выдача призов</div>
-                        <div className={"wheelRedeemBadge " + redeemTag.cls}>
-                          {redeemTag.text}
-                        </div>
-                      </div>
 
-                      <div className="wheelBarTrack" aria-hidden="true">
-                        <div className="wheelBarFill" style={{ width: `${Math.max(0, Math.min(100, fact.redeemRatePct))}%` }} />
-                      </div>
-
-                      <div className="wheelRedeemMeta">
-                        <span className="sg-muted">Выигрышей: <b>{fact.wins}</b></span>
-                        <span className="sg-muted">Выдано: <b>{fact.redeemed}</b></span>
-                      </div>
-                    </div>
 
                     {ev.topRisk ? (
                       <div className="sg-pill" style={{ padding: '10px 12px', marginTop: 12 }}>
@@ -1177,6 +1161,28 @@ export default function Wheel() {
               {tab === 'forecast' && (
                 <div className="wheelUnderPanel">
                   <div className="wheelUnderHead">
+                    <Card className="wheelCard" style={{ marginBottom: 12 }}>
+  <div className="wheelRedeemBar" style={{ marginTop: 0 }}>
+    <div className="wheelRedeemTop">
+      <div className="wheelRedeemName">Выдача призов</div>
+      <div className={"wheelRedeemBadge " + redeemTag.cls}>
+        {redeemTag.text}
+      </div>
+    </div>
+
+    <div className="wheelBarTrack" aria-hidden="true">
+      <div
+        className="wheelBarFill"
+        style={{ width: `${Math.max(0, Math.min(100, fact.redeemRatePct))}%` }}
+      />
+    </div>
+
+    <div className="wheelRedeemMeta">
+      <span className="sg-muted">Выигрышей: <b>{fact.wins}</b></span>
+      <span className="sg-muted">Выдано: <b>{fact.redeemed}</b></span>
+    </div>
+  </div>
+</Card>
                     <div>
                       <div className="wheelCardTitle">Прогноз: окупаемость и экономика</div>
                       <div className="wheelCardSub">Это прогноз по текущим настройкам. История — в графике выше.</div>
