@@ -929,6 +929,22 @@ React.useEffect(() => {
   }
 }
 
+/* Apply button must NOT change toolbar height */
+.wheelApplyBtn{
+  height:34px;           /* как у sg-tab */
+  line-height:34px;
+  padding:0 14px;        /* как у табов */
+  border-radius:12px;    /* как у дат/контрола */
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+
+/* если кнопка disabled — чтобы не “плыла” */
+.wheelApplyBtn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
         
       `}</style>
 
