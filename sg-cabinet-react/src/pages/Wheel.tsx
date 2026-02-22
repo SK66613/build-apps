@@ -1699,7 +1699,7 @@ React.useEffect(() => {
 
                 <td>
                   <div className="stockCtl">
-                    <Toggle
+                    <Switch
                       checked={!!d.active}
                       onChange={(v: boolean) => patchDraft(p.prize_code, { active: v })}
                       labelOn="вкл"
@@ -1713,7 +1713,7 @@ React.useEffect(() => {
 
                 <td>
                   <div className="stockCtl">
-                    <Toggle
+                    <Switch
                       checked={!!d.track_qty}
                       onChange={(v: boolean) => patchDraft(p.prize_code, { track_qty: v })}
                       labelOn="да"
@@ -1757,7 +1757,7 @@ React.useEffect(() => {
                 <td>
                   {tracked ? (
                     <div className="stockCtl">
-                      <Toggle
+                      <Switch
                         checked={!!d.stop_when_zero}
                         onChange={(v: boolean) => patchDraft(p.prize_code, { stop_when_zero: v })}
                         labelOn="да"
