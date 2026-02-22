@@ -587,6 +587,9 @@ React.useEffect(() => {
 
   const spinCostCoinsForecast = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
 
+  const [forecastScenario, setForecastScenario] = React.useState<'safe' | 'base' | 'aggr'>('base');
+const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2 | 0.3>(0.2);
+
   // ===== PROGNOSIS EV/ROI (current config; НЕ влияет на факт) =====
   const ev = React.useMemo(() => {
     // используем данные из items + склад (stop/track/qty) из draft, чтобы прогноз учитывал склад
@@ -1623,7 +1626,38 @@ React.useEffect(() => {
   background:rgba(239,68,68,.07);
 }
 
+/* ===== Forecast target margin segmented ===== */
 
+.forecastTargetBar{
+  margin-top:10px;
+  display:inline-flex;
+  gap:6px;
+  padding:4px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.08);
+  background:rgba(255,255,255,.55);
+}
+
+.forecastTargetBtn{
+  height:30px;
+  padding:0 10px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  font-weight:900;
+  font-size:12px;
+  opacity:.88;
+}
+
+.forecastTargetBtn:hover{ opacity:1; }
+
+.forecastTargetBtn.is-active{
+  background:rgba(15,23,42,.04);
+  border-color:rgba(15,23,42,.10);
+  box-shadow:0 10px 18px rgba(15,23,42,.06);
+  opacity:1;
+}
 
         
       `}</style>
@@ -1989,394 +2023,429 @@ React.useEffect(() => {
                 </div>
               )}
 
-{/* ===== TAB: FORECAST (PRO v3: tabs w/ badges + recommendations) ===== */}
-{tab === 'forecast' && (() => {
-  const toNum = (v: any, d = 0) => {
-    const n = Number(String(v ?? '').replace(',', '.').trim());
-    return Number.isFinite(n) ? n : d;
-  };
-  const clamp0 = (n: number) => (Number.isFinite(n) ? Math.max(0, n) : 0);
-  const money = (c: number) => moneyFromCent(Math.round(c), currency);
 
-  // inputs
-  const spinCostCoinsForecast = Math.max(0, Math.round(toNum(spinCostCoinsDraft, ev?.spinRevenueCoins ?? 0)));
-  const spinsPerDayDraftRaw = String(spinsPerDayDraft ?? '').trim();
-  const spinsPerDayBase =
-    spinsPerDayDraftRaw === ''
-      ? (period.days > 0 ? (period.spins / Math.max(1, period.days)) : 0)
-      : Math.max(0, toNum(spinsPerDayDraftRaw, 0));
 
-  // per spin
-  const revenuePerSpinCent = clamp0(spinCostCoinsForecast * coinCostCentPerCoin);
-  const avgPayoutPerSpinCent = clamp0(ev?.payoutCent ?? 0); // средний расход/спин (бывш. EV)
-  const avgProfitPerSpinCent = Math.round(revenuePerSpinCent - avgPayoutPerSpinCent);
 
-  // ROI
-  const roi = revenuePerSpinCent > 0 ? (avgProfitPerSpinCent / revenuePerSpinCent) : null;
 
-  // variability band (fallback if no sigma)
-  const sigmaPerSpinCent = (() => {
-    const sigma = (ev as any)?.sigmaCent;
-    if (Number.isFinite(sigma)) return Math.max(0, Math.round(sigma));
-    return Math.max(0, Math.round(avgPayoutPerSpinCent * 0.6));
-  })();
 
-  // scenarios
-  const scenarios = [
-    { key: 'safe', title: 'Осторожно', k: 0.7, hint: 'меньше трафика/кручений' },
-    { key: 'base', title: 'База', k: 1.0, hint: 'как сейчас' },
-    { key: 'aggr', title: 'Агрессивно', k: 1.3, hint: 'акции/трафик выше' },
-  ] as const;
 
-  // local scenario tab state
-  const [scKey, setScKey] = React.useState<(typeof scenarios)[number]['key']>('base');
-  const sc = scenarios.find(s => s.key === scKey) || scenarios[1];
-
-  const calc = (spinsPerDay: number) => {
-    const spinsDay = Math.max(0, spinsPerDay);
-    const revDay = revenuePerSpinCent * spinsDay;
-    const payDay = avgPayoutPerSpinCent * spinsDay;
-    const profDay = (revenuePerSpinCent - avgPayoutPerSpinCent) * spinsDay;
-
-    const bandLow = profDay - sigmaPerSpinCent * spinsDay;
-    const bandHigh = profDay + sigmaPerSpinCent * spinsDay;
-
-    return {
-      spinsDay,
-      revDay, payDay, profDay,
-      bandLow, bandHigh,
-      prof30: profDay * 30,
-      rev30: revDay * 30,
-      pay30: payDay * 30,
-    };
-  };
-
-  const base = calc(spinsPerDayBase);
-  const chosen = calc(spinsPerDayBase * sc.k);
-
-  // for badges on tabs
-  const scStats = scenarios.map((s) => {
-    const r = calc(spinsPerDayBase * s.k);
-    return { key: s.key, profitDay: r.profDay };
-  });
-  const profitDayByKey = (key: string) => (scStats.find(x => x.key === key)?.profitDay ?? 0);
-
-  // risks list (top3)
-  const risksRaw = (ev as any)?.risks;
-  const risks: any[] = Array.isArray(risksRaw) ? risksRaw : (ev?.topRisk ? [ev.topRisk] : []);
-  const top3 = [...risks]
-    .sort((a, b) => (Number(b?.expCent ?? 0) - Number(a?.expCent ?? 0)))
-    .slice(0, 3);
-
-  const basisLabel = costBasis === 'issued' ? 'в момент выигрыша' : 'в момент выдачи';
-
-  // plan tone
-  const profitToneCls = avgProfitPerSpinCent >= 0 ? 'forecastGood' : 'forecastBad';
-
-  // =========================
-  // Recommendations (actionable)
-  // =========================
-  const recs: Array<{ title: string; body: string; tone?: 'good' | 'warn' | 'bad' }> = [];
-
-  // 1) price to breakeven / to target margin
-  if (coinCostCentPerCoin > 0) {
-    const needRevenueBreakevenCent = avgPayoutPerSpinCent; // profit=0
-    const needCoinsBreakeven = Math.ceil(needRevenueBreakevenCent / coinCostCentPerCoin);
-
-    // target margin 20% (optional, nice default)
-    const targetMargin = 0.2;
-    const needRevenueTargetCent =
-      (1 - targetMargin) > 0 ? Math.ceil(avgPayoutPerSpinCent / (1 - targetMargin)) : avgPayoutPerSpinCent;
-    const needCoinsTarget = Math.ceil(needRevenueTargetCent / coinCostCentPerCoin);
-
-    if (avgProfitPerSpinCent < 0) {
-      recs.push({
-        tone: 'bad',
-        title: 'Подними цену спина (быстрый фикс)',
-        body:
-          `Чтобы выйти в ноль: ≈ ${needCoinsBreakeven} монет/спин ` +
-          `(сейчас ${spinCostCoinsForecast}). Для маржи ~20%: ≈ ${needCoinsTarget} монет/спин.`,
-      });
-    } else {
-      recs.push({
-        tone: 'good',
-        title: 'Цена спина выглядит ок',
-        body:
-          `Текущая цена даёт прибыль/спин ≈ ${money(avgProfitPerSpinCent)}. ` +
-          `Если хочешь маржу стабильнее — держи цену не ниже ${needCoinsTarget} монет при текущих расходах.`,
-      });
-    }
-  }
-
-  // 2) top risk action (reduce its contribution)
-  if (top3.length && avgProfitPerSpinCent < 0) {
-    const top = top3[0];
-    const needCutCent = Math.min(Math.abs(avgProfitPerSpinCent), Math.round(top.expCent ?? 0));
-    const pct = (top.expCent ?? 0) > 0 ? Math.round((needCutCent / top.expCent) * 100) : 0;
-
-    recs.push({
-      tone: 'warn',
-      title: `Снизь влияние приза “${top.title}”`,
-      body:
-        `Он даёт ~${money(Math.round(top.expCent ?? 0))} расхода на спин. ` +
-        `Чтобы приблизиться к нулю — уменьши его вклад примерно на ${money(needCutCent)} (~${pct}%). ` +
-        `Обычно это: уменьшить шанс (weight) или себестоимость/тип выдачи.`,
-    });
-  }
-
-  // 3) inventory policy hint (when tracked logic exists + negative/low)
-  if (avgProfitPerSpinCent < 0) {
-    recs.push({
-      tone: 'warn',
-      title: 'Для дефицитных призов включай “остатки + авто-выкл”',
-      body:
-        `Так дорогие призы не будут “просачиваться” при нуле и ты не уйдёшь в перерасход. ` +
-        `Особенно актуально для физических призов с ограниченным количеством.`,
-    });
-  }
-
-  // 4) spins/day sensitivity (when variability big)
-  if (sigmaPerSpinCent > 0 && spinsPerDayBase > 0) {
-    const bandWidthDay = (sigmaPerSpinCent * spinsPerDayBase) * 2;
-    if (bandWidthDay > Math.abs(base.profDay) * 1.2 && base.profDay !== 0) {
-      recs.push({
-        tone: 'warn',
-        title: 'У тебя высокая “качка” прибыли (разброс)',
-        body:
-          `Диапазон по дню широкий — это нормально для колеса. ` +
-          `Чтобы сгладить: снизить шанс крупных призов или поднять цену спина.`,
-      });
-    }
-  }
-
-  // clamp to max 4 recs
-  const recsFinal = recs.slice(0, 4);
-
-  return (
-    <div className="wheelUnderPanel">
-      <div className="wheelUnderHead">
-        <div>
-          <div className="wheelCardTitle">Прогноз: прибыль и окупаемость</div>
-          <div className="wheelCardSub">
-            Выручка со спинов минус <b>средний</b> расход на призы.
-            <span className="sg-muted"> (Расход фиксируем {basisLabel}.)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* inputs */}
-      <div className="forecastGrid2" style={{ marginTop: 12 }}>
-        <div className="sg-pill forecastCard">
-          <div className="forecastHead">
-            <div className="forecastLbl">Цена спина (монет)</div>
-            <span className="forecastTip" data-tip="Только для прогноза. Реальная цена задаётся в настройках колеса." />
-          </div>
-          <Input
-            value={spinCostCoinsDraft}
-            onChange={(e: any) => setSpinCostCoinsDraft(e.target.value)}
-            placeholder="10"
-          />
-          <div className="forecastSub">
-            Выручка / спин ≈ <b>{money(revenuePerSpinCent)}</b>
-          </div>
-        </div>
-
-        <div className="sg-pill forecastCard">
-          <div className="forecastHead">
-            <div className="forecastLbl">Спинов / день</div>
-            <span className="forecastTip" data-tip="Пусто = авто по истории периода. Можно задать вручную." />
-          </div>
-          <Input
-            value={spinsPerDayDraft}
-            onChange={(e: any) => setSpinsPerDayDraft(e.target.value)}
-            placeholder="пусто = авто"
-          />
-          <div className="forecastSub">
-            авто: <b>{period.days > 0 ? (period.spins / Math.max(1, period.days)).toFixed(2) : '0.00'}</b> / день
-          </div>
-        </div>
-      </div>
-
-      {/* top tiles */}
-      <div className="wheelSummaryPro" style={{ paddingTop: 12 }}>
-        <div className="wheelSummaryTiles">
-          <div className="wheelSumTile">
-            <div className="wheelSumLbl">Выручка / спин</div>
-            <div className="wheelSumVal">{money(revenuePerSpinCent)}</div>
-            <div className="sg-muted" style={{ marginTop: 4 }}>{spinCostCoinsForecast} монет / спин</div>
-          </div>
-
-          <div className="wheelSumTile">
-            <div className="wheelSumLbl">
-              Средний расход на призы / спин
-              <span className="forecastInlineTip" data-tip="Раньше это называли EV: средняя стоимость выдач на один спин." />
-            </div>
-            <div className="wheelSumVal">{money(avgPayoutPerSpinCent)}</div>
-            <div className="sg-muted" style={{ marginTop: 4 }}>
-              {(ev?.payoutCoins ?? 0).toFixed(2)} монет / спин
-            </div>
-          </div>
-
-          <div className={'wheelSumTile is-strong ' + profitToneCls}>
-            <div className="wheelSumLbl">Плановая прибыль / спин</div>
-            <div className="wheelSumVal">{money(avgProfitPerSpinCent)}</div>
-            <div className="sg-muted" style={{ marginTop: 4 }}>
-              {(ev?.profitCoins ?? 0).toFixed(2)} монет / спин
-            </div>
-          </div>
-        </div>
-
-        {/* KPI row */}
-        <div className="forecastGrid2" style={{ marginTop: 10 }}>
-          <div className="sg-pill forecastCardMini">
-            <div className="forecastLbl">План (база)</div>
-
-            <div className="forecastRow">
-              <span className="sg-muted">Выручка/день:</span> <b>{money(base.revDay)}</b>
-            </div>
-            <div className="forecastRow">
-              <span className="sg-muted">Расход/день:</span> <b>{money(base.payDay)}</b>
-            </div>
-
-            <div className="forecastRow forecastRowWrap">
-              <span className="sg-muted">Прибыль/день:</span> <b>{money(base.profDay)}</b>
-              <span className="forecastRange">
-                диапазон: <b>{money(base.bandLow)}</b> … <b>{money(base.bandHigh)}</b>
-              </span>
-            </div>
-
-            <div className="forecastSub">
-              За 30 дней: прибыль ≈ <b>{money(base.prof30)}</b>
-            </div>
-          </div>
-
-          <div className="sg-pill forecastCardMini">
-            <div className="forecastLbl">Окупаемость</div>
-
-            <div className="forecastRow">
-              <span className="sg-muted">Маржа:</span> <b>{roi === null ? '—' : fmtPct(roi)}</b>
-            </div>
-            <div className="forecastRow">
-              <span className="sg-muted">Окупаемость (ярлык):</span> <b>{breakEvenLabel}</b>
-            </div>
-            <div className="forecastRow">
-              <span className="sg-muted">До “плюса”:</span>
-              <b>{avgProfitPerSpinCent <= 0 ? 'не выходит в плюс при текущих настройках' : 'в плюс'}</b>
-            </div>
-
-            <div className="forecastSub">
-              Расход фиксируем: <b>{basisLabel}</b>
-            </div>
-          </div>
-        </div>
-
-        {/* RECOMMENDATIONS */}
-        {recsFinal.length ? (
-          <div className="sg-pill forecastRecs" style={{ marginTop: 10 }}>
-            <div className="forecastLbl">Рекомендации</div>
-            <div className="forecastRecsGrid">
-              {recsFinal.map((r, i) => (
-                <div key={i} className={'forecastRecCard ' + (r.tone ? `is-${r.tone}` : '')}>
-                  <div className="forecastRecTitle">{r.title}</div>
-                  <div className="forecastRecBody">{r.body}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {/* risks (keep above scenarios) */}
-        {top3.length ? (
-          <div className="sg-pill forecastRisk" style={{ marginTop: 10 }}>
-            <div className="forecastLbl">Что сильнее всего “съедает” прибыль</div>
-
-            <div className="forecastRiskList">
-              {top3.map((x, idx) => (
-                <div key={idx} className="forecastRiskRow">
-                  <div className="forecastRiskTitle">
-                    <b>{x.title}</b>
-                    <span className="sg-muted">· вклад в средний расход:</span>
-                    <b>{money(Math.round(x.expCent ?? 0))}</b>
-                    <span className="sg-muted">/ спин</span>
-                  </div>
-                  <div className="forecastRiskSub sg-muted">
-                    подсказка: уменьши шанс / себестоимость / включи остатки и авто-выкл (если приз дефицитный)
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {/* scenarios as TABS with BADGES */}
-        <div className="sg-pill forecastScenarios" style={{ marginTop: 10 }}>
-          <div className="forecastScTop">
-            <div className="forecastLbl">Сценарии</div>
-
-            <div className="forecastTabs">
-              {scenarios.map((s) => {
-                const pDay = profitDayByKey(s.key);
-                const badgeCls = pDay >= 0 ? 'is-good' : 'is-bad';
-                return (
-                  <button
-                    key={s.key}
-                    type="button"
-                    className={'forecastTabBtn ' + (scKey === s.key ? 'is-active' : '')}
-                    onClick={() => setScKey(s.key)}
-                  >
-                    <span className="forecastTabTitle">{s.title}</span>
-                    <span className={'forecastTabBadge ' + badgeCls}>
-                      {money(pDay)}
-                      <span className="forecastTabBadgeSub">/день</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="forecastScBody">
-            <div className="forecastScMeta">
-              <div className="forecastScTitle">
-                <b>{sc.title}</b>
-                <span className="sg-muted">· {sc.hint}</span>
-              </div>
-              <div className="forecastScNumbers">
-                <span className="sg-muted">спины/день:</span> <b>{chosen.spinsDay.toFixed(1)}</b>
-              </div>
-            </div>
-
-            <div className="forecastGrid2" style={{ marginTop: 10 }}>
-              <div className="forecastScenarioCard">
-                <div className="forecastLbl">В день</div>
-                <div className="forecastRow"><span className="sg-muted">Выручка:</span> <b>{money(chosen.revDay)}</b></div>
-                <div className="forecastRow"><span className="sg-muted">Расход:</span> <b>{money(chosen.payDay)}</b></div>
-                <div className="forecastRow forecastRowWrap">
-                  <span className="sg-muted">Прибыль:</span> <b>{money(chosen.profDay)}</b>
-                  <span className="forecastRange">
-                    диапазон: <b>{money(chosen.bandLow)}</b> … <b>{money(chosen.bandHigh)}</b>
-                  </span>
-                </div>
-              </div>
-
-              <div className="forecastScenarioCard">
-                <div className="forecastLbl">За 30 дней</div>
-                <div className="forecastRow"><span className="sg-muted">Выручка:</span> <b>{money(chosen.rev30)}</b></div>
-                <div className="forecastRow"><span className="sg-muted">Расход:</span> <b>{money(chosen.pay30)}</b></div>
-                <div className="forecastRow"><span className="sg-muted">Прибыль:</span> <b>{money(chosen.prof30)}</b></div>
-                <div className="forecastSub">Это планирование “по текущим настройкам”, не история.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="sg-muted" style={{ marginTop: 12 }}>
-          Подсказка: если прибыль отрицательная — лечится повышением цены спина или снижением “дорогих” призов (шанс/себестоимость).
+{/* ===== TAB: FORECAST (PRO v4: tabs+badges + target margin + recs) ===== */}
+{tab === 'forecast' && (
+  <div className="wheelUnderPanel">
+    <div className="wheelUnderHead">
+      <div>
+        <div className="wheelCardTitle">Прогноз: прибыль и окупаемость</div>
+        <div className="wheelCardSub">
+          Это планирование по текущим настройкам (не история). Расход фиксируем{' '}
+          <b>{costBasis === 'issued' ? 'в момент выигрыша' : 'в момент выдачи'}</b>.
+          <span className="sg-muted"> “EV” = средний расход на призы на 1 спин.</span>
         </div>
       </div>
     </div>
-  );
-})()}
+
+    {(() => {
+      // ----- safe helpers (чтобы не падало)
+      const toNum = (v: any, d = 0) => {
+        const n = Number(String(v ?? '').replace(',', '.').trim());
+        return Number.isFinite(n) ? n : d;
+      };
+      const clamp0 = (n: number) => (Number.isFinite(n) ? Math.max(0, n) : 0);
+      const money = (c: number) => moneyFromCent(Math.round(c || 0), currency);
+
+      // ----- base inputs
+      const coinCent = clamp0(coinCostCentPerCoin || 0);
+
+      const spinCostCoinsForecast = Math.max(0, Math.round(toNum(spinCostCoinsDraft, 0)));
+      const spinsPerDayDraftRaw = String(spinsPerDayDraft ?? '').trim();
+      const spinsPerDayAuto =
+        period && period.days > 0 ? (period.spins / Math.max(1, period.days)) : 0;
+      const spinsPerDayBase =
+        spinsPerDayDraftRaw === ''
+          ? Math.max(0, spinsPerDayAuto)
+          : Math.max(0, toNum(spinsPerDayDraftRaw, 0));
+
+      // ----- per spin economics
+      const revenuePerSpinCent = clamp0(spinCostCoinsForecast * coinCent);
+      const avgPayoutPerSpinCent = clamp0(ev?.payoutCent ?? 0); // EV payout / spin
+      const avgProfitPerSpinCent = Math.round(revenuePerSpinCent - avgPayoutPerSpinCent);
+      const roi = revenuePerSpinCent > 0 ? (avgProfitPerSpinCent / revenuePerSpinCent) : null;
+
+      // variability band (fallback if not provided)
+      const sigmaPerSpinCent = (() => {
+        const s = (ev as any)?.sigmaCent;
+        if (Number.isFinite(s)) return Math.max(0, Math.round(s));
+        return Math.max(0, Math.round(avgPayoutPerSpinCent * 0.6));
+      })();
+
+      const calc = (spinsPerDay: number) => {
+        const spinsDay = Math.max(0, spinsPerDay);
+        const revDay = revenuePerSpinCent * spinsDay;
+        const payDay = avgPayoutPerSpinCent * spinsDay;
+        const profDay = (revenuePerSpinCent - avgPayoutPerSpinCent) * spinsDay;
+
+        const bandLow = profDay - sigmaPerSpinCent * spinsDay;
+        const bandHigh = profDay + sigmaPerSpinCent * spinsDay;
+
+        return {
+          spinsDay,
+          revDay,
+          payDay,
+          profDay,
+          bandLow,
+          bandHigh,
+          rev30: revDay * 30,
+          pay30: payDay * 30,
+          prof30: profDay * 30,
+        };
+      };
+
+      const scenarios = [
+        { key: 'safe' as const, title: 'Осторожно', k: 0.7, hint: 'меньше трафика/кручений' },
+        { key: 'base' as const, title: 'База', k: 1.0, hint: 'как сейчас' },
+        { key: 'aggr' as const, title: 'Агрессивно', k: 1.3, hint: 'акции/трафик выше' },
+      ];
+
+      const base = calc(spinsPerDayBase);
+
+      const getScenarioProfitDay = (key: 'safe' | 'base' | 'aggr') => {
+        const s = scenarios.find(x => x.key === key) || scenarios[1];
+        return calc(spinsPerDayBase * s.k).profDay;
+      };
+
+      const sc = scenarios.find(x => x.key === forecastScenario) || scenarios[1];
+      const chosen = calc(spinsPerDayBase * sc.k);
+
+      const profitToneCls = avgProfitPerSpinCent >= 0 ? 'forecastGood' : 'forecastBad';
+
+      // ----- target margin math
+      const target = forecastTargetMargin; // 0.1 | 0.2 | 0.3
+      const needRevenueBreakevenCent = avgPayoutPerSpinCent; // profit=0
+      const needCoinsBreakeven = coinCent > 0 ? Math.ceil(needRevenueBreakevenCent / coinCent) : null;
+
+      const needRevenueTargetCent =
+        (1 - target) > 0 ? Math.ceil(avgPayoutPerSpinCent / (1 - target)) : avgPayoutPerSpinCent;
+      const needCoinsTarget = coinCent > 0 ? Math.ceil(needRevenueTargetCent / coinCent) : null;
+
+      // ----- risks (top3)
+      const risksRaw = (ev as any)?.risks;
+      const risks: any[] = Array.isArray(risksRaw) ? risksRaw : (ev?.topRisk ? [ev.topRisk] : []);
+      const top3 = [...risks]
+        .sort((a, b) => (Number(b?.expCent ?? 0) - Number(a?.expCent ?? 0)))
+        .slice(0, 3);
+
+      // ----- recommendations
+      const recs: Array<{ tone?: 'good' | 'warn' | 'bad'; title: string; body: string }> = [];
+
+      if (coinCent > 0) {
+        if (avgProfitPerSpinCent < 0) {
+          recs.push({
+            tone: 'bad',
+            title: 'Подними цену спина (быстрый фикс)',
+            body:
+              `Чтобы выйти в ноль: ≈ ${needCoinsBreakeven ?? '—'} монет/спин (сейчас ${spinCostCoinsForecast}). ` +
+              `Для цели маржи ${Math.round(target * 100)}%: ≈ ${needCoinsTarget ?? '—'} монет/спин.`,
+          });
+        } else {
+          recs.push({
+            tone: 'good',
+            title: 'Цена спина выглядит ок',
+            body:
+              `Плановая прибыль/спин ≈ ${money(avgProfitPerSpinCent)}. ` +
+              `Чтобы держать цель маржи ${Math.round(target * 100)}% при текущих расходах — держи цену не ниже ≈ ${needCoinsTarget ?? '—'} монет/спин.`,
+          });
+        }
+      } else {
+        recs.push({
+          tone: 'warn',
+          title: 'Заполни стоимость монеты',
+          body: 'Для корректного прогноза нужен курс: “1 монета = …” в блоке ниже “Склад”.',
+        });
+      }
+
+      if (top3.length && avgProfitPerSpinCent < 0) {
+        const top = top3[0];
+        const needCutCent = Math.min(Math.abs(avgProfitPerSpinCent), Math.round(top.expCent ?? 0));
+        const pct = (top.expCent ?? 0) > 0 ? Math.round((needCutCent / top.expCent) * 100) : 0;
+        recs.push({
+          tone: 'warn',
+          title: `Снизь влияние приза “${top.title}”`,
+          body:
+            `Он даёт ~${money(Math.round(top.expCent ?? 0))} расхода на спин. ` +
+            `Чтобы приблизиться к нулю — уменьши вклад примерно на ${money(needCutCent)} (~${pct}%). ` +
+            `Обычно это: уменьшить шанс (weight) или себестоимость.`,
+        });
+      }
+
+      recs.push({
+        tone: 'warn',
+        title: 'Для дефицитных призов включай “остатки + авто-выкл”',
+        body:
+          'Так дорогие призы не будут выпадать при нуле/дефиците. Это стабилизирует экономику колеса.',
+      });
+
+      const recsFinal = recs.slice(0, 4);
+
+      return (
+        <>
+          {/* inputs */}
+          <div className="forecastGrid2" style={{ marginTop: 12 }}>
+            <div className="sg-pill forecastCard">
+              <div className="forecastHead">
+                <div className="forecastLbl">Цена спина (монет)</div>
+                <span
+                  className="forecastTip"
+                  data-tip="Только для прогноза. Реальная цена задаётся в настройках колеса."
+                />
+              </div>
+              <Input
+                value={spinCostCoinsDraft}
+                onChange={(e: any) => setSpinCostCoinsDraft(e.target.value)}
+                placeholder="10"
+              />
+              <div className="forecastSub">
+                Выручка / спин ≈ <b>{money(revenuePerSpinCent)}</b>
+              </div>
+            </div>
+
+            <div className="sg-pill forecastCard">
+              <div className="forecastHead">
+                <div className="forecastLbl">Спинов / день</div>
+                <span
+                  className="forecastTip"
+                  data-tip="Пусто = авто по истории периода. Можно задать вручную."
+                />
+              </div>
+              <Input
+                value={spinsPerDayDraft}
+                onChange={(e: any) => setSpinsPerDayDraft(e.target.value)}
+                placeholder="пусто = авто"
+              />
+              <div className="forecastSub">
+                авто: <b>{spinsPerDayAuto.toFixed(2)}</b> / день
+              </div>
+            </div>
+          </div>
+
+          {/* tiles */}
+          <div className="wheelSummaryPro" style={{ paddingTop: 12 }}>
+            <div className="wheelSummaryTiles">
+              <div className="wheelSumTile">
+                <div className="wheelSumLbl">Выручка / спин</div>
+                <div className="wheelSumVal">{money(revenuePerSpinCent)}</div>
+                <div className="sg-muted" style={{ marginTop: 4 }}>
+                  {spinCostCoinsForecast} монет / спин
+                </div>
+              </div>
+
+              <div className="wheelSumTile">
+                <div className="wheelSumLbl">
+                  Средний расход на призы / спин
+                  <span
+                    className="forecastInlineTip"
+                    data-tip="EV (expected value) = средний расход на призы на один спин."
+                  />
+                </div>
+                <div className="wheelSumVal">{money(avgPayoutPerSpinCent)}</div>
+                <div className="sg-muted" style={{ marginTop: 4 }}>
+                  {(ev?.payoutCoins ?? 0).toFixed(2)} монет / спин
+                </div>
+              </div>
+
+              <div className={'wheelSumTile is-strong ' + profitToneCls}>
+                <div className="wheelSumLbl">Плановая прибыль / спин</div>
+                <div className="wheelSumVal">{money(avgProfitPerSpinCent)}</div>
+                <div className="sg-muted" style={{ marginTop: 4 }}>
+                  {(ev?.profitCoins ?? 0).toFixed(2)} монет / спин
+                </div>
+              </div>
+            </div>
+
+            {/* KPI row */}
+            <div className="forecastGrid2" style={{ marginTop: 10 }}>
+              <div className="sg-pill forecastCardMini">
+                <div className="forecastLbl">План (база)</div>
+
+                <div className="forecastRow">
+                  <span className="sg-muted">Выручка/день:</span> <b>{money(base.revDay)}</b>
+                </div>
+                <div className="forecastRow">
+                  <span className="sg-muted">Расход/день:</span> <b>{money(base.payDay)}</b>
+                </div>
+                <div className="forecastRow forecastRowWrap">
+                  <span className="sg-muted">Прибыль/день:</span> <b>{money(base.profDay)}</b>
+                  <span className="forecastRange">
+                    диапазон: <b>{money(base.bandLow)}</b> … <b>{money(base.bandHigh)}</b>
+                  </span>
+                </div>
+
+                <div className="forecastSub">
+                  За 30 дней: прибыль ≈ <b>{money(base.prof30)}</b>
+                </div>
+              </div>
+
+              <div className="sg-pill forecastCardMini">
+                <div className="forecastLbl">Окупаемость</div>
+
+                <div className="forecastRow">
+                  <span className="sg-muted">Маржа:</span> <b>{roi === null ? '—' : fmtPct(roi)}</b>
+                </div>
+                <div className="forecastRow">
+                  <span className="sg-muted">Окупаемость (ярлык):</span> <b>{breakEvenLabel}</b>
+                </div>
+
+                <div className="forecastSub">
+                  Цель маржи: <b>{Math.round(target * 100)}%</b>{' '}
+                  {coinCent > 0 && needCoinsTarget !== null ? (
+                    <span className="sg-muted">· цена спина ≈ {needCoinsTarget} монет</span>
+                  ) : null}
+                </div>
+
+                <div className="forecastTargetBar">
+                  <button
+                    type="button"
+                    className={'forecastTargetBtn ' + (forecastTargetMargin === 0.1 ? 'is-active' : '')}
+                    onClick={() => setForecastTargetMargin(0.1)}
+                  >
+                    10%
+                  </button>
+                  <button
+                    type="button"
+                    className={'forecastTargetBtn ' + (forecastTargetMargin === 0.2 ? 'is-active' : '')}
+                    onClick={() => setForecastTargetMargin(0.2)}
+                  >
+                    20%
+                  </button>
+                  <button
+                    type="button"
+                    className={'forecastTargetBtn ' + (forecastTargetMargin === 0.3 ? 'is-active' : '')}
+                    onClick={() => setForecastTargetMargin(0.3)}
+                  >
+                    30%
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* RISKS above scenarios */}
+            {top3.length ? (
+              <div className="sg-pill forecastRisk" style={{ marginTop: 10 }}>
+                <div className="forecastLbl">Что сильнее всего “съедает” прибыль</div>
+
+                <div className="forecastRiskList">
+                  {top3.map((x, idx) => (
+                    <div key={idx} className="forecastRiskRow">
+                      <div className="forecastRiskTitle">
+                        <b>{x.title}</b>
+                        <span className="sg-muted"> · вклад в средний расход:</span>{' '}
+                        <b>{money(Math.round(x.expCent ?? 0))}</b>
+                        <span className="sg-muted"> / спин</span>
+                      </div>
+                      <div className="forecastRiskSub sg-muted">
+                        подсказка: уменьши шанс / себестоимость / включи остатки и авто-выкл (если приз дефицитный)
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* RECOMMENDATIONS */}
+            {recsFinal.length ? (
+              <div className="sg-pill forecastRecs" style={{ marginTop: 10 }}>
+                <div className="forecastLbl">Рекомендации</div>
+                <div className="forecastRecsGrid">
+                  {recsFinal.map((r, i) => (
+                    <div key={i} className={'forecastRecCard ' + (r.tone ? `is-${r.tone}` : '')}>
+                      <div className="forecastRecTitle">{r.title}</div>
+                      <div className="forecastRecBody">{r.body}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* SCENARIOS tabs with badges */}
+            <div className="sg-pill forecastScenarios" style={{ marginTop: 10 }}>
+              <div className="forecastScTop">
+                <div className="forecastLbl">Сценарии</div>
+
+                <div className="forecastTabs">
+                  {(['safe', 'base', 'aggr'] as const).map((k) => {
+                    const pDay = getScenarioProfitDay(k);
+                    const badgeCls = pDay >= 0 ? 'is-good' : 'is-bad';
+                    const title = scenarios.find(s => s.key === k)?.title || k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        className={'forecastTabBtn ' + (forecastScenario === k ? 'is-active' : '')}
+                        onClick={() => setForecastScenario(k)}
+                      >
+                        <span className="forecastTabTitle">{title}</span>
+                        <span className={'forecastTabBadge ' + badgeCls}>
+                          {money(pDay)}
+                          <span className="forecastTabBadgeSub">/день</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="forecastScBody">
+                <div className="forecastScMeta">
+                  <div className="forecastScTitle">
+                    <b>{sc.title}</b>
+                    <span className="sg-muted"> · {sc.hint}</span>
+                  </div>
+                  <div className="forecastScNumbers">
+                    <span className="sg-muted">спины/день:</span> <b>{chosen.spinsDay.toFixed(1)}</b>
+                  </div>
+                </div>
+
+                <div className="forecastGrid2" style={{ marginTop: 10 }}>
+                  <div className="forecastScenarioCard">
+                    <div className="forecastLbl">В день</div>
+                    <div className="forecastRow"><span className="sg-muted">Выручка:</span> <b>{money(chosen.revDay)}</b></div>
+                    <div className="forecastRow"><span className="sg-muted">Расход:</span> <b>{money(chosen.payDay)}</b></div>
+                    <div className="forecastRow forecastRowWrap">
+                      <span className="sg-muted">Прибыль:</span> <b>{money(chosen.profDay)}</b>
+                      <span className="forecastRange">
+                        диапазон: <b>{money(chosen.bandLow)}</b> … <b>{money(chosen.bandHigh)}</b>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="forecastScenarioCard">
+                    <div className="forecastLbl">За 30 дней</div>
+                    <div className="forecastRow"><span className="sg-muted">Выручка:</span> <b>{money(chosen.rev30)}</b></div>
+                    <div className="forecastRow"><span className="sg-muted">Расход:</span> <b>{money(chosen.pay30)}</b></div>
+                    <div className="forecastRow"><span className="sg-muted">Прибыль:</span> <b>{money(chosen.prof30)}</b></div>
+                    <div className="forecastSub">Это планирование “по текущим настройкам”.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="sg-muted" style={{ marginTop: 12 }}>
+              Подсказка: если прибыль отрицательная — обычно лечится повышением цены спина или снижением “дорогих” призов (шанс/себестоимость).
+            </div>
+          </div>
+        </>
+      );
+    })()}
+  </div>
+)}
+
+
+
+
+
+
+
+
+
+              
 
 {/* ===== TAB: STOCK (ТОЛЬКО СКЛАД) ===== */}
 {tab === 'stock' && (
