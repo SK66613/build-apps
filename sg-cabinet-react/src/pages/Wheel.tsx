@@ -922,7 +922,7 @@ export default function Wheel() {
     </div>
   )}
 </div>
-      </div>
+  
 
       <div className="wheelGrid">
         {/* LEFT */}
