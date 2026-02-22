@@ -981,7 +981,6 @@ React.useEffect(() => {
 .wheelChartWrap{
   position:relative;
   height:100%;
-  width:100%;
 }
 
 .wheelChartOverlay{
@@ -992,10 +991,9 @@ React.useEffect(() => {
   justify-content:center;
   flex-direction:column;
   gap:10px;
-
-  /* без blur, без "размытия" всей страницы */
-  background:rgba(255,255,255,.0);
-  pointer-events:none;
+  background:rgba(255,255,255,.55);
+  backdrop-filter: blur(2px);
+  border-radius:12px;
 }
 
 .wheelChartOverlayText{
@@ -1222,7 +1220,6 @@ React.useEffect(() => {
       </div>
     )}
   </div>
-</div>
 
             {/* KPI mini row */}
             <div className="wheelKpiRow">
