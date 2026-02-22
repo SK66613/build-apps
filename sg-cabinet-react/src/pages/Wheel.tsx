@@ -1501,10 +1501,11 @@ React.useEffect(() => {
                           <th>Название</th>
                           <th style={{ minWidth: 120 }}>Активен</th>
                           <th style={{ minWidth: 150 }}>Учёт остатков</th>
-                          <th style={{ minWidth: 160 }}>Остаток</th>
-                          <th style={{ minWidth: 180 }}>Авто-выкл при 0</th>
+                          <th style={{ minWidth: 200 }}>Остаток</th>
+                          <th style={{ minWidth: 220 }}>Авто-выкл при 0</th>
                         </tr>
                       </thead>
+
                       <tbody>
                         {items.map((p) => {
                           const d = draft[p.prize_code] || {
@@ -1517,13 +1518,17 @@ React.useEffect(() => {
                           const tracked = !!d.track_qty;
                           const qRaw = String(d.qty_left ?? '').trim();
                           const qNum = qRaw === '' ? qtyLeft(p) : Math.max(0, toInt(qRaw, 0));
-                          const swz = !!d.stop_when_zero;
 
                           const out = tracked && (qNum !== null && qNum <= 0);
                           const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
 
+                          const rowCls =
+                            tracked
+                              ? (out ? 'stockRowState is-out' : (low ? 'stockRowState is-low' : 'stockRowState'))
+                              : '';
+
                           return (
-                            <tr key={p.prize_code}>
+                            <tr key={p.prize_code} className={rowCls}>
                               <td>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                   <div style={{ fontWeight: 900 }}>{p.title || p.prize_code}</div>
@@ -1536,18 +1541,18 @@ React.useEffect(() => {
                               </td>
 
                               <td>
-                                <Toggle
+                                <Switch
                                   checked={!!d.active}
-                                  onChange={(v) => patchDraft(p.prize_code, { active: v })}
+                                  onChange={(v: boolean) => patchDraft(p.prize_code, { active: v })}
                                   labelOn="вкл"
                                   labelOff="выкл"
                                 />
                               </td>
 
                               <td>
-                                <Toggle
+                                <Switch
                                   checked={!!d.track_qty}
-                                  onChange={(v) => patchDraft(p.prize_code, { track_qty: v })}
+                                  onChange={(v: boolean) => patchDraft(p.prize_code, { track_qty: v })}
                                   labelOn="да"
                                   labelOff="нет"
                                 />
@@ -1555,22 +1560,27 @@ React.useEffect(() => {
 
                               <td>
                                 {tracked ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                  <div className="stockCell">
+                                    <div className="stockRow">
                                       <Input
                                         value={d.qty_left}
                                         onChange={(e: any) => patchDraft(p.prize_code, { qty_left: e.target.value })}
                                         placeholder="0"
-                                        style={{ width: 120 }}
+                                        className="stockQtyInput"
                                       />
-                                      {out ? <span className="sg-muted">ноль</span> : null}
-                                      {!out && low ? <span className="sg-muted">мало (≤ {inventory.lowThreshold})</span> : null}
-                                    </div>
-                                    {out && swz ? (
-                                      <div className="sg-muted" style={{ fontSize: 12 }}>
-                                        подсказка: при нуле + авто-выкл — приз не выпадает
+
+                                      <div className="stockBadges">
+                                        {out ? <span className="stockBadge is-out">Ноль</span> : null}
+                                        {!out && low ? (
+                                          <span className="stockBadge is-low">Мало ≤ {inventory.lowThreshold}</span>
+                                        ) : null}
                                       </div>
-                                    ) : null}
+                                    </div>
+
+                                    {/* резервируем высоту => не дёргается */}
+                                    <div className="stockHintLine">
+                                      {out && d.stop_when_zero ? 'Подсказка: при нуле + авто-выкл — приз не выпадает' : ''}
+                                    </div>
                                   </div>
                                 ) : (
                                   <span className="sg-muted">—</span>
@@ -1579,18 +1589,18 @@ React.useEffect(() => {
 
                               <td>
                                 {tracked ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <Toggle
+                                  <div className="stockCell">
+                                    <Switch
                                       checked={!!d.stop_when_zero}
-                                      onChange={(v) => patchDraft(p.prize_code, { stop_when_zero: v })}
+                                      onChange={(v: boolean) => patchDraft(p.prize_code, { stop_when_zero: v })}
                                       labelOn="да"
                                       labelOff="нет"
                                     />
-                                    {out && d.stop_when_zero ? (
-                                      <div className="sg-muted" style={{ fontSize: 12 }}>
-                                        подсказка: сейчас выключен по нулю
-                                      </div>
-                                    ) : null}
+
+                                    {/* резервируем высоту => не дёргается */}
+                                    <div className="stockHintLine">
+                                      {out && d.stop_when_zero ? 'Подсказка: сейчас приз авто-выключен по нулю' : ''}
+                                    </div>
                                   </div>
                                 ) : (
                                   <span className="sg-muted">—</span>
@@ -1601,7 +1611,9 @@ React.useEffect(() => {
                         })}
 
                         {!items.length && !qStats.isLoading && (
-                          <tr><td colSpan={5} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td></tr>
+                          <tr>
+                            <td colSpan={5} style={{ opacity: 0.7, padding: 14 }}>Нет призов.</td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -1612,7 +1624,13 @@ React.useEffect(() => {
                     <div className="sg-muted">
                       {saveMsg ? <b>{saveMsg}</b> : 'Подсказка: если склад не включён — прочерки это нормально.'}
                     </div>
-                    <Button variant="primary" disabled={saving || qStats.isLoading || !appId} onClick={saveStock}>
+
+                    <Button
+                      variant="primary"
+                      className="stockSaveBtn"
+                      disabled={saving || qStats.isLoading || !appId}
+                      onClick={saveStock}
+                    >
                       {saving ? 'Сохраняю…' : 'Сохранить склад'}
                     </Button>
                   </div>
