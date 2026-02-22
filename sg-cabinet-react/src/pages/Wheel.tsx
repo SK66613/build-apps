@@ -1770,7 +1770,6 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
 }
 .summaryTopMoney{ font-weight:900; }
 .summaryTopPct{ font-size:12px; opacity:.7; font-weight:800; }
-
         
       `}</style>
 
@@ -2305,6 +2304,7 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
     })()}
   </div>
 )}
+
 
 
 
