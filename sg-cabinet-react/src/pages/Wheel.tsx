@@ -975,6 +975,15 @@ React.useEffect(() => {
   vertical-align:middle;
 }
 
+.wheelApplyBtn{
+  box-sizing:border-box;
+}
+.wheelQuickDate{
+  height:34px;
+  line-height:32px;  /* на 2px меньше из-за border */
+  padding:0 12px;
+}
+
         
       `}</style>
 
