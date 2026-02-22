@@ -1760,11 +1760,11 @@ React.useEffect(() => {
       <table className="sg-table stockTable">
         {/* ширины суммарно = 100% */}
         <colgroup>
-          <col style={{ width: '40%' }} /> {/* Название */}
-          <col style={{ width: '15%' }} /> {/* Активен */}
-          <col style={{ width: '17%' }} /> {/* Учёт остатков */}
-          <col style={{ width: '16%' }} /> {/* Остаток */}
-          <col style={{ width: '12%' }} /> {/* Авто-выкл */}
+          <col style={{ width: '20%' }} /> {/* Название */}
+          <col style={{ width: '20%' }} /> {/* Активен */}
+          <col style={{ width: '20%' }} /> {/* Учёт остатков */}
+          <col style={{ width: '20%' }} /> {/* Остаток */}
+          <col style={{ width: '20%' }} /> {/* Авто-выкл */}
         </colgroup>
 
         <thead>
