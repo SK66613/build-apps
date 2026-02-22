@@ -825,6 +825,10 @@ export default function Wheel() {
         }
         .sg-toggle.is-on .sg-toggle__knob{ background:var(--accent); }
         .sg-toggle__txt{ font-weight:900; font-size:12px; opacity:.9; }
+
+
+
+        
       `}</style>
 
       <div className="wheelHead">
@@ -884,7 +888,7 @@ export default function Wheel() {
               <div className="wheelChartBtns" role="tablist" aria-label="Слои графика">
                                 <button
                   type="button"
-                  className={'sg-tab ' + (costBasis === 'issued' ? 'is-active' : '')}
+                  className={'wheelChartBtn wheelChartBtn--text ' + (costBasis === 'issued' ? 'is-active' : '')}
                   onClick={() => setCostBasis('issued')}
                   title="Факт расхода считаем в момент выигрыша"
                 >
@@ -892,7 +896,7 @@ export default function Wheel() {
                 </button>
                 <button
                   type="button"
-                  className={'sg-tab ' + (costBasis === 'redeemed' ? 'is-active' : '')}
+                  className={'wheelChartBtn wheelChartBtn--text ' + (costBasis === 'redeemed' ? 'is-active' : '')}
                   onClick={() => setCostBasis('redeemed')}
                   title="Факт расхода считаем по факту выдачи"
                 >
