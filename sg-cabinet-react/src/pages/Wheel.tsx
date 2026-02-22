@@ -2066,105 +2066,59 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
       <div>
         <div className="wheelCardTitle">Сводка (ФАКТ)</div>
         <div className="wheelCardSub">
-          Данные за выбранный период из <b>wheel_spins</b> (timeseries) и состояния склада из <b>wheel_prizes</b>.
-          <span className="sg-muted"> База расхода: </span>
-          <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b>
+          История берётся из <b>wheel_spins</b> (timeseries). База расхода:{' '}
+          <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b>.
         </div>
       </div>
     </div>
 
     {(() => {
-      // -------- safe helpers (чтобы не словить белый экран)
+      // --- safe numbers (чтобы не словить белый экран)
       const n = (v: any, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+
       const spins = Math.max(0, n(period?.spins, 0));
       const revenue = Math.round(n(period?.revenue, 0));
       const payout = Math.round(n(period?.payout, 0));
-      const profit = Math.round(n(period?.profit, revenue - payout));
 
-      const m = (cent: number) => moneyFromCent(Math.round(cent || 0), currency);
+      // profit: если period.profit есть — берём, иначе считаем
+      const profit = Math.round(
+        Number.isFinite(Number(period?.profit)) ? Number(period?.profit) : (revenue - payout)
+      );
 
-      const revenuePerSpin = spins > 0 ? Math.round(revenue / spins) : 0;
-      const payoutPerSpin = spins > 0 ? Math.round(payout / spins) : 0;
-      const profitPerSpin = spins > 0 ? Math.round(profit / spins) : 0;
+      const revPerSpin = spins > 0 ? Math.round(revenue / spins) : 0;
+      const payPerSpin = spins > 0 ? Math.round(payout / spins) : 0;
+      const profPerSpin = spins > 0 ? Math.round(profit / spins) : 0;
 
-      // факт: средняя цена спина (монет) из истории (если у тебя есть поле period.spin_cost_coins_sum)
-      // если нет — просто покажем "—"
-      const spinCoinsAvg = (() => {
-        const sum = (period as any)?.spin_cost_coins_sum;
-        if (!Number.isFinite(Number(sum)) || spins <= 0) return null;
-        return Number(sum) / spins;
-      })();
+      const redeemRatePct = String(fact?.redeemRatePct ?? '0');
 
-      // факт: средняя выручка в монетах/спин (если есть revenue_coins_sum)
-      const revenueCoinsAvg = (() => {
-        const sum = (period as any)?.revenue_coins_sum;
-        if (!Number.isFinite(Number(sum)) || spins <= 0) return null;
-        return Number(sum) / spins;
-      })();
-
-      const redeemRatePct = String(fact?.redeemRatePct ?? '').trim() || '0';
-
-      // склад/активность
       const totalPrizes = Array.isArray(items) ? items.length : 0;
-      const active = Math.max(0, n(activeCount, 0));
+      const activePrizes = Math.max(0, n(activeCount, 0));
 
+      // inventory может быть не готов — защитим
       const trackedCount = Math.max(0, n(inventory?.trackedCount, 0));
       const outCount = Math.max(0, n(inventory?.outOfStockCount, 0));
       const lowCount = Math.max(0, n(inventory?.lowStockCount, 0));
       const autoOffCount = Math.max(0, n(inventory?.autoOffCount, 0));
-      const lowThreshold = Math.max(0, n(inventory?.lowThreshold, 3));
+      const lowThr = Math.max(0, n(inventory?.lowThreshold, 3));
 
-      // “топ расхода” — используем то, что уже есть у тебя в prizeStats (wins * cost_cent etc)
-      // если массива нет — просто не показываем
-      const stats: any[] = Array.isArray(prizeStats) ? prizeStats : [];
-      const topPayout = (() => {
-        const rows = stats
-          .map((x) => {
-            const kind = String(x.kind || '');
-            const wins = Math.max(0, n(x.wins, 0));
-            const costCent = Math.max(0, n(x.cost_cent, 0));
-            const coins = Math.max(0, n(x.coins, 0));
-            const coinCent = Math.max(0, n(coinCostCentPerCoin, 0));
-
-            // расход фактический: для item = wins*cost_cent, для coins = wins*coins*coinCent
-            const pay = kind === 'coins'
-              ? Math.round(wins * coins * coinCent)
-              : Math.round(wins * costCent);
-
-            return {
-              prize_code: x.prize_code,
-              title: x.title || x.prize_code,
-              payCent: pay,
-              wins,
-              kind,
-            };
-          })
-          .filter((r) => r.payCent > 0)
-          .sort((a, b) => b.payCent - a.payCent)
-          .slice(0, 5);
-
-        return rows;
+      // бейдж по прибыли
+      const profitBadge = (() => {
+        if (profit > 0) return { cls: 'wheelRedeemBadge is-good', text: 'плюс' };
+        if (profit < 0) return { cls: 'wheelRedeemBadge is-bad', text: 'минус' };
+        return { cls: 'wheelRedeemBadge', text: 'ноль' };
       })();
 
-      const payoutTopSum = topPayout.reduce((s, r) => s + (r.payCent || 0), 0);
-      const payoutDenom = payout > 0 ? payout : payoutTopSum;
-
-      // бейджи состояния прибыли
-      const profitCls =
-        profit > 0 ? 'sumBadge is-good' : (profit < 0 ? 'sumBadge is-bad' : 'sumBadge is-neutral');
-      const profitTxt = profit > 0 ? 'плюс' : (profit < 0 ? 'минус' : 'ноль');
-
-      // бейдж склада
+      // бейдж по складу (очень полезно владельцу)
       const stockBadge = (() => {
-        if (trackedCount <= 0) return { cls: 'sumBadge is-neutral', txt: 'склад выкл' };
-        if (outCount > 0) return { cls: 'sumBadge is-bad', txt: `ноль: ${outCount}` };
-        if (lowCount > 0) return { cls: 'sumBadge is-warn', txt: `мало: ${lowCount}` };
-        return { cls: 'sumBadge is-good', txt: 'ок' };
+        if (trackedCount <= 0) return { cls: 'wheelRedeemBadge', text: 'склад выкл' };
+        if (outCount > 0) return { cls: 'wheelRedeemBadge is-bad', text: `ноль: ${outCount}` };
+        if (lowCount > 0) return { cls: 'wheelRedeemBadge is-warn', text: `мало: ${lowCount}` };
+        return { cls: 'wheelRedeemBadge is-good', text: 'склад ок' };
       })();
 
       return (
         <div className="wheelSummaryPro" style={{ paddingTop: 0 }}>
-          {/* 4 главных факта */}
+          {/* ===== row 1: главные цифры ===== */}
           <div className="wheelSummaryTiles">
             <div className="wheelSumTile">
               <div className="wheelSumLbl">Спинов</div>
@@ -2173,138 +2127,99 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
 
             <div className="wheelSumTile">
               <div className="wheelSumLbl">Выручка</div>
-              <div className="wheelSumVal">{m(revenue)}</div>
+              <div className="wheelSumVal">{moneyFromCent(revenue, currency)}</div>
               <div className="sg-muted" style={{ marginTop: 4 }}>
-                {spins > 0 ? `${m(revenuePerSpin)} / спин` : '—'}
+                {spins > 0 ? (
+                  <>на спин: <b>{moneyFromCent(revPerSpin, currency)}</b></>
+                ) : '—'}
               </div>
             </div>
 
             <div className="wheelSumTile">
-              <div className="wheelSumLbl">Расход на призы</div>
-              <div className="wheelSumVal">{m(payout)}</div>
+              <div className="wheelSumLbl">Расход</div>
+              <div className="wheelSumVal">{moneyFromCent(payout, currency)}</div>
               <div className="sg-muted" style={{ marginTop: 4 }}>
-                {spins > 0 ? `${m(payoutPerSpin)} / спин` : '—'}
+                {spins > 0 ? (
+                  <>на спин: <b>{moneyFromCent(payPerSpin, currency)}</b></>
+                ) : (
+                  <>база: <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b></>
+                )}
               </div>
             </div>
 
             <div className="wheelSumTile is-strong">
               <div className="wheelSumLbl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                Прибыль
-                <span className={profitCls}>{profitTxt}</span>
+                Прибыль <span className={profitBadge.cls}>{profitBadge.text}</span>
               </div>
-              <div className="wheelSumVal">{m(profit)}</div>
+              <div className="wheelSumVal">{moneyFromCent(profit, currency)}</div>
               <div className="sg-muted" style={{ marginTop: 4 }}>
-                {spins > 0 ? `${m(profitPerSpin)} / спин` : '—'}
+                {spins > 0 ? (
+                  <>на спин: <b>{moneyFromCent(profPerSpin, currency)}</b></>
+                ) : '—'}
               </div>
             </div>
           </div>
 
-          {/* операционка + склад (дорого как “карточки”) */}
-          <div className="summaryGrid2" style={{ marginTop: 10 }}>
-            <div className="sg-pill summaryCard">
-              <div className="summaryCardHead">
-                <div className="summaryCardTitle">Операционка</div>
-              </div>
-
-              <div className="summaryRows">
-                <div className="summaryRow">
-                  <span className="sg-muted">Доля выдачи (redeemed):</span>
-                  <b>{redeemRatePct}%</b>
-                </div>
-
-                <div className="summaryRow">
-                  <span className="sg-muted">Активных призов:</span>
-                  <b>{active} / {totalPrizes}</b>
-                </div>
-
-                <div className="summaryRow">
-                  <span className="sg-muted">Средняя цена спина:</span>
-                  <b>{spinCoinsAvg === null ? '—' : `${spinCoinsAvg.toFixed(2)} монет`}</b>
-                </div>
-
-                <div className="summaryRow">
-                  <span className="sg-muted">Выручка/спин:</span>
-                  <b>{m(revenuePerSpin)}</b>
-                  {revenueCoinsAvg !== null ? (
-                    <span className="sg-muted">· {revenueCoinsAvg.toFixed(2)} монет</span>
-                  ) : null}
-                </div>
+          {/* ===== row 2: операционка + склад (без прогнозов) ===== */}
+          <div className="wheelSummaryTiles" style={{ marginTop: 10 }}>
+            <div className="wheelSumTile">
+              <div className="wheelSumLbl">Доля выдачи</div>
+              <div className="wheelSumVal">{redeemRatePct}%</div>
+              <div className="sg-muted" style={{ marginTop: 4 }}>
+                redeemed / выигрыши
               </div>
             </div>
 
-            <div className="sg-pill summaryCard">
-              <div className="summaryCardHead">
-                <div className="summaryCardTitle">Склад</div>
-                <span className={stockBadge.cls}>{stockBadge.txt}</span>
+            <div className="wheelSumTile">
+              <div className="wheelSumLbl">Активных призов</div>
+              <div className="wheelSumVal">{activePrizes} / {totalPrizes}</div>
+              <div className="sg-muted" style={{ marginTop: 4 }}>
+                сейчас участвуют в выпадении
               </div>
+            </div>
 
-              <div className="summaryRows">
-                <div className="summaryRow">
-                  <span className="sg-muted">Призы со складом:</span>
-                  <b>{trackedCount}</b>
-                </div>
+            <div className="wheelSumTile">
+              <div className="wheelSumLbl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                Склад <span className={stockBadge.cls}>{stockBadge.text}</span>
+              </div>
+              <div className="wheelSumVal">{trackedCount}</div>
+              <div className="sg-muted" style={{ marginTop: 4 }}>
+                призов с учётом остатков
+              </div>
+            </div>
 
-                <div className="summaryRow">
-                  <span className="sg-muted">Закончились (qty ≤ 0):</span>
-                  <b>{outCount}</b>
-                </div>
-
-                <div className="summaryRow">
-                  <span className="sg-muted">Мало (≤ {lowThreshold}):</span>
-                  <b>{lowCount}</b>
-                </div>
-
-                <div className="summaryRow">
-                  <span className="sg-muted">Авто-выкл при нуле:</span>
-                  <b>{autoOffCount}</b>
-                </div>
+            <div className="wheelSumTile">
+              <div className="wheelSumLbl">Склад: статусы</div>
+              <div className="wheelSumVal">
+                {outCount} / {lowCount}
+              </div>
+              <div className="sg-muted" style={{ marginTop: 4 }}>
+                ноль / мало (≤ {lowThr})
+                <span className="sg-muted"> · авто-выкл: </span>
+                <b>{autoOffCount}</b>
               </div>
             </div>
           </div>
 
-          {/* топ расхода */}
-          {topPayout.length ? (
-            <div className="sg-pill summaryCard" style={{ marginTop: 10 }}>
-              <div className="summaryCardHead">
-                <div className="summaryCardTitle">Топ расхода по призам</div>
-                <div className="sg-muted">доля от расхода за период</div>
-              </div>
-
-              <div className="summaryTopList">
-                {topPayout.map((r) => {
-                  const pct = payoutDenom > 0 ? Math.round((r.payCent / payoutDenom) * 100) : 0;
-                  return (
-                    <div key={r.prize_code} className="summaryTopRow">
-                      <div className="summaryTopLeft">
-                        <div className="summaryTopTitle">
-                          <b>{r.title}</b>
-                          <span className="sg-muted"> · {r.wins} выигрышей</span>
-                        </div>
-                        <div className="summaryTopBar">
-                          <div className="summaryTopBarFill" style={{ width: `${Math.min(100, pct)}%` }} />
-                        </div>
-                      </div>
-
-                      <div className="summaryTopRight">
-                        <div className="summaryTopMoney">{m(r.payCent)}</div>
-                        <div className="summaryTopPct">{pct}%</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="sg-muted" style={{ marginTop: 10 }}>
-                Подсказка: чтобы уменьшить расход — снижай шанс (weight) или себестоимость самых дорогих призов.
-              </div>
-            </div>
-          ) : null}
+          {/* ===== маленькая “умная подсказка” (фактная) ===== */}
+          <div className="sg-pill" style={{ padding: '10px 12px', marginTop: 12 }}>
+            {profit < 0 ? (
+              <>
+                <span className="sg-muted">Подсказка: </span>
+                сейчас прибыль <b>отрицательная</b>. Обычно помогает снизить расход/спин (дорогие призы) или повысить выручку/спин (цена спина).
+              </>
+            ) : (
+              <>
+                <span className="sg-muted">Подсказка: </span>
+                если хочешь “ровнее” экономику — смотри расход/спин и склад (ноль/мало), это чаще всего ломает стабильность.
+              </>
+            )}
+          </div>
         </div>
       );
     })()}
   </div>
 )}
-
 
 
 
