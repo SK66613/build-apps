@@ -945,6 +945,31 @@ React.useEffect(() => {
   cursor:not-allowed;
 }
 
+/* ===== FORCE SAME FONT AS sg-tab ===== */
+
+/* кнопка применить */
+.wheelApplyBtn{
+  font: inherit;
+  font-weight:900;
+  font-size:13px;
+  letter-spacing:0;
+}
+
+/* инпут дат */
+.wheelQuickDate{
+  font: inherit;
+  font-weight:900;
+  font-size:13px;
+  letter-spacing:0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* чтобы браузер не подменял системный шрифт */
+.wheelQuickDate input,
+.wheelQuickDate{
+  font-family: inherit !important;
+}
+
         
       `}</style>
 
