@@ -836,34 +836,51 @@ React.useEffect(() => {
   border-radius:12px; /* такой же как у обычных wheelChartBtn */
 }
 
-/* ===== PERIOD SEGMENT + DATES (FULL REPLACE) ===== */
+/* ===== PERIOD SEGMENT + DATES (CLEAN, NO JUMP, NO SEAM) ===== */
 
 .wheelQuickWrap{
   display:flex;
-  align-items:stretch;
+  align-items:center;     /* НЕ stretch => высота не прыгает */
   gap:0;
   flex-wrap:nowrap;
+
+  border:1px solid rgba(15,23,42,.12);
+  border-radius:12px;
+  background:rgba(255,255,255,.60);
+  overflow:hidden;        /* убирает “шов” и линии */
 }
 
-/* сегмент табов слева */
+/* табы: убираем внешнюю рамку, чтобы рамка была одна общая */
 .wheelQuickTabs{
-  border-top-right-radius:0 !important;
-  border-bottom-right-radius:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
 }
 
-/* правая часть с датами */
+/* правая часть: тоже без внешней рамки */
 .wheelQuickRange{
   display:flex;
   align-items:center;
   gap:8px;
   padding:6px 10px;
-  border:1px solid rgba(15,23,42,.12);
-  border-left:0;
 
-  border-top-right-radius:12px;
-  border-bottom-right-radius:12px;
-
+  border:0;
   background:transparent;
+}
+
+/* вертикальный разделитель (аккуратный) */
+.wheelQuickRange{
+  position:relative;
+}
+.wheelQuickRange::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:8px;
+  bottom:8px;
+  width:1px;
+  background:rgba(15,23,42,.10);
 }
 
 /* подписи от/до */
@@ -873,17 +890,14 @@ React.useEffect(() => {
   font-size:12px;
 }
 
-/* инпуты дат — выглядят как кнопки */
+/* инпуты дат */
 .wheelQuickDate{
   width:150px;
-
   height:34px;
   padding:0 12px;
-
   border-radius:12px;
   border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.9);
-
+  background:rgba(255,255,255,.90);
   font-weight:900;
   font-size:13px;
 }
@@ -894,26 +908,24 @@ React.useEffect(() => {
   cursor:pointer;
 }
 
-/* кнопка применить */
-.wheelApplyBtn{
-  margin-left:6px;
-}
+/* кнопка применить (если делаешь её sg-tab) */
+.wheelApplyBtn{ margin-left:6px; }
 
 /* адаптив */
 @media (max-width:1100px){
-
   .wheelQuickWrap{
     flex-wrap:wrap;
     gap:10px;
-  }
-
-  .wheelQuickTabs{
-    border-radius:999px !important;
+    padding:6px;
   }
 
   .wheelQuickRange{
-    border-left:1px solid rgba(15,23,42,.12);
-    border-radius:12px;
+    width:100%;
+    padding:8px 6px 6px;
+  }
+
+  .wheelQuickRange::before{
+    display:none; /* на переносе не нужна вертикальная линия */
   }
 }
 
