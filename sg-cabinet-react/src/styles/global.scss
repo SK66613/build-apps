@@ -2416,7 +2416,7 @@ body{
 }
 .wheelTopBar{
   margin-top: 8px;
-  height: 10px;
+  height: 8px; /* ← ВОТ ТУТ регулируется толщина прогреса призы в колесе например*/
   border-radius: 999px;
   background: rgba(15,23,42,.06);
   overflow:hidden;
