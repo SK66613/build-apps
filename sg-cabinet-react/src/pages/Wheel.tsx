@@ -2002,62 +2002,17 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
       </div>
     </div>
   )}
-</div>
-
-            {/* KPI mini row */}
-            <div className="wheelKpiRow">
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Спинов (за период)</div>
-                <div className="wheelKpiVal">{period.spins}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Прибыль/день (прогноз)</div>
-                <div className="wheelKpiVal">{moneyFromCent(profitPerDayForecast, currency)}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Призы со складом</div>
-                <div className="wheelKpiVal">{inventory.trackedCount}</div>
-              </div>
-            </div>
-
-            <div className="wheelKpiRow" style={{ paddingTop: 0 }}>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Закончились</div>
-                <div className="wheelKpiVal">{inventory.outOfStockCount}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Мало (≤ {inventory.lowThreshold})</div>
-                <div className="wheelKpiVal">{inventory.lowStockCount}</div>
-              </div>
-              <div className="wheelKpi">
-                <div className="wheelKpiLbl">Авто-выкл при нуле</div>
-                <div className="wheelKpiVal">{inventory.autoOffCount}</div>
-              </div>
-            </div>
 
 
 
-            <div className="wheelUnderTabs" style={{ marginTop: 10 }}>
-              <div className="sg-tabs wheelUnderTabs__seg">
-                <button
-                  className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')}
-                  onClick={() => setTab('summary')}
-                >
-                  Сводка
-                </button>
-                <button
-                  className={'sg-tab ' + (tab === 'forecast' ? 'is-active' : '')}
-                  onClick={() => setTab('forecast')}
-                >
-                  Прогноз
-                </button>
-                <button
-                  className={'sg-tab ' + (tab === 'stock' ? 'is-active' : '')}
-                  onClick={() => setTab('stock')}
-                >
-                  Склад
-                </button>
-              </div>
+
+
+
+
+
+
+
+              
 
              {/* ===== TAB: SUMMARY (ФАКТ) ===== */}
 {tab === 'summary' && (
