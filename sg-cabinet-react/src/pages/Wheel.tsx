@@ -977,6 +977,44 @@ React.useEffect(() => {
   }
 }
 
+// график загрузка
+.wheelChartWrap{
+  position:relative;
+  height:100%;
+}
+
+.wheelChartOverlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:10px;
+  background:rgba(255,255,255,.55);
+  backdrop-filter: blur(2px);
+  border-radius:12px;
+}
+
+.wheelChartOverlayText{
+  font-weight:900;
+  opacity:.75;
+}
+
+.wheelSpinner{
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  border:3px solid rgba(15,23,42,.18);
+  border-top-color: rgba(15,23,42,.55);
+  animation: wheelSpin .8s linear infinite;
+}
+
+@keyframes wheelSpin{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
+}
+
         
       `}</style>
 
