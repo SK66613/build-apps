@@ -881,6 +881,26 @@ export default function Wheel() {
                 <div className="wheelCardSub">{range.from} — {range.to}</div>
               </div>
 
+              <div className="wheelChartSeg" role="tablist" aria-label="Расход считать (ФАКТ)">
+  <button
+    type="button"
+    className={'wheelChartSegBtn ' + (costBasis === 'issued' ? 'is-active' : '')}
+    onClick={() => setCostBasis('issued')}
+    title="Факт расхода считаем в момент выигрыша"
+  >
+    при выигрыше
+  </button>
+
+  <button
+    type="button"
+    className={'wheelChartSegBtn ' + (costBasis === 'redeemed' ? 'is-active' : '')}
+    onClick={() => setCostBasis('redeemed')}
+    title="Факт расхода считаем по факту выдачи"
+  >
+    при выдаче
+  </button>
+</div>
+
               <div className="wheelChartBtns" role="tablist" aria-label="Слои графика">
                 <button
                   type="button"
