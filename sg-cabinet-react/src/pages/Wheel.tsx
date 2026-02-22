@@ -834,11 +834,10 @@ export default function Wheel() {
   border-radius:12px; /* такой же как у обычных wheelChartBtn */
 }
 
-
 .wheelQuickWrap{
   display:flex;
   align-items:stretch;
-  gap:0;              /* важно: без зазора между сегментом и датами */
+  gap:0;
   flex-wrap:nowrap;
 }
 
@@ -853,7 +852,7 @@ export default function Wheel() {
   gap:8px;
   padding:8px 10px;
   border:1px solid rgba(15,23,42,.12);
-  border-left:0;      /* чтобы выглядело как единый блок */
+  border-left:0;
   border-top-right-radius:999px;
   border-bottom-right-radius:999px;
   background:rgba(255,255,255,.6);
@@ -869,8 +868,7 @@ export default function Wheel() {
   width:150px;
 }
 
-/* если не помещается по ширине — пусть красиво переносится */
-@media (max-width: 1100px){
+@media (max-width:1100px){
   .wheelQuickWrap{ flex-wrap:wrap; gap:10px; }
   .wheelQuickTabs{
     border-top-right-radius:999px !important;
@@ -885,44 +883,70 @@ export default function Wheel() {
         
       `}</style>
 
-      <div className="wheelHead">
-        <div>
-          <h1 className="sg-h1">Колесо</h1>
-          <div className="sg-sub">
-            Факт по спинам (wheel_spins) + прогноз EV/ROI (по весам/себестоимости/цене спина).
-          </div>
-        </div>
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-<div className="wheelQuickWrap">
-  <div className="sg-tabs wheelMiniTabs wheelQuickTabs">
-    <button type="button" className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>
-      День
-    </button>
-    <button type="button" className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>
-      Неделя
-    </button>
-    <button type="button" className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>
-      Месяц
-    </button>
-    <button type="button" className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>
-      Свой период
-    </button>
+<div className="wheelHead">
+  <div>
+    <h1 className="sg-h1">Колесо</h1>
+    <div className="sg-sub">
+      Факт по спинам (wheel_spins) + прогноз EV/ROI (по весам/себестоимости/цене спина).
+    </div>
   </div>
 
-  {quick === 'custom' && (
-    <div className="wheelQuickRange">
-      <span className="wheelQuickLbl">от</span>
-      <Input type="date" value={customFrom} onChange={(e: any) => setCustomFrom(e.target.value)} className="wheelQuickDate" />
-      <span className="wheelQuickLbl">до</span>
-      <Input type="date" value={customTo} onChange={(e: any) => setCustomTo(e.target.value)} className="wheelQuickDate" />
-      <Button variant="primary" onClick={() => applyRange(customFrom, customTo)} disabled={!customFrom || !customTo}>
-        Применить
-      </Button>
+  <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+    
+    <div className="wheelQuickWrap">
+
+      <div className="sg-tabs wheelMiniTabs wheelQuickTabs">
+        <button type="button" className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>
+          День
+        </button>
+
+        <button type="button" className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>
+          Неделя
+        </button>
+
+        <button type="button" className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>
+          Месяц
+        </button>
+
+        <button type="button" className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>
+          Свой период
+        </button>
+      </div>
+
+      {quick === 'custom' && (
+        <div className="wheelQuickRange">
+          <span className="wheelQuickLbl">от</span>
+
+          <Input
+            type="date"
+            value={customFrom}
+            onChange={(e:any)=>setCustomFrom(e.target.value)}
+            className="wheelQuickDate"
+          />
+
+          <span className="wheelQuickLbl">до</span>
+
+          <Input
+            type="date"
+            value={customTo}
+            onChange={(e:any)=>setCustomTo(e.target.value)}
+            className="wheelQuickDate"
+          />
+
+          <Button
+            variant="primary"
+            onClick={()=>applyRange(customFrom, customTo)}
+            disabled={!customFrom || !customTo}
+          >
+            Применить
+          </Button>
+        </div>
+      )}
+
     </div>
-  )}
+
+  </div>
 </div>
-  
 
       <div className="wheelGrid">
         {/* LEFT */}
