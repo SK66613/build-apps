@@ -1018,7 +1018,7 @@ React.useEffect(() => {
 
 
 /* =========================
-   STOCK TAB — FINAL (clean)
+   STOCK TAB — FINAL (clean + centered + compact)
    Used by: stockTable/stockWrap + sgSwitch + stockTip + stockWarn + stockQtyRow
    ========================= */
 
@@ -1089,47 +1089,75 @@ React.useEffect(() => {
 }
 .stockDot{ margin:0 6px; opacity:.55; }
 
-.stockTdCtr{ text-align:center; }
+/* center columns */
+.stockTdCtr{ text-align:center; vertical-align:middle; }
 
-/* ===== Switch (one implementation) ===== */
+/* центрируем ТОЛЬКО контролы, а не любой контент */
+.stockCtlCtr{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+}
+
+/* =========================
+   Switch (compact + clearer ON)
+   ========================= */
+
 .sgSwitch{
-  width:78px;
-  height:34px;
+  width:64px;                 /* было 78 */
+  height:28px;                /* было 34 */
   border-radius:999px;
   border:1px solid rgba(15,23,42,.10);
-  background:rgba(15,23,42,.06);
+  background:rgba(15,23,42,.05);
   position:relative;
   cursor:pointer;
   display:inline-flex;
   align-items:center;
   justify-content:flex-start;
-  padding:0 6px;
+  padding:0 5px;              /* было 6 */
   box-shadow:0 1px 0 rgba(15,23,42,.03);
+  transition: background .12s ease, border-color .12s ease, opacity .12s ease, filter .12s ease;
 }
+
 .sgSwitch.is-on{
-  background:rgba(34,197,94,.18);
-  border-color:rgba(34,197,94,.22);
+  background:rgba(34,197,94,.22);     /* чуть ярче, но спокойно */
+  border-color:rgba(34,197,94,.26);
   justify-content:flex-end;
+  filter:saturate(1.05);
 }
+
 .sgSwitch.is-off{
-  background:rgba(239,68,68,.10);
-  border-color:rgba(239,68,68,.16);
+  background:rgba(239,68,68,.07);
+  border-color:rgba(239,68,68,.14);
+  filter:saturate(.92);
 }
+
 .sgSwitch.is-disabled{
   opacity:.45;
   cursor:not-allowed;
 }
+
 .sgSwitch__knob{
-  width:22px;
-  height:22px;
+  width:18px;                 /* было 22 */
+  height:18px;                /* было 22 */
   border-radius:999px;
   background:#fff;
   border:1px solid rgba(15,23,42,.12);
-  box-shadow:0 10px 18px rgba(15,23,42,.10);
+  box-shadow:0 8px 14px rgba(15,23,42,.10);
 }
 
-/* tooltip on hover of control */
-.stockTip{ position:relative; display:inline-flex; justify-content:center; }
+/* =========================
+   Tooltip on hover (no “sticky” after click)
+   ========================= */
+
+.stockTip{
+  position:relative;
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+}
+
 .stockTip::after{
   content:attr(data-tip);
   position:absolute;
@@ -1149,15 +1177,24 @@ React.useEffect(() => {
   transition:opacity .12s ease;
   z-index:9999;
 }
-.stockTip:hover::after,
-.stockTip:focus-within::after{ opacity:1; }
+
+/* показываем ТОЛЬКО на hover */
+.stockTip:hover::after{ opacity:1; }
+
+/* важно: не показывать на focus, иначе “залипает” после клика */
+.stockTip:focus-within::after{ opacity:0; }
+
 .stockTip.is-disabled::after{ display:none; }
 
-/* qty cell */
+/* =========================
+   Qty cell (compact; centered)
+   ========================= */
+
 .stockQtyCell{
   position:relative;
   display:flex;
   justify-content:center;
+  align-items:center;
 }
 
 /* warning bubble above input */
@@ -1185,7 +1222,7 @@ React.useEffect(() => {
   display:inline-flex;
   align-items:center;
   gap:8px;
-  padding:6px 8px;
+  padding:5px 7px;
   border-radius:14px;
   border:1px solid rgba(15,23,42,.10);
   background:rgba(255,255,255,.75);
@@ -1195,10 +1232,11 @@ React.useEffect(() => {
   background:rgba(15,23,42,.04);
 }
 
+/* (если оставляешь стрелки в инпуте — кнопки не нужны, но стили оставим на всякий) */
 .stockStepBtn{
-  width:34px;
-  height:34px;
-  border-radius:12px;
+  width:28px;                 /* было 34 */
+  height:28px;                /* было 34 */
+  border-radius:10px;
   border:1px solid rgba(15,23,42,.10);
   background:rgba(255,255,255,.9);
   font-weight:900;
@@ -1209,13 +1247,16 @@ React.useEffect(() => {
   cursor:not-allowed;
 }
 
-/* input */
+/* input: compact */
 .stockQtyInput{
-  width:82px;
-  height:34px !important;
-  border-radius:12px !important;
+  width:64px;                 /* было 82 */
+  height:28px !important;     /* было 34 */
+  border-radius:10px !important;
   text-align:center;
   font-weight:900 !important;
+  font-size:13px !important;
+  padding:0 8px !important;
+  box-sizing:border-box;
 }
 .stockQtyInput:focus{
   outline:none !important;
@@ -1223,7 +1264,10 @@ React.useEffect(() => {
   border-color:rgba(15,23,42,.18) !important;
 }
 
-/* bottom bar */
+/* =========================
+   Bottom bar
+   ========================= */
+
 .stockBottomBar{
   margin-top:12px;
   display:flex;
@@ -1238,37 +1282,6 @@ React.useEffect(() => {
   padding:0 14px;
   border-radius:12px;
   white-space:nowrap;
-}
-
-/* center controls inside stock columns */
-.stockTdCtr{
-  text-align:center;
-  vertical-align:middle;
-}
-
-/* важно: делаем центр по flex, чтобы не зависеть от inline размеров */
-.stockTdCtr > *{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-/* qty cell already flex — просто центр */
-.stockQtyCell{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-.sgSwitch{
-  width:78px;
-  height:34px;
-  ...
-}
-.sgSwitch__knob{
-  width:22px;
-  height:22px;
-  ...
 }
         
       `}</style>
