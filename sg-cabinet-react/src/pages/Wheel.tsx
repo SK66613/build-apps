@@ -1239,6 +1239,37 @@ React.useEffect(() => {
   border-radius:12px;
   white-space:nowrap;
 }
+
+/* center controls inside stock columns */
+.stockTdCtr{
+  text-align:center;
+  vertical-align:middle;
+}
+
+/* важно: делаем центр по flex, чтобы не зависеть от inline размеров */
+.stockTdCtr > *{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+/* qty cell already flex — просто центр */
+.stockQtyCell{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.sgSwitch{
+  width:78px;
+  height:34px;
+  ...
+}
+.sgSwitch__knob{
+  width:22px;
+  height:22px;
+  ...
+}
         
       `}</style>
 
