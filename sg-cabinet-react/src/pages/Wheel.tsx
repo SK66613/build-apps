@@ -1053,40 +1053,7 @@ export default function Wheel() {
               </div>
             </div>
 
-            {/* ===== тут как раньше: basis + доля выдачи + табы (под графиком) ===== */}
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div className="sg-muted" style={{ fontWeight: 900 }}>Расход считать (ФАКТ):</div>
 
-              <div className="sg-tabs wheelMiniTabs">
-                <button
-                  type="button"
-                  className={'sg-tab ' + (costBasis === 'issued' ? 'is-active' : '')}
-                  onClick={() => setCostBasis('issued')}
-                  title="Факт расхода считаем в момент выигрыша"
-                >
-                  при выигрыше
-                </button>
-                <button
-                  type="button"
-                  className={'sg-tab ' + (costBasis === 'redeemed' ? 'is-active' : '')}
-                  onClick={() => setCostBasis('redeemed')}
-                  title="Факт расхода считаем по факту выдачи"
-                >
-                  при выдаче
-                </button>
-              </div>
-
-              <div className="sg-pill" style={{ padding: '8px 12px' }}>
-                <span className="sg-muted">Доля выдачи: </span>
-                <b>{fmtPct(fact.redeemRate, '—')}</b>
-              </div>
-
-              {qTs.data?.meta?.used_snapshots === 0 ? (
-                <div className="sg-pill" style={{ padding: '8px 12px' }}>
-                  <span className="sg-muted">⚠️ Нет снапшотов (колонки в wheel_spins)</span>
-                </div>
-              ) : null}
-            </div>
 
             <div className="wheelUnderTabs" style={{ marginTop: 10 }}>
               <div className="sg-tabs wheelUnderTabs__seg">
