@@ -1760,11 +1760,11 @@ React.useEffect(() => {
       <table className="sg-table stockTable">
         {/* фиксируем ширины колонок, чтобы “Активен” не уезжал */}
         <colgroup>
-          <col style={{ width: '20%' }} />
-          <col style={{ width: '20%' }} />
-          <col style={{ width: '20%' }} />
-          <col style={{ width: '20%' }} />
-          <col style={{ width: '20%' }} />
+          <col style={{ width: '36%' }} />
+          <col style={{ width: '24%' }} />
+          <col style={{ width: '24%' }} />
+          <col style={{ width: '24%' }} />
+          <col style={{ width: '24%' }} />
         </colgroup>
 
         <thead>
