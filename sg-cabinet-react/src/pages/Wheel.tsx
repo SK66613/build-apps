@@ -1119,14 +1119,85 @@ React.useEffect(() => {
   <div className={'wheelChart is-area'}>
     {!isLoading && !isError && (
       <ResponsiveContainer width="100%" height="100%">
-        {/* chart */}
+        <ComposedChart
+          data={moneySeries.series}
+          margin={{ top: 8, right: 18, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 12 }}
+            interval="preserveStartEnd"
+            tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
+          />
+
+          <YAxis
+            yAxisId="day"
+            tick={{ fontSize: 12 }}
+            width={54}
+            tickFormatter={(v: any) => {
+              const n = Number(v);
+              if (!Number.isFinite(n)) return '';
+              return String(Math.round(n / 100));
+            }}
+          />
+
+          <Tooltip
+            formatter={(val: any, name: any) => {
+              if (name === 'profit') return [moneyFromCent(val, currency), 'Прибыль/день'];
+              if (name === 'revenue') return [moneyFromCent(val, currency), 'Выручка/день'];
+              if (name === 'payout') return [moneyFromCent(val, currency), 'Расход/день'];
+              return [val, name];
+            }}
+            labelFormatter={(_: any, payload: any) => {
+              const d = payload?.[0]?.payload?.date;
+              return d ? `Дата ${d}` : 'Дата';
+            }}
+          />
+
+          {showProfitBars && (
+            <Bar
+              yAxisId="day"
+              dataKey="profit"
+              name="profit"
+              fill="var(--accent)"
+              fillOpacity={0.22}
+              radius={[10, 10, 10, 10]}
+            />
+          )}
+
+          {showRevenue && (
+            <Line
+              yAxisId="day"
+              type="monotone"
+              dataKey="revenue"
+              name="revenue"
+              stroke="var(--accent2)"
+              strokeWidth={2}
+              dot={false}
+            />
+          )}
+
+          {showPayout && (
+            <Line
+              yAxisId="day"
+              type="monotone"
+              dataKey="payout"
+              name="payout"
+              stroke="var(--accent2)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              dot={false}
+            />
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
     )}
   </div>
 
   {isLoading && (
-    <div className="wheelChartOverlay" aria-live="polite">
-      <div className="wheelSpinner" aria-hidden="true" />
+    <div className="wheelChartOverlay">
+      <div className="wheelSpinner" />
       <div className="wheelChartOverlayText">Загрузка…</div>
     </div>
   )}
@@ -1139,84 +1210,6 @@ React.useEffect(() => {
     </div>
   )}
 </div>
-
-              {!isLoading && !isError && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    data={moneySeries.series}
-                    margin={{ top: 8, right: 18, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      interval="preserveStartEnd"
-                      tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
-                    />
-
-                    <YAxis
-                      yAxisId="day"
-                      tick={{ fontSize: 12 }}
-                      width={54}
-                      tickFormatter={(v: any) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) return '';
-                        return String(Math.round(n / 100));
-                      }}
-                    />
-
-                    <Tooltip
-                      formatter={(val: any, name: any) => {
-                        if (name === 'profit') return [moneyFromCent(val, currency), 'Прибыль/день'];
-                        if (name === 'revenue') return [moneyFromCent(val, currency), 'Выручка/день'];
-                        if (name === 'payout') return [moneyFromCent(val, currency), 'Расход/день'];
-                        return [val, name];
-                      }}
-                      labelFormatter={(_: any, payload: any) => {
-                        const d = payload?.[0]?.payload?.date;
-                        return d ? `Дата ${d}` : 'Дата';
-                      }}
-                    />
-
-                    {showProfitBars && (
-                      <Bar
-                        yAxisId="day"
-                        dataKey="profit"
-                        name="profit"
-                        fill="var(--accent)"
-                        fillOpacity={0.22}
-                        radius={[10, 10, 10, 10]}
-                      />
-                    )}
-
-                    {showRevenue && (
-                      <Line
-                        yAxisId="day"
-                        type="monotone"
-                        dataKey="revenue"
-                        name="revenue"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    )}
-
-                    {showPayout && (
-                      <Line
-                        yAxisId="day"
-                        type="monotone"
-                        dataKey="payout"
-                        name="payout"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
-                        dot={false}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-            </div>
 
             {/* KPI mini row */}
             <div className="wheelKpiRow">
