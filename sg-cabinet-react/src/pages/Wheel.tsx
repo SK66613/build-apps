@@ -2004,12 +2004,31 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
   )}
 
 
+  
+</div>
 
 
-
-
-
-
+            <div className="wheelUnderTabs" style={{ marginTop: 10 }}>
+              <div className="sg-tabs wheelUnderTabs__seg">
+                <button
+                  className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')}
+                  onClick={() => setTab('summary')}
+                >
+                  Сводка
+                </button>
+                <button
+                  className={'sg-tab ' + (tab === 'forecast' ? 'is-active' : '')}
+                  onClick={() => setTab('forecast')}
+                >
+                  Прогноз
+                </button>
+                <button
+                  className={'sg-tab ' + (tab === 'stock' ? 'is-active' : '')}
+                  onClick={() => setTab('stock')}
+                >
+                  Склад
+                </button>
+              </div>
 
 
               
