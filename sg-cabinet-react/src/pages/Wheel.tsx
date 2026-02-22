@@ -836,7 +836,8 @@ React.useEffect(() => {
   border-radius:12px; /* такой же как у обычных wheelChartBtn */
 }
 
-///даты 
+/* ===== PERIOD SEGMENT + DATES (FULL REPLACE) ===== */
+
 .wheelQuickWrap{
   display:flex;
   align-items:stretch;
@@ -844,12 +845,13 @@ React.useEffect(() => {
   flex-wrap:nowrap;
 }
 
+/* сегмент табов слева */
 .wheelQuickTabs{
   border-top-right-radius:0 !important;
   border-bottom-right-radius:0 !important;
 }
 
-/* правая часть рядом с табами */
+/* правая часть с датами */
 .wheelQuickRange{
   display:flex;
   align-items:center;
@@ -857,49 +859,61 @@ React.useEffect(() => {
   padding:6px 10px;
   border:1px solid rgba(15,23,42,.12);
   border-left:0;
-  border-top-right-radius:999px;
-  border-bottom-right-radius:999px;
-  background:rgba(255,255,255,.0);
+
+  border-top-right-radius:12px;
+  border-bottom-right-radius:12px;
+
+  background:transparent;
 }
 
+/* подписи от/до */
 .wheelQuickLbl{
   font-weight:900;
   opacity:.75;
   font-size:12px;
 }
 
-/* ВАЖНО: инпуты дат выглядят как кнопки sg-tab */
+/* инпуты дат — выглядят как кнопки */
 .wheelQuickDate{
   width:150px;
 
   height:34px;
   padding:0 12px;
-  border-radius:999px;
+
+  border-radius:12px;
   border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.85);
+  background:rgba(255,255,255,.9);
 
   font-weight:900;
   font-size:13px;
-  line-height:34px;
 }
 
-/* иконка календаря аккуратнее */
+/* иконка календаря */
 .wheelQuickDate::-webkit-calendar-picker-indicator{
   opacity:.7;
   cursor:pointer;
 }
 
+/* кнопка применить */
+.wheelApplyBtn{
+  margin-left:6px;
+}
+
+/* адаптив */
 @media (max-width:1100px){
-  .wheelQuickWrap{ flex-wrap:wrap; gap:10px; }
+
+  .wheelQuickWrap{
+    flex-wrap:wrap;
+    gap:10px;
+  }
 
   .wheelQuickTabs{
-    border-top-right-radius:999px !important;
-    border-bottom-right-radius:999px !important;
+    border-radius:999px !important;
   }
 
   .wheelQuickRange{
     border-left:1px solid rgba(15,23,42,.12);
-    border-radius:999px;
+    border-radius:12px;
   }
 }
 
@@ -970,13 +984,14 @@ React.useEffect(() => {
             className="wheelQuickDate"
           />
 
-          <Button
-            variant="primary"
-            onClick={() => applyRange(customFrom, customTo)}
-            disabled={!customFrom || !customTo}
-          >
-            Применить
-          </Button>
+<button
+  type="button"
+  className="sg-tab is-active wheelApplyBtn"
+  onClick={() => applyRange(customFrom, customTo)}
+  disabled={!customFrom || !customTo}
+>
+  Применить
+</button>
         </div>
       )}
     </div>
