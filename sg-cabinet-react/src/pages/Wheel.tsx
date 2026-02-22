@@ -228,33 +228,21 @@ function Switch({
   checked,
   onChange,
   disabled,
-  labelOn = 'вкл',
-  labelOff = 'выкл',
-  showText = false,      // ⬅️ по умолчанию текст скрыт (как ты просил)
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   disabled?: boolean;
-  labelOn?: string;
-  labelOff?: string;
-  showText?: boolean;
 }) {
   return (
     <button
       type="button"
       className={'sg-switch ' + (checked ? 'is-on' : 'is-off') + (disabled ? ' is-disabled' : '')}
-      onClick={() => {
-        if (disabled) return;
-        onChange(!checked);
-      }}
+      onClick={() => { if (!disabled) onChange(!checked); }}
       aria-pressed={checked}
       aria-disabled={!!disabled}
     >
-      <span className="sg-switch__track" aria-hidden="true" />
-      <span className="sg-switch__knob" aria-hidden="true" />
-      {showText ? (
-        <span className="sg-switch__txt">{checked ? labelOn : labelOff}</span>
-      ) : null}
+      <span className="sg-switch__track" />
+      <span className="sg-switch__knob" />
     </button>
   );
 }
@@ -1355,6 +1343,200 @@ React.useEffect(() => {
   padding:0 14px;
   border-radius:12px;
 }
+
+/* ===== STOCK: compact, no horizontal scroll ===== */
+.stockTable{
+  width:100%;
+  table-layout:fixed;
+}
+.stockTable th:nth-child(1), .stockTable td:nth-child(1){ width:42%; }
+.stockTable th:nth-child(2), .stockTable td:nth-child(2){ width:14%; }
+.stockTable th:nth-child(3), .stockTable td:nth-child(3){ width:16%; }
+.stockTable th:nth-child(4), .stockTable td:nth-child(4){ width:18%; }
+.stockTable th:nth-child(5), .stockTable td:nth-child(5){ width:10%; }
+
+.stockTable th, .stockTable td{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+
+.stockTitleSub{
+  white-space:normal;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.stockTitleMain{ font-weight:900; }
+.stockDot{ opacity:.45; }
+
+.stockCtlRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* row states */
+.stockRowState.is-off{ opacity:.65; background:rgba(15,23,42,.02); }
+.stockRowState.is-out{ background:rgba(239,68,68,.06); }
+
+/* ===== Switch (track + knob only) ===== */
+.sg-switch{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+
+  width:54px;
+  height:28px;
+  padding:0;
+
+  border:0;
+  background:transparent;
+  box-shadow:none;
+  cursor:pointer;
+  user-select:none;
+}
+.sg-switch.is-disabled{ opacity:.45; cursor:not-allowed; }
+
+.sg-switch__track{
+  position:absolute;
+  left:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:54px;
+  height:28px;
+  border-radius:999px;
+  background:rgba(15,23,42,.12);
+  border:1px solid rgba(15,23,42,.14);
+}
+.sg-switch.is-on .sg-switch__track{
+  background:rgba(34,197,94,.18);
+  border-color:rgba(34,197,94,.25);
+}
+.sg-switch.is-off .sg-switch__track{
+  background:rgba(239,68,68,.10);
+  border-color:rgba(239,68,68,.18);
+}
+
+.sg-switch__knob{
+  position:absolute;
+  left:4px;
+  top:50%;
+  transform:translateY(-50%);
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  background:#fff;
+  box-shadow:0 10px 18px rgba(15,23,42,.14);
+  transition:transform .18s ease;
+}
+.sg-switch.is-on .sg-switch__knob{
+  transform:translate(26px, -50%);
+}
+
+/* ===== Qty stepper ===== */
+.stockQtyWrap{
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+.stockQtyRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.stockQtyInput{
+  width:84px !important;
+  height:34px !important;
+  border-radius:12px !important;
+  padding:0 10px !important;
+  font-weight:900 !important;
+  font-size:13px !important;
+  text-align:center;
+  box-sizing:border-box;
+}
+.stockQtyInput::-webkit-outer-spin-button,
+.stockQtyInput::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+.stockQtyInput{ -moz-appearance:textfield; }
+
+.stockStepBtn{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.12);
+  background:rgba(255,255,255,.85);
+  font-weight:900;
+  font-size:18px;
+  line-height:32px;
+  cursor:pointer;
+}
+.stockStepBtn:active{ transform:translateY(1px); }
+.stockStepBtn:disabled{ opacity:.5; cursor:not-allowed; }
+
+/* warning above input (no layout shift) */
+.stockWarn{
+  position:absolute;
+  left:50%;
+  top:-10px;
+  transform:translate(-50%, -100%);
+  padding:7px 10px;
+  border-radius:12px;
+  border:1px solid rgba(239,68,68,.20);
+  background:rgba(255,255,255,.95);
+  box-shadow:0 16px 30px rgba(15,23,42,.10);
+  font-weight:900;
+  font-size:12px;
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+/* tooltip ? */
+.sgTip{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:18px;
+  height:18px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.16);
+  background:rgba(255,255,255,.90);
+  font-weight:900;
+  font-size:12px;
+  opacity:.85;
+  cursor:help;
+  position:relative;
+  outline:none;
+}
+.sgTip:hover,
+.sgTip:focus{ opacity:1; }
+
+.sgTip::after{
+  content:attr(data-tip);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translateX(-50%);
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.12);
+  background:rgba(255,255,255,.95);
+  box-shadow:0 16px 30px rgba(15,23,42,.10);
+  font-weight:800;
+  font-size:12px;
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .12s ease;
+  z-index:10;
+}
+.sgTip:hover::after,
+.sgTip:focus::after{ opacity:1; }
         
       `}</style>
 
@@ -1833,10 +2015,10 @@ React.useEffect(() => {
         <thead>
           <tr>
             <th>Название</th>
-            <th style={{ width: 150 }}>Активен</th>
-            <th style={{ width: 170 }}>Учёт остатков</th>
-            <th style={{ minWidth: 220 }}>Остаток</th>
-            <th style={{ width: 200 }}>Авто-выкл при 0</th>
+            <th>Активен</th>
+            <th>Учёт остатков</th>
+            <th>Остаток</th>
+            <th>Авто-выкл при 0</th>
           </tr>
         </thead>
 
@@ -1852,28 +2034,28 @@ React.useEffect(() => {
             };
 
             const active = !!d.active;
-            const tracked = active && !!d.track_qty; // ⬅️ если приз выключен — склад считается выключенным
+            const tracked = active && !!d.track_qty;
 
             const qRaw = String(d.qty_left ?? '').trim();
-            const qNum = qRaw === '' ? qtyLeft(p) : Math.max(0, toInt(qRaw, 0));
+            const baseQty = qtyLeft(p) ?? 0;
+            const qNum = qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0));
 
-            const out = tracked && (qNum !== null && qNum <= 0);
-            const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
+            const out = tracked && (Number.isFinite(qNum) && qNum <= 0);
 
             const rowCls =
               !active
                 ? 'stockRowState is-off'
-                : tracked
-                  ? (out ? 'stockRowState is-out' : (low ? 'stockRowState is-low' : 'stockRowState'))
+                : (tracked && out)
+                  ? 'stockRowState is-out'
                   : 'stockRowState';
 
-            // disable rules
             const disTrack = !active;
-            const disQty = !tracked;                 // qty input only when tracked
-            const disSwz = !tracked;                 // swz only when tracked
+            const disQty = !tracked;
+            const disSwz = !tracked;
 
             return (
               <tr key={code} className={rowCls}>
+                {/* TITLE */}
                 <td>
                   <div className="stockTitle">
                     <div className="stockTitleMain">{p.title || code}</div>
@@ -1887,13 +2069,12 @@ React.useEffect(() => {
 
                 {/* ACTIVE */}
                 <td>
-                  <div className="stockCtl">
+                  <div className="stockCtlRow">
                     <Switch
                       checked={active}
                       disabled={false}
                       onChange={(v: boolean) => {
                         if (!v) {
-                          // выключили приз => склад тоже выключаем + чистим qty
                           patchDraft(code, {
                             active: false,
                             track_qty: false,
@@ -1904,52 +2085,65 @@ React.useEffect(() => {
                         }
                         patchDraft(code, { active: true });
                       }}
-                      labelOn="вкл"
-                      labelOff="выкл"
-                      showText={false}
                     />
-
-                    <div className="stockHintLine">
-                      {!active ? 'приз выключен' : ' '}
-                    </div>
+                    <span
+                      className="sgTip"
+                      tabIndex={0}
+                      data-tip="Выключенный приз не выпадает. При выключении — склад/авто-выкл сбрасываются."
+                      aria-label="Подсказка"
+                    >?</span>
                   </div>
                 </td>
 
                 {/* TRACK_QTY */}
                 <td>
-                  <div className="stockCtl">
+                  <div className="stockCtlRow">
                     <Switch
-                      checked={!!d.track_qty && active}
+                      checked={tracked}
                       disabled={disTrack}
                       onChange={(v: boolean) => {
                         if (!active) return;
                         if (!v) {
-                          patchDraft(code, {
-                            track_qty: false,
-                            stop_when_zero: false,
-                            qty_left: '',
-                          });
+                          patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
                           return;
                         }
                         patchDraft(code, { track_qty: true });
                       }}
-                      labelOn="да"
-                      labelOff="нет"
-                      showText={false}
                     />
-
-                    <div className="stockHintLine">
-                      {!active ? ' ' : (tracked ? 'остатки учитываются' : 'остатки не считаем')}
-                    </div>
+                    <span
+                      className="sgTip"
+                      tabIndex={0}
+                      data-tip={active ? "Если включено — приз использует qty_left. Если выключено — остатки не учитываются." : "Сначала включи приз."}
+                      aria-label="Подсказка"
+                    >?</span>
                   </div>
                 </td>
 
-                {/* QTY_LEFT */}
+                {/* QTY_LEFT (STEPPER) */}
                 <td>
                   {tracked ? (
-                    <div className="stockCell">
-                      <div className="stockRow">
+                    <div className="stockQtyWrap">
+                      {(out && !!d.stop_when_zero) ? (
+                        <div className="stockWarn">при нуле + авто-выкл приз не выпадает</div>
+                      ) : null}
+
+                      <div className="stockQtyRow">
+                        <button
+                          type="button"
+                          className="stockStepBtn"
+                          onClick={() => {
+                            const cur = qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0));
+                            const next = Math.max(0, (Number(cur) || 0) - 1);
+                            patchDraft(code, { qty_left: String(next) });
+                          }}
+                          aria-label="Уменьшить"
+                        >
+                          −
+                        </button>
+
                         <Input
+                          type="number"
+                          inputMode="numeric"
                           value={d.qty_left}
                           disabled={disQty}
                           onChange={(e: any) => patchDraft(code, { qty_left: e.target.value })}
@@ -1957,26 +2151,25 @@ React.useEffect(() => {
                           className="stockQtyInput"
                         />
 
-                        <div className="stockBadges">
-                          {out ? <span className="stockBadge is-out">Ноль</span> : null}
-                          {!out && low ? (
-                            <span className="stockBadge is-low">Мало ≤ {inventory.lowThreshold}</span>
-                          ) : null}
+                        <button
+                          type="button"
+                          className="stockStepBtn"
+                          onClick={() => {
+                            const cur = qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0));
+                            const next = Math.max(0, (Number(cur) || 0) + 1);
+                            patchDraft(code, { qty_left: String(next) });
+                          }}
+                          aria-label="Увеличить"
+                        >
+                          +
+                        </button>
 
-                          {(out && !!d.stop_when_zero) ? (
-                            <span
-                              className="sgTip"
-                              tabIndex={0}
-                              data-tip="При нуле + авто-выкл приз не выпадает"
-                              aria-label="Подсказка"
-                            >?</span>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      {/* резерв высоты, чтобы не дёргалось */}
-                      <div className="stockHintLine">
-                        {out && !!d.stop_when_zero ? 'приз не выпадает при нуле' : ' '}
+                        <span
+                          className="sgTip"
+                          tabIndex={0}
+                          data-tip="Остаток на складе. Можно менять −/+. Пусто = не трогаем при сохранении."
+                          aria-label="Подсказка"
+                        >?</span>
                       </div>
                     </div>
                   ) : (
@@ -1987,7 +2180,7 @@ React.useEffect(() => {
                 {/* STOP_WHEN_ZERO */}
                 <td>
                   {active ? (
-                    <div className="stockCtl">
+                    <div className="stockCtlRow">
                       <Switch
                         checked={!!d.stop_when_zero && tracked}
                         disabled={disSwz}
@@ -1995,24 +2188,16 @@ React.useEffect(() => {
                           if (!tracked) return;
                           patchDraft(code, { stop_when_zero: v });
                         }}
-                        labelOn="да"
-                        labelOff="нет"
-                        showText={false}
                       />
-
-                      <div className="stockHintLine">
-                        {out && !!d.stop_when_zero ? (
-                          <>
-                            авто-выкл по нулю
-                            <span
-                              className="sgTip"
-                              tabIndex={0}
-                              data-tip="Сейчас приз отключается из выпадения, потому что остаток ≤ 0"
-                              aria-label="Подсказка"
-                            >?</span>
-                          </>
-                        ) : ' '}
-                      </div>
+                      <span
+                        className="sgTip"
+                        tabIndex={0}
+                        data-tip={tracked
+                          ? "Если включено и qty_left ≤ 0 — приз исключается из выпадения."
+                          : "Сначала включи учёт остатков."
+                        }
+                        aria-label="Подсказка"
+                      >?</span>
                     </div>
                   ) : (
                     <span className="sg-muted">—</span>
@@ -2047,7 +2232,7 @@ React.useEffect(() => {
       </button>
     </div>
 
-    {/* app_settings block BELOW stock (как обсудили) */}
+    {/* app_settings block BELOW stock */}
     <div className="sg-pill" style={{ padding: '12px 12px', marginTop: 12 }}>
       <div style={{ fontWeight: 900, marginBottom: 10 }}>Стоимость монеты и валюта</div>
 
