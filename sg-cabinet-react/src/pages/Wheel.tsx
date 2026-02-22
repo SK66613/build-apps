@@ -1138,7 +1138,6 @@ React.useEffect(() => {
   font-weight:900;
   white-space:nowrap;
 }
-
         
       `}</style>
 
@@ -1598,7 +1597,6 @@ React.useEffect(() => {
                 </div>
               )}
 
-             
 /* ===== TAB: STOCK (ТОЛЬКО СКЛАД) ===== */
 {tab === 'stock' && (
   <div className="wheelUnderPanel">
@@ -1800,6 +1798,9 @@ React.useEffect(() => {
     </div>
   </div>
 )}
+            </div>
+          </Card>
+        </div>
 
         {/* RIGHT */}
         <div className="wheelRight">
