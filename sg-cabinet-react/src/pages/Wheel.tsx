@@ -224,7 +224,7 @@ function effWeight(p: PrizeStat, w: number) {
 }
 
 /* ==== Toggle (тумблер) ==== */
-function Toggle({
+function Switch({
   checked,
   onChange,
   disabled,
