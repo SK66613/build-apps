@@ -1121,10 +1121,10 @@ React.useEffect(() => {
 }
 
 .sgSwitch.is-on{
-  background:rgba(34,197,94,.22);     /* чуть ярче, но спокойно */
-  border-color:rgba(34,197,94,.26);
+  background:rgba(34,197,94,.26);
+  border-color:rgba(34,197,94,.30);
   justify-content:flex-end;
-  filter:saturate(1.05);
+  filter:saturate(1.10);
 }
 
 .sgSwitch.is-off{
@@ -1282,6 +1282,60 @@ React.useEffect(() => {
   padding:0 14px;
   border-radius:12px;
   white-space:nowrap;
+}
+
+/* =========================
+   HARD CENTERING for stock columns
+   (fix “looks shifted” issue)
+   ========================= */
+
+/* центр-колонки: делаем сам TD флексом и центрим контент */
+.stockTable td.stockTdCtr{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+
+  /* убираем “оптический” сдвиг из-за одинаковых паддингов */
+  padding-left:0 !important;
+  padding-right:0 !important;
+
+  /* чтобы ничего не влияло на высоту/вертикаль */
+  line-height:1;
+}
+
+/* заголовки центр-колонок тоже без лишних паддингов */
+.stockTable th.stockThCtr{
+  padding-left:0 !important;
+  padding-right:0 !important;
+}
+
+/* title оставляем как было, ему padding нужен */
+.stockTable td.stockTdTitle{
+  padding-left:12px !important;
+  padding-right:12px !important;
+  display:table-cell; /* важно: не флекс */
+}
+
+/* если где-то остался stockCtlCtr — пусть не ломает */
+.stockCtlCtr{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+/* qty cell уже флекс — просто гарантируем */
+.stockQtyCell{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+/* чтобы tooltip не менял ширину/центрирование */
+.stockTip{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
 }
         
       `}</style>
