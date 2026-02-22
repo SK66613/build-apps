@@ -1017,539 +1017,18 @@ React.useEffect(() => {
 
 
 /* =========================
-   STOCK TAB polish
+   STOCK TAB — FINAL (clean)
+   Used by: stockTable/stockWrap + sgSwitch + stockTip + stockWarn + stockQtyRow
    ========================= */
-
-.stockTitle{ display:flex; flex-direction:column; gap:3px; }
-.stockTitleMain{ font-weight:900; }
-.stockTitleSub{ font-size:12px; opacity:.78; }
-.stockDot{ padding:0 6px; opacity:.55; }
-
-.stockCtl{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.stockCell{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.stockRow{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.stockQtyInput{
-  width:120px;
-}
-
-.stockBadges{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-
-.stockBadge{
-  display:inline-flex;
-  align-items:center;
-  height:22px;
-  padding:0 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:900;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.7);
-  opacity:.9;
-}
-
-.stockBadge.is-out{
-  background:rgba(255, 230, 230, .8);
-  border-color:rgba(220, 38, 38, .25);
-}
-
-.stockBadge.is-low{
-  background:rgba(255, 244, 214, .85);
-  border-color:rgba(245, 158, 11, .25);
-}
-
-/* подсказка: резервируем высоту чтобы не прыгало */
-.stockHintLine{
-  min-height:16px;     /* ключ: не дёргается */
-  line-height:16px;
-  font-size:12px;
-  opacity:.72;
-}
-
-/* подсветка строк по состоянию (очень мягко) */
-.stockRowState.is-out td{
-  background:rgba(220, 38, 38, .04);
-}
-.stockRowState.is-low td{
-  background:rgba(245, 158, 11, .045);
-}
-.stockRowState.is-off td{
-  background:transparent;
-}
-
-/* нижняя панель */
-.stockBottomBar{
-  margin-top:12px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-/* кнопка как sg-tab (как "Применить") */
-.stockSaveBtn{
-  height:34px;
-  line-height:34px;
-  padding:0 14px;
-  border-radius:12px;
-  white-space:nowrap;
-}
-
-/* ==== Toggle: сделать прям “тумблер” с движением ==== */
-.sg-toggle{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
-  height:34px;
-  padding:0 12px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.14);
-  background:rgba(255,255,255,.65);
-  box-shadow:0 1px 0 rgba(15,23,42,.04);
-  cursor:pointer;
-  user-select:none;
-  overflow:hidden;
-}
-
-.sg-toggle__knob{
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  background:rgba(15,23,42,.28);
-  transform:translateX(0);
-  transition:transform .18s ease, background .18s ease;
-}
-
-.sg-toggle__txt{
-  font-weight:900;
-  font-size:12px;
-  opacity:.9;
-  min-width:34px;
-  text-align:left;
-}
-
-.sg-toggle.is-on{
-  border-color:rgba(34,197,94,.28);
-  background:rgba(34,197,94,.08);
-}
-.sg-toggle.is-on .sg-toggle__knob{
-  background:var(--accent);
-  transform:translateX(10px); /* визуально “вправо” */
-}
-
-.sg-toggle.is-off{
-  border-color:rgba(239,68,68,.18);
-  background:rgba(239,68,68,.04);
-}
-.sg-toggle.is-off .sg-toggle__knob{
-  background:rgba(239,68,68,.45);
-}
-
-.sg-toggle.is-disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-/* ===== Stock table polish ===== */
-.stockTable td{ vertical-align: middle; }
-.stockTitle{ display:flex; flex-direction:column; gap:2px; }
-.stockTitleMain{ font-weight:900; }
-.stockTitleSub{ font-size:12px; opacity:.85; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.stockDot{ opacity:.5; margin:0 2px; }
-
-.stockCtl{ display:flex; flex-direction:column; gap:6px; }
-.stockCell{ display:flex; flex-direction:column; gap:6px; }
-.stockRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.stockBadges{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-
-.stockHintLine{
-  min-height:16px;      /* резерв — не дёргается */
-  font-size:12px;
-  font-weight:800;
-  opacity:.65;
-}
-
-/* row states */
-.stockRowState.is-off{ opacity:.65; background:rgba(15,23,42,.02); }
-.stockRowState.is-out{ background:rgba(239,68,68,.06); }
-.stockRowState.is-low{ background:rgba(245,158,11,.06); }
-
-/* badges */
-.stockBadge{
-  display:inline-flex;
-  align-items:center;
-  height:24px;
-  padding:0 10px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.12);
-  font-weight:900;
-  font-size:12px;
-  background:rgba(255,255,255,.85);
-}
-.stockBadge.is-out{ border-color:rgba(239,68,68,.25); background:rgba(239,68,68,.10); }
-.stockBadge.is-low{ border-color:rgba(245,158,11,.25); background:rgba(245,158,11,.10); }
-
-/* qty input = same height as switch */
-.stockQtyInput{
-  height:34px !important;
-  border-radius:999px !important;
-  padding:0 12px !important;
-  font-weight:900 !important;
-  font-size:13px !important;
-  box-sizing:border-box;
-}
-
-/* ===== Switch (pill with colored background + knob) ===== */
-.sg-switch{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-
-  height:34px;
-  min-width:92px;
-  padding:0 12px;
-
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.14);
-  background:rgba(255,255,255,.6);
-  box-shadow:0 1px 0 rgba(15,23,42,.04);
-
-  cursor:pointer;
-  user-select:none;
-  transition:background .15s ease, border-color .15s ease, opacity .15s ease;
-}
-
-.sg-switch.is-on{
-  background:rgba(34,197,94,.10);
-  border-color:rgba(34,197,94,.25);
-}
-.sg-switch.is-off{
-  background:rgba(239,68,68,.07);
-  border-color:rgba(239,68,68,.20);
-}
-.sg-switch.is-disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-.sg-switch__track{
-  position:absolute;
-  left:10px;
-  width:44px;
-  height:22px;
-  border-radius:999px;
-  background:rgba(15,23,42,.10);
-}
-.sg-switch.is-on .sg-switch__track{ background:rgba(34,197,94,.35); }
-.sg-switch.is-off .sg-switch__track{ background:rgba(239,68,68,.22); }
-
-.sg-switch__knob{
-  position:absolute;
-  left:12px;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  background:#fff;
-  box-shadow:0 6px 14px rgba(15,23,42,.12);
-  transform:translateX(0);
-  transition:transform .18s ease;
-}
-.sg-switch.is-on .sg-switch__knob{ transform:translateX(22px); }
-
-/* optional text (если включишь showText) */
-.sg-switch__txt{
-  margin-left:56px;
-  font-weight:900;
-  font-size:12px;
-  opacity:.9;
-}
-
-/* ===== Tooltip (no layout shift) ===== */
-.sgTip{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.16);
-  background:rgba(255,255,255,.85);
-  font-weight:900;
-  font-size:12px;
-  opacity:.85;
-  cursor:help;
-  position:relative;
-  outline:none;
-}
-.sgTip:hover,
-.sgTip:focus{ opacity:1; }
-
-.sgTip::after{
-  content:attr(data-tip);
-  position:absolute;
-  left:50%;
-  bottom:calc(100% + 8px);
-  transform:translateX(-50%);
-
-  padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.95);
-  box-shadow:0 16px 30px rgba(15,23,42,.10);
-
-  font-weight:800;
-  font-size:12px;
-  white-space:nowrap;
-
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .12s ease;
-}
-.sgTip:hover::after,
-.sgTip:focus::after{ opacity:1; }
-
-/* bottom bar */
-.stockBottomBar{
-  margin-top:12px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.stockSaveBtn{
-  height:34px;
-  line-height:34px;
-  padding:0 14px;
-  border-radius:12px;
-}
-
-/* ===== STOCK: compact, no horizontal scroll ===== */
-.stockTable{
-  width:100%;
-  table-layout:fixed;
-}
-.stockTable th:nth-child(1), .stockTable td:nth-child(1){ width:42%; }
-.stockTable th:nth-child(2), .stockTable td:nth-child(2){ width:14%; }
-.stockTable th:nth-child(3), .stockTable td:nth-child(3){ width:16%; }
-.stockTable th:nth-child(4), .stockTable td:nth-child(4){ width:18%; }
-.stockTable th:nth-child(5), .stockTable td:nth-child(5){ width:10%; }
-
-.stockTable th, .stockTable td{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  vertical-align:middle;
-}
-
-.stockTitleSub{
-  white-space:normal;
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-}
-.stockTitleMain{ font-weight:900; }
-.stockDot{ opacity:.45; }
-
-.stockCtlRow{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-/* row states */
-.stockRowState.is-off{ opacity:.65; background:rgba(15,23,42,.02); }
-.stockRowState.is-out{ background:rgba(239,68,68,.06); }
-
-/* ===== Switch (track + knob only) ===== */
-.sg-switch{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-  justify-content:flex-start;
-
-  width:54px;
-  height:28px;
-  padding:0;
-
-  border:0;
-  background:transparent;
-  box-shadow:none;
-  cursor:pointer;
-  user-select:none;
-}
-.sg-switch.is-disabled{ opacity:.45; cursor:not-allowed; }
-
-.sg-switch__track{
-  position:absolute;
-  left:0;
-  top:50%;
-  transform:translateY(-50%);
-  width:54px;
-  height:28px;
-  border-radius:999px;
-  background:rgba(15,23,42,.12);
-  border:1px solid rgba(15,23,42,.14);
-}
-.sg-switch.is-on .sg-switch__track{
-  background:rgba(34,197,94,.18);
-  border-color:rgba(34,197,94,.25);
-}
-.sg-switch.is-off .sg-switch__track{
-  background:rgba(239,68,68,.10);
-  border-color:rgba(239,68,68,.18);
-}
-
-.sg-switch__knob{
-  position:absolute;
-  left:4px;
-  top:50%;
-  transform:translateY(-50%);
-  width:20px;
-  height:20px;
-  border-radius:999px;
-  background:#fff;
-  box-shadow:0 10px 18px rgba(15,23,42,.14);
-  transition:transform .18s ease;
-}
-.sg-switch.is-on .sg-switch__knob{
-  transform:translate(26px, -50%);
-}
-
-/* ===== Qty stepper ===== */
-.stockQtyWrap{
-  position:relative;
-  display:flex;
-  align-items:center;
-}
-.stockQtyRow{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.stockQtyInput{
-  width:84px !important;
-  height:34px !important;
-  border-radius:12px !important;
-  padding:0 10px !important;
-  font-weight:900 !important;
-  font-size:13px !important;
-  text-align:center;
-  box-sizing:border-box;
-}
-.stockQtyInput::-webkit-outer-spin-button,
-.stockQtyInput::-webkit-inner-spin-button{
-  -webkit-appearance:none;
-  margin:0;
-}
-.stockQtyInput{ -moz-appearance:textfield; }
-
-.stockStepBtn{
-  width:34px;
-  height:34px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.85);
-  font-weight:900;
-  font-size:18px;
-  line-height:32px;
-  cursor:pointer;
-}
-.stockStepBtn:active{ transform:translateY(1px); }
-.stockStepBtn:disabled{ opacity:.5; cursor:not-allowed; }
-
-/* warning above input (no layout shift) */
-.stockWarn{
-  position:absolute;
-  left:50%;
-  top:-10px;
-  transform:translate(-50%, -100%);
-  padding:7px 10px;
-  border-radius:12px;
-  border:1px solid rgba(239,68,68,.20);
-  background:rgba(255,255,255,.95);
-  box-shadow:0 16px 30px rgba(15,23,42,.10);
-  font-weight:900;
-  font-size:12px;
-  white-space:nowrap;
-  pointer-events:none;
-}
-
-/* tooltip ? */
-.sgTip{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.16);
-  background:rgba(255,255,255,.90);
-  font-weight:900;
-  font-size:12px;
-  opacity:.85;
-  cursor:help;
-  position:relative;
-  outline:none;
-}
-.sgTip:hover,
-.sgTip:focus{ opacity:1; }
-
-.sgTip::after{
-  content:attr(data-tip);
-  position:absolute;
-  left:50%;
-  bottom:calc(100% + 8px);
-  transform:translateX(-50%);
-  padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.95);
-  box-shadow:0 16px 30px rgba(15,23,42,.10);
-  font-weight:800;
-  font-size:12px;
-  white-space:nowrap;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .12s ease;
-  z-index:10;
-}
-.sgTip:hover::after,
-.sgTip:focus::after{ opacity:1; }
-
-/* ===== STOCK “EXPENSIVE” UI ===== */
 
 .stockWrap{ overflow: visible !important; }
 
-/* table as “card rows” */
+/* table as card-rows */
 .stockTable{
   width:100%;
   table-layout:fixed;
   border-collapse:separate;
-  border-spacing:0 10px;            /* пространство между “карточками” */
+  border-spacing:0 10px;
 }
 
 /* header */
@@ -1563,7 +1042,7 @@ React.useEffect(() => {
 }
 .stockThCtr{ text-align:center; }
 
-/* body cells as one card */
+/* card cells */
 .stockTable tbody td{
   padding:14px 12px;
   border-top:1px solid rgba(15,23,42,.06);
@@ -1582,39 +1061,36 @@ React.useEffect(() => {
   border-bottom-right-radius:16px;
 }
 
-/* hover “lift” */
-.stockTable tbody tr{
-  transition: transform .12s ease;
-}
-.stockTable tbody tr:hover{
-  transform: translateY(-1px);
-}
+/* hover lift */
+.stockTable tbody tr{ transition:transform .12s ease; }
+.stockTable tbody tr:hover{ transform:translateY(-1px); }
 
 /* row states */
 .stockRowState.is-off td{
   background:rgba(15,23,42,.035);
   opacity:.85;
 }
-.stockRowState.is-low td{
-  background:rgba(245,158,11,.06);
-}
-.stockRowState.is-out td{
-  background:rgba(239,68,68,.06);
-}
-.stockRowState.is-on td{
-  background:rgba(255,255,255,.85);
-}
+.stockRowState.is-low td{ background:rgba(245,158,11,.06); }
+.stockRowState.is-out td{ background:rgba(239,68,68,.06); }
+.stockRowState.is-on td{ background:rgba(255,255,255,.85); }
 
 /* title */
 .stockTdTitle{ overflow:hidden; }
 .stockTitleMain{ font-weight:900; }
-.stockTitleSub{ margin-top:4px; font-size:12px; opacity:.85; }
-.stockDot{ margin:0 8px; opacity:.55; }
+.stockTitleSub{
+  margin-top:4px;
+  font-size:12px;
+  opacity:.85;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  white-space:normal;
+}
+.stockDot{ margin:0 6px; opacity:.55; }
 
-/* center columns */
 .stockTdCtr{ text-align:center; }
 
-/* ===== switch (дороже, без текстов) ===== */
+/* ===== Switch (one implementation) ===== */
 .sgSwitch{
   width:78px;
   height:34px;
@@ -1651,7 +1127,7 @@ React.useEffect(() => {
   box-shadow:0 10px 18px rgba(15,23,42,.10);
 }
 
-/* tooltip on hover of control (no “?” icons) */
+/* tooltip on hover of control */
 .stockTip{ position:relative; display:inline-flex; justify-content:center; }
 .stockTip::after{
   content:attr(data-tip);
@@ -1677,7 +1153,11 @@ React.useEffect(() => {
 .stockTip.is-disabled::after{ display:none; }
 
 /* qty cell */
-.stockQtyCell{ position:relative; display:flex; justify-content:center; }
+.stockQtyCell{
+  position:relative;
+  display:flex;
+  justify-content:center;
+}
 
 /* warning bubble above input */
 .stockWarn{
@@ -1699,7 +1179,7 @@ React.useEffect(() => {
 .stockWarn.is-out{ border-color:rgba(239,68,68,.22); }
 .stockWarn.is-low{ border-color:rgba(245,158,11,.24); }
 
-/* stepper input group */
+/* stepper group */
 .stockQtyRow{
   display:inline-flex;
   align-items:center;
@@ -1713,6 +1193,7 @@ React.useEffect(() => {
   opacity:.55;
   background:rgba(15,23,42,.04);
 }
+
 .stockStepBtn{
   width:34px;
   height:34px;
@@ -1727,23 +1208,21 @@ React.useEffect(() => {
   cursor:not-allowed;
 }
 
-/* qty input: same height as switch */
+/* input */
 .stockQtyInput{
   width:82px;
   height:34px !important;
-  border-radius:12px;
+  border-radius:12px !important;
   text-align:center;
-  font-weight:900;
+  font-weight:900 !important;
 }
-
-/* убрать “синюю тень/подсветку” у инпута (как ты просил) */
 .stockQtyInput:focus{
   outline:none !important;
   box-shadow:none !important;
   border-color:rgba(15,23,42,.18) !important;
 }
 
-/* bottom bar: like “apply” */
+/* bottom bar */
 .stockBottomBar{
   margin-top:12px;
   display:flex;
