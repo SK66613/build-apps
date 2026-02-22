@@ -826,7 +826,14 @@ export default function Wheel() {
         .sg-toggle.is-on .sg-toggle__knob{ background:var(--accent); }
         .sg-toggle__txt{ font-weight:900; font-size:12px; opacity:.9; }
 
-
+.wheelChartBtn--text{
+  width:auto;
+  padding_slice:0 12px;
+  padding:0 12px;
+  font-weight:800;
+  font-size:13px;
+  border-radius:999px;
+}
 
         
       `}</style>
