@@ -2033,7 +2033,7 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
 
               
 
-             {/* ===== TAB: SUMMARY (ФАКТ) ===== */}
+            {/* ===== TAB: SUMMARY (ФАКТ) — PRO ===== */}
 {tab === 'summary' && (
   <div className="wheelUnderPanel">
     <div className="wheelUnderHead">
@@ -2047,154 +2047,328 @@ const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2
     </div>
 
     {(() => {
-      // --- safe numbers (чтобы не словить белый экран)
+      // ========== SAFE HELPERS (анти-белый экран) ==========
       const n = (v: any, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+      const clamp0 = (x: number) => (Number.isFinite(x) ? Math.max(0, x) : 0);
 
-      const spins = Math.max(0, n(period?.spins, 0));
+      const spins = clamp0(n(period?.spins, 0));
+      const days = Math.max(1, clamp0(n(period?.days, 1)));
+
       const revenue = Math.round(n(period?.revenue, 0));
       const payout = Math.round(n(period?.payout, 0));
-
-      // profit: если period.profit есть — берём, иначе считаем
-      const profit = Math.round(
-        Number.isFinite(Number(period?.profit)) ? Number(period?.profit) : (revenue - payout)
-      );
+      const profit = Math.round(Number.isFinite(Number(period?.profit)) ? Number(period?.profit) : (revenue - payout));
 
       const revPerSpin = spins > 0 ? Math.round(revenue / spins) : 0;
       const payPerSpin = spins > 0 ? Math.round(payout / spins) : 0;
       const profPerSpin = spins > 0 ? Math.round(profit / spins) : 0;
 
-      const redeemRatePct = String(fact?.redeemRatePct ?? '0');
+      const spinsPerDay = spins > 0 ? (spins / days) : 0;
+      const revPerDay = Math.round(revenue / days);
+      const payPerDay = Math.round(payout / days);
+      const profPerDay = Math.round(profit / days);
+
+      const wins = clamp0(n(fact?.wins, 0));
+      const redeemed = clamp0(n(fact?.redeemed, 0));
+      const redeemRatePct = clamp0(n(fact?.redeemRatePct, 0));
 
       const totalPrizes = Array.isArray(items) ? items.length : 0;
-      const activePrizes = Math.max(0, n(activeCount, 0));
+      const activePrizes = clamp0(n(activeCount, 0));
 
-      // inventory может быть не готов — защитим
-      const trackedCount = Math.max(0, n(inventory?.trackedCount, 0));
-      const outCount = Math.max(0, n(inventory?.outOfStockCount, 0));
-      const lowCount = Math.max(0, n(inventory?.lowStockCount, 0));
-      const autoOffCount = Math.max(0, n(inventory?.autoOffCount, 0));
-      const lowThr = Math.max(0, n(inventory?.lowThreshold, 3));
+      const trackedCount = clamp0(n(inventory?.trackedCount, 0));
+      const outCount = clamp0(n(inventory?.outOfStockCount, 0));
+      const lowCount = clamp0(n(inventory?.lowStockCount, 0));
+      const autoOffCount = clamp0(n(inventory?.autoOffCount, 0));
+      const lowThr = clamp0(n(inventory?.lowThreshold, 3));
 
-      // бейдж по прибыли
-      const profitBadge = (() => {
-        if (profit > 0) return { cls: 'wheelRedeemBadge is-good', text: 'плюс' };
-        if (profit < 0) return { cls: 'wheelRedeemBadge is-bad', text: 'минус' };
-        return { cls: 'wheelRedeemBadge', text: 'ноль' };
+      // ========= BADGES (дорого + понятно) =========
+      const profitTone = (() => {
+        // маржа по факту (в деньгах)
+        const m = revenue > 0 ? (profit / revenue) : 0;
+        if (revenue <= 0) return { text: 'нет данных', cls: 'is-neutral' as const };
+        if (m >= 0.25) return { text: 'сильно', cls: 'is-good' as const };
+        if (m >= 0.05) return { text: 'норм', cls: 'is-warn' as const };
+        if (m >= 0) return { text: 'на грани', cls: 'is-warn' as const };
+        return { text: 'минус', cls: 'is-bad' as const };
       })();
 
-      // бейдж по складу (очень полезно владельцу)
-      const stockBadge = (() => {
-        if (trackedCount <= 0) return { cls: 'wheelRedeemBadge', text: 'склад выкл' };
-        if (outCount > 0) return { cls: 'wheelRedeemBadge is-bad', text: `ноль: ${outCount}` };
-        if (lowCount > 0) return { cls: 'wheelRedeemBadge is-warn', text: `мало: ${lowCount}` };
-        return { cls: 'wheelRedeemBadge is-good', text: 'склад ок' };
+      const redeemTone = (() => {
+        if (wins <= 0) return { text: '—', cls: 'is-neutral' as const };
+        if (redeemRatePct >= 70) return { text: 'ок', cls: 'is-good' as const };
+        if (redeemRatePct >= 40) return { text: 'средне', cls: 'is-warn' as const };
+        return { text: 'низко', cls: 'is-bad' as const };
       })();
+
+      const stockTone = (() => {
+        if (trackedCount <= 0) return { text: 'склад выкл', cls: 'is-neutral' as const };
+        if (outCount > 0) return { text: `ноль: ${outCount}`, cls: 'is-bad' as const };
+        if (lowCount > 0) return { text: `мало: ${lowCount}`, cls: 'is-warn' as const };
+        return { text: 'в норме', cls: 'is-good' as const };
+      })();
+
+      // ========= “что съедает прибыль” — оценка по prize stats =========
+      // считаем ожидаемый вклад приза в расход за период по факту wins/redeemed
+      // coins-prize: cost_coins ~ coins
+      // item-prize: cost_coins берём из p.cost_coins (source of truth)
+      const topEaters = (() => {
+        const coinCent = clamp0(n(coinCostCentPerCoin, 0)); // из app_settings
+        const basis = costBasis; // issued | redeemed
+
+        const rows = (Array.isArray(items) ? items : []).map((p) => {
+          const kind = normalizeKind(p);
+          const costCoins =
+            kind === 'coins'
+              ? clamp0(n((p as any).coins, 0))
+              : clamp0(n((p as any).cost_coins, 0)); // ✅ новая истина
+
+          const qty = basis === 'redeemed' ? clamp0(n((p as any).redeemed, 0)) : clamp0(n((p as any).wins, 0));
+
+          const estCoins = costCoins * qty;
+          const estCent = Math.round(estCoins * coinCent);
+
+          const tracked = isTracked(p);
+          const swz = isStopWhenZero(p);
+          const q = qtyLeft(p);
+          const out = tracked && swz && q !== null && q <= 0;
+
+          return {
+            code: p.prize_code,
+            title: p.title || p.prize_code,
+            kind,
+            qty,
+            costCoins,
+            estCoins,
+            estCent,
+            out,
+          };
+        });
+
+        const total = rows.reduce((s, r) => s + r.estCent, 0);
+        const sorted = rows
+          .filter((r) => r.estCent > 0 && r.qty > 0)
+          .sort((a, b) => b.estCent - a.estCent)
+          .slice(0, 6)
+          .map((r) => ({
+            ...r,
+            sharePct: total > 0 ? Math.round((r.estCent / total) * 100) : 0,
+          }));
+
+        return { totalCent: total, list: sorted };
+      })();
+
+      // ========= Рекомендации (фактные, не прогноз) =========
+      const recs = (() => {
+        const out: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string }> = [];
+
+        if (revenue > 0 && profit < 0) {
+          out.push({
+            tone: 'bad',
+            title: 'Период в минусе',
+            body: 'Проверь “что съедает прибыль” ниже: там топ-призы по расходу. Обычно лечится снижением их доли (шанс/себестоимость) или повышением цены спина.',
+          });
+        } else if (revenue > 0 && profit >= 0) {
+          out.push({
+            tone: 'good',
+            title: 'Период в плюсе',
+            body: 'Следи за расходом/спин и складом: нули и “мало” часто ломают стабильность и создают перекосы по выдаче.',
+          });
+        }
+
+        if (wins > 0 && redeemRatePct < 40) {
+          out.push({
+            tone: 'warn',
+            title: 'Низкая выдача призов',
+            body: 'Если выдача низкая — люди могут “не доходить до кассы”. Подумай про более понятный CTA, напоминания и упрощение получения.',
+          });
+        }
+
+        if (trackedCount > 0 && outCount > 0) {
+          out.push({
+            tone: 'bad',
+            title: 'Есть призы с нулём на складе',
+            body: 'Если приз дефицитный — включай “авто-выкл при 0”, иначе экономика и UX будут дергаться.',
+          });
+        }
+
+        if (trackedCount <= 0) {
+          out.push({
+            tone: 'warn',
+            title: 'Склад выключен',
+            body: 'Для физических призов лучше включить “учёт остатков” + “авто-выкл”, чтобы дорогие позиции не выпадали при нуле.',
+          });
+        }
+
+        return out.slice(0, 4);
+      })();
+
+      const recToneCls = (t: string) => (t ? `is-${t}` : '');
 
       return (
-        <div className="wheelSummaryPro" style={{ paddingTop: 0 }}>
-          {/* ===== row 1: главные цифры ===== */}
-          <div className="wheelSummaryTiles">
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl">Спинов</div>
-              <div className="wheelSumVal">{spins}</div>
-            </div>
+        <div className="wheelSummaryPro" style={{ paddingTop: 12 }}>
+          <div className="summaryGrid2">
+            {/* LEFT: KPI */}
+            <div className="sg-pill summaryCard">
+              <div className="summaryCardHead">
+                <div className="summaryCardTitle">Ключевые метрики</div>
+                <span className={'sumBadge ' + profitTone.cls}>
+                  {profitTone.text}
+                </span>
+              </div>
 
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl">Выручка</div>
-              <div className="wheelSumVal">{moneyFromCent(revenue, currency)}</div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                {spins > 0 ? (
-                  <>на спин: <b>{moneyFromCent(revPerSpin, currency)}</b></>
-                ) : '—'}
+              <div className="summaryRows">
+                <div className="summaryRow">
+                  <span className="sg-muted">Спинов</span>
+                  <b>{spins}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">Выручка</span>
+                  <b>{moneyFromCent(revenue, currency)}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">Расход</span>
+                  <b>{moneyFromCent(payout, currency)}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">
+                    Прибыль <span className="sg-muted">· база:</span>{' '}
+                    <b>{costBasis === 'issued' ? 'выигрыш' : 'выдача'}</b>
+                  </span>
+                  <b>{moneyFromCent(profit, currency)}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">На 1 спин</span>
+                  <b>
+                    {moneyFromCent(revPerSpin, currency)} / {moneyFromCent(payPerSpin, currency)} / {moneyFromCent(profPerSpin, currency)}
+                  </b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">В день (среднее)</span>
+                  <b>
+                    {moneyFromCent(revPerDay, currency)} / {moneyFromCent(payPerDay, currency)} / {moneyFromCent(profPerDay, currency)}
+                  </b>
+                </div>
               </div>
             </div>
 
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl">Расход</div>
-              <div className="wheelSumVal">{moneyFromCent(payout, currency)}</div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                {spins > 0 ? (
-                  <>на спин: <b>{moneyFromCent(payPerSpin, currency)}</b></>
-                ) : (
-                  <>база: <b>{costBasis === 'issued' ? 'при выигрыше' : 'при выдаче'}</b></>
-                )}
+            {/* RIGHT: ОПЕРАЦИОНКА */}
+            <div className="sg-pill summaryCard">
+              <div className="summaryCardHead">
+                <div className="summaryCardTitle">Операционка</div>
+                <span className={'sumBadge ' + redeemTone.cls}>
+                  выдача {redeemTone.text}
+                </span>
               </div>
-            </div>
 
-            <div className="wheelSumTile is-strong">
-              <div className="wheelSumLbl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                Прибыль <span className={profitBadge.cls}>{profitBadge.text}</span>
-              </div>
-              <div className="wheelSumVal">{moneyFromCent(profit, currency)}</div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                {spins > 0 ? (
-                  <>на спин: <b>{moneyFromCent(profPerSpin, currency)}</b></>
-                ) : '—'}
+              <div className="summaryRows">
+                <div className="summaryRow">
+                  <span className="sg-muted">Выигрышей</span>
+                  <b>{wins}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">Выдано</span>
+                  <b>{redeemed}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">Доля выдачи</span>
+                  <b>{redeemRatePct}%</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">Активных призов</span>
+                  <b>{activePrizes} / {totalPrizes}</b>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">Склад</span>
+                  <span className={'sumBadge ' + stockTone.cls}>{stockTone.text}</span>
+                </div>
+
+                <div className="summaryRow">
+                  <span className="sg-muted">
+                    Остатки: ноль / мало (≤ {lowThr}) / авто-выкл
+                  </span>
+                  <b>{outCount} / {lowCount} / {autoOffCount}</b>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ===== row 2: операционка + склад (без прогнозов) ===== */}
-          <div className="wheelSummaryTiles" style={{ marginTop: 10 }}>
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl">Доля выдачи</div>
-              <div className="wheelSumVal">{redeemRatePct}%</div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                redeemed / выигрыши
-              </div>
+          {/* ТОП “пожиратели” */}
+          <div className="sg-pill summaryCard" style={{ marginTop: 12 }}>
+            <div className="summaryCardHead">
+              <div className="summaryCardTitle">Что сильнее всего “съедает” расход</div>
+              <span className="sumBadge is-neutral">
+                оценка: {costBasis === 'issued' ? 'wins×cost' : 'redeemed×cost'}
+              </span>
             </div>
 
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl">Активных призов</div>
-              <div className="wheelSumVal">{activePrizes} / {totalPrizes}</div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                сейчас участвуют в выпадении
-              </div>
-            </div>
+            {topEaters.list.length ? (
+              <div className="summaryTopList">
+                {topEaters.list.map((r) => {
+                  const w = Math.max(3, Math.min(100, r.sharePct));
+                  return (
+                    <div key={r.code} className="summaryTopRow">
+                      <div className="summaryTopLeft">
+                        <div className="summaryTopTitle">
+                          <b style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {r.title}
+                          </b>
+                          <span className="sg-muted">·</span>
+                          <span className="sg-muted">{r.kind === 'coins' ? 'монеты' : 'товар'}</span>
+                          {r.out ? (
+                            <span className="sumBadge is-bad" style={{ marginLeft: 8 }}>ноль+авто-выкл</span>
+                          ) : null}
+                        </div>
 
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                Склад <span className={stockBadge.cls}>{stockBadge.text}</span>
-              </div>
-              <div className="wheelSumVal">{trackedCount}</div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                призов с учётом остатков
-              </div>
-            </div>
+                        <div className="summaryTopBar" aria-hidden="true">
+                          <div className="summaryTopBarFill" style={{ width: `${w}%` }} />
+                        </div>
+                      </div>
 
-            <div className="wheelSumTile">
-              <div className="wheelSumLbl">Склад: статусы</div>
-              <div className="wheelSumVal">
-                {outCount} / {lowCount}
+                      <div className="summaryTopRight">
+                        <div className="summaryTopMoney">{moneyFromCent(r.estCent, currency)}</div>
+                        <div className="summaryTopPct">{r.sharePct}% · {r.qty} шт</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="sg-muted" style={{ marginTop: 4 }}>
-                ноль / мало (≤ {lowThr})
-                <span className="sg-muted"> · авто-выкл: </span>
-                <b>{autoOffCount}</b>
-              </div>
-            </div>
-          </div>
-
-          {/* ===== маленькая “умная подсказка” (фактная) ===== */}
-          <div className="sg-pill" style={{ padding: '10px 12px', marginTop: 12 }}>
-            {profit < 0 ? (
-              <>
-                <span className="sg-muted">Подсказка: </span>
-                сейчас прибыль <b>отрицательная</b>. Обычно помогает снизить расход/спин (дорогие призы) или повысить выручку/спин (цена спина).
-              </>
             ) : (
-              <>
-                <span className="sg-muted">Подсказка: </span>
-                если хочешь “ровнее” экономику — смотри расход/спин и склад (ноль/мало), это чаще всего ломает стабильность.
-              </>
+              <div className="sg-muted" style={{ padding: '8px 2px' }}>
+                Пока нечего показать: нет себестоимости (cost_coins/coins) или нет wins/redeemed за период.
+              </div>
             )}
           </div>
+
+          {/* Рекомендации (фактные) */}
+          {recs.length ? (
+            <div className="sg-pill summaryCard" style={{ marginTop: 12 }}>
+              <div className="summaryCardHead">
+                <div className="summaryCardTitle">Рекомендации</div>
+                <span className="sumBadge is-neutral">по факту периода</span>
+              </div>
+
+              <div className="forecastRecsGrid" style={{ marginTop: 0 }}>
+                {recs.map((r, i) => (
+                  <div key={i} className={'forecastRecCard ' + recToneCls(r.tone)}>
+                    <div className="forecastRecTitle">{r.title}</div>
+                    <div className="forecastRecBody">{r.body}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       );
     })()}
   </div>
 )}
-
 
 
 
