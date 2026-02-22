@@ -831,7 +831,7 @@ export default function Wheel() {
   padding:0 12px;
   font-weight:800;
   font-size:13px;
-  border-radius:inherit;
+  border-radius:12px; /* такой же как у обычных wheelChartBtn */
 }
 
         
