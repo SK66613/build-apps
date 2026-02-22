@@ -1824,57 +1824,37 @@ React.useEffect(() => {
                   </div>
                 </td>
 
-                {/* QTY_LEFT */}
-                <td className="stockTdCtr">
-                  <div className="stockQtyCell">
-                    {/* всплывашки над полем: только когда реально нужно */}
-                    {out && swz ? (
-                      <div className="stockWarn is-out">Закончились — приз не выпадает</div>
-                    ) : null}
+              
+{/* QTY_LEFT */}
+<td>
+  {tracked ? (
+    <div className="stockQtyCell">
+      {/* подсказка над полем — только когда low/out */}
+      {out ? (
+        <div className="stockWarn is-out">Закончились</div>
+      ) : low ? (
+        <div className="stockWarn is-low">Скоро закончатся (≤ {inventory.lowThreshold})</div>
+      ) : null}
 
-                    {!out && low ? (
-                      <div className="stockWarn is-low">Скоро закончатся (≤ {inventory.lowThreshold})</div>
-                    ) : null}
-
-                    <div className={'stockQtyRow ' + (!tracked ? 'is-disabled' : '')}>
-                      <button
-                        type="button"
-                        className="stockStepBtn"
-                        disabled={!tracked}
-                        onClick={() => {
-                          const cur = qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0));
-                          patchDraft(code, { qty_left: String(Math.max(0, cur - 1)) });
-                        }}
-                        aria-label="Уменьшить"
-                      >
-                        −
-                      </button>
-
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        value={tracked ? d.qty_left : ''}
-                        disabled={!tracked}
-                        onChange={(e: any) => patchDraft(code, { qty_left: e.target.value })}
-                        placeholder={tracked ? '0' : '—'}
-                        className="stockQtyInput"
-                      />
-
-                      <button
-                        type="button"
-                        className="stockStepBtn"
-                        disabled={!tracked}
-                        onClick={() => {
-                          const cur = qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0));
-                          patchDraft(code, { qty_left: String(Math.max(0, cur + 1)) });
-                        }}
-                        aria-label="Увеличить"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </td>
+      <Input
+        type="number"
+        inputMode="numeric"
+        value={d.qty_left}
+        disabled={disQty}
+        onChange={(e: any) => patchDraft(code, { qty_left: e.target.value })}
+        placeholder="0"
+        className="stockQtyInput"
+      />
+    </div>
+  ) : (
+    <Input
+      value=""
+      disabled
+      placeholder="—"
+      className="stockQtyInput stockQtyInput--disabled"
+    />
+  )}
+</td>
 
                 {/* STOP_WHEN_ZERO */}
                 <td className="stockTdCtr">
