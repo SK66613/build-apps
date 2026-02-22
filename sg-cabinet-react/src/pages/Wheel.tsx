@@ -825,6 +825,44 @@ export default function Wheel() {
         }
         .sg-toggle.is-on .sg-toggle__knob{ background:var(--accent); }
         .sg-toggle__txt{ font-weight:900; font-size:12px; opacity:.9; }
+
+
+
+        .wheelChartBtns{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.wheelChartSeg{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.12);
+  background:rgba(255,255,255,.7);
+  box-shadow:0 1px 0 rgba(15,23,42,.04);
+}
+
+.wheelChartSegBtn{
+  height:30px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.85);
+  font-weight:900;
+  font-size:12px;
+  line-height:30px;
+  cursor:pointer;
+  user-select:none;
+}
+
+.wheelChartSegBtn.is-active{
+  background:rgba(99, 102, 241, .12); /* если не хочешь хардкод — скажи, сделаем через var */
+  border-color:rgba(99, 102, 241, .35);
+}
       `}</style>
 
       <div className="wheelHead">
