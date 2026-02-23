@@ -1,20 +1,42 @@
 // sg-cabinet-react/src/constructor/editors/StylesPassportEditor.tsx
 import React from 'react';
-import { Button, Input } from '../../components/ui';
+import { Input } from '../../components/ui';
 import { useConstructorStore } from '../state/constructorStore';
-import { apiFetch } from '../../lib/api';
 
 type Props = {
   value: any;
   onChange: (next: any) => void;
 };
 
-type WheelPrize = {
+type Stamp = {
   code: string;
-  title?: string;
-  coins?: number;
-  active?: number | boolean;
-  img?: string;
+  name: string;
+  desc: string;
+  image: string;
+};
+
+type TierRewardKind = 'none' | 'item' | 'coins';
+
+type Tier = {
+  id: 't1' | 't2' | 't3';
+
+  // progression
+  goal: number;            // how many stamps to complete this tier
+  window_days: number;     // rolling window from user start (0 = no limit)
+
+  // reward (independent from wheel)
+  reward_enabled: boolean;
+  reward_kind: TierRewardKind;
+
+  reward_title: string;
+  reward_text: string;
+  reward_img: string;
+
+  // if reward_kind = coins
+  reward_coins: number;
+
+  // economics (in coins) — расход владельца
+  reward_cost_coins: number; // cost of this tier reward in coins (for analytics)
 };
 
 function clone<T>(v: T): T {
@@ -40,53 +62,89 @@ async function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+function ensureTierDefaults(t: any, id: Tier['id'], idx: number): Tier {
+  const dGoal = idx === 0 ? 3 : idx === 1 ? 6 : 10;
+  const dWindow = idx === 0 ? 30 : idx === 1 ? 60 : 90;
+
+  const out: Tier = {
+    id,
+
+    goal: clamp(Math.round(toNum(t?.goal, dGoal)), 1, 999),
+    window_days: clamp(Math.round(toNum(t?.window_days, dWindow)), 0, 3650),
+
+    reward_enabled: t?.reward_enabled === undefined ? true : !!t.reward_enabled,
+    reward_kind: (['none', 'item', 'coins'].includes(String(t?.reward_kind)) ? String(t?.reward_kind) : 'item') as TierRewardKind,
+
+    reward_title: toStr(t?.reward_title) || (idx === 0 ? '🎁 Приз за 1 круг' : idx === 1 ? '🎁 Приз за 2 круг' : '🎁 Приз за 3 круг'),
+    reward_text: toStr(t?.reward_text) || 'Приз будет выдан после завершения уровня.',
+    reward_img: toStr(t?.reward_img),
+
+    reward_coins: clamp(Math.round(toNum(t?.reward_coins, 0)), 0, 1_000_000),
+
+    reward_cost_coins: clamp(Math.round(toNum(t?.reward_cost_coins, 0)), 0, 1_000_000),
+  };
+
+  // normalize for kind
+  if (!out.reward_enabled) {
+    out.reward_kind = 'none';
+  } else {
+    if (out.reward_kind === 'coins') {
+      // ok
+    } else if (out.reward_kind === 'item') {
+      // ok
+    } else {
+      out.reward_kind = 'item';
+    }
+  }
+
+  return out;
+}
+
 function ensureDefaults(src: any) {
   const p = { ...(src || {}) };
 
+  // stamps
   if (!Array.isArray(p.styles)) p.styles = [];
+  p.styles = (p.styles || []).map((st: any) => ({
+    code: toStr(st?.code),
+    name: toStr(st?.name),
+    desc: toStr(st?.desc),
+    image: toStr(st?.image),
+  })) as Stamp[];
 
   // layout
   if (p.grid_cols === undefined) p.grid_cols = 3;
 
-  // ✅ PIN всегда включен (UI убрали)
+  // ✅ PIN always on
   p.require_pin = true;
 
-  // server coins per stamp
+  // economics: coins per stamp
   if (p.collect_coins === undefined) p.collect_coins = 0;
+  if (p.collect_cost_coins === undefined) p.collect_cost_coins = 0; // cost for granting collect_coins (optional, base analytics)
 
   // texts
   if (p.title === undefined) p.title = 'Паспорт';
   if (p.subtitle === undefined) p.subtitle = '';
   if (p.cover_url === undefined) p.cover_url = '';
-
   if (p.btn_collect === undefined) p.btn_collect = 'Отметить';
   if (p.btn_done === undefined) p.btn_done = 'Получено';
 
-  // reward
-  if (p.reward_enabled === undefined) p.reward_enabled = true;
-  if (p.reward_title === undefined) p.reward_title = '🎁 Приз';
-  if (p.reward_text === undefined)
-    p.reward_text = 'Приз будет отправлен вам в бот после завершения паспорта.';
-  if (p.reward_prize_code === undefined) p.reward_prize_code = '';
+  // campaign (global deadline)
+  if (p.campaign_deadline_enabled === undefined) p.campaign_deadline_enabled = false;
+  if (p.campaign_end_date === undefined) p.campaign_end_date = ''; // YYYY-MM-DD
+  if (p.campaign_title === undefined) p.campaign_title = '⏳ До конца акции';
+  if (p.campaign_text === undefined) p.campaign_text = 'Соберите уровни до завершения акции.';
 
-  // ===== PRO: period/deadline/reset (UI + config only) =====
-  // modes: none | days | weekly | monthly
-  if (p.deadline_mode === undefined) p.deadline_mode = 'none';
-  if (p.deadline_days === undefined) p.deadline_days = 30; // only for 'days'
-  if (p.deadline_title === undefined) p.deadline_title = '⏳ До конца акции';
-  if (p.deadline_text === undefined) p.deadline_text = 'Соберите все штампы до конца периода.';
+  // rolling policy (config only here; runtime later)
+  if (p.expire_policy === undefined) p.expire_policy = 'freeze'; // freeze | reset_all | reset_tier
+  if (p.grace_days_redeem === undefined) p.grace_days_redeem = 7;
 
-  // reset: none | on_deadline | daily
-  if (p.reset_mode === undefined) p.reset_mode = 'none';
-  if (p.reset_text === undefined) p.reset_text = 'Период завершён — прогресс сброшен.';
-
-  // normalize stamps
-  p.styles = p.styles.map((st: any) => ({
-    code: toStr(st?.code),
-    name: toStr(st?.name),
-    desc: toStr(st?.desc),
-    image: toStr(st?.image),
-  }));
+  // tiers
+  if (!Array.isArray(p.tiers)) p.tiers = [];
+  const t1 = ensureTierDefaults(p.tiers?.[0], 't1', 0);
+  const t2 = ensureTierDefaults(p.tiers?.[1], 't2', 1);
+  const t3 = ensureTierDefaults(p.tiers?.[2], 't3', 2);
+  p.tiers = [t1, t2, t3];
 
   return p;
 }
@@ -181,17 +239,23 @@ function Acc({
 }
 
 export default function StylesPassportEditor({ value, onChange }: Props) {
-  const appId = useConstructorStore((s) => s.appId);
+  // (appId может пригодиться позже, оставим)
+  useConstructorStore((s) => s.appId);
 
   const v = React.useMemo(() => ensureDefaults(value), [value]);
 
   const setP = (patch: any) => {
     const next = ensureDefaults({ ...clone(v), ...(patch || {}) });
-
-    // ✅ всегда
     next.require_pin = true;
-
     onChange(next);
+  };
+
+  const setTier = (idx: 0 | 1 | 2, patch: Partial<Tier>) => {
+    const next = clone(v);
+    next.tiers = Array.isArray(next.tiers) ? next.tiers : [];
+    next.tiers[idx] = ensureTierDefaults({ ...(next.tiers[idx] || {}), ...(patch || {}) }, (idx === 0 ? 't1' : idx === 1 ? 't2' : 't3'), idx);
+    next.require_pin = true;
+    onChange(ensureDefaults(next));
   };
 
   const setStamp = (idx: number, patch: any) => {
@@ -236,63 +300,20 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
     setStamp(idx, { image: url });
   };
 
-  // ===== wheel prizes dropdown =====
-  const [wheelPrizes, setWheelPrizes] = React.useState<WheelPrize[]>([]);
-  const [wheelErr, setWheelErr] = React.useState<string>('');
+  const uploadTierImg = async (idx: 0 | 1 | 2, file: File) => {
+    const url = await fileToDataUrl(file);
+    setTier(idx, { reward_img: url });
+  };
 
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      setWheelErr('');
-      if (!appId) return;
-
-      try {
-        // ⬇️ если у тебя другой endpoint — поменяй ТУТ
-        const res = await apiFetch<any>(`/api/app/${encodeURIComponent(appId)}/wheel/prizes`, {
-          method: 'GET',
-        });
-
-        const list: WheelPrize[] = Array.isArray(res?.prizes)
-          ? res.prizes
-          : Array.isArray(res?.items)
-          ? res.items
-          : Array.isArray(res?.results)
-          ? res.results
-          : [];
-
-        const normalized = (list || [])
-          .map((x: any) => ({
-            code: String(x.code || ''),
-            title: String(x.title || x.name || x.code || ''),
-            coins: Number(x.coins || 0),
-            active: x.active,
-            img: x.img ? String(x.img) : '',
-          }))
-          .filter((x) => x.code);
-
-        if (alive) setWheelPrizes(normalized);
-      } catch (e: any) {
-        if (alive) setWheelErr(e?.message || String(e));
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [appId]);
-
-  const rewardWarn = !!v.reward_enabled && !String(v.reward_prize_code || '').trim();
-
-  // ===== section accordions =====
   const [open, setOpen] = React.useState<Record<string, boolean>>({
     texts: true,
     cover: true,
-    layout: true,
-    reward: true,
-    period: false,
+    economy: true,
+    deadlines: true,
+    tiers: true,
     stamps: true,
   });
 
-  // ===== stamps accordion open map =====
   const [stampOpen, setStampOpen] = React.useState<Record<number, boolean>>({});
   React.useEffect(() => {
     setStampOpen((m) => {
@@ -300,6 +321,8 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
       return v.styles?.length ? { 0: true } : {};
     });
   }, [v.styles?.length]);
+
+  const tiers: Tier[] = (Array.isArray(v.tiers) ? v.tiers : []) as any;
 
   return (
     <div className="be">
@@ -320,10 +343,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
 
         <div className="beGrid2">
           <Field label='Кнопка “Отметить”'>
-            <Input
-              value={toStr(v.btn_collect)}
-              onChange={(e) => setP({ btn_collect: e.target.value })}
-            />
+            <Input value={toStr(v.btn_collect)} onChange={(e) => setP({ btn_collect: e.target.value })} />
           </Field>
 
           <Field label='Кнопка “Получено”'>
@@ -332,7 +352,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
         </div>
 
         <div className="beHint">
-          PIN в паспорте <b>всегда включён</b> (мы убрали переключатель, чтобы не ломать логику кассира).
+          PIN в паспорте <b>всегда включён</b> (переключатель убран, чтобы не ломать логику кассира).
         </div>
       </Acc>
 
@@ -342,10 +362,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
         open={!!open.cover}
         onToggle={() => setOpen((m) => ({ ...m, cover: !m.cover }))}
       >
-        <Field
-          label="Картинка (обложка)"
-          hint="Можно вставить ссылку или загрузить файлом (сохраним как dataURL)."
-        >
+        <Field label="Картинка (обложка)" hint="Можно вставить ссылку или загрузить файлом (сохраним как dataURL).">
           <div className="beRow">
             <Input
               value={toStr(v.cover_url)}
@@ -366,12 +383,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
                 }}
               />
             </label>
-            <button
-              type="button"
-              className="beMiniBtn"
-              disabled={!v.cover_url}
-              onClick={() => setP({ cover_url: '' })}
-            >
+            <button type="button" className="beMiniBtn" disabled={!v.cover_url} onClick={() => setP({ cover_url: '' })}>
               Убрать
             </button>
           </div>
@@ -395,10 +407,10 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
       </Acc>
 
       <Acc
-        title="Сетка и начисления"
-        sub={<span className="beMut">колонки + монеты за штамп</span>}
-        open={!!open.layout}
-        onToggle={() => setOpen((m) => ({ ...m, layout: !m.layout }))}
+        title="Сетка и экономика"
+        sub={<span className="beMut">колонки + монеты за штамп + себестоимость</span>}
+        open={!!open.economy}
+        onToggle={() => setOpen((m) => ({ ...m, economy: !m.economy }))}
       >
         <div className="beGrid2">
           <Field label="Колонки сетки" hint="1..6">
@@ -412,10 +424,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
             />
           </Field>
 
-          <Field
-            label="Монеты за штамп"
-            hint="server-side: начислять при каждом подтверждённом штампе"
-          >
+          <Field label="Монеты за штамп" hint="Начислять при каждом подтверждённом штампе (server-side).">
             <Input
               type="number"
               value={String(v.collect_coins)}
@@ -425,164 +434,284 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
             />
           </Field>
         </div>
-      </Acc>
 
-      <Acc
-        title="Приз за завершение"
-        sub={
-          <span className="beMut">
-            выбор приза по <b>wheel_prizes.code</b>
-          </span>
-        }
-        open={!!open.reward}
-        onToggle={() => setOpen((m) => ({ ...m, reward: !m.reward }))}
-        right={
-          <Toggle
-            checked={!!v.reward_enabled}
-            onChange={(x) => setP({ reward_enabled: !!x })}
-            label="Включено"
-            hint={null}
-          />
-        }
-      >
         <div className="beGrid2">
-          <Field label="Заголовок приза">
-            <Input value={toStr(v.reward_title)} onChange={(e) => setP({ reward_title: e.target.value })} />
-          </Field>
-
-          <Field label="Текст">
-            <Input value={toStr(v.reward_text)} onChange={(e) => setP({ reward_text: e.target.value })} />
-          </Field>
-        </div>
-
-        <Field
-          label="Приз из колеса"
-          hint={
-            <>
-              Мы подтягиваем список призов колеса и сохраняем <b>reward_prize_code</b>.
-              Если у выбранного приза <b>coins &gt; 0</b> — начислим монеты, иначе выдадим redeem-код и отправим в бот.
-            </>
-          }
-        >
-          <div className="beRow">
-            <select
-              className="beSelect"
-              value={toStr(v.reward_prize_code)}
-              onChange={(e) => setP({ reward_prize_code: e.target.value })}
-              style={{ flex: 1 }}
-              disabled={!v.reward_enabled}
-            >
-              <option value="">— выбрать приз —</option>
-              {wheelPrizes
-                .filter((p) => p.code)
-                .map((p) => {
-                  const coins = Math.max(0, Math.floor(Number(p.coins || 0)));
-                  const active = p.active === undefined ? true : !!Number(p.active);
-                  const label = `${p.title || p.code} — (${p.code})${coins > 0 ? ` · ${coins} мон.` : ''}${!active ? ' · OFF' : ''}`;
-                  return (
-                    <option key={p.code} value={p.code}>
-                      {label}
-                    </option>
-                  );
-                })}
-            </select>
-
-            <button
-              type="button"
-              className="beMiniBtn"
-              onClick={() => setP({ reward_prize_code: '' })}
-              disabled={!v.reward_enabled || !v.reward_prize_code}
-            >
-              Очистить
-            </button>
-          </div>
-
-          {wheelErr ? (
-            <div className="beHint" style={{ marginTop: 8, opacity: 0.9 }}>
-              Не удалось загрузить призы колеса: <b>{wheelErr}</b> (проверь endpoint).
-            </div>
-          ) : null}
-
-          {rewardWarn ? (
-            <div className="beHint" style={{ marginTop: 8, color: '#ffcc66', opacity: 1 }}>
-              Включена выдача приза, но не выбран приз из колеса — приз не будет выдан.
-            </div>
-          ) : null}
-        </Field>
-
-        {/* fallback manual input (на всякий) */}
-        <Field label="(Ручной ввод) reward_prize_code" hint="Если не хочешь зависеть от списка — можно вписать вручную.">
-          <Input
-            value={toStr(v.reward_prize_code)}
-            onChange={(e) => setP({ reward_prize_code: e.target.value })}
-            placeholder="free_coffee_6"
-            disabled={!v.reward_enabled}
-          />
-        </Field>
-      </Acc>
-
-      <Acc
-        title="Период, дедлайн, сброс"
-        sub={<span className="beMut">прокачка (нужна поддержка в runtime/worker)</span>}
-        open={!!open.period}
-        onToggle={() => setOpen((m) => ({ ...m, period: !m.period }))}
-      >
-        <div className="beGrid2">
-          <Field label="Дедлайн режим" hint="Пока это только конфиг. Если скажешь — допишу поддержку в мини-апп.">
-            <select
-              className="beSelect"
-              value={toStr(v.deadline_mode)}
-              onChange={(e) => setP({ deadline_mode: e.target.value })}
-            >
-              <option value="none">Нет дедлайна</option>
-              <option value="days">Срок в днях (с первого штампа)</option>
-              <option value="weekly">Каждую неделю</option>
-              <option value="monthly">Каждый месяц</option>
-            </select>
-          </Field>
-
-          <Field label="Срок (дней)" hint="Используется только если выбран режим “Срок в днях”.">
+          <Field
+            label="Себестоимость “монет за штамп”"
+            hint="В монетах. Если монеты за штамп — это расход, укажи сколько это стоит владельцу (для базовой аналитики)."
+          >
             <Input
               type="number"
-              min={1}
+              value={String(v.collect_cost_coins)}
+              onChange={(e) => setP({ collect_cost_coins: Math.max(0, Math.round(toNum(e.target.value, 0))) })}
+              min={0}
               step={1}
-              value={String(toNum(v.deadline_days, 30))}
-              onChange={(e) => setP({ deadline_days: clamp(toNum(e.target.value, 30), 1, 365) })}
-              disabled={toStr(v.deadline_mode) !== 'days'}
+            />
+          </Field>
+
+          <div className="beField">
+            <div className="beLab">Подсказка</div>
+            <div className="beHint" style={{ opacity: 0.85 }}>
+              Стоимость 1 монеты (в руб/eur/usd) берём из настроек проекта. Здесь мы фиксируем расходы в монетах —
+              чтобы в кабинете сразу считать деньги.
+            </div>
+          </div>
+        </div>
+      </Acc>
+
+      <Acc
+        title="Дедлайны"
+        sub={<span className="beMut">общий дедлайн + сроки уровней от старта</span>}
+        open={!!open.deadlines}
+        onToggle={() => setOpen((m) => ({ ...m, deadlines: !m.deadlines }))}
+      >
+        <div className="beGrid2">
+          <Toggle
+            checked={!!v.campaign_deadline_enabled}
+            onChange={(x) => setP({ campaign_deadline_enabled: !!x })}
+            label="Включить общий дедлайн паспорта"
+            hint="Когда дедлайн включён — после даты окончания сбор штампов блокируется (runtime поддержим отдельно)."
+          />
+
+          <Field label="Дата окончания" hint="YYYY-MM-DD (локальная дата владельца)">
+            <Input
+              type="date"
+              value={toStr(v.campaign_end_date)}
+              onChange={(e) => setP({ campaign_end_date: e.target.value })}
+              disabled={!v.campaign_deadline_enabled}
             />
           </Field>
         </div>
 
         <div className="beGrid2">
           <Field label="Заголовок дедлайна">
-            <Input value={toStr(v.deadline_title)} onChange={(e) => setP({ deadline_title: e.target.value })} />
+            <Input value={toStr(v.campaign_title)} onChange={(e) => setP({ campaign_title: e.target.value })} />
           </Field>
           <Field label="Текст дедлайна">
-            <Input value={toStr(v.deadline_text)} onChange={(e) => setP({ deadline_text: e.target.value })} />
+            <Input value={toStr(v.campaign_text)} onChange={(e) => setP({ campaign_text: e.target.value })} />
           </Field>
         </div>
 
         <div className="beGrid2">
-          <Field label="Сброс прогресса" hint="Как вести себя, когда дедлайн истёк.">
+          <Field label="Политика после истечения tier-window" hint="Пока конфиг в blueprint (реализация в worker/runtime).">
             <select
               className="beSelect"
-              value={toStr(v.reset_mode)}
-              onChange={(e) => setP({ reset_mode: e.target.value })}
+              value={toStr(v.expire_policy)}
+              onChange={(e) => setP({ expire_policy: e.target.value })}
             >
-              <option value="none">Не сбрасывать</option>
-              <option value="on_deadline">Сбросить при окончании периода</option>
-              <option value="daily">Сброс каждый день</option>
+              <option value="freeze">Freeze (заморозить прогресс)</option>
+              <option value="reset_tier">Reset tier (сбросить текущий уровень)</option>
+              <option value="reset_all">Reset all (сбросить всё)</option>
             </select>
           </Field>
 
-          <Field label="Текст при сбросе">
-            <Input value={toStr(v.reset_text)} onChange={(e) => setP({ reset_text: e.target.value })} />
+          <Field label="Грейс-период на выдачу (дней)" hint="После дедлайна/окна можно ещё выдать приз N дней.">
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={String(toNum(v.grace_days_redeem, 7))}
+              onChange={(e) => setP({ grace_days_redeem: clamp(toNum(e.target.value, 7), 0, 365) })}
+            />
           </Field>
         </div>
 
         <div className="beHint">
-          Если хочешь “собрать за период иначе сброс” — это оно. Нужно только: (1) хранить старт периода у юзера,
-          (2) при open/collect проверять дедлайн и чистить stamps в D1.
+          У каждого пользователя будет <b>start_at</b> при первом штампе. Для каждого tier можно задать свой срок
+          <b>window_days</b> “со дня начала”.
+        </div>
+      </Acc>
+
+      <Acc
+        title="Уровни (3 tiers)"
+        sub={<span className="beMut">порог, срок, награда, себестоимость</span>}
+        open={!!open.tiers}
+        onToggle={() => setOpen((m) => ({ ...m, tiers: !m.tiers }))}
+      >
+        <div className="beAccList">
+          {([0, 1, 2] as const).map((i) => {
+            const t = tiers[i] || ensureTierDefaults(null, i === 0 ? 't1' : i === 1 ? 't2' : 't3', i);
+            const title =
+              i === 0 ? `Tier 1` : i === 1 ? `Tier 2` : `Tier 3`;
+
+            return (
+              <div key={t.id} className="beAcc">
+                <div className="beAcc__hdr" style={{ cursor: 'default' }}>
+                  <div className="beAcc__left">
+                    <div className="beAcc__title">{title}</div>
+                    <div className="beAcc__sub">
+                      <span className="beMut">
+                        цель: <b>{t.goal}</b>
+                      </span>
+                      <span className="beDot" />
+                      <span className="beMut">
+                        срок: <b>{t.window_days ? `${t.window_days} дн.` : 'без лимита'}</b>
+                      </span>
+                      <span className="beDot" />
+                      <span className="beMut">
+                        награда: <b>{t.reward_enabled ? t.reward_kind : 'OFF'}</b>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="beAcc__right">
+                    <Toggle
+                      checked={!!t.reward_enabled}
+                      onChange={(x) => setTier(i, { reward_enabled: !!x, reward_kind: x ? (t.reward_kind === 'none' ? 'item' : t.reward_kind) : 'none' })}
+                      label="Награда"
+                    />
+                  </div>
+                </div>
+
+                <div className="beAcc__body">
+                  <div className="beGrid2">
+                    <Field label="Порог (штампов)" hint="Сколько штампов нужно, чтобы закрыть этот уровень.">
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={String(t.goal)}
+                        onChange={(e) => setTier(i, { goal: clamp(toNum(e.target.value, t.goal), 1, 999) })}
+                      />
+                    </Field>
+
+                    <Field
+                      label="Срок уровня (дней от старта)"
+                      hint="0 = без ограничения. Старт фиксируется при первом штампе пользователя."
+                    >
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={String(t.window_days)}
+                        onChange={(e) => setTier(i, { window_days: clamp(toNum(e.target.value, t.window_days), 0, 3650) })}
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="beGrid2">
+                    <Field label="Тип награды" hint="Независимо от колеса. Дальше в runtime/боте выдадим по этой структуре.">
+                      <select
+                        className="beSelect"
+                        value={toStr(t.reward_kind)}
+                        onChange={(e) => setTier(i, { reward_kind: e.target.value as any })}
+                        disabled={!t.reward_enabled}
+                      >
+                        <option value="item">Товар/услуга (redeem)</option>
+                        <option value="coins">Монеты</option>
+                        <option value="none">Без награды</option>
+                      </select>
+                    </Field>
+
+                    <Field label="Себестоимость награды (в монетах)" hint="Расход владельца для базовой аналитики.">
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={String(t.reward_cost_coins)}
+                        onChange={(e) => setTier(i, { reward_cost_coins: Math.max(0, Math.round(toNum(e.target.value, 0))) })}
+                        disabled={!t.reward_enabled || t.reward_kind === 'none'}
+                      />
+                    </Field>
+                  </div>
+
+                  {t.reward_enabled && t.reward_kind === 'coins' ? (
+                    <div className="beGrid2">
+                      <Field label="Сколько монет выдать" hint="Начислим пользователю при закрытии уровня.">
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={String(t.reward_coins)}
+                          onChange={(e) => setTier(i, { reward_coins: Math.max(0, Math.round(toNum(e.target.value, 0))) })}
+                        />
+                      </Field>
+
+                      <div className="beField">
+                        <div className="beLab">Подсказка</div>
+                        <div className="beHint" style={{ opacity: 0.85 }}>
+                          Если награда — монеты, обычно <b>reward_cost_coins</b> = reward_coins (если 1 монета “стоит”
+                          владельцу 1 монету). Можно задать иначе, если есть маржа/схема.
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="beGrid2">
+                    <Field label="Заголовок награды">
+                      <Input
+                        value={toStr(t.reward_title)}
+                        onChange={(e) => setTier(i, { reward_title: e.target.value })}
+                        disabled={!t.reward_enabled || t.reward_kind === 'none'}
+                      />
+                    </Field>
+
+                    <Field label="Текст награды">
+                      <Input
+                        value={toStr(t.reward_text)}
+                        onChange={(e) => setTier(i, { reward_text: e.target.value })}
+                        disabled={!t.reward_enabled || t.reward_kind === 'none'}
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label="Картинка награды" hint="URL или загрузка (dataURL). Покажем рядом со штампами в UI.">
+                    <div className="beRow">
+                      <Input
+                        value={toStr(t.reward_img)}
+                        onChange={(e) => setTier(i, { reward_img: e.target.value })}
+                        placeholder="https://..."
+                        style={{ flex: 1 }}
+                        disabled={!t.reward_enabled || t.reward_kind === 'none'}
+                      />
+                      <label className="beUploadBtn" style={{ cursor: 'pointer', opacity: (!t.reward_enabled || t.reward_kind === 'none') ? 0.5 : 1 }}>
+                        Загрузить
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadTierImg(i, f);
+                            e.currentTarget.value = '';
+                          }}
+                          disabled={!t.reward_enabled || t.reward_kind === 'none'}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="beMiniBtn"
+                        disabled={!t.reward_enabled || t.reward_kind === 'none' || !t.reward_img}
+                        onClick={() => setTier(i, { reward_img: '' })}
+                      >
+                        Убрать
+                      </button>
+                    </div>
+
+                    {t.reward_img ? (
+                      <div style={{ marginTop: 10 }}>
+                        <img
+                          src={String(t.reward_img)}
+                          alt=""
+                          style={{
+                            width: '100%',
+                            maxHeight: 160,
+                            objectFit: 'cover',
+                            borderRadius: 14,
+                            border: '1px solid rgba(15,23,42,.10)',
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </Field>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="beHint">
+          Идея: tiers — это “круги”. В runtime мы показываем текущий tier + следующую награду, а по закрытию создаём
+          reward (issued) и переводим пользователя на следующий tier.
         </div>
       </Acc>
 
@@ -618,7 +747,9 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
                           code: <b>{toStr(st?.code) || '—'}</b>
                         </span>
                         <span className="beDot" />
-                        <span className="beMut">картинка: <b>{imgLabel}</b></span>
+                        <span className="beMut">
+                          картинка: <b>{imgLabel}</b>
+                        </span>
                       </div>
                     </div>
 
@@ -626,11 +757,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
                       <IconBtn title="Вверх" disabled={idx === 0} onClick={() => moveStamp(idx, -1)}>
                         ↑
                       </IconBtn>
-                      <IconBtn
-                        title="Вниз"
-                        disabled={idx === v.styles.length - 1}
-                        onClick={() => moveStamp(idx, 1)}
-                      >
+                      <IconBtn title="Вниз" disabled={idx === v.styles.length - 1} onClick={() => moveStamp(idx, 1)}>
                         ↓
                       </IconBtn>
                       <button
@@ -680,10 +807,7 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
                         />
                       </Field>
 
-                      <Field
-                        label="image"
-                        hint="Можно вставить ссылку или загрузить файлом (dataURL)."
-                      >
+                      <Field label="image" hint="Можно вставить ссылку или загрузить файлом (dataURL).">
                         <div className="beRow">
                           <Input
                             value={toStr(st?.image)}
@@ -741,7 +865,6 @@ export default function StylesPassportEditor({ value, onChange }: Props) {
         )}
       </Acc>
 
-      {/* local styles (same vibe as wheel editor) */}
       <style>{`
         .be{ display:grid; gap:12px; }
         .beGrid2{ display:grid; gap:12px; grid-template-columns: 1fr 1fr; }
