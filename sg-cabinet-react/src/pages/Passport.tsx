@@ -40,7 +40,7 @@ type PassportStyleStat = {
   title: string;
   collects: number;          // сколько собрали этот стиль
   unique_users: number;      // сколько уникальных пользователей собрали этот стиль
-  missing_share_pct?: number; // опционально: “на этом стиле застревают”
+  missing_share_pct?: number; // “на этом стиле застревают”
 };
 
 /** ========= Utils ========= */
@@ -163,13 +163,13 @@ function IcoUsers() {
         strokeWidth="2"
         strokeLinecap="round"
       />
-      <path d="M11 8.2a1.7 1.7 0 1 0 0-3.4" stroke="currentColor" strokeWidth="2" opacity="0.55" />
+      <path d="M11 8.2a1.7 1.7 0 1 0 0-3.4" stroke="currentColor" strokeWidth="2" opacity={0.55} />
       <path
         d="M11.7 10.3c1.1.4 2.1 1.2 2.6 2.7"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
-        opacity="0.55"
+        opacity={0.55}
       />
     </svg>
   );
@@ -189,12 +189,134 @@ function toneBadge(pct: number) {
   return { text: 'ПЛОХО', cls: 'bad' };
 }
 
+function copyToClipboard(text: string) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+  } catch (_) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  } catch (_) {
+    return Promise.resolve();
+  }
+}
+
+/** ========= Premium policy models (UI-first) ========= */
+type SeasonPolicy = {
+  mode: 'infinite' | 'season';
+  season_days: number;        // длительность сезона в днях
+  season_grace_days: number;  // “грейс” после конца сезона
+  season_start_iso: string;   // якорь (может быть пусто)
+};
+
+type TierWindowPolicy = {
+  mode: 'none' | 'rolling';
+  tier_window_days: number;     // окно на закрытие тира
+  allow_catchup: boolean;       // можно ли “догонять”
+};
+
+type ResetPolicy = {
+  on_reward_redeemed: 'none' | 'next_tier' | 'new_cycle';
+  on_season_end: 'freeze' | 'reset_all';
+  keep_history: boolean; // для аналитики всегда true, но оставим как UI-понятность
+};
+
+type LimitsPolicy = {
+  max_collects_per_day: number;   // 0 = без лимита
+  max_collects_per_user_per_day: number; // 0 = без лимита
+  block_when_inactive: boolean;   // если акция выключена — запрещать collect
+};
+
+type RewardPolicy = {
+  issue_on_tier_complete: boolean;
+  issue_on_full_complete: boolean;
+  reward_expiry_days: number; // 0 = не истекает
+  rotation_mode: 'none' | 'daily' | 'weekly'; // ротация призов (потом)
+};
+
+type PassportPolicyBundle = {
+  preset: 'A_infinite' | 'B_season' | 'C_tier_windows' | 'D_marathon';
+  season: SeasonPolicy;
+  tier_window: TierWindowPolicy;
+  reset: ResetPolicy;
+  limits: LimitsPolicy;
+  reward: RewardPolicy;
+};
+
+function defaultPolicy(): PassportPolicyBundle {
+  return {
+    preset: 'A_infinite',
+    season: { mode: 'infinite', season_days: 30, season_grace_days: 2, season_start_iso: '' },
+    tier_window: { mode: 'none', tier_window_days: 30, allow_catchup: true },
+    reset: { on_reward_redeemed: 'new_cycle', on_season_end: 'reset_all', keep_history: true },
+    limits: { max_collects_per_day: 0, max_collects_per_user_per_day: 0, block_when_inactive: true },
+    reward: { issue_on_tier_complete: true, issue_on_full_complete: true, reward_expiry_days: 14, rotation_mode: 'none' },
+  };
+}
+
+function applyPreset(p: PassportPolicyBundle, preset: PassportPolicyBundle['preset']): PassportPolicyBundle {
+  const next = JSON.parse(JSON.stringify(p)) as PassportPolicyBundle;
+  next.preset = preset;
+
+  if (preset === 'A_infinite') {
+    next.season.mode = 'infinite';
+    next.tier_window.mode = 'none';
+    next.reset.on_reward_redeemed = 'new_cycle';
+    next.reset.on_season_end = 'reset_all';
+    next.reward.reward_expiry_days = 0;
+    return next;
+  }
+
+  if (preset === 'B_season') {
+    next.season.mode = 'season';
+    next.season.season_days = Math.max(7, toInt(next.season.season_days, 30));
+    next.season.season_grace_days = Math.max(0, toInt(next.season.season_grace_days, 2));
+    next.tier_window.mode = 'none';
+    next.reset.on_reward_redeemed = 'new_cycle';
+    next.reset.on_season_end = 'reset_all';
+    next.reward.reward_expiry_days = Math.max(1, toInt(next.reward.reward_expiry_days, 14));
+    return next;
+  }
+
+  if (preset === 'C_tier_windows') {
+    next.season.mode = 'infinite';
+    next.tier_window.mode = 'rolling';
+    next.tier_window.tier_window_days = Math.max(3, toInt(next.tier_window.tier_window_days, 30));
+    next.tier_window.allow_catchup = true;
+    next.reset.on_reward_redeemed = 'next_tier';
+    next.reset.on_season_end = 'freeze';
+    next.reward.reward_expiry_days = Math.max(1, toInt(next.reward.reward_expiry_days, 14));
+    return next;
+  }
+
+  // D_marathon
+  next.season.mode = 'season';
+  next.season.season_days = Math.max(7, toInt(next.season.season_days, 30));
+  next.season.season_grace_days = Math.max(0, toInt(next.season.season_grace_days, 3));
+  next.tier_window.mode = 'rolling';
+  next.tier_window.tier_window_days = Math.max(3, toInt(next.tier_window.tier_window_days, 30));
+  next.tier_window.allow_catchup = false;
+  next.reset.on_reward_redeemed = 'next_tier';
+  next.reset.on_season_end = 'freeze';
+  next.reward.reward_expiry_days = Math.max(1, toInt(next.reward.reward_expiry_days, 7));
+  next.reward.rotation_mode = 'weekly';
+  return next;
+}
+
 export default function Passport() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
   // ===== Under-chart tabs =====
-  const [tab, setTab] = React.useState<'summary' | 'boosts' | 'settings'>('summary');
+  const [tab, setTab] = React.useState<'summary' | 'autopilot' | 'ops' | 'premium'>('summary');
 
   // ===== chart layers =====
   const [showSteps, setShowSteps] = React.useState(true);
@@ -209,7 +331,6 @@ export default function Passport() {
   React.useEffect(() => {
     setCustomFrom(range?.from || '');
     setCustomTo(range?.to || '');
-    // quick intentionally untouched
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range?.from, range?.to]);
 
@@ -305,10 +426,12 @@ export default function Passport() {
     const pin_invalid = days.reduce((s, d) => s + safeNum((d as any).pin_invalid, 0), 0);
     const pin_used = days.reduce((s, d) => s + safeNum((d as any).pin_used, 0), 0);
 
-    // heuristics
-    const activated = Math.max(users, 0); // в идеале: “users with first step”; пока proxy
+    const activated = Math.max(users, 0); // proxy
     const completionRatePct = activated > 0 ? Math.round((completed / activated) * 100) : 0;
     const redeemRatePct = completed > 0 ? Math.round((redeemed / completed) * 100) : 0;
+
+    const pending = Math.max(0, issued - redeemed);
+    const pinErrors = Math.max(0, pin_invalid + pin_used);
 
     return {
       steps,
@@ -317,8 +440,10 @@ export default function Passport() {
       completed,
       issued,
       redeemed,
+      pending,
       pin_invalid,
       pin_used,
+      pinErrors,
       completionRatePct,
       redeemRatePct,
     };
@@ -337,21 +462,18 @@ export default function Passport() {
 
   // ===== right column: top styles =====
   const [topMetric, setTopMetric] = React.useState<'collects' | 'missing'>('collects');
-
   const styleItems = qStats.data?.items || [];
-
   const topStyles = React.useMemo(() => {
     const arr = [...styleItems];
     if (topMetric === 'collects') {
       arr.sort((a, b) => safeNum(b.collects, 0) - safeNum(a.collects, 0));
     } else {
-      // missing = “провал”: если есть missing_share_pct используем его, иначе инвертируем collects
       arr.sort((a, b) => safeNum(b.missing_share_pct, 0) - safeNum(a.missing_share_pct, 0));
     }
     return arr.slice(0, 7);
   }, [styleItems, topMetric]);
 
-  // ===== settings drafts (tab settings) =====
+  // ===== live toggles (small block inside OPS) =====
   const [activeDraft, setActiveDraft] = React.useState<boolean>(passportActive);
   const [pinDraft, setPinDraft] = React.useState<boolean>(requirePin);
   const [offersDraft, setOffersDraft] = React.useState<boolean>(showOffers);
@@ -392,55 +514,135 @@ export default function Passport() {
     }
   }
 
-  // ===== boosts tab: local templates (UI-first; backend can be added later) =====
-  type BoostTpl = {
-    id: string;
+  /** ===== AUTOPILOT (UI-first, later bind to worker /offers/*) ===== */
+  type AutoSeg = 'near_goal' | 'dormant_7d' | 'season_ends' | 'reward_waiting';
+  type AutopilotTpl = {
+    id: AutoSeg;
     title: string;
     enabled: boolean;
     ttl_hours: number;
     limit_per_user: number;
+    button_label: string;
+    message_text: string;
     hint: string;
   };
 
-  const [boosts, setBoosts] = React.useState<BoostTpl[]>([
+  const [autopilotOn, setAutopilotOn] = React.useState<boolean>(true);
+  const [autopilot, setAutopilot] = React.useState<AutopilotTpl[]>([
     {
       id: 'near_goal',
-      title: 'Near-goal: осталось 1 — удвоение прогресса',
+      title: 'Остался 1 штамп — дожимаем до приза',
       enabled: true,
       ttl_hours: 24,
       limit_per_user: 1,
-      hint: 'Если у пользователя осталось 1 стиль до завершения — он может активировать буст и получить x2 на следующий сбор.',
+      button_label: 'Дожать до приза',
+      message_text: 'Остался всего 1 штамп до приза 🎁 Загляни к кассиру сегодня — добьём!',
+      hint: 'Сегмент: пользователи, у которых осталось 1 до закрытия текущего круга/тира.',
     },
     {
-      id: 'comeback',
-      title: 'Comeback: не был 7 дней — x2 на 48ч',
+      id: 'dormant_7d',
+      title: 'Не было 7 дней — возвращаем',
       enabled: false,
       ttl_hours: 48,
       limit_per_user: 1,
-      hint: 'Возвращаем “уснувших”. Активируется кнопкой в сообщении бота.',
+      button_label: 'Вернуться',
+      message_text: 'Мы скучали! Вернись в ближайшие 48 часов — у тебя есть шанс добрать штампы ✨',
+      hint: 'Сегмент: нет collect 7 дней. Триггерится по расписанию.',
     },
     {
-      id: 'happy_hour',
-      title: 'Happy hour: x2 в выбранные часы',
+      id: 'season_ends',
+      title: 'Сезон скоро закончится — срочно добрать',
       enabled: false,
-      ttl_hours: 3,
-      limit_per_user: 99,
-      hint: 'Технически это “окно времени”: во время окна при collect применяем x2.',
+      ttl_hours: 72,
+      limit_per_user: 1,
+      button_label: 'Успеть',
+      message_text: 'Сезон заканчивается скоро ⏳ Успей собрать штампы и получить приз!',
+      hint: 'Сегмент: сезонный паспорт, до конца ≤ N дней (премиум).',
+    },
+    {
+      id: 'reward_waiting',
+      title: 'Приз выдан (issued), но не забран — напоминание',
+      enabled: true,
+      ttl_hours: 72,
+      limit_per_user: 3,
+      button_label: 'Забрать приз',
+      message_text: 'Твой приз уже готов 🎉 Покажи QR кассиру — забери подарок!',
+      hint: 'Сегмент: у пользователя есть passport_rewards issued (не redeemed).',
     },
   ]);
 
-  const [boostMsg, setBoostMsg] = React.useState<string>('');
-
-  function patchBoost(id: string, patch: Partial<BoostTpl>) {
-    setBoosts((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  const [autoMsg, setAutoMsg] = React.useState<string>('');
+  function patchAutopilot(id: AutoSeg, patch: Partial<AutopilotTpl>) {
+    setAutopilot((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  }
+  async function saveAutopilotMock() {
+    setAutoMsg('Сохранено (пока локально). Следующий шаг — привязать к воркеру /offers/*.');
+    setTimeout(() => setAutoMsg(''), 2200);
   }
 
-  async function saveBoostsMock() {
-    // UI-first: чтобы страница уже работала без бекенда
-    // Потом заменим на PUT /offers/templates
-    setBoostMsg('Сохранено (пока локально). Следующий шаг — привязать к воркеру.');
-    setTimeout(() => setBoostMsg(''), 2200);
+  /** ===== OPS: cashier instructions ===== */
+  const [cashierText, setCashierText] = React.useState<string>(
+    [
+      'Инструкция кассиру (Паспорт):',
+      '1) Клиент показывает экран “Паспорт”.',
+      '2) Ты вводишь одноразовый PIN (из нашего списка/сообщения).',
+      '3) Если клиент завершил круг — покажет QR для выдачи приза.',
+      'Важно: PIN одноразовый. Если ошибка — попроси новый PIN.',
+    ].join('\n')
+  );
+  const [cashierCopyMsg, setCashierCopyMsg] = React.useState<string>('');
+
+  async function copyCashier() {
+    await copyToClipboard(cashierText);
+    setCashierCopyMsg('Скопировано');
+    setTimeout(() => setCashierCopyMsg(''), 1500);
   }
+
+  /** ===== PREMIUM policies (UI-first) ===== */
+  const [policy, setPolicy] = React.useState<PassportPolicyBundle>(() => defaultPolicy());
+  const [policyMsg, setPolicyMsg] = React.useState<string>('');
+  const [policySaving, setPolicySaving] = React.useState<boolean>(false);
+
+  function patchPolicy(path: string, value: any) {
+    setPolicy((prev) => {
+      const next: any = JSON.parse(JSON.stringify(prev));
+      const parts = String(path).split('.');
+      let cur: any = next;
+      for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]];
+      cur[parts[parts.length - 1]] = value;
+      return next as PassportPolicyBundle;
+    });
+  }
+
+  async function savePolicyMock() {
+    setPolicyMsg('');
+    setPolicySaving(true);
+    try {
+      // UI-first: позже будет PUT /api/cabinet/apps/:id/passport/policy
+      setPolicyMsg('Сохранено (пока локально). Следующий шаг — привязать к воркеру (season/tier windows/reset).');
+    } finally {
+      setPolicySaving(false);
+      setTimeout(() => setPolicyMsg(''), 2400);
+    }
+  }
+
+  // ===== small helpers for summaries =====
+  const pinHealthTone = React.useMemo(() => {
+    // грубо: если ошибок мало — ок
+    const total = Math.max(1, fact.steps);
+    const rate = Math.round((fact.pinErrors / total) * 100);
+    // 0-3% ok, 4-10 mid, 11+ bad
+    if (rate <= 3) return { text: 'ОК', cls: 'ok', rate };
+    if (rate <= 10) return { text: 'РИСК', cls: 'mid', rate };
+    return { text: 'ПЛОХО', cls: 'bad', rate };
+  }, [fact.pinErrors, fact.steps]);
+
+  const pendingTone = React.useMemo(() => {
+    const pending = Math.max(0, fact.pending);
+    if (pending === 0) return { text: 'ОК', cls: 'ok' };
+    if (pending <= 3) return { text: 'РИСК', cls: 'mid' };
+    return { text: 'ПЛОХО', cls: 'bad' };
+  }, [fact.pending]);
 
   return (
     <div className="sg-page passportPage">
@@ -665,6 +867,60 @@ export default function Passport() {
         }
         .psTopTitle{ font-weight:900; }
         .psTopSub{ font-size:12px; opacity:.75; margin-top:4px; }
+
+        /* textarea */
+        .psTextArea{
+          width:100%;
+          min-height:120px;
+          resize:vertical;
+          border-radius:14px;
+          border:1px solid rgba(15,23,42,.12);
+          background:rgba(255,255,255,.86);
+          padding:10px 12px;
+          font:inherit;
+          font-weight:800;
+          line-height:1.35;
+          box-shadow: var(--sg-in1);
+        }
+
+        .psMiniHint{
+          font-size:12px;
+          opacity:.78;
+          line-height:1.35;
+        }
+
+        .psPillRow{
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+          padding:10px 10px;
+          border-radius:16px;
+          border:1px solid rgba(15,23,42,.06);
+          background:rgba(255,255,255,.62);
+          box-shadow: var(--sg-in1);
+        }
+
+        .psSelect{
+          height:38px;
+          border-radius:12px;
+          border:1px solid rgba(15,23,42,.12);
+          background:rgba(255,255,255,.90);
+          font:inherit;
+          font-weight:900;
+          padding:0 12px;
+          width:100%;
+        }
+
+        .psInline2{
+          display:grid;
+          grid-template-columns: 1fr 200px;
+          gap:12px;
+          align-items:end;
+        }
+        @media (max-width:980px){
+          .psInline2{ grid-template-columns: 1fr; }
+        }
       `}</style>
 
       {/* ===== Head ===== */}
@@ -672,7 +928,7 @@ export default function Passport() {
         <div>
           <h1 className="sg-h1">Паспорт</h1>
           <div className="sg-sub">
-            Факт по шагам (styles_user / pins_pool) + завершениям и наградам (passport_rewards). Бусты — отдельный слой.
+            Факт по шагам (style.collect) + завершениям и наградам (passport_rewards). Автопилот и сезонные политики — премиум слой.
           </div>
         </div>
 
@@ -818,7 +1074,6 @@ export default function Passport() {
                       }}
                     />
 
-                    {/* bars = steps */}
                     {showSteps && (
                       <Bar
                         yAxisId="y"
@@ -880,14 +1135,14 @@ export default function Passport() {
                 <button className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')} onClick={() => setTab('summary')}>
                   Сводка
                 </button>
-                <button className={'sg-tab ' + (tab === 'boosts' ? 'is-active' : '')} onClick={() => setTab('boosts')}>
-                  Бусты
+                <button className={'sg-tab ' + (tab === 'autopilot' ? 'is-active' : '')} onClick={() => setTab('autopilot')}>
+                  Автопилот
                 </button>
-                <button
-                  className={'sg-tab ' + (tab === 'settings' ? 'is-active' : '')}
-                  onClick={() => setTab('settings')}
-                >
-                  Настройки
+                <button className={'sg-tab ' + (tab === 'ops' ? 'is-active' : '')} onClick={() => setTab('ops')}>
+                  Операционка
+                </button>
+                <button className={'sg-tab ' + (tab === 'premium' ? 'is-active' : '')} onClick={() => setTab('premium')}>
+                  Премиум
                 </button>
               </div>
 
@@ -925,14 +1180,13 @@ export default function Passport() {
                     const completionBadge = completionTone;
                     const redeemBadge = redeemTone;
 
-                    // “what blocks conversion” quick heuristics
                     const recs: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string }> = [];
 
                     if (!passportActive) {
                       recs.push({
                         tone: 'bad',
                         title: 'Паспорт выключен',
-                        body: 'Сейчас пользователи не смогут собирать прогресс. Включи “Акция активна” в настройках.',
+                        body: 'Сейчас пользователи не смогут собирать прогресс. Включи “Акция активна” в операционке.',
                       });
                     }
 
@@ -940,13 +1194,13 @@ export default function Passport() {
                       recs.push({
                         tone: 'warn',
                         title: 'Не задана цель (total_styles)',
-                        body: 'Чтобы корректно считать completion и “near-goal” — нужен total_styles. Добавим в settings/metadata.',
+                        body: 'Чтобы корректно считать completion и сценарии “остался 1” — нужен total_styles. Добавим в settings/metadata.',
                       });
                     } else if (completionRatePct < 40) {
                       recs.push({
                         tone: 'warn',
                         title: 'Низкий completion',
-                        body: 'Обычно лечится бустом “остался 1 стиль → x2”, напоминаниями и более простым “дойти до кассы”.',
+                        body: 'Обычно лечится автопилотом: “остался 1 штамп → напоминание”, плюс буст/оффер и простая выдача.',
                       });
                     } else {
                       recs.push({
@@ -960,7 +1214,7 @@ export default function Passport() {
                       recs.push({
                         tone: 'warn',
                         title: 'Есть ошибки PIN',
-                        body: 'Если pin_invalid много — кассиры/UX. Можно перейти на QR-подтверждение или укоротить код.',
+                        body: 'Если pin_invalid много — проблема в кассирах/UX. Добавь “инструкцию кассиру” и/или автопроверку.',
                       });
                     }
 
@@ -968,7 +1222,7 @@ export default function Passport() {
                       recs.push({
                         tone: 'bad',
                         title: 'Низкая выдача наград',
-                        body: 'Люди завершают, но не получают. Нужны пуши от бота и максимально простой сценарий “показать кассиру”.',
+                        body: 'Люди завершают, но не получают. Нужны напоминания от бота и максимально простой сценарий “показать QR кассиру”.',
                       });
                     }
 
@@ -1029,8 +1283,8 @@ export default function Passport() {
                                 <b>{redeemed}</b>
                               </div>
                               <div className="psRow">
-                                <span className="psMuted">Redeem rate</span>
-                                <b>{redeemRatePct}%</b>
+                                <span className="psMuted">Ожидают выдачи</span>
+                                <b>{Math.max(0, issued - redeemed)}</b>
                               </div>
                               <div className="psRow">
                                 <span className="psMuted">PIN обязателен</span>
@@ -1103,15 +1357,21 @@ export default function Passport() {
                 </div>
               )}
 
-              {/* ===== TAB: BOOSTS ===== */}
-              {tab === 'boosts' && (
+              {/* ===== TAB: AUTOPILOT ===== */}
+              {tab === 'autopilot' && (
                 <div className="psUnderPanel">
                   <div className="psUnderHead">
-                    <div>
-                      <div className="wheelCardTitle">Бусты / Автопилот</div>
-                      <div className="wheelCardSub">
-                        Это слой “офферов”: бот шлёт сообщение с кнопкой “Активировать”, а воркер применяет обещание при collect / complete.
-                        <span className="psMuted"> Сейчас UI-first (локально). Дальше привяжем к /offers/*.</span>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                      <div>
+                        <div className="wheelCardTitle">Автопилот (бот-кампании)</div>
+                        <div className="wheelCardSub">
+                          Включаем авто-напоминания и дожим до приза. Сейчас UI-first (локально). Дальше привяжем к воркеру <b>/offers/*</b>.
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span className="psBadge mid">общий тумблер</span>
+                        <Switch checked={autopilotOn} onChange={setAutopilotOn} />
                       </div>
                     </div>
                   </div>
@@ -1119,41 +1379,78 @@ export default function Passport() {
                   <div className="psGrid2">
                     <div className="sg-pill psCard">
                       <div className="psCardHead">
-                        <div className="psCardTitle">Шаблоны</div>
-                        <span className="psBadge mid">toggle + TTL</span>
+                        <div className="psCardTitle">Сценарии</div>
+                        <span className={'psBadge ' + (autopilotOn ? 'ok' : 'bad')}>
+                          {autopilotOn ? 'вкл' : 'выкл'}
+                        </span>
                       </div>
 
                       <div className="psRows" style={{ gap: 10 }}>
-                        {boosts.map((b) => (
+                        {autopilot.map((b) => (
                           <div key={b.id} className="psRow" style={{ alignItems: 'center' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 900, lineHeight: 1.2 }}>{b.title}</div>
-                              <div className="psMuted" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.25 }}>
-                                {b.hint}
+                              <div className="psMiniHint" style={{ marginTop: 4 }}>{b.hint}</div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10, marginTop: 10, alignItems: 'end' }}>
+                                <div>
+                                  <div className="psMuted" style={{ fontSize: 12, marginBottom: 6 }}>Текст сообщения</div>
+                                  <Input
+                                    value={b.message_text}
+                                    onChange={(e: any) => patchAutopilot(b.id, { message_text: String(e.target.value || '') })}
+                                    placeholder="Текст…"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="psMuted" style={{ fontSize: 12, marginBottom: 6 }}>Кнопка</div>
+                                  <Input
+                                    value={b.button_label}
+                                    onChange={(e: any) => patchAutopilot(b.id, { button_label: String(e.target.value || '') })}
+                                    placeholder="Например: Забрать приз"
+                                  />
+                                </div>
                               </div>
 
-                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
                                 <span className="psMuted" style={{ fontSize: 12 }}>TTL (часы)</span>
                                 <Input
                                   type="number"
                                   value={String(b.ttl_hours)}
-                                  onChange={(e: any) => patchBoost(b.id, { ttl_hours: Math.max(1, toInt(e.target.value, 24)) })}
+                                  onChange={(e: any) => patchAutopilot(b.id, { ttl_hours: Math.max(1, toInt(e.target.value, 24)) })}
                                   style={{ width: 110 }}
                                 />
                                 <span className="psMuted" style={{ fontSize: 12 }}>лимит / юзер</span>
                                 <Input
                                   type="number"
                                   value={String(b.limit_per_user)}
-                                  onChange={(e: any) => patchBoost(b.id, { limit_per_user: Math.max(0, toInt(e.target.value, 1)) })}
+                                  onChange={(e: any) => patchAutopilot(b.id, { limit_per_user: Math.max(0, toInt(e.target.value, 1)) })}
                                   style={{ width: 110 }}
                                 />
+                              </div>
+
+                              {/* Простейший “прогноз охвата” (UI-first) */}
+                              <div className="psMiniHint" style={{ marginTop: 10 }}>
+                                Прогноз охвата (пока приближённо):{' '}
+                                <b>
+                                  {b.id === 'reward_waiting'
+                                    ? `${fact.pending} пользователей с “приз ждёт”`
+                                    : b.id === 'near_goal'
+                                    ? `~${Math.max(0, Math.round(fact.completed * 0.6))} пользователей близко к цели`
+                                    : b.id === 'dormant_7d'
+                                    ? `~${Math.max(0, Math.round(fact.users * 0.25))} “уснувших”`
+                                    : `зависит от сезона (премиум)`}
+                                </b>
                               </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                              <Switch checked={b.enabled} onChange={(v) => patchBoost(b.id, { enabled: v })} />
-                              <span className={'psBadge ' + (b.enabled ? 'ok' : 'bad')}>
-                                {b.enabled ? 'вкл' : 'выкл'}
+                              <Switch
+                                checked={b.enabled && autopilotOn}
+                                disabled={!autopilotOn}
+                                onChange={(v) => patchAutopilot(b.id, { enabled: v })}
+                              />
+                              <span className={'psBadge ' + ((b.enabled && autopilotOn) ? 'ok' : 'bad')}>
+                                {(b.enabled && autopilotOn) ? 'вкл' : 'выкл'}
                               </span>
                             </div>
                           </div>
@@ -1161,129 +1458,517 @@ export default function Passport() {
                       </div>
 
                       <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button type="button" className="sg-tab is-active" onClick={saveBoostsMock}>
-                          Сохранить шаблоны
+                        <button type="button" className="sg-tab is-active" onClick={saveAutopilotMock} disabled={!appId}>
+                          Сохранить автопилот
                         </button>
-                        {boostMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{boostMsg}</span> : null}
+                        {autoMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{autoMsg}</span> : null}
                       </div>
                     </div>
 
                     <div className="sg-pill psCard">
                       <div className="psCardHead">
-                        <div className="psCardTitle">Кампании (сообщение от бота)</div>
-                        <span className="psBadge mid">скоро</span>
+                        <div className="psCardTitle">Что это даёт мерчанту</div>
+                        <span className="psBadge mid">экономия времени</span>
                       </div>
 
-                      <div className="psMuted" style={{ lineHeight: 1.35 }}>
-                        Следующий шаг (воркер):
+                      <div className="psMuted" style={{ lineHeight: 1.45 }}>
                         <ul style={{ margin: '8px 0 0 16px' }}>
-                          <li>POST /offers/send_campaign (segmentation + message + button)</li>
-                          <li>действие кнопки → записать “offer_armed” в D1/KV</li>
-                          <li>в момент style.collect → проверить активный буст и применить (x2 / +1 / skip)</li>
+                          <li><b>Авто-дожим</b> до приза: меньше “брошенных” паспортов</li>
+                          <li><b>Авто-пинги</b> “приз ждёт”: меньше негативных ситуаций</li>
+                          <li><b>Не нужно вручную</b> писать рассылки и думать сегменты</li>
+                          <li>Дальше добавим: расписание, частоты, A/B тексты, статистика доставок</li>
                         </ul>
-                        <div style={{ marginTop: 10 }}>
-                          В UI здесь будут: сегмент, текст, предпросмотр кнопки, лимиты, статистика активаций.
-                        </div>
-                      </div>
 
-                      <div style={{ marginTop: 12 }}>
-                        <Button disabled>Отправить кампанию (soon)</Button>
+                        <div style={{ marginTop: 12 }} className="psMiniHint">
+                          Технически (воркер): cron → выбрать сегмент → tgSendMessage → записать “кампания отправлена” (лимиты) → в mini collect/complete учитывать.
+                        </div>
+
+                        <div style={{ marginTop: 12 }}>
+                          <Button disabled>Отправить кампанию вручную (soon)</Button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* ===== TAB: SETTINGS ===== */}
-              {tab === 'settings' && (
+              {/* ===== TAB: OPS ===== */}
+              {tab === 'ops' && (
                 <div className="psUnderPanel">
                   <div className="psUnderHead">
                     <div>
-                      <div className="wheelCardTitle">Настройки (live)</div>
+                      <div className="wheelCardTitle">Операционка (без ручного труда)</div>
                       <div className="wheelCardSub">
-                        Оперативные тумблеры. Не завязаны на publish.
+                        Здесь всё, что снижает ошибки кассиров и “хвосты выдачи”. Тумблеры — live, не завязаны на publish.
                       </div>
                     </div>
                   </div>
 
                   <div className="psGrid2">
+                    {/* Health */}
                     <div className="sg-pill psCard">
                       <div className="psCardHead">
-                        <div className="psCardTitle">Правила</div>
-                        <span className="psBadge mid">live</span>
+                        <div className="psCardTitle">Здоровье процесса</div>
+                        <span className={'psBadge ' + pendingTone.cls}>хвосты {pendingTone.text}</span>
                       </div>
 
                       <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psRow" style={{ alignItems: 'center' }}>
-                          <div style={{ flex: 1 }}>
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Ожидают выдачи</div>
+                            <div className="psMiniHint">issued - redeemed за период</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 900, fontSize: 18 }}>{Math.max(0, fact.pending)}</div>
+                          </div>
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Ошибки PIN</div>
+                            <div className="psMiniHint">invalid + used / steps</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                            <span className={'psBadge ' + pinHealthTone.cls}>{pinHealthTone.text} · {pinHealthTone.rate}%</span>
+                            <b>{fact.pinErrors}</b>
+                          </div>
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
                             <div style={{ fontWeight: 900 }}>Акция активна</div>
-                            <div className="psMuted" style={{ fontSize: 12, marginTop: 4 }}>
-                              Если выключено — collect не должен засчитываться (можем enforce в mini/passport.ts).
-                            </div>
+                            <div className="psMiniHint">если выкл — collect должен блокироваться</div>
                           </div>
                           <Switch checked={activeDraft} onChange={setActiveDraft} />
                         </div>
 
-                        <div className="psRow" style={{ alignItems: 'center' }}>
-                          <div style={{ flex: 1 }}>
+                        <div className="psPillRow">
+                          <div>
                             <div style={{ fontWeight: 900 }}>Требовать PIN</div>
-                            <div className="psMuted" style={{ fontSize: 12, marginTop: 4 }}>
-                              Если включено — style.collect требует одноразовый PIN из pins_pool.
-                            </div>
+                            <div className="psMiniHint">если вкл — collect требует одноразовый PIN</div>
                           </div>
                           <Switch checked={pinDraft} onChange={setPinDraft} />
                         </div>
 
-                        <div className="psRow" style={{ alignItems: 'center' }}>
-                          <div style={{ flex: 1 }}>
+                        <div className="psPillRow">
+                          <div>
                             <div style={{ fontWeight: 900 }}>Показывать офферы/бусты</div>
-                            <div className="psMuted" style={{ fontSize: 12, marginTop: 4 }}>
-                              Если включено — мини-апп может показывать пользователю активные предложения.
-                            </div>
+                            <div className="psMiniHint">мини-апп показывает предложения пользователю</div>
                           </div>
                           <Switch checked={offersDraft} onChange={setOffersDraft} />
                         </div>
 
-                        <div className="psRow">
-                          <span className="psMuted">passport_key</span>
-                          <b>{String(settings.passport_key || 'default')}</b>
+                        <div style={{ marginTop: 2, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="sg-tab is-active"
+                            onClick={savePassportSettings}
+                            disabled={savingSettings || !appId}
+                          >
+                            {savingSettings ? 'Сохраняю…' : 'Сохранить тумблеры'}
+                          </button>
+                          {settingsMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{settingsMsg}</span> : null}
+                          <span className="psMuted" style={{ marginLeft: 'auto' }}>
+                            passport_key: <b>{String(settings.passport_key || 'default')}</b> · total_styles: <b>{totalStyles > 0 ? totalStyles : '—'}</b>
+                          </span>
                         </div>
-
-                        <div className="psRow">
-                          <span className="psMuted">total_styles</span>
-                          <b>{totalStyles > 0 ? totalStyles : '—'}</b>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          className="sg-tab is-active"
-                          onClick={savePassportSettings}
-                          disabled={savingSettings || !appId}
-                        >
-                          {savingSettings ? 'Сохраняю…' : 'Сохранить'}
-                        </button>
-                        {settingsMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{settingsMsg}</span> : null}
                       </div>
                     </div>
 
+                    {/* Cashier instructions */}
                     <div className="sg-pill psCard">
                       <div className="psCardHead">
-                        <div className="psCardTitle">Управление витриной стилей</div>
-                        <span className="psBadge mid">soon</span>
+                        <div className="psCardTitle">Инструкция кассиру</div>
+                        <span className="psBadge mid">1 клик</span>
                       </div>
 
-                      <div className="psMuted" style={{ lineHeight: 1.35 }}>
-                        Это будущий аналог “Склада” из колеса — но для карточек стилей:
-                        <ul style={{ margin: '8px 0 0 16px' }}>
-                          <li>активен / скрыт</li>
-                          <li>порядок</li>
-                          <li>featured (подсветить)</li>
-                        </ul>
-                        Технически: live-поля в styles_dict (или отдельная styles_live).
+                      <div className="psMuted" style={{ lineHeight: 1.35, marginBottom: 10 }}>
+                        Мерчант копирует и кидает в чат кассиров. Меньше <b>pin_invalid</b> и “что делать?”.
+                      </div>
+
+                      <textarea
+                        className="psTextArea"
+                        value={cashierText}
+                        onChange={(e) => setCashierText(String(e.target.value || ''))}
+                      />
+
+                      <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button type="button" className="sg-tab is-active" onClick={copyCashier}>
+                          Скопировать
+                        </button>
+                        {cashierCopyMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{cashierCopyMsg}</span> : null}
+                        <span className="psMuted" style={{ marginLeft: 'auto' }}>
+                          совет: добавь туда “где взять PIN” и “что делать при ошибке”
+                        </span>
+                      </div>
+
+                      <div className="psMiniHint" style={{ marginTop: 10 }}>
+                        Следующий шаг (воркер): вывести список кассиров + их активность (сколько confirm/decline) и подсказки по ошибкам.
                       </div>
                     </div>
+                  </div>
+
+                  {/* Future: “Склад стилей” */}
+                  <div className="sg-pill psCard" style={{ marginTop: 12 }}>
+                    <div className="psCardHead">
+                      <div className="psCardTitle">Витрина стилей (как “Склад”)</div>
+                      <span className="psBadge mid">скоро</span>
+                    </div>
+
+                    <div className="psMuted" style={{ lineHeight: 1.35 }}>
+                      Оперативное управление карточками штампов без конструктора:
+                      <ul style={{ margin: '8px 0 0 16px' }}>
+                        <li>активен / скрыт</li>
+                        <li>порядок (позже drag)</li>
+                        <li>featured (подсветить)</li>
+                        <li>подсказка кассиру по шагу</li>
+                      </ul>
+                      Технически: live-поля в <b>styles_dict</b> (или отдельная <b>styles_live</b>). Publish эти поля не трогает.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== TAB: PREMIUM ===== */}
+              {tab === 'premium' && (
+                <div className="psUnderPanel">
+                  <div className="psUnderHead">
+                    <div>
+                      <div className="wheelCardTitle">Премиум-политики (сезоны / окна / сбросы / лимиты)</div>
+                      <div className="wheelCardSub">
+                        Это “киллер-фича”: настраиваем правила так, чтобы всё работало само. Сейчас UI-first (локально), потом привяжем к воркеру.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Presets */}
+                  <div className="sg-pill psCard">
+                    <div className="psCardHead">
+                      <div className="psCardTitle">Режимы (пресеты)</div>
+                      <span className="psBadge mid">1 клик</span>
+                    </div>
+
+                    <div className="psInline2">
+                      <div>
+                        <div className="psMuted" style={{ marginBottom: 6 }}>Выбери режим</div>
+                        <select
+                          className="psSelect"
+                          value={policy.preset}
+                          onChange={(e) => setPolicy((prev) => applyPreset(prev, e.target.value as any))}
+                        >
+                          <option value="A_infinite">A · Бесконечный круг (стандарт)</option>
+                          <option value="B_season">B · Сезон 30 дней (премиум)</option>
+                          <option value="C_tier_windows">C · Окна на тиры (премиум)</option>
+                          <option value="D_marathon">D · Марафон (сезон + окна + дедлайн)</option>
+                        </select>
+                        <div className="psMiniHint" style={{ marginTop: 8 }}>
+                          Пресет выставляет понятные значения. Ниже — тонкая ручная докрутка.
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="psMuted" style={{ marginBottom: 6 }}>Статус</div>
+                        <div className="psPillRow" style={{ height: 38, borderRadius: 12 }}>
+                          <span style={{ fontWeight: 900 }}>Премиум</span>
+                          <span className="psBadge mid">UI-first</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="psGrid2" style={{ marginTop: 12 }}>
+                    {/* Season policy */}
+                    <div className="sg-pill psCard">
+                      <div className="psCardHead">
+                        <div className="psCardTitle">Season policy</div>
+                        <span className="psBadge mid">сезон</span>
+                      </div>
+
+                      <div className="psRows" style={{ gap: 10 }}>
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Режим</div>
+                            <div className="psMiniHint">infinite = бесконечно, season = сезон</div>
+                          </div>
+                          <select
+                            className="psSelect"
+                            style={{ maxWidth: 220 }}
+                            value={policy.season.mode}
+                            onChange={(e) => patchPolicy('season.mode', e.target.value)}
+                          >
+                            <option value="infinite">infinite</option>
+                            <option value="season">season</option>
+                          </select>
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Длина сезона (дней)</div>
+                            <div className="psMiniHint">например 30</div>
+                          </div>
+                          <Input
+                            type="number"
+                            value={String(policy.season.season_days)}
+                            onChange={(e: any) => patchPolicy('season.season_days', Math.max(1, toInt(e.target.value, 30)))}
+                            style={{ width: 140 }}
+                            disabled={policy.season.mode !== 'season'}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Грейс (дней)</div>
+                            <div className="psMiniHint">сколько дней после конца ещё можно забрать</div>
+                          </div>
+                          <Input
+                            type="number"
+                            value={String(policy.season.season_grace_days)}
+                            onChange={(e: any) => patchPolicy('season.season_grace_days', Math.max(0, toInt(e.target.value, 2)))}
+                            style={{ width: 140 }}
+                            disabled={policy.season.mode !== 'season'}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Якорь сезона</div>
+                            <div className="psMiniHint">если пусто — считаем от первого collect</div>
+                          </div>
+                          <Input
+                            type="date"
+                            value={String(policy.season.season_start_iso || '')}
+                            onChange={(e: any) => patchPolicy('season.season_start_iso', String(e.target.value || ''))}
+                            style={{ width: 180 }}
+                            disabled={policy.season.mode !== 'season'}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tier window policy */}
+                    <div className="sg-pill psCard">
+                      <div className="psCardHead">
+                        <div className="psCardTitle">Tier window policy</div>
+                        <span className="psBadge mid">окна</span>
+                      </div>
+
+                      <div className="psRows" style={{ gap: 10 }}>
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Режим</div>
+                            <div className="psMiniHint">none = без окон, rolling = окна по тиру</div>
+                          </div>
+                          <select
+                            className="psSelect"
+                            style={{ maxWidth: 220 }}
+                            value={policy.tier_window.mode}
+                            onChange={(e) => patchPolicy('tier_window.mode', e.target.value)}
+                          >
+                            <option value="none">none</option>
+                            <option value="rolling">rolling</option>
+                          </select>
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Окно на тир (дней)</div>
+                            <div className="psMiniHint">например 30: если не успел — что делать решает reset</div>
+                          </div>
+                          <Input
+                            type="number"
+                            value={String(policy.tier_window.tier_window_days)}
+                            onChange={(e: any) => patchPolicy('tier_window.tier_window_days', Math.max(1, toInt(e.target.value, 30)))}
+                            style={{ width: 140 }}
+                            disabled={policy.tier_window.mode !== 'rolling'}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Можно догонять</div>
+                            <div className="psMiniHint">если выкл — пропущенный тир сгорает</div>
+                          </div>
+                          <Switch
+                            checked={!!policy.tier_window.allow_catchup}
+                            disabled={policy.tier_window.mode !== 'rolling'}
+                            onChange={(v) => patchPolicy('tier_window.allow_catchup', v)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reset policy */}
+                    <div className="sg-pill psCard">
+                      <div className="psCardHead">
+                        <div className="psCardTitle">Reset policy</div>
+                        <span className="psBadge mid">сбросы</span>
+                      </div>
+
+                      <div className="psRows" style={{ gap: 10 }}>
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>После выдачи приза (redeemed)</div>
+                            <div className="psMiniHint">что происходит с прогрессом</div>
+                          </div>
+                          <select
+                            className="psSelect"
+                            style={{ maxWidth: 260 }}
+                            value={policy.reset.on_reward_redeemed}
+                            onChange={(e) => patchPolicy('reset.on_reward_redeemed', e.target.value)}
+                          >
+                            <option value="none">none · ничего</option>
+                            <option value="next_tier">next_tier · следующий тир</option>
+                            <option value="new_cycle">new_cycle · новый круг</option>
+                          </select>
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Когда сезон закончился</div>
+                            <div className="psMiniHint">freeze = заморозить, reset_all = сбросить</div>
+                          </div>
+                          <select
+                            className="psSelect"
+                            style={{ maxWidth: 260 }}
+                            value={policy.reset.on_season_end}
+                            onChange={(e) => patchPolicy('reset.on_season_end', e.target.value)}
+                            disabled={policy.season.mode !== 'season'}
+                          >
+                            <option value="freeze">freeze</option>
+                            <option value="reset_all">reset_all</option>
+                          </select>
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Историю сохраняем</div>
+                            <div className="psMiniHint">для аналитики (обычно всегда да)</div>
+                          </div>
+                          <Switch checked={!!policy.reset.keep_history} onChange={(v) => patchPolicy('reset.keep_history', v)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Limits */}
+                    <div className="sg-pill psCard">
+                      <div className="psCardHead">
+                        <div className="psCardTitle">Limits</div>
+                        <span className="psBadge mid">лимиты</span>
+                      </div>
+
+                      <div className="psRows" style={{ gap: 10 }}>
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Лимит collect в день (всего)</div>
+                            <div className="psMiniHint">0 = без лимита</div>
+                          </div>
+                          <Input
+                            type="number"
+                            value={String(policy.limits.max_collects_per_day)}
+                            onChange={(e: any) => patchPolicy('limits.max_collects_per_day', Math.max(0, toInt(e.target.value, 0)))}
+                            style={{ width: 140 }}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Лимит collect / юзер / день</div>
+                            <div className="psMiniHint">0 = без лимита</div>
+                          </div>
+                          <Input
+                            type="number"
+                            value={String(policy.limits.max_collects_per_user_per_day)}
+                            onChange={(e: any) => patchPolicy('limits.max_collects_per_user_per_day', Math.max(0, toInt(e.target.value, 0)))}
+                            style={{ width: 140 }}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Блокировать collect если акция выключена</div>
+                            <div className="psMiniHint">enforce в mini style.collect</div>
+                          </div>
+                          <Switch checked={!!policy.limits.block_when_inactive} onChange={(v) => patchPolicy('limits.block_when_inactive', v)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reward policy */}
+                    <div className="sg-pill psCard">
+                      <div className="psCardHead">
+                        <div className="psCardTitle">Reward policy</div>
+                        <span className="psBadge mid">призы</span>
+                      </div>
+
+                      <div className="psRows" style={{ gap: 10 }}>
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Выдавать приз на тир</div>
+                            <div className="psMiniHint">после закрытия тира создаём passport_rewards issued</div>
+                          </div>
+                          <Switch
+                            checked={!!policy.reward.issue_on_tier_complete}
+                            onChange={(v) => patchPolicy('reward.issue_on_tier_complete', v)}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Выдавать приз на полный паспорт</div>
+                            <div className="psMiniHint">если есть “финальный приз”</div>
+                          </div>
+                          <Switch
+                            checked={!!policy.reward.issue_on_full_complete}
+                            onChange={(v) => patchPolicy('reward.issue_on_full_complete', v)}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Истечение приза (дней)</div>
+                            <div className="psMiniHint">0 = не истекает</div>
+                          </div>
+                          <Input
+                            type="number"
+                            value={String(policy.reward.reward_expiry_days)}
+                            onChange={(e: any) => patchPolicy('reward.reward_expiry_days', Math.max(0, toInt(e.target.value, 0)))}
+                            style={{ width: 140 }}
+                          />
+                        </div>
+
+                        <div className="psPillRow">
+                          <div>
+                            <div style={{ fontWeight: 900 }}>Ротация призов</div>
+                            <div className="psMiniHint">позже: менять набор призов по времени</div>
+                          </div>
+                          <select
+                            className="psSelect"
+                            style={{ maxWidth: 220 }}
+                            value={policy.reward.rotation_mode}
+                            onChange={(e) => patchPolicy('reward.rotation_mode', e.target.value)}
+                          >
+                            <option value="none">none</option>
+                            <option value="daily">daily</option>
+                            <option value="weekly">weekly</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="sg-tab is-active"
+                      onClick={savePolicyMock}
+                      disabled={policySaving || !appId}
+                    >
+                      {policySaving ? 'Сохраняю…' : 'Сохранить политики'}
+                    </button>
+                    {policyMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{policyMsg}</span> : null}
+                    <span className="psMuted" style={{ marginLeft: 'auto' }}>
+                      подсказка: начни с пресета и не трогай лишнее — мерчанту важна простота
+                    </span>
                   </div>
                 </div>
               )}
@@ -1316,7 +2001,34 @@ export default function Passport() {
               <div className="psRightMeta" style={{ marginTop: 6 }}>
                 <span className="psMuted">issued: <b>{fact.issued}</b></span>
                 <span className="psMuted">redeemed: <b>{fact.redeemed}</b></span>
-                <span className="psMuted">redeem: <b>{clampN(fact.redeemRatePct, 0, 100)}%</b></span>
+                <span className="psMuted">pending: <b>{Math.max(0, fact.pending)}</b></span>
+              </div>
+            </div>
+          </Card>
+
+          {/* ops mini widget */}
+          <Card className="wheelCard" style={{ marginBottom: 12 }}>
+            <div className="wheelRedeemBar" style={{ marginTop: 0 }}>
+              <div className="wheelRedeemTop">
+                <div className="wheelRedeemName">Операционка</div>
+                <div className={'wheelRedeemBadge ' + pendingTone.cls}>
+                  {pendingTone.text}
+                </div>
+              </div>
+
+              <div className="psRightMeta" style={{ marginTop: 0 }}>
+                <span className="psMuted">ожидают выдачи: <b>{Math.max(0, fact.pending)}</b></span>
+                <span className="psMuted">ошибки PIN: <b>{fact.pinErrors}</b></span>
+              </div>
+
+              <div className="psMiniHint" style={{ marginTop: 8 }}>
+                Если pending растёт — включай автопилот “приз ждёт” + дай кассирам инструкцию.
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <button type="button" className="sg-tab is-active" onClick={() => setTab('ops')}>
+                  Открыть операционку
+                </button>
               </div>
             </div>
           </Card>
@@ -1373,6 +2085,10 @@ export default function Passport() {
               {!topStyles.length && !qStats.isLoading && (
                 <div className="psMuted">Пока пусто</div>
               )}
+            </div>
+
+            <div className="psMiniHint" style={{ marginTop: 10 }}>
+              “Провал” = на этом шаге чаще всего не доходят до финала. Дальше сделаем действия: подсветить / упростить / подсказка кассиру.
             </div>
           </Card>
         </div>
