@@ -949,201 +949,132 @@ export default function Wheel() {
       ) : null}
 
       {/* ===== TAB: STOCK ===== */}
-{tab === 'stock' ? (
-  <>
-    <SgCard>
-      <SgCardHeader>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <SgCardTitle>Склад призов</SgCardTitle>
-        </div>
-      </SgCardHeader>
-
-      <SgCardContent>
-        <div className="sgp-stockHead">
-          <div className="sgp-stockCol sgp-stockCol--name">Название</div>
-          <div className="sgp-stockCol sgp-stockCol--status">Статус</div>
-          <div className="sgp-stockCol">Активен</div>
-          <div className="sgp-stockCol">Учёт</div>
-          <div className="sgp-stockCol">Остаток</div>
-          <div className="sgp-stockCol">Авто-выкл</div>
-        </div>
-
-        <div className="sgp-stockList">
-          {items.map((p) => {
-            const code = p.prize_code;
-            const d = draft[code] || {
-              active: !!p.active,
-              track_qty: !!p.track_qty,
-              qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
-              stop_when_zero: !!p.stop_when_zero,
-            };
-
-            const active = !!d.active;
-            const tracked = active && !!d.track_qty;
-
-            const qRaw = String(d.qty_left ?? '').trim();
-            const baseQty = qtyLeft(p) ?? 0;
-            const qNum = tracked ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0))) : null;
-
-            const out = tracked && (qNum !== null && qNum <= 0);
-            const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
-            const swz = tracked && !!d.stop_when_zero;
-
-            const tone = !active ? 'off' : (tracked ? (out ? 'out' : (low ? 'low' : 'on')) : 'on');
-
-            const statusText =
-              !active ? 'Не активен'
-                : tracked && out && swz ? 'Закончились'
-                : tracked && low ? 'Мало'
-                : tracked ? 'Ок'
-                : 'Без учёта';
-
-            return (
-              <div key={code} className={'sgp-stockRow tone-' + tone}>
-                <div className="sgp-stockCol sgp-stockCol--name">
-                  <div className="sgp-stockNameRow">
-                    {(tracked && out && swz) ? <span className="sgp-stockIco is-bad">!</span>
-                      : (tracked && low) ? <span className="sgp-stockIco is-warn">!</span>
-                      : (!active) ? <span className="sgp-stockIco is-off">—</span>
-                      : <span className="sgp-stockIco is-good">✓</span>
-                    }
-                    <div className="sgp-stockName">{p.title || code}</div>
-                  </div>
-
-                  <div className="sgp-stockSub">
-                    {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'} · код: {code}
-                  </div>
-
-                  {out && swz ? <div className="sgp-stockHint is-bad">Закончились — приз не выпадает</div> : null}
-                  {!out && low ? <div className="sgp-stockHint is-warn">Скоро закончатся (≤ {inventory.lowThreshold})</div> : null}
-                </div>
-
-                <div className="sgp-stockCol sgp-stockCol--status">
-                  {statusText}
-                </div>
-
-                <div className="sgp-stockCol">
-                  <SgToggle
-                    checked={active}
-                    onChange={(v) => {
-                      if (!v) {
-                        patchDraft(code, { active: false, track_qty: false, stop_when_zero: false, qty_left: '' });
-                        return;
-                      }
-                      patchDraft(code, { active: true });
-                    }}
-                  />
-                </div>
-
-                <div className="sgp-stockCol">
-                  <SgToggle
-                    checked={tracked}
-                    disabled={!active}
-                    onChange={(v) => {
-                      if (!active) return;
-                      if (!v) {
-                        patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
-                        return;
-                      }
-                      patchDraft(code, { track_qty: true });
-                    }}
-                  />
-                </div>
-
-                <div className="sgp-stockCol">
-                  <SgInput
-                    value={d.qty_left}
-                    onChange={(e) => patchDraft(code, { qty_left: (e.target as any).value })}
-                    placeholder={tracked ? '0' : '—'}
-                    disabled={!tracked}
-                  />
-                </div>
-
-                <div className="sgp-stockCol">
-                  <SgToggle
-                    checked={tracked && !!d.stop_when_zero}
-                    disabled={!tracked}
-                    onChange={(v) => {
-                      if (!tracked) return;
-                      patchDraft(code, { stop_when_zero: v });
-                    }}
-                  />
-                </div>
+      {tab === 'stock' ? (
+        <>
+          <SgCard>
+            <SgCardHeader
+              right={
+                <IconBtn active={openStock} onClick={() => setOpenStock((v) => !v)} title="Свернуть/развернуть">
+                  {openStock ? '—' : '+'}
+                </IconBtn>
+              }
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <SgCardTitle>Склад призов</SgCardTitle>
+                <SgpPill>Учёт: <b>{inventory.trackedCount}</b></SgpPill>
+                <SgpPill>Закончились: <b>{inventory.outOfStockCount}</b></SgpPill>
+                <SgpPill>Мало (≤ {inventory.lowThreshold}): <b>{inventory.lowStockCount}</b></SgpPill>
               </div>
-            );
-          })}
+            </SgCardHeader>
 
-          {!items.length && !qStats.isLoading ? <div className="sgp-muted">Нет призов.</div> : null}
-        </div>
+            {openStock ? (
+              <SgCardContent>
+                <div className="sgp-stockHead">
+                  <div className="sgp-stockCol sgp-stockCol--name">Название</div>
+                  <div className="sgp-stockCol">Активен</div>
+                  <div className="sgp-stockCol">Учёт</div>
+                  <div className="sgp-stockCol">Остаток</div>
+                  <div className="sgp-stockCol">Авто-выкл</div>
+                </div>
 
-        <div style={{ marginTop: 12 }}>
-          {saveMsg ? (
-            <Hint tone={saveMsg.startsWith('Ошибка') ? 'bad' : 'warn'}>{saveMsg}</Hint>
-          ) : (
-            <Hint tone="neutral">Подсказка: если “Учёт остатков” выключен — поля неактивны, это нормально.</Hint>
-          )}
-        </div>
-      </SgCardContent>
+                <div className="sgp-stockList">
+                  {items.map((p) => {
+                    const code = p.prize_code;
+                    const d = draft[code] || {
+                      active: !!p.active,
+                      track_qty: !!p.track_qty,
+                      qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
+                      stop_when_zero: !!p.stop_when_zero,
+                    };
 
-      <SgCardFooter>
-        <SgActions
-          primaryLabel="Сохранить склад"
-          onPrimary={saveStock}
-          state={stockSaveState}
-          errorText={saveMsg?.startsWith('Ошибка') ? saveMsg : undefined}
-          left={<span className="sgp-muted">Меняется только склад (active/track/qty/auto-off).</span>}
-        />
-      </SgCardFooter>
-    </SgCard>
+                    const active = !!d.active;
+                    const tracked = active && !!d.track_qty;
 
-    <div style={{ height: 12 }} />
+                    const qRaw = String(d.qty_left ?? '').trim();
+                    const baseQty = qtyLeft(p) ?? 0;
+                    const qNum = tracked ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0))) : null;
 
-    <SgCard>
-      <SgCardHeader>
-        <div>
-          <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
-          <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
-        </div>
-      </SgCardHeader>
+                    const out = tracked && (qNum !== null && qNum <= 0);
+                    const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
+                    const swz = tracked && !!d.stop_when_zero;
 
-      <SgCardContent>
-        <SgFormRow
-          label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
-          hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
-        >
-          <SgInput
-            value={coinValueDraft}
-            onChange={(e) => setCoinValueDraft((e.target as any).value)}
-            placeholder="1.00"
-          />
-        </SgFormRow>
+                    const tone = !active ? 'off' : (tracked ? (out ? 'out' : (low ? 'low' : 'on')) : 'on');
 
-        <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
-          <SgSelect
-            value={currencyDraft}
-            onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
-          >
-            <option value="RUB">RUB (₽)</option>
-            <option value="USD">USD ($)</option>
-            <option value="EUR">EUR (€)</option>
-          </SgSelect>
-        </SgFormRow>
+                    return (
+                      <div key={code} className={'sgp-stockRow tone-' + tone}>
+                        <div className="sgp-stockCol sgp-stockCol--name">
+                          <div className="sgp-stockName">{p.title || code}</div>
+                          <div className="sgp-stockSub">
+                            {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'} · код: {code}
+                          </div>
 
-        {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
-      </SgCardContent>
+                          {out && swz ? <div className="sgp-stockHint is-bad">Закончились — приз не выпадает</div> : null}
+                          {!out && low ? <div className="sgp-stockHint is-warn">Скоро закончатся (≤ {inventory.lowThreshold})</div> : null}
+                        </div>
 
-      <SgCardFooter>
-        <SgActions
-          primaryLabel="Сохранить"
-          onPrimary={saveAppSettings}
-          state={coinSaveState}
-          errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
-          left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
-        />
-      </SgCardFooter>
-    </SgCard>
-  </>
-) : null}
+                        <div className="sgp-stockCol">
+                          <SgToggle
+                            checked={active}
+                            onChange={(v) => {
+                              if (!v) {
+                                patchDraft(code, { active: false, track_qty: false, stop_when_zero: false, qty_left: '' });
+                                return;
+                              }
+                              patchDraft(code, { active: true });
+                            }}
+                          />
+                        </div>
+
+                        <div className="sgp-stockCol">
+                          <SgToggle
+                            checked={tracked}
+                            disabled={!active}
+                            onChange={(v) => {
+                              if (!active) return;
+                              if (!v) {
+                                patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
+                                return;
+                              }
+                              patchDraft(code, { track_qty: true });
+                            }}
+                          />
+                        </div>
+
+                        <div className="sgp-stockCol">
+                          <SgInput
+                            value={d.qty_left}
+                            onChange={(e) => patchDraft(code, { qty_left: (e.target as any).value })}
+                            placeholder={tracked ? '0' : '—'}
+                            disabled={!tracked}
+                          />
+                        </div>
+
+                        <div className="sgp-stockCol">
+                          <SgToggle
+                            checked={tracked && !!d.stop_when_zero}
+                            disabled={!tracked}
+                            onChange={(v) => {
+                              if (!tracked) return;
+                              patchDraft(code, { stop_when_zero: v });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {!items.length && !qStats.isLoading ? <div className="sgp-muted">Нет призов.</div> : null}
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  {saveMsg ? (
+                    <Hint tone={saveMsg.startsWith('Ошибка') ? 'bad' : 'warn'}>{saveMsg}</Hint>
+                  ) : (
+                    <Hint tone="neutral">Подсказка: если “Учёт остатков” выключен — поля неактивны, это нормально.</Hint>
+                  )}
+                </div>
+              </SgCardContent>
+            ) : null}
 
             <SgCardFooter>
               <SgActions
