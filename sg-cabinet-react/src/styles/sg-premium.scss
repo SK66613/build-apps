@@ -1,37 +1,31 @@
-/* src/styles/sg-premium.scss
-   SGP (Wheel etalon) — soft, creamy, lift-on-hover like screenshot
-   Scope: only Sg* primitives + Wheel helpers
-*/
+/* =========================================================
+   SGP ETALON BLOCK (soft cards + correct fonts + tone logic)
+   Paste whole block into src/styles/sg-premium.scss (bottom)
+========================================================= */
 
-/* =========================
-   Tokens
-========================= */
+/* ---------- Tokens (soft, like screenshot) ---------- */
 :root{
   --sgp-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
-  /* radii (a bit tighter than your 22px, but still soft) */
-  --sgp-radius-card: 18px;
-  --sgp-radius-control: 14px;
-  --sgp-radius-pill: 999px;
+  --sgp-r-xl: 22px;
+  --sgp-r-lg: 18px;
+  --sgp-r-md: 14px;
+  --sgp-r-sm: 12px;
 
-  /* surfaces */
-  --sgp-bg: #f6f7fb;               /* page background */
-  --sgp-card: rgba(255,255,255,.88);
-  --sgp-card-strong: rgba(255,255,255,.96);
-  --sgp-soft: rgba(15,23,42,.03);
-
-  /* borders */
   --sgp-bd: rgba(15,23,42,.10);
   --sgp-bd2: rgba(15,23,42,.08);
   --sgp-bd-strong: rgba(15,23,42,.14);
 
-  /* shadows */
+  --sgp-card-bg: rgba(255,255,255,.88);
+  --sgp-card-bg2: rgba(255,255,255,.96);
+  --sgp-soft: rgba(15,23,42,.03);
+
   --sgp-in: inset 0 1px 0 rgba(255,255,255,.70);
   --sgp-shadow: 0 10px 26px rgba(15,23,42,.06);
   --sgp-shadow2: 0 16px 40px rgba(15,23,42,.10);
   --sgp-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
 
-  /* tones (soft tints) */
+  /* tints for tone logic */
   --sgp-goodTint: rgba(34,197,94,.08);
   --sgp-goodBd: rgba(34,197,94,.18);
 
@@ -41,90 +35,57 @@
   --sgp-badTint: rgba(239,68,68,.08);
   --sgp-badBd: rgba(239,68,68,.18);
 
-  /* chart */
+  --sgp-neutralTint: rgba(15,23,42,.035);
+
+  /* chart soft colors */
   --sgp-chart-grid: rgba(15,23,42,.08);
   --sgp-chart-axis: rgba(15,23,42,.55);
-  --sgp-chart-good: rgba(16,185,129,.55);
-  --sgp-chart-bad: rgba(239,68,68,.55);
+  --sgp-chart-revenue: rgba(59,130,246,.45);
+  --sgp-chart-cost: rgba(148,163,184,.65);
+  --sgp-chart-cum: rgba(15,23,42,.35);
+  --sgp-chart-good: rgba(16,185,129,.45);
+  --sgp-chart-bad: rgba(239,68,68,.40);
 }
 
-/* =========================
-   Base typography helpers
-========================= */
-.sgp-page, .sgp-page *{
+/* ---------- Typography base ---------- */
+.sgp-page,
+.sgp-page *{
   font-family: var(--sgp-font);
 }
 
-.sgp-muted{ opacity:.72; font-size:12px; }
-
-/* =========================
-   Page (SgPage)
-========================= */
-.sgp-page{
-  width: 100%;
-  padding: 0;
-}
-
-.sgp-page__header{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
 .sgp-page__title{
-  font-size: 22px;
-  font-weight: 900;          /* like screenshot */
+  font-weight: 900;
   letter-spacing: -0.02em;
-  line-height: 1.1;
 }
-
 .sgp-page__subtitle{
-  margin-top: 6px;
   font-size: 13px;
   opacity: .75;
 }
 
-.sgp-page__actions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
+.sgp-muted{ opacity:.72; font-size:12px; }
 
-.sgp-page__grid{
-  display:grid;
-  grid-template-columns: 1fr 360px;
-  gap: 14px;
-  align-items:start;
-}
-.sgp-page__grid--single{ grid-template-columns: 1fr; }
-.sgp-page__main{ min-width:0; }
-.sgp-page__aside{ position: relative; }
-
-@media (max-width: 1100px){
-  .sgp-page__grid{ grid-template-columns: 1fr; }
-}
-
-/* =========================
-   Card (SgCard) — soft + lift
-========================= */
+/* =========================================================
+   Cards (sgp-card) — soft glass + lift like screenshot
+========================================================= */
 .sgp-card{
   position: relative;
-  border-radius: var(--sgp-radius-card);
   border: 1px solid var(--sgp-bd2);
-  background: var(--sgp-card);
+  border-radius: var(--sgp-r-xl);
+  background:
+    radial-gradient(1200px 600px at 18% -12%, var(--sgp-neutralTint), rgba(0,0,0,0) 60%),
+    radial-gradient(900px 520px at 112% 0%, rgba(15,23,42,.03), rgba(0,0,0,0) 55%),
+    var(--sgp-card-bg);
   box-shadow: var(--sgp-in);
   overflow: hidden;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
 
-/* subtle “sheen” like on screenshot */
+/* sheen */
 .sgp-card::before{
   content:"";
   position:absolute;
   inset:-2px;
-  border-radius: calc(var(--sgp-radius-card) + 2px);
+  border-radius: calc(var(--sgp-r-xl) + 2px);
   background:
     radial-gradient(650px 200px at 18% 0%, rgba(255,255,255,.58), rgba(255,255,255,0) 62%),
     radial-gradient(650px 220px at 86% 10%, rgba(255,255,255,.38), rgba(255,255,255,0) 66%);
@@ -133,12 +94,18 @@
   transition: opacity .16s ease, transform .16s ease;
 }
 
+/* lift on hover */
+.sgp-card.is-lift:hover,
 .sgp-wheel .sgp-card:hover{
   transform: translateY(-1px);
-  box-shadow: var(--sgp-glow), var(--sgp-in);
   border-color: rgba(15,23,42,.12);
-  background: var(--sgp-card-strong);
+  box-shadow: var(--sgp-glow), var(--sgp-in);
+  background:
+    radial-gradient(1200px 600px at 18% -12%, rgba(15,23,42,.03), rgba(0,0,0,0) 60%),
+    radial-gradient(900px 520px at 112% 0%, rgba(15,23,42,.03), rgba(0,0,0,0) 55%),
+    var(--sgp-card-bg2);
 }
+.sgp-card.is-lift:hover::before,
 .sgp-wheel .sgp-card:hover::before{
   opacity:.34;
   transform: translateY(-1px);
@@ -149,157 +116,103 @@
   box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in);
 }
 
+/* inner structure */
 .sgp-card__header{
-  padding: 14px 14px 10px;
+  padding:14px 14px 10px;
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
-  gap: 12px;
-  border-bottom: 1px solid rgba(15,23,42,.06);
+  gap:12px;
+  border-bottom:1px solid rgba(15,23,42,.06);
 }
 .sgp-card__title{
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:-0.01em;
 }
 .sgp-card__sub{
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: .72;
+  margin-top:4px;
+  font-size:12px;
+  opacity:.72;
 }
-.sgp-card__content{
-  padding: 12px 14px 14px;
-}
+.sgp-card__content{ padding:12px 14px 14px; }
 .sgp-card__footer{
-  padding: 12px 14px;
-  border-top: 1px solid rgba(15,23,42,.06);
+  padding:12px 14px;
+  border-top:1px solid rgba(15,23,42,.06);
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 12px;
+  gap:12px;
 }
 
-/* tone variants (soft) */
+/* =========================================================
+   Tone logic for cards (when inside there is alert/warn/etc)
+   Use on card root: .tone-good / .tone-warn / .tone-bad / .tone-neutral
+========================================================= */
+.sgp-card.tone-neutral{
+  border-color: rgba(15,23,42,.10);
+  background:
+    radial-gradient(1200px 600px at 18% -12%, rgba(15,23,42,.03), rgba(0,0,0,0) 60%),
+    var(--sgp-card-bg);
+}
 .sgp-card.tone-good{
   border-color: var(--sgp-goodBd);
-  background: linear-gradient(0deg, var(--sgp-goodTint), var(--sgp-card));
+  background:
+    radial-gradient(1200px 600px at 18% -12%, var(--sgp-goodTint), rgba(0,0,0,0) 60%),
+    var(--sgp-card-bg);
 }
 .sgp-card.tone-warn{
   border-color: var(--sgp-warnBd);
-  background: linear-gradient(0deg, var(--sgp-warnTint), var(--sgp-card));
+  background:
+    radial-gradient(1200px 600px at 18% -12%, var(--sgp-warnTint), rgba(0,0,0,0) 60%),
+    var(--sgp-card-bg);
 }
 .sgp-card.tone-bad{
   border-color: var(--sgp-badBd);
-  background: linear-gradient(0deg, var(--sgp-badTint), var(--sgp-card));
+  background:
+    radial-gradient(1200px 600px at 18% -12%, var(--sgp-badTint), rgba(0,0,0,0) 60%),
+    var(--sgp-card-bg);
 }
 
-/* =========================
-   Inputs / Buttons / Toggle
-========================= */
-.sgp-input{
-  height: 42px;
-  border-radius: var(--sgp-radius-control);
-  border: 1px solid var(--sgp-bd2);
-  background: rgba(255,255,255,.92);
-  padding: 0 12px;
-  outline: none;
-  width: 100%;
-  transition: box-shadow .14s ease, border-color .14s ease, background .14s ease;
-}
-.sgp-input:focus{
-  border-color: rgba(15,23,42,.16);
-  box-shadow: 0 0 0 3px rgba(15,23,42,.06);
-  background: rgba(255,255,255,.98);
-}
-.sgp-select{ padding-right: 34px; }
-
-.sgp-btn{
-  height: 42px;
-  border-radius: var(--sgp-radius-control);
-  border: 1px solid var(--sgp-bd2);
-  padding: 0 14px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  background: rgba(255,255,255,.92);
-  transition: transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease;
-}
-.sgp-btn:hover{
-  transform: translateY(-1px);
-  border-color: rgba(15,23,42,.12);
-  box-shadow: var(--sgp-shadow), var(--sgp-in);
-  background: rgba(255,255,255,.98);
-}
-.sgp-btn--primary{
-  background: rgba(15,23,42,.92);
-  color: #fff;
-  border-color: rgba(15,23,42,.12);
-}
-.sgp-btn--primary:hover{
-  background: rgba(15,23,42,.96);
-}
-.sgp-btn--secondary{ background: rgba(255,255,255,.92); }
-.sgp-btn--ghost{ background: transparent; }
-.sgp-btn--danger{
-  background: rgba(190, 38, 38, .92);
-  color: #fff;
-  border-color: rgba(190, 38, 38, .32);
-}
-.sgp-btn--sm{ height: 36px; padding: 0 12px; font-size: 13px; }
-.sgp-btn.is-disabled{ opacity: .55; cursor: not-allowed; transform:none; box-shadow:none; }
-
-.sgp-toggle{ display:inline-flex; align-items:center; cursor:pointer; }
-.sgp-toggle.is-disabled{ opacity: .55; cursor:not-allowed; }
-.sgp-toggle__input{ position:absolute; opacity:0; pointer-events:none; }
-.sgp-toggle__track{
-  width: 44px;
-  height: 26px;
-  border-radius: 999px;
-  border: 1px solid var(--sgp-bd2);
-  background: rgba(15,23,42,.06);
-  position: relative;
-  transition: background .15s ease, border-color .15s ease;
-}
-.sgp-toggle__thumb{
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.95);
-  box-shadow: 0 6px 18px rgba(0,0,0,.14);
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  transition: transform .15s ease;
-}
-.sgp-toggle.is-checked .sgp-toggle__track{
-  background: rgba(15,23,42,.90);
-  border-color: rgba(15,23,42,.10);
-}
-.sgp-toggle.is-checked .sgp-toggle__thumb{
-  transform: translateX(18px);
-}
-
-/* =========================
-   Wheel helpers (your classes)
-========================= */
-.sgp-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 10px;
-  border-radius: var(--sgp-radius-pill);
+/* =========================================================
+   Hint / Comment (bottom message blocks)
+   Use: <div class="sgp-hint tone-good|tone-warn|tone-bad|tone-neutral">
+========================================================= */
+.sgp-hint{
+  border-radius: 16px;
   border:1px solid rgba(15,23,42,.10);
-  background: rgba(255,255,255,.70);
-  font-size:12px;
+  background: rgba(255,255,255,.72);
+  box-shadow: var(--sgp-in);
+  padding:10px 12px;
+  font-size:13px;
+  font-weight:800;
+  line-height:1.25;
+}
+.sgp-hint.tone-neutral{
+  border-color: rgba(15,23,42,.10);
+  background: linear-gradient(0deg, rgba(15,23,42,.03), rgba(255,255,255,.78));
+}
+.sgp-hint.tone-good{
+  border-color: var(--sgp-goodBd);
+  background: linear-gradient(0deg, var(--sgp-goodTint), rgba(255,255,255,.80));
+}
+.sgp-hint.tone-warn{
+  border-color: var(--sgp-warnBd);
+  background: linear-gradient(0deg, var(--sgp-warnTint), rgba(255,255,255,.80));
+}
+.sgp-hint.tone-bad{
+  border-color: var(--sgp-badBd);
+  background: linear-gradient(0deg, var(--sgp-badTint), rgba(255,255,255,.80));
 }
 
+/* =========================================================
+   Segmented + tabs (like screenshot)
+========================================================= */
 .sgp-seg{
   display:inline-flex;
   gap:6px;
   padding:4px;
-  border-radius: 999px;
+  border-radius:999px;
   border:1px solid rgba(15,23,42,.10);
   background: rgba(255,255,255,.70);
   box-shadow: var(--sgp-in);
@@ -307,7 +220,7 @@
 .sgp-seg__btn{
   height:32px;
   padding:0 12px;
-  border-radius: 999px;
+  border-radius:999px;
   border:1px solid transparent;
   background:transparent;
   font-weight:900;
@@ -315,35 +228,78 @@
   opacity:.88;
   transition: background .14s ease, box-shadow .14s ease, border-color .14s ease, opacity .14s ease;
 }
-.sgp-seg__btn:hover{ opacity:1; background: rgba(15,23,42,.03); }
+.sgp-seg__btn:hover{
+  opacity:1;
+  background: rgba(15,23,42,.03);
+}
 .sgp-seg__btn.is-active{
   background: rgba(15,23,42,.06);
   border-color: rgba(15,23,42,.10);
-  box-shadow: 0 12px 22px rgba(15,23,42,.06), var(--sgp-in);
+  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sgp-in);
   opacity:1;
 }
 
-.sgp-rangebar{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:10px;
+/* icons group (R/C/P/Σ) */
+.sgp-iconGroup{
+  display:inline-flex;
+  gap:6px;
+  padding:4px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.70);
+  box-shadow: var(--sgp-in);
 }
-.sgp-rangebar__custom{
+.sgpIconBtn, /* legacy */
+.sgp-iconbtn{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.86);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-weight:900;
+  opacity:.92;
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease, opacity .14s ease;
+}
+.sgpIconBtn:hover,
+.sgp-iconbtn:hover{
+  opacity:1;
+  transform: translateY(-1px);
+  box-shadow: var(--sgp-shadow), var(--sgp-in);
+  border-color: rgba(15,23,42,.12);
+  background: rgba(255,255,255,.96);
+}
+.sgpIconBtn.is-active,
+.sgp-iconbtn.is-active{
+  background: rgba(15,23,42,.06);
+  border-color: rgba(15,23,42,.14);
+  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sgp-in);
+  opacity:1;
+}
+
+/* one-row header controls (при выигрыше/при выдаче + icons) */
+.sgp-chartbar{
   display:flex;
   align-items:center;
-  gap:8px;
-}
-.sgp-date{ width: 170px; }
-
-.sgp-chartctl{
-  display:flex;
-  flex-direction:column;
   gap:10px;
-  align-items:flex-end;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
-.sgp-chartctl__icons{ display:flex; gap:8px; }
 
+/* footer facts */
+.sgp-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.70);
+  font-size:12px;
+}
 .sgp-facts{
   display:flex;
   gap:8px;
@@ -351,39 +307,18 @@
   justify-content:flex-end;
 }
 
-.sgp-kv__row{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  padding:6px 0;
-  border-bottom:1px solid rgba(15,23,42,.06);
-}
-.sgp-kv__row:last-child{ border-bottom:0; }
-
-/* toplist */
-.sgp-toplist{ display:flex; flex-direction:column; gap:10px; }
-.sgp-toprow{ display:flex; gap:10px; align-items:flex-start; }
-.sgp-toprow__idx{ width:18px; opacity:.6; font-weight:900; }
-.sgp-toprow__mid{ flex:1; min-width:0; }
-.sgp-toprow__title{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.sgp-toprow__sub{ font-size:12px; opacity:.7; margin-top:2px; }
-.sgp-toprow__bar{
-  margin-top:6px; height:8px; border-radius:999px;
-  background: rgba(15,23,42,.06); overflow:hidden;
-}
-.sgp-toprow__barFill{ height:100%; background: rgba(15,23,42,.55); border-radius:999px; }
-.sgp-toprow__val{ font-weight:900; }
-
-/* metrics grid (cards like screenshot) */
+/* =========================================================
+   Metrics inside card — “mini-cards” like screenshot
+========================================================= */
 .sgp-metrics{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap:10px;
 }
 .sgp-metric{
   border:1px solid rgba(15,23,42,.08);
   background: rgba(255,255,255,.78);
-  border-radius: 16px;
+  border-radius:16px;
   padding:10px;
   box-shadow: var(--sgp-in);
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
@@ -395,41 +330,132 @@
   background: rgba(255,255,255,.92);
 }
 .sgp-metric__k{ font-size:12px; opacity:.7; font-weight:700; }
-.sgp-metric__v{ margin-top:6px; font-size:16px; font-weight:950; letter-spacing: -0.01em; }
-
-@media (max-width: 1100px){
+.sgp-metric__v{
+  margin-top:6px;
+  font-size:16px;
+  font-weight:950;
+  letter-spacing:-0.01em;
+}
+@media (max-width:1100px){
   .sgp-metrics{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* stock table */
+/* =========================================================
+   Toplist + KV (aside)
+========================================================= */
+.sgp-kv__row{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 0;
+  border-bottom:1px solid rgba(15,23,42,.06);
+}
+.sgp-kv__row:last-child{ border-bottom:0; }
+
+.sgp-toplist{ display:flex; flex-direction:column; gap:10px; }
+.sgp-toprow{ display:flex; gap:10px; align-items:flex-start; }
+.sgp-toprow__idx{ width:18px; opacity:.6; font-weight:900; }
+.sgp-toprow__mid{ flex:1; min-width:0; }
+.sgp-toprow__title{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sgp-toprow__sub{ font-size:12px; opacity:.7; margin-top:2px; }
+.sgp-toprow__bar{
+  margin-top:6px;
+  height:8px;
+  border-radius:999px;
+  background: rgba(15,23,42,.06);
+  overflow:hidden;
+}
+.sgp-toprow__barFill{
+  height:100%;
+  background: rgba(15,23,42,.55);
+  border-radius:999px;
+}
+.sgp-toprow__val{ font-weight:900; }
+
+/* =========================================================
+   Stock table + row-level alert tint (card has tone, row has gradient)
+========================================================= */
 .sgp-stockHead,
 .sgp-stockRow{
   display:grid;
   grid-template-columns: 1fr 90px 90px 140px 110px;
-  gap: 10px;
+  gap:10px;
   align-items:center;
 }
-.sgp-stockHead{ padding: 8px 0; font-size:12px; opacity:.7; }
-.sgp-stockRow{ padding: 10px 0; border-top:1px solid rgba(15,23,42,.06); }
-.sgp-stockCol--name{ min-width: 0; }
+.sgp-stockHead{
+  padding:8px 0;
+  font-size:12px;
+  opacity:.7;
+}
+.sgp-stockRow{
+  padding:10px 0;
+  border-top:1px solid rgba(15,23,42,.06);
+}
+.sgp-stockCol--name{ min-width:0; }
 .sgp-stockName{ font-weight:950; }
 .sgp-stockSub{ font-size:12px; opacity:.7; margin-top:2px; }
 .sgp-stockHint{ margin-top:6px; font-size:12px; }
-.sgp-stockHint.is-bad{ opacity: .95; }
-.sgp-stockHint.is-warn{ opacity: .85; }
+.sgp-stockHint.is-bad{ opacity:.95; }
+.sgp-stockHint.is-warn{ opacity:.85; }
 
-@media (max-width: 1100px){
+/* row tones */
+.sgp-stockRow.tone-out{ background: linear-gradient(90deg, var(--sgp-badTint), transparent 60%); }
+.sgp-stockRow.tone-low{ background: linear-gradient(90deg, var(--sgp-warnTint), transparent 60%); }
+
+@media (max-width:1100px){
   .sgp-stockHead,
   .sgp-stockRow{
     grid-template-columns: 1fr 80px 80px 120px 100px;
   }
 }
 
+/* =========================================================
+   Inputs (soft) — if you use sgp-input in Wheel date etc
+========================================================= */
+.sgp-input{
+  height:42px;
+  border-radius:14px;
+  border:1px solid var(--sgp-bd2);
+  background: rgba(255,255,255,.92);
+  padding:0 12px;
+  outline:none;
+  width:100%;
+  transition: box-shadow .14s ease, border-color .14s ease, background .14s ease;
+}
+.sgp-input:focus{
+  border-color: rgba(15,23,42,.16);
+  box-shadow: 0 0 0 3px rgba(15,23,42,.06);
+  background: rgba(255,255,255,.98);
+}
+.sgp-date{ width:170px; }
+
+/* rangebar */
+.sgp-rangebar{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+}
+.sgp-rangebar__custom{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
 /* reduced motion */
 @media (prefers-reduced-motion: reduce){
-  .sgp-card, .sgp-metric, .sgp-btn { transition:none !important; }
+  .sgp-card,
+  .sgp-metric,
+  .sgpIconBtn,
+  .sgp-iconbtn,
+  .sgp-seg__btn{
+    transition:none !important;
+  }
   .sgp-wheel .sgp-card:hover,
   .sgp-metric:hover,
-  .sgp-btn:hover { transform:none !important; }
+  .sgpIconBtn:hover,
+  .sgp-iconbtn:hover{
+    transform:none !important;
+  }
   .sgp-card::before{ transition:none !important; }
 }
