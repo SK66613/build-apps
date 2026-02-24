@@ -1,20 +1,10 @@
 import React from 'react';
 
-export function IconBtn({
-  title,
-  active,
-  onClick,
-  children,
-}: {
-  title: string;
-  active?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+export function IconBtn({ title, active, onClick, children }: any) {
   return (
     <button
       type="button"
-      className={'sgpIconBtn ' + (active ? 'is-active' : '')}
+      className={'sgp-iconbtn ' + (active ? 'is-active' : '')}
       onClick={onClick}
       title={title}
       aria-pressed={!!active}
