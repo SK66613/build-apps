@@ -19,9 +19,8 @@ import {
 /**
  * SALES — “one-to-one” по ощущению с Wheel:
  * - мягкие карточки/бордеры/hover как в “Складе”
- * - график: Area + Line(штрих) + Bar(цилиндры) + такие же кнопки накладкой
+ * - график: Area + Line(штрих) + Bar(цилиндры) + overlay controls
  * - без “лишних” осей/кумулятивов (только дневные значения)
- * - цвета оставляем “как у тебя в оригинале” (var(--accent), var(--accent2))
  *
  * DEV: сейчас данные mock, потом просто заменить queryFn на реальные роуты воркера.
  */
@@ -179,11 +178,47 @@ function niceMoneyTick(vCents: number) {
 
 /* ===== Premium UI helpers ===== */
 
-function AlertDot({ title }: { title: string }) {
+type HealthTone = 'good' | 'warn' | 'bad';
+type AlertItem = { key: string; title: string; sev: 'warn' | 'bad' };
+
+function toneFromAlerts(alerts: AlertItem[]): HealthTone {
+  const hasBad = alerts.some((a) => a.sev === 'bad');
+  if (hasBad) return 'bad';
+  const hasWarn = alerts.length > 0;
+  if (hasWarn) return 'warn';
+  return 'good';
+}
+
+function joinAlertTitles(alerts: AlertItem[], max = 3) {
+  if (!alerts.length) return 'Всё хорошо — критичных отклонений нет.';
+  const list = alerts.slice(0, max).map((a) => a.title);
+  const tail = alerts.length > max ? ` (+${alerts.length - max})` : '';
+  return list.join(' / ') + tail;
+}
+
+function HealthBadge({
+  tone,
+  title,
+  compact,
+}: {
+  tone: HealthTone;
+  title: string;
+  compact?: boolean;
+}) {
+  const cls =
+    'sgHealthBadge ' +
+    (tone === 'bad' ? 'is-bad' : tone === 'warn' ? 'is-warn' : 'is-good') +
+    (compact ? ' is-compact' : '');
+  const icon = tone === 'bad' ? '!' : tone === 'warn' ? '!' : '✓';
+  const label = tone === 'bad' ? 'alert' : tone === 'warn' ? 'warn' : 'ok';
+
   return (
-    <div className="sgAlertDot" title={title} aria-label={title}>
-      <span className="sgAlertDot__bang">!</span>
-    </div>
+    <button type="button" className={cls} title={title} aria-label={title}>
+      <span className="sgHealthBadge__icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="sgHealthBadge__txt">{label}</span>
+    </button>
   );
 }
 
@@ -269,7 +304,10 @@ function mkMock(range: SalesRange, settings: SalesSettings) {
   const kpi: SalesKPI = {
     revenue_cents: days.reduce((s, x) => s + x.revenue_cents, 0),
     orders: days.reduce((s, x) => s + x.orders, 0),
-    buyers: Math.max(1, Math.round(days.reduce((s, x) => s + x.buyers, 0) / Math.max(1, days.length))),
+    buyers: Math.max(
+      1,
+      Math.round(days.reduce((s, x) => s + x.buyers, 0) / Math.max(1, days.length)),
+    ),
     repeat_rate: 0.36 + Math.sin(days.length / 4) * 0.05,
     cashback_issued_coins: days.reduce((s, x) => s + x.cashback_coins, 0),
     redeem_confirmed_coins: days.reduce((s, x) => s + x.redeem_coins, 0),
@@ -316,10 +354,38 @@ function mkMock(range: SalesRange, settings: SalesSettings) {
   ];
 
   const customers: CustomerRow[] = [
-    { customer_label: 'Покупатель A', orders: 7, revenue_cents: 410000, ltv_cents: 690000, last_seen: dates[dates.length - 1], segment: 'repeat' },
-    { customer_label: 'Покупатель B', orders: 1, revenue_cents: 58000, ltv_cents: 58000, last_seen: dates[Math.max(0, dates.length - 2)], segment: 'new' },
-    { customer_label: 'Покупатель C', orders: 5, revenue_cents: 260000, ltv_cents: 510000, last_seen: dates[Math.max(0, dates.length - 3)], segment: 'spender' },
-    { customer_label: 'Покупатель D', orders: 4, revenue_cents: 210000, ltv_cents: 420000, last_seen: dates[Math.max(0, dates.length - 6)], segment: 'saver' },
+    {
+      customer_label: 'Покупатель A',
+      orders: 7,
+      revenue_cents: 410000,
+      ltv_cents: 690000,
+      last_seen: dates[dates.length - 1],
+      segment: 'repeat',
+    },
+    {
+      customer_label: 'Покупатель B',
+      orders: 1,
+      revenue_cents: 58000,
+      ltv_cents: 58000,
+      last_seen: dates[Math.max(0, dates.length - 2)],
+      segment: 'new',
+    },
+    {
+      customer_label: 'Покупатель C',
+      orders: 5,
+      revenue_cents: 260000,
+      ltv_cents: 510000,
+      last_seen: dates[Math.max(0, dates.length - 3)],
+      segment: 'spender',
+    },
+    {
+      customer_label: 'Покупатель D',
+      orders: 4,
+      revenue_cents: 210000,
+      ltv_cents: 420000,
+      last_seen: dates[Math.max(0, dates.length - 6)],
+      segment: 'saver',
+    },
   ];
 
   return { kpi, days, funnel, cashiers, customers, settings };
@@ -334,7 +400,8 @@ function Collapsible({
   open,
   onToggle,
   children,
-  alert,
+  healthTone,
+  healthTitle,
 }: {
   title: string;
   sub?: string;
@@ -342,10 +409,19 @@ function Collapsible({
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
-  alert?: { on: boolean; title: string };
+  healthTone?: HealthTone;
+  healthTitle?: string;
 }) {
+  const toneCls =
+    healthTone === 'bad'
+      ? ' is-bad'
+      : healthTone === 'warn'
+        ? ' is-warn'
+        : healthTone === 'good'
+          ? ' is-good'
+          : '';
   return (
-    <div className={'sgColl ' + (open ? 'is-open' : 'is-closed')}>
+    <div className={'sgColl ' + (open ? 'is-open' : 'is-closed') + toneCls}>
       <button type="button" className="sgColl__head" onClick={onToggle}>
         <div className="sgColl__left">
           <div className="sgColl__title">
@@ -356,7 +432,9 @@ function Collapsible({
         </div>
         <div className="sgColl__right">
           {right}
-          {alert?.on ? <AlertDot title={alert.title} /> : null}
+          {healthTone ? (
+            <HealthBadge tone={healthTone} title={healthTitle || ''} compact />
+          ) : null}
         </div>
       </button>
       <div className="sgColl__body">{children}</div>
@@ -369,7 +447,9 @@ function Collapsible({
 export default function Sales() {
   const { appId, range, setRange }: any = useAppState();
 
-  const [tab, setTab] = React.useState<'summary' | 'funnel' | 'cashiers' | 'customers' | 'live'>('summary');
+  const [tab, setTab] = React.useState<'summary' | 'funnel' | 'cashiers' | 'customers' | 'live'>(
+    'summary',
+  );
 
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
@@ -383,9 +463,9 @@ export default function Sales() {
   const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
 
   // overlay кнопки “как в колесе” (3 штуки)
-  const [showBars, setShowBars] = React.useState(true);  // “цилиндры”
-  const [showNet, setShowNet] = React.useState(true);    // “П” (profit/net)
-  const [showArea, setShowArea] = React.useState(true);  // “заливка”
+  const [showBars, setShowBars] = React.useState(true); // “цилиндры”
+  const [showNet, setShowNet] = React.useState(true); // “П” (profit/net)
+  const [showArea, setShowArea] = React.useState(true); // “заливка”
 
   // settings draft (UI only)
   const [currencyDraft, setCurrencyDraft] = React.useState('RUB');
@@ -424,7 +504,15 @@ export default function Sales() {
 
   const qAll = useQuery({
     enabled: !!appId && !!range?.from && !!range?.to,
-    queryKey: ['sales_mock', appId, range?.from, range?.to, settings.currency, settings.coin_value_cents, basis],
+    queryKey: [
+      'sales_mock',
+      appId,
+      range?.from,
+      range?.to,
+      settings.currency,
+      settings.coin_value_cents,
+      basis,
+    ],
     queryFn: async () => {
       // позже:
       // const kpi = await apiFetch(`/api/cabinet/apps/${appId}/sales/kpi?${qs(range)}`);
@@ -488,20 +576,22 @@ export default function Sales() {
     };
   }, [kpi, coinCents, range?.from, range?.to]);
 
-  const alerts = React.useMemo(() => {
-    const out: Array<{ key: string; title: string; sev: 'warn' | 'bad' }> = [];
+  const alerts: AlertItem[] = React.useMemo(() => {
+    const out: AlertItem[] = [];
     if (totals.pending >= 8) out.push({ key: 'pending', title: 'Много неподтверждённых операций', sev: 'bad' });
     else if (totals.pending >= 4) out.push({ key: 'pending', title: 'Есть неподтверждённые операции', sev: 'warn' });
 
     if (totals.cancelRate >= 0.12) out.push({ key: 'cancel', title: 'Высокий процент отмен', sev: 'bad' });
     else if (totals.cancelRate >= 0.08) out.push({ key: 'cancel', title: 'Отмены выше нормы', sev: 'warn' });
 
-    if (totals.repeat < 0.22 && totals.orders > 20) out.push({ key: 'repeat', title: 'Низкая повторяемость', sev: 'warn' });
+    if (totals.repeat < 0.22 && totals.orders > 20)
+      out.push({ key: 'repeat', title: 'Низкая повторяемость', sev: 'warn' });
 
     return out;
   }, [totals.pending, totals.cancelRate, totals.repeat, totals.orders]);
 
-  const primaryAlert = alerts.find((a) => a.sev === 'bad') || alerts[0] || null;
+  const healthTone: HealthTone = React.useMemo(() => toneFromAlerts(alerts), [alerts]);
+  const healthTitle = React.useMemo(() => joinAlertTitles(alerts, 4), [alerts]);
 
   const insights = React.useMemo(() => {
     const out: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string; dev?: string }> = [];
@@ -555,11 +645,13 @@ export default function Sales() {
     }));
   }, [days]);
 
+  const cardToneCls =
+    healthTone === 'bad' ? 'is-health-bad' : healthTone === 'warn' ? 'is-health-warn' : 'is-health-good';
+
   return (
     <div className="sg-page salesPage">
       <style>{`
 :root{
-  /* чуть мягче, ближе к Wheel/Склад */
   --sg-r-xl: 22px;
   --sg-r-lg: 18px;
   --sg-r-md: 14px;
@@ -576,11 +668,14 @@ export default function Sales() {
   --sg-shadow2: 0 16px 40px rgba(15,23,42,.10);
   --sg-in: inset 0 1px 0 rgba(255,255,255,.70);
 
-  --sg-warnTint: rgba(245,158,11,.08); /* как “Склад” */
+  --sg-warnTint: rgba(245,158,11,.08);
   --sg-warnBd: rgba(245,158,11,.18);
 
   --sg-dangerTint: rgba(239,68,68,.08);
   --sg-dangerBd: rgba(239,68,68,.18);
+
+  --sg-goodTint: rgba(34,197,94,.08);
+  --sg-goodBd: rgba(34,197,94,.18);
 
   --sg-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
 }
@@ -656,6 +751,12 @@ export default function Sales() {
   box-shadow: var(--sg-in) !important;
   overflow: hidden;
 }
+
+/* Health tint on cards */
+.salesCard.is-health-good{ border-color: var(--sg-goodBd) !important; background: linear-gradient(0deg, var(--sg-goodTint), rgba(255,255,255,.90)) !important; }
+.salesCard.is-health-warn{ border-color: var(--sg-warnBd) !important; background: linear-gradient(0deg, var(--sg-warnTint), rgba(255,255,255,.90)) !important; }
+.salesCard.is-health-bad{ border-color: var(--sg-dangerBd) !important; background: linear-gradient(0deg, var(--sg-dangerTint), rgba(255,255,255,.90)) !important; }
+
 .salesCard--lift{
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
@@ -678,13 +779,13 @@ export default function Sales() {
 .salesChartWrap{
   position:relative;
   width:100%;
-  height: 340px; /* ближе к Wheel */
+  height: 340px;
 }
 @media (max-width: 1100px){
   .salesChartWrap{ height: 320px; }
 }
 
-/* overlay controls — как в Wheel */
+/* overlay controls */
 .salesChartTopControls{
   position:absolute;
   top: 10px;
@@ -824,7 +925,7 @@ export default function Sales() {
   opacity:.78;
 }
 
-/* Rows — hover как “Склад”: мягкий warm */
+/* Rows */
 .sgRow{
   position:relative;
   display:flex;
@@ -844,6 +945,19 @@ export default function Sales() {
   border-color: rgba(15,23,42,.12);
   background: var(--sg-warnTint);
 }
+.sgRow.is-warn{
+  border-color: var(--sg-warnBd) !important;
+  background: linear-gradient(0deg, var(--sg-warnTint), rgba(255,255,255,.86)) !important;
+}
+.sgRow.is-bad{
+  border-color: var(--sg-dangerBd) !important;
+  background: linear-gradient(0deg, var(--sg-dangerTint), rgba(255,255,255,.86)) !important;
+}
+.sgRow.is-good{
+  border-color: var(--sg-goodBd) !important;
+  background: linear-gradient(0deg, var(--sg-goodTint), rgba(255,255,255,.86)) !important;
+}
+
 .sgRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
 .sgRowTitle{ font-weight:900; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sgRowMeta{ margin-top:2px; font-size:12px; opacity:.75; }
@@ -873,24 +987,6 @@ export default function Sales() {
 @keyframes sgShimmer{
   0%{ transform: translateX(-35%); }
   100%{ transform: translateX(35%); }
-}
-
-/* alert dot */
-.sgAlertDot{
-  width:22px; height:22px;
-  border-radius:999px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border:1px solid rgba(239,68,68,.24);
-  background: rgba(239,68,68,.10);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 12px 24px rgba(15,23,42,.10);
-}
-.sgAlertDot__bang{
-  font-weight:1000;
-  font-size:14px;
-  line-height:1;
-  color: rgba(239,68,68,.95);
 }
 
 /* tooltips */
@@ -944,6 +1040,14 @@ export default function Sales() {
   box-shadow: var(--sg-in);
   overflow:hidden;
 }
+.sgColl.is-good{ border-color: var(--sg-goodBd); }
+.sgColl.is-warn{ border-color: var(--sg-warnBd); }
+.sgColl.is-bad{ border-color: var(--sg-dangerBd); }
+
+.sgColl.is-good .sgColl__head{ background: linear-gradient(90deg, var(--sg-goodTint), transparent 44%); }
+.sgColl.is-warn .sgColl__head{ background: linear-gradient(90deg, var(--sg-warnTint), transparent 44%); }
+.sgColl.is-bad .sgColl__head{ background: linear-gradient(90deg, var(--sg-dangerTint), transparent 44%); }
+
 .sgColl__head{
   width:100%;
   display:flex;
@@ -984,6 +1088,70 @@ export default function Sales() {
   padding: 0 12px 12px 12px;
 }
 
+/* Health badge (yellow/red/green, with tooltip) */
+.sgHealthBadge{
+  height:32px;
+  padding:0 10px 0 8px;
+  border-radius:14px;
+  border:1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.78);
+  box-shadow: var(--sg-in);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  cursor:default;
+  user-select:none;
+  font-weight:1000;
+  font-size:12px;
+  opacity:.96;
+}
+.sgHealthBadge.is-compact{
+  height:28px;
+  padding:0 8px 0 6px;
+  border-radius:13px;
+  font-size:11px;
+}
+.sgHealthBadge__icon{
+  width:18px; height:18px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1100;
+  line-height:1;
+}
+.sgHealthBadge__txt{ opacity:.86; text-transform:uppercase; letter-spacing:.08em; }
+
+.sgHealthBadge.is-good{
+  border-color: var(--sg-goodBd);
+  background: rgba(255,255,255,.86);
+}
+.sgHealthBadge.is-good .sgHealthBadge__icon{
+  border:1px solid var(--sg-goodBd);
+  background: var(--sg-goodTint);
+  color: rgba(22,163,74,.95);
+}
+
+.sgHealthBadge.is-warn{
+  border-color: var(--sg-warnBd);
+  background: rgba(255,255,255,.86);
+}
+.sgHealthBadge.is-warn .sgHealthBadge__icon{
+  border:1px solid var(--sg-warnBd);
+  background: var(--sg-warnTint);
+  color: rgba(245,158,11,.95);
+}
+
+.sgHealthBadge.is-bad{
+  border-color: var(--sg-dangerBd);
+  background: rgba(255,255,255,.86);
+}
+.sgHealthBadge.is-bad .sgHealthBadge__icon{
+  border:1px solid var(--sg-dangerBd);
+  background: var(--sg-dangerTint);
+  color: rgba(239,68,68,.95);
+}
+
 /* Right sticky */
 .salesRightSticky{ position: sticky; top: 10px; }
       `}</style>
@@ -992,9 +1160,7 @@ export default function Sales() {
       <div className="wheelHead">
         <div>
           <h1 className="sg-h1">Продажи (QR)</h1>
-          <div className="sg-sub">
-            График/карточки — один стиль с Wheel. Сейчас данные — mock (для дизайна), потом подключим воркер.
-          </div>
+          <div className="sg-sub">График/карточки — один стиль с Wheel. Сейчас данные — mock, потом подключим воркер.</div>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -1030,7 +1196,7 @@ export default function Sales() {
       <div className="salesGrid">
         {/* LEFT */}
         <div className="salesLeft">
-          <Card className="salesCard salesCard--lift">
+          <Card className={`salesCard salesCard--lift ${cardToneCls}`}>
             <div className="salesCardHead">
               <div>
                 <div className="salesTitle">
@@ -1044,7 +1210,7 @@ export default function Sales() {
             </div>
 
             <div className="salesChartWrap">
-              {/* top overlay controls — “как в колесе” */}
+              {/* top overlay controls */}
               <div className="salesChartTopControls">
                 <div className="salesSeg" role="tablist" aria-label="basis">
                   <button
@@ -1066,36 +1232,21 @@ export default function Sales() {
                 </div>
 
                 <div className="salesIconGroup" aria-label="chart overlays">
-                  <IconBtn
-                    title="Цилиндры (заказы)"
-                    active={showBars}
-                    onClick={() => setShowBars(v => !v)}
-                  >
-                    {/* “квадратик” как на wheel */}
+                  <IconBtn title="Цилиндры (заказы)" active={showBars} onClick={() => setShowBars(v => !v)}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <rect x="6" y="7" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
                       <path d="M8 15h8" stroke="currentColor" strokeWidth="2" opacity=".6" />
                     </svg>
                   </IconBtn>
 
-                  <IconBtn
-                    title="Заливка (выручка)"
-                    active={showArea}
-                    onClick={() => setShowArea(v => !v)}
-                  >
-                    {/* “линии” */}
+                  <IconBtn title="Заливка (выручка)" active={showArea} onClick={() => setShowArea(v => !v)}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <path d="M5 16c3-6 6 2 9-4s5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                       <path d="M5 18h14" stroke="currentColor" strokeWidth="2" opacity=".45" />
                     </svg>
                   </IconBtn>
 
-                  <IconBtn
-                    title="П — Net (profit)"
-                    active={showNet}
-                    onClick={() => setShowNet(v => !v)}
-                  >
-                    {/* “П” */}
+                  <IconBtn title="П — Net (profit)" active={showNet} onClick={() => setShowNet(v => !v)}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <path d="M7 18V7h10v11" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                       <path d="M9 10h6" stroke="currentColor" strokeWidth="2" opacity=".6" />
@@ -1103,13 +1254,13 @@ export default function Sales() {
                   </IconBtn>
                 </div>
 
-                {primaryAlert ? <AlertDot title={primaryAlert.title} /> : null}
+                {/* ✅ Health button with tooltip (exactly what you asked: yellow/red with "!"; green if ok) */}
+                <HealthBadge tone={healthTone} title={healthTitle} />
               </div>
 
               {!isLoading && !isError && (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 34, right: 18, left: 6, bottom: 0 }}>
-                    {/* сетка “как у wheel”: лёгкая */}
                     <CartesianGrid strokeDasharray="3 3" opacity={0.22} />
                     <XAxis
                       dataKey="date"
@@ -1118,7 +1269,6 @@ export default function Sales() {
                       tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
                     />
 
-                    {/* money axis (как в wheel: одна читаемая шкала) */}
                     <YAxis
                       yAxisId="money"
                       tick={{ fontSize: 12 }}
@@ -1126,7 +1276,6 @@ export default function Sales() {
                       tickFormatter={(v: any) => niceMoneyTick(Number(v))}
                     />
 
-                    {/* orders axis — скрытая шкала, только для bar */}
                     <YAxis
                       yAxisId="orders"
                       orientation="right"
@@ -1149,7 +1298,6 @@ export default function Sales() {
                       }}
                     />
 
-                    {/* Area — выручка */}
                     {showArea && (
                       <Area
                         yAxisId="money"
@@ -1165,7 +1313,6 @@ export default function Sales() {
                       />
                     )}
 
-                    {/* Line — net (profit) */}
                     {showNet && (
                       <Line
                         yAxisId="money"
@@ -1179,7 +1326,6 @@ export default function Sales() {
                       />
                     )}
 
-                    {/* Bars — заказы (цилиндры) */}
                     {showBars && (
                       <Bar
                         yAxisId="orders"
@@ -1211,7 +1357,7 @@ export default function Sales() {
               )}
             </div>
 
-            {/* UNDER TABS (как wheel) */}
+            {/* UNDER TABS */}
             <div className="salesUnderTabs">
               <div className="sg-tabs wheelUnderTabs__seg">
                 <button className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')} onClick={() => setTab('summary')}>Сводка</button>
@@ -1227,9 +1373,7 @@ export default function Sales() {
               <div className="salesUnderPanel">
                 <div className="salesTiles">
                   <div className="salesTile">
-                    <div className="salesTileLbl">
-                      Выручка <Tip text="Сумма чеков за период" />
-                    </div>
+                    <div className="salesTileLbl">Выручка <Tip text="Сумма чеков за период" /></div>
                     <div className="salesTileVal">{isLoading ? '—' : moneyFromCent(totals.rev, currency)}</div>
                     <div className="salesTileSub">
                       {isLoading ? <ShimmerLine w={66} /> : <>в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b></>}
@@ -1237,9 +1381,7 @@ export default function Sales() {
                   </div>
 
                   <div className="salesTile">
-                    <div className="salesTileLbl">
-                      Заказы <Tip text="Количество продаж (recorded)" />
-                    </div>
+                    <div className="salesTileLbl">Заказы <Tip text="Количество продаж (recorded)" /></div>
                     <div className="salesTileVal">{isLoading ? '—' : totals.orders}</div>
                     <div className="salesTileSub">
                       {isLoading ? <ShimmerLine w={58} /> : <>ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b></>}
@@ -1247,9 +1389,7 @@ export default function Sales() {
                   </div>
 
                   <div className="salesTile">
-                    <div className="salesTileLbl">
-                      Покупатели <Tip text="Уникальные клиенты (приближ.)" />
-                    </div>
+                    <div className="salesTileLbl">Покупатели <Tip text="Уникальные клиенты (приближ.)" /></div>
                     <div className="salesTileVal">{isLoading ? '—' : totals.buyers}</div>
                     <div className="salesTileSub">
                       {isLoading ? <ShimmerLine w={52} /> : <>repeat: <b>{fmtPct(totals.repeat)}</b></>}
@@ -1257,36 +1397,23 @@ export default function Sales() {
                   </div>
 
                   <div className="salesTile">
-                    <div className="salesTileLbl">
-                      Кэшбэк <Tip text="Начислено монет (issued)" />
-                    </div>
-                    <div className="salesTileVal">
-                      {isLoading ? '—' : `${totals.cashbackCoins.toLocaleString('ru-RU')} мон`}
-                    </div>
-                    <div className="salesTileSub">
-                      {isLoading ? <ShimmerLine w={64} /> : <>≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b></>}
-                    </div>
+                    <div className="salesTileLbl">Кэшбэк <Tip text="Начислено монет (issued)" /></div>
+                    <div className="salesTileVal">{isLoading ? '—' : `${totals.cashbackCoins.toLocaleString('ru-RU')} мон`}</div>
+                    <div className="salesTileSub">{isLoading ? <ShimmerLine w={64} /> : <>≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b></>}</div>
                   </div>
 
                   <div className="salesTile">
-                    <div className="salesTileLbl">
-                      Net <Tip text="Списание(₽) − Кэшбэк(₽)" />
-                    </div>
+                    <div className="salesTileLbl">Net <Tip text="Списание(₽) − Кэшбэк(₽)" /></div>
                     <div className="salesTileVal">{isLoading ? '—' : moneyFromCent(totals.net, currency)}</div>
-                    <div className="salesTileSub">
-                      {isLoading ? <ShimmerLine w={60} /> : <>списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b></>}
+                    <div className="salesTileSub">{isLoading ? <ShimmerLine w={60} /> : <>списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b></>}</div>
+                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                      <HealthBadge tone={healthTone} title={healthTitle} compact />
                     </div>
-
-                    {primaryAlert ? (
-                      <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                        <AlertDot title={primaryAlert.title} />
-                      </div>
-                    ) : null}
                   </div>
                 </div>
 
                 <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div className="sgRow">
+                  <div className={'sgRow ' + (totals.pending >= 6 ? 'is-bad' : totals.pending > 0 ? 'is-warn' : 'is-good')}>
                     <div className="sgRowLeft">
                       <div>
                         <div className="sgRowTitle">Зависшие подтверждения</div>
@@ -1304,7 +1431,7 @@ export default function Sales() {
                     </div>
                   </div>
 
-                  <div className="sgRow">
+                  <div className={'sgRow ' + (totals.cancelRate >= 0.12 ? 'is-bad' : totals.cancelRate >= 0.08 ? 'is-warn' : 'is-good')}>
                     <div className="sgRowLeft">
                       <div>
                         <div className="sgRowTitle">Процент отмен</div>
@@ -1401,7 +1528,7 @@ export default function Sales() {
 
                 {!isLoading && (
                   <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="sgRow">
+                    <div className={'sgRow ' + ((funnel?.median_confirm_minutes ?? 0) > 6 ? 'is-warn' : 'is-good')}>
                       <div className="sgRowLeft">
                         <div>
                           <div className="sgRowTitle">Подтверждение (median)</div>
@@ -1450,7 +1577,7 @@ export default function Sales() {
                   <div style={{ fontWeight: 1000 }}>
                     Кассиры <span style={{ marginLeft: 8 }}><Tip dev text="DEV: /sales/cashiers агрегация по cashier_tg_id" /></span>
                   </div>
-                  <div className="sg-muted">наведи на строки — подсветка как “Склад”</div>
+                  <div className="sg-muted">hover подсветка как “Склад”</div>
                 </div>
 
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1468,12 +1595,31 @@ export default function Sales() {
                       </div>
                     </div>
                   )) : topCashiers.map((c) => {
-                    const bad = c.cancel_rate >= 0.12 || c.confirm_rate <= 0.86;
+                    const tone: HealthTone =
+                      c.cancel_rate >= 0.12 || c.confirm_rate <= 0.86
+                        ? 'bad'
+                        : c.cancel_rate >= 0.08 || c.confirm_rate <= 0.90
+                          ? 'warn'
+                          : 'good';
+
+                    const tip = c.alerts?.length
+                      ? c.alerts.join(' / ')
+                      : tone === 'bad'
+                        ? 'Риск: проверь отмены/подтверждения'
+                        : tone === 'warn'
+                          ? 'Есть отклонения — стоит проверить'
+                          : 'Всё норм по метрикам';
+
                     return (
-                      <div className="sgRow" key={c.cashier_label} style={bad ? { borderColor: 'var(--sg-warnBd)' as any } : undefined}>
+                      <div className={'sgRow ' + (tone === 'bad' ? 'is-bad' : tone === 'warn' ? 'is-warn' : 'is-good')} key={c.cashier_label}>
                         <div className="sgRowLeft">
                           <div style={{ minWidth: 0 }}>
-                            <div className="sgRowTitle">{c.cashier_label}</div>
+                            <div className="sgRowTitle">
+                              {c.cashier_label}
+                              <span style={{ marginLeft: 10 }}>
+                                <HealthBadge tone={tone} title={tip} compact />
+                              </span>
+                            </div>
                             <div className="sgRowMeta">
                               выручка: <b>{moneyFromCent(c.revenue_cents, currency)}</b>
                               <span className="sg-muted"> · </span>
@@ -1482,18 +1628,13 @@ export default function Sales() {
                               confirm: <b>{fmtPct(c.confirm_rate)}</b>
                               <span className="sg-muted"> · </span>
                               cancel: <b>{fmtPct(c.cancel_rate)}</b>
-                              {c.alerts?.length ? (
-                                <span style={{ marginLeft: 10 }}>
-                                  <AlertDot title={c.alerts.join(' / ')} />
-                                </span>
-                              ) : null}
                             </div>
                           </div>
                         </div>
 
                         <div className="sgRowRight">
                           <div className="sgRowVal">{c.median_confirm_minutes.toFixed(1)} мин</div>
-                          <div className="sgRowSub">{bad ? 'риск' : 'норма'}</div>
+                          <div className="sgRowSub">{tone === 'bad' ? 'риск' : tone === 'warn' ? 'внимание' : 'норма'}</div>
                         </div>
                       </div>
                     );
@@ -1527,14 +1668,27 @@ export default function Sales() {
                       </div>
                     </div>
                   )) : topCustomers.map((c) => {
-                    const isSaver = c.segment === 'saver';
-                    const isSpender = c.segment === 'spender';
-                    const alert = isSaver ? 'Накопил и не тратит' : isSpender ? 'Часто тратит — VIP' : '';
+                    const tone: HealthTone =
+                      c.segment === 'saver' ? 'warn' : c.segment === 'spender' ? 'good' : 'good';
+
+                    const alert = c.segment === 'saver'
+                      ? 'Накопил и не тратит — пуши на списание'
+                      : c.segment === 'spender'
+                        ? 'Часто тратит — VIP'
+                        : c.segment === 'repeat'
+                          ? 'Повторный клиент'
+                          : 'Новый клиент';
+
                     return (
-                      <div className="sgRow" key={c.customer_label} style={isSaver ? { background: 'rgba(245,158,11,.06)' } : undefined}>
+                      <div className={'sgRow ' + (tone === 'warn' ? 'is-warn' : 'is-good')} key={c.customer_label}>
                         <div className="sgRowLeft">
                           <div style={{ minWidth: 0 }}>
-                            <div className="sgRowTitle">{c.customer_label}</div>
+                            <div className="sgRowTitle">
+                              {c.customer_label}
+                              <span style={{ marginLeft: 10 }}>
+                                <HealthBadge tone={tone} title={alert} compact />
+                              </span>
+                            </div>
                             <div className="sgRowMeta">
                               LTV: <b>{moneyFromCent(c.ltv_cents, currency)}</b>
                               <span className="sg-muted"> · </span>
@@ -1543,11 +1697,6 @@ export default function Sales() {
                               last: <b>{c.last_seen}</b>
                               <span className="sg-muted"> · </span>
                               сегмент: <b>{c.segment}</b>
-                              {alert ? (
-                                <span style={{ marginLeft: 10 }}>
-                                  <Tip text={alert} />
-                                </span>
-                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -1586,7 +1735,7 @@ export default function Sales() {
                     </div>
                   )) : (
                     <>
-                      <div className="sgRow">
+                      <div className="sgRow is-good">
                         <div className="sgRowLeft">
                           <div>
                             <div className="sgRowTitle">sale_recorded</div>
@@ -1602,13 +1751,11 @@ export default function Sales() {
                         </div>
                       </div>
 
-                      <div className="sgRow">
+                      <div className="sgRow is-good">
                         <div className="sgRowLeft">
                           <div>
                             <div className="sgRowTitle">redeem_confirmed</div>
-                            <div className="sgRowMeta">
-                              Списано 120 мон · net +12 ₽ · кассир #1 · 12:40
-                            </div>
+                            <div className="sgRowMeta">Списано 120 мон · net +12 ₽ · кассир #1 · 12:40</div>
                           </div>
                         </div>
                         <div className="sgRowRight">
@@ -1617,13 +1764,11 @@ export default function Sales() {
                         </div>
                       </div>
 
-                      <div className="sgRow">
+                      <div className="sgRow is-warn">
                         <div className="sgRowLeft">
                           <div>
                             <div className="sgRowTitle">cashback_pending</div>
-                            <div className="sgRowMeta">
-                              Ждёт подтверждения · кассир #2 · 12:33
-                            </div>
+                            <div className="sgRowMeta">Ждёт подтверждения · кассир #2 · 12:33</div>
                           </div>
                         </div>
                         <div className="sgRowRight">
@@ -1643,7 +1788,7 @@ export default function Sales() {
         <div className="salesRight">
           <div className="salesRightSticky">
             {/* Summary PRO */}
-            <Card className="salesCard salesCard--lift" style={{ marginBottom: 12 }}>
+            <Card className={`salesCard salesCard--lift ${cardToneCls}`} style={{ marginBottom: 12 }}>
               <div className="salesCardHead">
                 <div>
                   <div className="salesTitle">
@@ -1652,7 +1797,7 @@ export default function Sales() {
                   </div>
                   <div className="salesSub">Сигналы качества + рекомендации</div>
                 </div>
-                {primaryAlert ? <AlertDot title={primaryAlert.title} /> : null}
+                <HealthBadge tone={healthTone} title={healthTitle} />
               </div>
 
               <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1661,11 +1806,12 @@ export default function Sales() {
                   sub="что нужно починить в первую очередь"
                   open={openKpi}
                   onToggle={() => setOpenKpi(v => !v)}
-                  alert={{ on: !!primaryAlert, title: primaryAlert?.title || '' }}
+                  healthTone={healthTone}
+                  healthTitle={healthTitle}
                   right={<span className="sg-muted" style={{ fontWeight: 900 }}>{alerts.length ? `${alerts.length} алерт(а)` : 'нет алертов'}</span>}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div className="sgRow">
+                    <div className={'sgRow ' + (alerts.length ? (healthTone === 'bad' ? 'is-bad' : 'is-warn') : 'is-good')}>
                       <div className="sgRowLeft">
                         <div>
                           <div className="sgRowTitle">Список алертов</div>
@@ -1682,13 +1828,18 @@ export default function Sales() {
                     </div>
 
                     {alerts.length ? alerts.slice(0, 4).map((a) => (
-                      <div className="sgRow" key={a.key} style={a.sev === 'bad' ? { borderColor: 'var(--sg-dangerBd)' as any, background: 'var(--sg-dangerTint)' as any } : undefined}>
+                      <div className={'sgRow ' + (a.sev === 'bad' ? 'is-bad' : 'is-warn')} key={a.key}>
                         <div className="sgRowLeft">
                           <div>
-                            <div className="sgRowTitle">{a.title}</div>
+                            <div className="sgRowTitle">
+                              {a.title}
+                              <span style={{ marginLeft: 10 }}>
+                                <HealthBadge tone={a.sev === 'bad' ? 'bad' : 'warn'} title={a.title} compact />
+                              </span>
+                            </div>
                             <div className="sgRowMeta">
-                              <span className="sg-muted">sev: </span><b>{a.sev}</b>
-                              <span style={{ marginLeft: 8 }}><Tip text="Подсказка при hover" /></span>
+                              sev: <b>{a.sev}</b>
+                              <span style={{ marginLeft: 8 }}><Tip text="Подсказка: наведи на ! (справа)" /></span>
                             </div>
                           </div>
                         </div>
@@ -1698,7 +1849,7 @@ export default function Sales() {
                         </div>
                       </div>
                     )) : (
-                      <div className="sgRow">
+                      <div className="sgRow is-good">
                         <div className="sgRowLeft">
                           <div>
                             <div className="sgRowTitle">Всё спокойно</div>
@@ -1719,6 +1870,8 @@ export default function Sales() {
                   sub="умные подсказки (с привязкой к метрикам)"
                   open={openInsights}
                   onToggle={() => setOpenInsights(v => !v)}
+                  healthTone={healthTone === 'bad' ? 'warn' : 'good'} // инсайты не должны “кричать” красным
+                  healthTitle={healthTone === 'bad' ? 'Есть проблемы: исправь алерты — инсайты станут точнее.' : 'Ок'}
                   right={<span className="sg-muted" style={{ fontWeight: 900 }}>4 cards</span>}
                 >
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
@@ -1728,19 +1881,13 @@ export default function Sales() {
                         <div className="sgRow"><div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={62} /></div><div className="sgRowMeta"><ShimmerLine w={88} /></div></div></div></div>
                       </>
                     ) : insights.map((x, i) => (
-                      <div className="sgRow" key={i}>
+                      <div className={'sgRow ' + (x.tone === 'bad' ? 'is-bad' : x.tone === 'warn' ? 'is-warn' : 'is-good')} key={i}>
                         <div className="sgRowLeft">
                           <div style={{ minWidth: 0 }}>
                             <div className="sgRowTitle">
                               {x.title}
-                              <span style={{ marginLeft: 10 }}>
-                                <Tip text={x.body} />
-                              </span>
-                              {x.dev ? (
-                                <span style={{ marginLeft: 8 }}>
-                                  <Tip dev text={x.dev} />
-                                </span>
-                              ) : null}
+                              <span style={{ marginLeft: 10 }}><Tip text={x.body} /></span>
+                              {x.dev ? <span style={{ marginLeft: 8 }}><Tip dev text={x.dev} /></span> : null}
                             </div>
                             <div className="sgRowMeta">{x.body}</div>
                           </div>
@@ -1759,6 +1906,8 @@ export default function Sales() {
                   sub="кто приносит деньги / кто косячит"
                   open={openTop}
                   onToggle={() => setOpenTop(v => !v)}
+                  healthTone="good"
+                  healthTitle="Ок"
                   right={<span className="sg-muted" style={{ fontWeight: 900 }}>Top 6</span>}
                 >
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
@@ -1882,9 +2031,7 @@ export default function Sales() {
                   <button type="button" className="sg-tab is-active" disabled>
                     Сохранить (позже)
                   </button>
-                  <span className="sg-muted">
-                    DEV: позже сделаем PUT /settings и invalidate queries
-                  </span>
+                  <span className="sg-muted">DEV: позже сделаем PUT /settings и invalidate queries</span>
                 </div>
               </div>
             </Card>
