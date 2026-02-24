@@ -1,6 +1,5 @@
 import React from 'react';
 import clsx from 'clsx';
-import { Card } from '../../ui';
 
 export function SgPage({
   title,
@@ -18,23 +17,18 @@ export function SgPage({
   className?: string;
 }) {
   return (
-    <div className={clsx('sg-page', className)}>
-      <div className="sg-page__header">
-        <div className="sg-page__headLeft">
-          <div className="sg-page__title">{title}</div>
-          {subtitle ? <div className="sg-page__subtitle">{subtitle}</div> : null}
+    <div className={clsx('sgp-page', className)}>
+      <div className="sgp-page__header">
+        <div className="sgp-page__headLeft">
+          <div className="sgp-page__title">{title}</div>
+          {subtitle ? <div className="sgp-page__subtitle">{subtitle}</div> : null}
         </div>
-        {actions ? <div className="sg-page__actions">{actions}</div> : null}
+        {actions ? <div className="sgp-page__actions">{actions}</div> : null}
       </div>
 
-      <div className={clsx('sg-page__grid', !aside && 'sg-page__grid--single')}>
-        <main className="sg-page__main">{children}</main>
-
-        {aside ? (
-          <aside className="sg-page__aside">
-            <Card className="sg-page__asideCard">{aside}</Card>
-          </aside>
-        ) : null}
+      <div className={clsx('sgp-page__grid', !aside && 'sgp-page__grid--single')}>
+        <main className="sgp-page__main">{children}</main>
+        {aside ? <aside className="sgp-page__aside">{aside}</aside> : null}
       </div>
     </div>
   );
