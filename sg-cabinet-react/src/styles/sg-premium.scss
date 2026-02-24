@@ -592,3 +592,55 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in);
 }
+
+/* ===== SgPage layout: MAIN + ASIDE (old behavior) ===== */
+.sgp-page{
+  width: 100%;
+}
+
+/* Header row stays as-is */
+.sgp-page__header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}
+
+/* THE GRID: left main + right aside */
+.sgp-page__grid{
+  display:grid !important;
+  grid-template-columns: minmax(0, 1fr) 360px !important; /* right column like before */
+  gap:14px !important;
+  align-items:start !important;
+}
+
+/* when page is single-column explicitly */
+.sgp-page__grid--single{
+  grid-template-columns: 1fr !important;
+}
+
+/* ensure main doesn't overflow */
+.sgp-page__main{
+  min-width: 0 !important;
+}
+
+/* ASIDE column is separate, sticky */
+.sgp-page__aside{
+  position: relative !important;
+}
+.sgp-page__aside > .sgp-aside{
+  position: sticky !important;
+  top: 10px !important;
+}
+
+/* responsive: stack */
+@media (max-width: 1100px){
+  .sgp-page__grid{
+    grid-template-columns: 1fr !important;
+  }
+  .sgp-page__aside > .sgp-aside{
+    position: static !important;
+    top: auto !important;
+  }
+}
