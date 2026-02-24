@@ -785,7 +785,7 @@ export default function Wheel() {
 
         <SgCardContent>
           {!isLoading && !isError ? (
-            <div style={{ height: 280 }}>
+            <div style={{ height: 340 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={moneySeries.series}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -830,21 +830,16 @@ export default function Wheel() {
           ) : null}
         </SgCardContent>
 
-        <SgCardFooter>
-          <div className="sgp-seg">
-            <SegBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</SegBtn>
-            <SegBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</SegBtn>
-            <SegBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</SegBtn>
-          </div>
-
-          <div className="sgp-facts">
-            <SgpPill>Спинов: <b>{fact.spins}</b></SgpPill>
-            <SgpPill>Выручка: <b>{moneyFromCent(fact.revenue_cents, currency)}</b></SgpPill>
-            <SgpPill>Расход: <b>{moneyFromCent(fact.payout_cents, currency)}</b></SgpPill>
-            <SgpPill>Прибыль: <b>{moneyFromCent(fact.profit_cents, currency)}</b></SgpPill>
-          </div>
-        </SgCardFooter>
       </SgCard>
+
+      {/* ===== TABS BAR BETWEEN CARDS ===== */}
+<div className="sgp-wheelTabsBar">
+  <div className="sgp-seg">
+    <SegBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</SegBtn>
+    <SegBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</SegBtn>
+    <SegBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</SegBtn>
+  </div>
+</div>
 
       {/* ===== TAB: SUMMARY ===== */}
       {tab === 'summary' ? (
