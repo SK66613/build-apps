@@ -1,24 +1,31 @@
-// src/pages/Wheel.tsx
+// sg-cabinet-react/src/pages/Wheel.tsx
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
 
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-  Input,
-  Toggle,
-  Pill,
-} from '../components/ui';
-
 import { SgPage } from '../components/sgp/layout/SgPage';
 import { SgFormRow } from '../components/sgp/ui/SgFormRow';
 import { SgActions, SgSaveState } from '../components/sgp/ui/SgActions';
+
+import {
+  SgCard,
+  SgCardHeader,
+  SgCardTitle,
+  SgCardSub,
+  SgCardContent,
+  SgCardFooter,
+} from '../components/sgp/ui/SgCard';
+import { SgButton } from '../components/sgp/ui/SgButton';
+import { SgInput, SgSelect } from '../components/sgp/ui/SgInput';
+import { SgToggle } from '../components/sgp/ui/SgToggle';
+
+// Existing SGP widgets (keep, already namespaced in their own styles)
+import { HealthBadge } from '../components/sgp/HealthBadge';
+import { Tip } from '../components/sgp/Tip';
+import { ShimmerLine } from '../components/sgp/ShimmerLine';
+import { Collapsible } from '../components/sgp/Collapsible';
+import { IconBtn } from '../components/sgp/IconBtn';
 
 // Charts
 import {
@@ -31,13 +38,6 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-
-// Existing SGP widgets (keep)
-import { HealthBadge } from '../components/sgp/HealthBadge';
-import { Tip } from '../components/sgp/Tip';
-import { ShimmerLine } from '../components/sgp/ShimmerLine';
-import { Collapsible } from '../components/sgp/Collapsible';
-import { IconBtn } from '../components/sgp/IconBtn';
 
 /** ========= Types ========= */
 type PrizeStat = {
@@ -69,13 +69,6 @@ type WheelTimeseriesDay = {
   spins: number;
   wins: number;
   redeemed: number;
-
-  // ✅ coins (ROI without currency)
-  revenue_coins: number;
-  payout_issued_coins: number;
-  payout_redeemed_coins: number;
-  profit_issued_coins: number;
-  profit_redeemed_coins: number;
 
   // ✅ money snapshots (cents) from wheel_spins
   revenue_cents: number;
@@ -141,7 +134,7 @@ function listDaysISO(fromISO: string, toISO: string) {
   const out: string[] = [];
   if (!fromISO || !toISO) return out;
   let cur = fromISO;
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 500; i++) {
     out.push(cur);
     if (cur === toISO) break;
     cur = isoAddDays(cur, 1);
@@ -176,8 +169,6 @@ function qtyLeft(p: PrizeStat) {
   const n = Number(q);
   return Number.isFinite(n) ? n : null;
 }
-
-// if track_qty + stop_when_zero + qty_left<=0 => effective weight = 0
 function effWeight(p: PrizeStat, w: number) {
   const tracked = isTracked(p);
   const swz = isStopWhenZero(p);
@@ -186,8 +177,12 @@ function effWeight(p: PrizeStat, w: number) {
   return Math.max(0, w);
 }
 
-/** ========= UI helpers ========= */
-function TabBtn({
+/** ========= Premium tiny UI bits ========= */
+function SgpPill({ children }: { children: React.ReactNode }) {
+  return <span className="sgp-pill">{children}</span>;
+}
+
+function SegBtn({
   active,
   onClick,
   children,
@@ -199,7 +194,7 @@ function TabBtn({
   return (
     <button
       type="button"
-      className={'sgpSegBtn ' + (active ? 'is-active' : '')}
+      className={active ? 'sgp-seg__btn is-active' : 'sgp-seg__btn'}
       onClick={onClick}
     >
       {children}
@@ -215,28 +210,28 @@ export default function Wheel() {
   // under-chart tabs
   const [tab, setTab] = React.useState<'summary' | 'forecast' | 'stock'>('summary');
 
-  // расход считать: при выигрыше или при выдаче (переключает payout/profit из timeseries)
+  // расход считать: при выигрыше или при выдаче
   const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
-  // Денежный график: кнопки слоёв
+  // chart layers
   const [showRevenue, setShowRevenue] = React.useState(true);
   const [showPayout, setShowPayout] = React.useState(false);
   const [showProfitBars, setShowProfitBars] = React.useState(true);
 
-  // Быстрые периоды
+  // quick ranges
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
   const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
 
-  // Right card Top prizes
+  // Aside: top list metric
   const [topMetric, setTopMetric] = React.useState<'wins' | 'redeemed'>('wins');
 
-  // Collapsible states
+  // collapsibles
   const [openSummary, setOpenSummary] = React.useState(true);
   const [openForecast, setOpenForecast] = React.useState(true);
   const [openStock, setOpenStock] = React.useState(true);
 
-  // ===== SETTINGS from worker (app_settings) =====
+  // ===== SETTINGS (app_settings) =====
   const qSettings = useQuery({
     enabled: !!appId,
     queryKey: ['app_settings', appId],
@@ -244,7 +239,6 @@ export default function Wheel() {
     staleTime: 30_000,
   });
 
-  // local drafts for app_settings (coin value + currency)
   const [coinValueDraft, setCoinValueDraft] = React.useState<string>('1'); // in currency units
   const [currencyDraft, setCurrencyDraft] = React.useState<string>('RUB');
   const [savingCoin, setSavingCoin] = React.useState(false);
@@ -261,18 +255,18 @@ export default function Wheel() {
     if (!Number.isFinite(units) || units <= 0) return;
 
     setCoinValueDraft((prev) => {
-      const prevN = Number(String(prev).replace(',', '.'));
-      if (!Number.isFinite(prevN)) return prev;
-      const prevCent = Math.floor(prevN * 100);
-      if (prevCent === Math.floor(Number(cents))) return prev;
-
-      // если пользователь уже руками менял — не затираем
+      // не затираем, если уже меняли руками
       if (prev !== '1' && prev !== '1.0' && prev !== '1.00') return prev;
-
       return String(units);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qSettings.data?.settings?.coin_value_cents, qSettings.data?.settings?.currency]);
+
+  const coinCostCentPerCoin = React.useMemo(() => {
+    const units = Number(String(coinValueDraft).replace(',', '.'));
+    const cents = Math.floor(units * 100);
+    return Number.isFinite(cents) ? Math.max(0, cents) : 0;
+  }, [coinValueDraft]);
 
   async function saveAppSettings() {
     if (!appId) return;
@@ -306,6 +300,7 @@ export default function Wheel() {
     }
   }
 
+  // range sync
   React.useEffect(() => {
     setCustomFrom(range?.from || '');
     setCustomTo(range?.to || '');
@@ -327,21 +322,22 @@ export default function Wheel() {
     if (kind === 'month') return applyRange(isoAddDays(anchor, -29), anchor);
   }
 
-  // ===== prizes stats (by prize) =====
+  // ===== stats/prizes =====
   const qStats = useQuery({
     enabled: !!appId,
     queryKey: ['wheel', appId, range.from, range.to],
-    queryFn: () => apiFetch<{ ok: true; items: PrizeStat[] }>(`/api/cabinet/apps/${appId}/wheel/stats?${qs(range)}`),
+    queryFn: () =>
+      apiFetch<{ ok: true; items: PrizeStat[] }>(`/api/cabinet/apps/${appId}/wheel/stats?${qs(range)}`),
     staleTime: 10_000,
   });
   const items = qStats.data?.items || [];
 
-  // ===== timeseries (daily) =====
+  // ===== timeseries =====
   const qTs = useQuery({
     enabled: !!appId,
     queryKey: ['wheel_ts', appId, range.from, range.to],
     queryFn: () =>
-      apiFetch<{ ok: true; days: WheelTimeseriesDay[]; settings?: AppSettings; meta?: any }>(
+      apiFetch<{ ok: true; days: WheelTimeseriesDay[]; settings?: AppSettings }>(
         `/api/cabinet/apps/${appId}/wheel/timeseries?${qs(range)}`
       ),
     staleTime: 10_000,
@@ -351,14 +347,6 @@ export default function Wheel() {
     qTs.data?.settings?.currency || qSettings.data?.settings?.currency || currencyDraft || 'RUB'
   ).toUpperCase();
 
-  // cents per coin (from app_settings draft)
-  const coinCostCentPerCoin = React.useMemo(() => {
-    const units = Number(String(coinValueDraft).replace(',', '.'));
-    const cents = Math.floor(units * 100);
-    return Number.isFinite(cents) ? Math.max(0, cents) : 0;
-  }, [coinValueDraft]);
-
-  // ===== FACT totals (from timeseries) =====
   const fact = React.useMemo(() => {
     const days = qTs.data?.days || [];
     const spins = days.reduce((s, d) => s + (Number(d.spins) || 0), 0);
@@ -388,11 +376,11 @@ export default function Wheel() {
     };
   }, [qTs.data?.days, costBasis]);
 
-  // ===== SETTINGS draft (ТОЛЬКО СКЛАД) =====
+  // ===== STOCK draft (only operational fields) =====
   type DraftRow = {
     active: boolean;
     track_qty: boolean;
-    qty_left: string; // empty => don't send
+    qty_left: string;
     stop_when_zero: boolean;
   };
 
@@ -484,14 +472,7 @@ export default function Wheel() {
     }
   }
 
-  // ===== Forecast controls (ПРОГНОЗ) =====
-  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10'); // forecast only
-  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>(''); // forecast only
-  const spinCostCoinsForecast = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
-  const [forecastScenario, setForecastScenario] = React.useState<'safe' | 'base' | 'aggr'>('base');
-  const [forecastTargetMargin, setForecastTargetMargin] = React.useState<0.1 | 0.2 | 0.3>(0.2);
-
-  // ===== inventory (for tips) =====
+  // ===== inventory counters (for UX hints) =====
   const inventory = React.useMemo(() => {
     const tracked = items.filter((p) => isTracked(p));
     const trackedCount = tracked.length;
@@ -509,21 +490,18 @@ export default function Wheel() {
     });
     const lowStockCount = lowStock.length;
 
-    const autoOff = tracked.filter((p) => isStopWhenZero(p) && (() => {
-      const q = qtyLeft(p);
-      return q !== null && q <= 0;
-    })());
-    const autoOffCount = autoOff.length;
-
-    return { trackedCount, outOfStockCount, lowStockCount, autoOffCount, lowThreshold };
+    return { trackedCount, outOfStockCount, lowStockCount, lowThreshold };
   }, [items]);
 
-  // ===== EV/ROI (current config; НЕ влияет на факт) =====
+  // ===== forecast (EV/ROI) controls =====
+  const [spinCostCoinsDraft, setSpinCostCoinsDraft] = React.useState<string>('10');
+  const [spinsPerDayDraft, setSpinsPerDayDraft] = React.useState<string>('');
+  const spinCostCoinsForecast = Math.max(0, Math.floor(Number(spinCostCoinsDraft || '0')));
+
   const ev = React.useMemo(() => {
     const merged = items.map((p) => {
       const d = draft[p.prize_code];
       if (!d) return p;
-
       const next: PrizeStat = { ...p };
       next.active = d.active ? 1 : 0;
       next.track_qty = d.track_qty ? 1 : 0;
@@ -540,78 +518,37 @@ export default function Wheel() {
 
     let evCoinsAcc = 0;
 
-    const perPrize = active.map((p) => {
+    for (const p of active) {
       const wRaw = Math.max(0, Number(p.weight) || 0);
       const w = effWeight(p, wRaw);
       const prob = wSum > 0 ? (w / wSum) : 0;
 
       const kind = normalizeKind(p);
       const coins = normalizeCoins(p);
-
       const costCoins = kind === 'coins' ? coins : Math.max(0, Number(p.cost_coins ?? 0) || 0);
-      const expCoins = prob * costCoins;
-      evCoinsAcc += expCoins;
 
-      const costCent = Math.round(costCoins * coinCostCentPerCoin);
-      const expCent = Math.round(expCoins * coinCostCentPerCoin);
-
-      const tracked = isTracked(p);
-      const swz = isStopWhenZero(p);
-      const q = qtyLeft(p);
-      const disabledByStock = tracked && swz && q !== null && q <= 0;
-
-      return {
-        prize_code: p.prize_code,
-        title: p.title || p.prize_code,
-        weight: wRaw,
-        eff_weight: w,
-        prob,
-        kind,
-        coins,
-        costCoins,
-        expCoins,
-        costCent,
-        expCent,
-        disabledByStock,
-      };
-    });
+      evCoinsAcc += prob * costCoins;
+    }
 
     const payoutCoinsIssued = evCoinsAcc;
-    const redeemRate = fact.redeemRate;
-    const payoutCoinsRedeemed = evCoinsAcc * redeemRate;
-
+    const payoutCoinsRedeemed = evCoinsAcc * (fact.redeemRate || 0);
     const payoutCoins = costBasis === 'redeemed' ? payoutCoinsRedeemed : payoutCoinsIssued;
+
     const profitCoins = spinRevenueCoins - payoutCoins;
-    const roiCoins = spinRevenueCoins > 0 ? profitCoins / spinRevenueCoins : null;
 
     const payoutCentIssued = Math.round(payoutCoinsIssued * coinCostCentPerCoin);
     const payoutCentRedeemed = Math.round(payoutCoinsRedeemed * coinCostCentPerCoin);
     const payoutCent = costBasis === 'redeemed' ? payoutCentRedeemed : payoutCentIssued;
 
     const profitCent = Math.round(spinRevenueCent - payoutCent);
-    const roi = spinRevenueCent > 0 ? profitCent / spinRevenueCent : null;
 
-    return {
-      wSum,
-      spinRevenueCoins,
-      spinRevenueCent,
-      payoutCent,
-      profitCent,
-      roi,
-      payoutCoins,
-      profitCoins,
-      roiCoins,
-      perPrize,
-      topRisk: [...perPrize].sort((a, b) => b.expCoins - a.expCoins)[0] || null,
-    };
+    return { wSum, spinRevenueCoins, spinRevenueCent, payoutCent, profitCent, profitCoins };
   }, [items, draft, spinCostCoinsForecast, coinCostCentPerCoin, fact.redeemRate, costBasis]);
 
-  // ===== MONEY SERIES (FACT DAYS) =====
+  // ===== series (fact) =====
   const moneySeries = React.useMemo(() => {
     const map = new Map<string, WheelTimeseriesDay>();
-    for (const r of (qTs.data?.days || [])) {
-      if (r?.date) map.set(String(r.date), r);
-    }
+    for (const r of (qTs.data?.days || [])) if (r?.date) map.set(String(r.date), r);
 
     const dates = listDaysISO(range.from, range.to);
     let cum = 0;
@@ -638,12 +575,13 @@ export default function Wheel() {
     return { series };
   }, [qTs.data?.days, range.from, range.to, costBasis]);
 
+  // ===== status =====
   const isLoading = qStats.isLoading || qTs.isLoading;
   const isError = qStats.isError || qTs.isError;
 
   const activeCount = items.filter((i) => (Number(i.active) || 0) ? true : false).length;
 
-  // Top prizes
+  // Aside: top prizes
   const top = [...items]
     .sort((a, b) => (Number((b as any)[topMetric]) || 0) - (Number((a as any)[topMetric]) || 0))
     .slice(0, 7);
@@ -651,165 +589,163 @@ export default function Wheel() {
   const redeemTone: 'good' | 'warn' | 'bad' =
     fact.wins <= 0 ? 'warn' : (fact.redeemRatePct >= 70 ? 'good' : (fact.redeemRatePct >= 40 ? 'warn' : 'bad'));
 
-  // Save state for SgActions
-  const stockSaveState: SgSaveState = savingStock ? 'saving' : (saveMsg?.startsWith('Сохранено') ? 'saved' : (saveMsg?.startsWith('Ошибка') ? 'error' : 'idle'));
-  const coinSaveState: SgSaveState = savingCoin ? 'saving' : (coinMsg === 'Сохранено' ? 'saved' : (coinMsg?.startsWith('Ошибка') ? 'error' : 'idle'));
+  const stockSaveState: SgSaveState =
+    savingStock ? 'saving'
+      : (saveMsg?.startsWith('Сохранено') ? 'saved'
+        : (saveMsg?.startsWith('Ошибка') ? 'error' : 'idle'));
 
+  const coinSaveState: SgSaveState =
+    savingCoin ? 'saving'
+      : (coinMsg === 'Сохранено' ? 'saved'
+        : (coinMsg?.startsWith('Ошибка') ? 'error' : 'idle'));
+
+  /** ========= Render ========= */
   return (
     <SgPage
-      className="wheelPage sgpPage"
+      className="sgp-wheel"
       title="Колесо"
-      subtitle={
-        <span>
-          Факт по <b>wheel_spins</b> + прогноз EV/ROI (по весам/себестоимости/цене спина).
-        </span>
-      }
+      subtitle={<span>Факт по <b>wheel_spins</b> + прогноз EV/ROI (по весам/себестоимости/цене спина).</span>}
       actions={
-        <div className="sgpRangeBar">
-          <div className="sgpSeg">
-            <TabBtn active={quick === 'day'} onClick={() => pickQuick('day')}>День</TabBtn>
-            <TabBtn active={quick === 'week'} onClick={() => pickQuick('week')}>Неделя</TabBtn>
-            <TabBtn active={quick === 'month'} onClick={() => pickQuick('month')}>Месяц</TabBtn>
-            <TabBtn active={quick === 'custom'} onClick={() => pickQuick('custom')}>Свой</TabBtn>
+        <div className="sgp-rangebar">
+          <div className="sgp-seg">
+            <SegBtn active={quick === 'day'} onClick={() => pickQuick('day')}>День</SegBtn>
+            <SegBtn active={quick === 'week'} onClick={() => pickQuick('week')}>Неделя</SegBtn>
+            <SegBtn active={quick === 'month'} onClick={() => pickQuick('month')}>Месяц</SegBtn>
+            <SegBtn active={quick === 'custom'} onClick={() => pickQuick('custom')}>Свой</SegBtn>
           </div>
 
           {quick === 'custom' ? (
-            <div className="sgpRangeBar__custom">
-              <span className="sgpLbl">от</span>
+            <div className="sgp-rangebar__custom">
+              <span className="sgp-muted">от</span>
               <input
                 type="date"
-                className="sg-input sgpDate"
+                className="sgp-input sgp-date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
               />
-              <span className="sgpLbl">до</span>
+              <span className="sgp-muted">до</span>
               <input
                 type="date"
-                className="sg-input sgpDate"
+                className="sgp-input sgp-date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
               />
-              <button
-                type="button"
-                className="sgpBtn"
+              <SgButton
+                variant="secondary"
+                size="sm"
                 onClick={() => applyRange(customFrom, customTo)}
                 disabled={!customFrom || !customTo}
               >
                 Применить
-              </button>
+              </SgButton>
             </div>
           ) : null}
         </div>
       }
       aside={
-        <div className="wheelAside">
-          <div className="wheelAside__block">
-            <div className="wheelAside__title">Выдача призов</div>
-            <HealthBadge tone={redeemTone} title={`${fact.redeemRatePct}%`} />
-            <div className="wheelAside__row">
-              <span>Выигрышей</span>
-              <b>{fact.wins}</b>
-            </div>
-            <div className="wheelAside__row">
-              <span>Выдано</span>
-              <b>{fact.redeemed}</b>
-            </div>
-            <Tip tone={redeemTone}>
-              {fact.wins <= 0
-                ? 'Пока нет данных за период.'
-                : (fact.redeemRatePct >= 70
-                  ? 'Отлично. Выдача высокая — значит призы реально забирают.'
-                  : (fact.redeemRatePct >= 40
-                    ? 'Нормально, но можно улучшить “доходимость”: напоминания, правила выдачи, витрина призов.'
-                    : 'Низкая выдача. Проверь коммуникацию кассира и понятность “как забрать приз”.'))}
-            </Tip>
-          </div>
+        <div className="sgp-aside">
+          <SgCard>
+            <SgCardHeader>
+              <div>
+                <SgCardTitle>Выдача призов</SgCardTitle>
+                <SgCardSub>за выбранный период</SgCardSub>
+              </div>
+              <HealthBadge tone={redeemTone} title={redeemTone.toUpperCase()} />
+            </SgCardHeader>
+            <SgCardContent>
+              <div className="sgp-kv">
+                <div className="sgp-kv__row"><span>Выигрышей</span><b>{fact.wins}</b></div>
+                <div className="sgp-kv__row"><span>Выдано</span><b>{fact.redeemed}</b></div>
+                <div className="sgp-kv__row"><span>Доля выдачи</span><b>{fact.redeemRatePct}%</b></div>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <Tip tone={redeemTone}>
+                  {fact.wins <= 0
+                    ? 'Пока нет данных за период.'
+                    : (fact.redeemRatePct >= 70
+                      ? 'Отлично. Призы реально забирают.'
+                      : (fact.redeemRatePct >= 40
+                        ? 'Нормально. Можно улучшить “доходимость”: правила выдачи, напоминания, витрина призов.'
+                        : 'Низкая выдача. Проверь кассира/инструкцию и понятность “как забрать”.'))}
+                </Tip>
+              </div>
+            </SgCardContent>
+          </SgCard>
 
-          <div className="wheelAside__block">
-            <div className="wheelAside__title">Топ призов</div>
+          <div style={{ height: 12 }} />
 
-            <div className="sgpSeg" style={{ marginTop: 8 }}>
-              <TabBtn active={topMetric === 'wins'} onClick={() => setTopMetric('wins')}>Выигрыши</TabBtn>
-              <TabBtn active={topMetric === 'redeemed'} onClick={() => setTopMetric('redeemed')}>Выдачи</TabBtn>
-            </div>
+          <SgCard>
+            <SgCardHeader>
+              <div>
+                <SgCardTitle>Топ призов</SgCardTitle>
+                <SgCardSub>по {topMetric === 'wins' ? 'выигрышам' : 'выдачам'}</SgCardSub>
+              </div>
+            </SgCardHeader>
+            <SgCardContent>
+              <div className="sgp-seg" style={{ marginBottom: 10 }}>
+                <SegBtn active={topMetric === 'wins'} onClick={() => setTopMetric('wins')}>Выигрыши</SegBtn>
+                <SegBtn active={topMetric === 'redeemed'} onClick={() => setTopMetric('redeemed')}>Выдачи</SegBtn>
+              </div>
 
-            <div className="wheelTopList">
-              {top.map((p, idx) => {
-                const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
-                const val = Number((p as any)[topMetric]) || 0;
-                const w = Math.round((val / max) * 100);
-
-                return (
-                  <div key={p.prize_code || idx} className="wheelTopRow">
-                    <div className="wheelTopRow__idx">{idx + 1}</div>
-                    <div className="wheelTopRow__mid">
-                      <div className="wheelTopRow__title">{p.title || p.prize_code}</div>
-                      <div className="wheelTopRow__sub">
-                        {topMetric === 'wins'
-                          ? `выдачи: ${Number(p.redeemed) || 0}`
-                          : `выигрыши: ${Number(p.wins) || 0}`}
+              <div className="sgp-toplist">
+                {top.map((p, idx) => {
+                  const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
+                  const val = Number((p as any)[topMetric]) || 0;
+                  const w = Math.round((val / max) * 100);
+                  return (
+                    <div key={p.prize_code || idx} className="sgp-toprow">
+                      <div className="sgp-toprow__idx">{idx + 1}</div>
+                      <div className="sgp-toprow__mid">
+                        <div className="sgp-toprow__title">{p.title || p.prize_code}</div>
+                        <div className="sgp-toprow__sub">
+                          {topMetric === 'wins'
+                            ? `выдачи: ${Number(p.redeemed) || 0}`
+                            : `выигрыши: ${Number(p.wins) || 0}`}
+                        </div>
+                        <div className="sgp-toprow__bar">
+                          <div className="sgp-toprow__barFill" style={{ width: `${w}%` }} />
+                        </div>
                       </div>
-                      <div className="wheelTopRow__bar">
-                        <div className="wheelTopRow__barFill" style={{ width: `${w}%` }} />
-                      </div>
+                      <div className="sgp-toprow__val">{val}</div>
                     </div>
-                    <div className="wheelTopRow__val">{val}</div>
-                  </div>
-                );
-              })}
-              {!top.length ? <div className="wheelEmpty">Пока пусто</div> : null}
-            </div>
-          </div>
+                  );
+                })}
+                {!top.length ? <div className="sgp-muted">Пока пусто</div> : null}
+              </div>
+            </SgCardContent>
+          </SgCard>
         </div>
       }
     >
       {/* ===== FACT CHART ===== */}
-      <Card className="sgpCard">
-        <CardHeader className="sgpCardHead">
+      <SgCard>
+        <SgCardHeader>
           <div>
-            <CardTitle>Факт: выручка / расход / прибыль</CardTitle>
-            <div className="wheelCardSub">{range.from} — {range.to}</div>
+            <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
+            <SgCardSub>{range.from} — {range.to}</SgCardSub>
           </div>
 
-          <div className="sgpChartBtns">
-            <div className="sgpSeg">
-              <TabBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
+          <div className="sgp-chartctl">
+            <div className="sgp-seg">
+              <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
                 при выигрыше
-              </TabBtn>
-              <TabBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
+              </SegBtn>
+              <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
                 при выдаче
-              </TabBtn>
+              </SegBtn>
             </div>
 
-            <div className="sgpIconRow">
-              <IconBtn
-                active={showRevenue}
-                title="Выручка"
-                onClick={() => setShowRevenue((v) => !v)}
-              >
-                R
-              </IconBtn>
-              <IconBtn
-                active={showPayout}
-                title="Расход"
-                onClick={() => setShowPayout((v) => !v)}
-              >
-                C
-              </IconBtn>
-              <IconBtn
-                active={showProfitBars}
-                title="Прибыль"
-                onClick={() => setShowProfitBars((v) => !v)}
-              >
-                P
-              </IconBtn>
+            <div className="sgp-chartctl__icons">
+              <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
+              <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>C</IconBtn>
+              <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>P</IconBtn>
             </div>
           </div>
-        </CardHeader>
+        </SgCardHeader>
 
-        <CardContent>
+        <SgCardContent>
           {!isLoading && !isError ? (
-            <div style={{ height: 260 }}>
+            <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={moneySeries.series}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -840,356 +776,166 @@ export default function Wheel() {
                   {showProfitBars ? <Bar dataKey="profit" name="profit" /> : null}
                   {showRevenue ? <Line type="monotone" dataKey="revenue" name="revenue" dot={false} /> : null}
                   {showPayout ? <Line type="monotone" dataKey="payout" name="payout" dot={false} /> : null}
-
-                  {/* cumulative line always on (premium) */}
                   <Line type="monotone" dataKey="cum_profit" name="cum_profit" dot={false} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
           ) : null}
 
-          {isLoading ? <div className="wheelLoading">Загрузка…</div> : null}
+          {isLoading ? <div className="sgp-muted">Загрузка…</div> : null}
           {isError ? (
-            <div className="wheelError">
+            <div className="sgp-muted">
               Ошибка: {String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
             </div>
           ) : null}
-        </CardContent>
+        </SgCardContent>
 
-        <CardFooter className="wheelUnderChart">
-          <div className="sgpSeg">
-            <TabBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</TabBtn>
-            <TabBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</TabBtn>
-            <TabBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</TabBtn>
+        <SgCardFooter>
+          <div className="sgp-seg">
+            <SegBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</SegBtn>
+            <SegBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</SegBtn>
+            <SegBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</SegBtn>
           </div>
 
-          <div className="wheelFactsInline">
-            <Pill>Спинов: <b>{fact.spins}</b></Pill>
-            <Pill>Выручка: <b>{moneyFromCent(fact.revenue_cents, currency)}</b></Pill>
-            <Pill>Расход: <b>{moneyFromCent(fact.payout_cents, currency)}</b></Pill>
-            <Pill>Прибыль: <b>{moneyFromCent(fact.profit_cents, currency)}</b></Pill>
+          <div className="sgp-facts">
+            <SgpPill>Спинов: <b>{fact.spins}</b></SgpPill>
+            <SgpPill>Выручка: <b>{moneyFromCent(fact.revenue_cents, currency)}</b></SgpPill>
+            <SgpPill>Расход: <b>{moneyFromCent(fact.payout_cents, currency)}</b></SgpPill>
+            <SgpPill>Прибыль: <b>{moneyFromCent(fact.profit_cents, currency)}</b></SgpPill>
           </div>
-        </CardFooter>
-      </Card>
+        </SgCardFooter>
+      </SgCard>
 
       {/* ===== TAB: SUMMARY ===== */}
       {tab === 'summary' ? (
-        <Card className="sgpCard">
-          <CardHeader className="sgpCardHead">
+        <SgCard>
+          <SgCardHeader>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <CardTitle>Ключевые метрики</CardTitle>
+              <SgCardTitle>Ключевые метрики</SgCardTitle>
               <HealthBadge
                 tone={fact.revenue_cents <= 0 ? 'warn' : (fact.profit_cents >= 0 ? 'good' : 'bad')}
                 title={fact.revenue_cents <= 0 ? 'нет данных' : (fact.profit_cents >= 0 ? 'ok' : 'минус')}
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <IconBtn active={openSummary} onClick={() => setOpenSummary((v) => !v)} title="Свернуть/развернуть">
-                {openSummary ? '—' : '+'}
-              </IconBtn>
-            </div>
-          </CardHeader>
+            <IconBtn active={openSummary} onClick={() => setOpenSummary((v) => !v)} title="Свернуть/развернуть">
+              {openSummary ? '—' : '+'}
+            </IconBtn>
+          </SgCardHeader>
 
-          <CardContent>
+          <SgCardContent>
             <Collapsible open={openSummary}>
-              <div className="wheelMetricsGrid">
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Спинов</div>
-                  <div className="wheelMetric__v">{fact.spins}</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Выручка</div>
-                  <div className="wheelMetric__v">{moneyFromCent(fact.revenue_cents, currency)}</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Расход</div>
-                  <div className="wheelMetric__v">{moneyFromCent(fact.payout_cents, currency)}</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Прибыль</div>
-                  <div className="wheelMetric__v">{moneyFromCent(fact.profit_cents, currency)}</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Выигрышей</div>
-                  <div className="wheelMetric__v">{fact.wins}</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Выдано</div>
-                  <div className="wheelMetric__v">{fact.redeemed}</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Доля выдачи</div>
-                  <div className="wheelMetric__v">{fact.redeemRatePct}%</div>
-                </div>
-
-                <div className="wheelMetric">
-                  <div className="wheelMetric__k">Активных призов</div>
-                  <div className="wheelMetric__v">{activeCount} / {items.length}</div>
-                </div>
+              <div className="sgp-metrics">
+                <div className="sgp-metric"><div className="sgp-metric__k">Спинов</div><div className="sgp-metric__v">{fact.spins}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Выручка</div><div className="sgp-metric__v">{moneyFromCent(fact.revenue_cents, currency)}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Расход</div><div className="sgp-metric__v">{moneyFromCent(fact.payout_cents, currency)}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Прибыль</div><div className="sgp-metric__v">{moneyFromCent(fact.profit_cents, currency)}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Выигрышей</div><div className="sgp-metric__v">{fact.wins}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Выдано</div><div className="sgp-metric__v">{fact.redeemed}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Доля выдачи</div><div className="sgp-metric__v">{fact.redeemRatePct}%</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">Активных призов</div><div className="sgp-metric__v">{activeCount} / {items.length}</div></div>
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <div className="wheelBlockTitle">Что сильнее всего “съедает” расход</div>
-                {(() => {
-                  const coinCent = Math.max(0, Number(coinCostCentPerCoin || 0) || 0);
-                  const basis = costBasis;
-
-                  const rows = (Array.isArray(items) ? items : []).map((p) => {
-                    const kind = normalizeKind(p);
-                    const costCoins =
-                      kind === 'coins'
-                        ? Math.max(0, Number((p as any).coins || 0))
-                        : Math.max(0, Number((p as any).cost_coins || 0));
-
-                    const qty = basis === 'redeemed'
-                      ? Math.max(0, Number((p as any).redeemed || 0))
-                      : Math.max(0, Number((p as any).wins || 0));
-
-                    const estCent = Math.round(costCoins * qty * coinCent);
-                    return { code: p.prize_code, title: p.title || p.prize_code, kind, qty, estCent };
-                  });
-
-                  const total = rows.reduce((s, r) => s + r.estCent, 0);
-                  const list = rows
-                    .filter((r) => r.estCent > 0 && r.qty > 0)
-                    .sort((a, b) => b.estCent - a.estCent)
-                    .slice(0, 6)
-                    .map((r) => ({ ...r, sharePct: total > 0 ? Math.round((r.estCent / total) * 100) : 0 }));
-
-                  if (!list.length) {
-                    return (
-                      <Tip tone="warn">
-                        Пока нечего показать: нет себестоимости (cost_coins) или нет wins/redeemed за период.
-                      </Tip>
-                    );
-                  }
-
-                  return (
-                    <div className="wheelEaters">
-                      {list.map((r) => (
-                        <div key={r.code} className="wheelEaterRow">
-                          <div className="wheelEaterRow__title">
-                            {r.title} · {r.kind === 'coins' ? 'монеты' : 'товар'}
-                          </div>
-                          <div className="wheelEaterRow__meta">
-                            <b>{moneyFromCent(r.estCent, currency)}</b> · {r.sharePct}% · {r.qty} шт
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
+                <Tip tone="warn">
+                  Подсказка: “Факт” считается по снимкам в <b>wheel_spins</b>, прогноз — по текущим весам/себестоимости.
+                </Tip>
               </div>
             </Collapsible>
-          </CardContent>
-        </Card>
+          </SgCardContent>
+        </SgCard>
       ) : null}
 
       {/* ===== TAB: FORECAST ===== */}
       {tab === 'forecast' ? (
-        <Card className="sgpCard">
-          <CardHeader className="sgpCardHead">
+        <SgCard>
+          <SgCardHeader>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <CardTitle>Прогноз EV/ROI</CardTitle>
+              <SgCardTitle>Прогноз EV/ROI</SgCardTitle>
               <HealthBadge tone={(ev?.profitCent ?? 0) >= 0 ? 'good' : 'bad'} title={(ev?.profitCent ?? 0) >= 0 ? 'плюс' : 'минус'} />
             </div>
 
             <IconBtn active={openForecast} onClick={() => setOpenForecast((v) => !v)} title="Свернуть/развернуть">
               {openForecast ? '—' : '+'}
             </IconBtn>
-          </CardHeader>
+          </SgCardHeader>
 
-          <CardContent>
+          <SgCardContent>
             <Collapsible open={openForecast}>
-              <div className="wheelForecastGrid">
+              <div className="sgp-forecast">
                 <SgFormRow
                   label="Цена спина (монет)"
                   hint={`Выручка/спин ≈ ${moneyFromCent(spinCostCoinsForecast * coinCostCentPerCoin, currency)}`}
                 >
-                  <Input
+                  <SgInput
                     value={spinCostCoinsDraft}
-                    onChange={(e) => setSpinCostCoinsDraft(e.target.value)}
+                    onChange={(e) => setSpinCostCoinsDraft((e.target as any).value)}
                     placeholder="10"
                   />
                 </SgFormRow>
 
                 <SgFormRow
                   label="Спинов / день"
-                  hint={
-                    (() => {
-                      const days = Math.max(1, listDaysISO(range.from, range.to).length || 1);
-                      const s = fact.spins / days;
-                      return `авто: ${Number.isFinite(s) ? s.toFixed(2) : '0.00'} / день`;
-                    })()
-                  }
+                  hint={(() => {
+                    const days = Math.max(1, listDaysISO(range.from, range.to).length || 1);
+                    const s = fact.spins / days;
+                    return `авто: ${Number.isFinite(s) ? s.toFixed(2) : '0.00'} / день`;
+                  })()}
                 >
-                  <Input
+                  <SgInput
                     value={spinsPerDayDraft}
-                    onChange={(e) => setSpinsPerDayDraft(e.target.value)}
+                    onChange={(e) => setSpinsPerDayDraft((e.target as any).value)}
                     placeholder="пусто = авто"
                   />
                 </SgFormRow>
               </div>
 
-              {(() => {
-                const toNum = (v: any, d = 0) => {
-                  const n = Number(String(v ?? '').replace(',', '.').trim());
-                  return Number.isFinite(n) ? n : d;
-                };
+              <div style={{ marginTop: 10 }} className="sgp-forecast__kpi">
+                <SgpPill>Выручка/спин: <b>{moneyFromCent(ev.spinRevenueCent, currency)}</b></SgpPill>
+                <SgpPill>Расход/спин: <b>{moneyFromCent(ev.payoutCent, currency)}</b></SgpPill>
+                <SgpPill>Прибыль/спин: <b>{moneyFromCent(ev.profitCent, currency)}</b></SgpPill>
+              </div>
 
-                const spinsPerDayAuto = (() => {
-                  const days = Math.max(1, listDaysISO(range.from, range.to).length || 1);
-                  return fact.spins / days;
-                })();
-
-                const spinsPerDayBase =
-                  String(spinsPerDayDraft ?? '').trim() === ''
-                    ? Math.max(0, spinsPerDayAuto)
-                    : Math.max(0, toNum(spinsPerDayDraft, 0));
-
-                const coinCent = Math.max(0, Number(coinCostCentPerCoin || 0) || 0);
-                const revenuePerSpinCent = spinCostCoinsForecast * coinCent;
-                const avgPayoutPerSpinCent = Math.max(0, Number(ev?.payoutCent ?? 0) || 0);
-                const avgProfitPerSpinCent = Math.round(revenuePerSpinCent - avgPayoutPerSpinCent);
-                const roi = revenuePerSpinCent > 0 ? (avgProfitPerSpinCent / revenuePerSpinCent) : null;
-
-                const target = forecastTargetMargin;
-                const needRevenueTargetCent =
-                  (1 - target) > 0
-                    ? Math.ceil(avgPayoutPerSpinCent / (1 - target))
-                    : avgPayoutPerSpinCent;
-
-                const needCoinsTarget = coinCent > 0 ? Math.ceil(needRevenueTargetCent / coinCent) : null;
-
-                const scenarios = [
-                  { key: 'safe' as const, title: 'Осторожно', k: 0.7 },
-                  { key: 'base' as const, title: 'База', k: 1.0 },
-                  { key: 'aggr' as const, title: 'Агрессивно', k: 1.3 },
-                ];
-
-                const calcProfDay = (k: number) => Math.round(avgProfitPerSpinCent * (spinsPerDayBase * k));
-
-                const recs: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string }> = [];
-                if (coinCent <= 0) {
-                  recs.push({
-                    tone: 'warn',
-                    title: 'Заполни стоимость монеты',
-                    body: 'Для корректного прогноза нужен курс: “1 монета = …” в блоке “Склад” → “Стоимость монеты и валюта”.',
-                  });
-                } else if (avgProfitPerSpinCent < 0) {
-                  recs.push({
-                    tone: 'bad',
-                    title: 'Подними цену спина',
-                    body: `Чтобы держать цель маржи ${Math.round(target * 100)}% — цена спина ≈ ${needCoinsTarget ?? '—'} монет (сейчас ${spinCostCoinsForecast}).`,
-                  });
-                } else {
-                  recs.push({
-                    tone: 'good',
-                    title: 'Цена спина выглядит ок',
-                    body: `Плановая прибыль/спин ≈ ${moneyFromCent(avgProfitPerSpinCent, currency)}.`,
-                  });
-                }
-
-                return (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="wheelForecastKpi">
-                      <Pill>Выручка/спин: <b>{moneyFromCent(revenuePerSpinCent, currency)}</b></Pill>
-                      <Pill>Расход/спин: <b>{moneyFromCent(avgPayoutPerSpinCent, currency)}</b></Pill>
-                      <Pill>Прибыль/спин: <b>{moneyFromCent(avgProfitPerSpinCent, currency)}</b></Pill>
-                      <Pill>ROI: <b>{roi === null ? '—' : `${Math.round(roi * 100)}%`}</b></Pill>
-                    </div>
-
-                    <div className="wheelBlockTitle" style={{ marginTop: 10 }}>
-                      Цель маржи
-                    </div>
-                    <div className="sgpSeg" style={{ marginTop: 6 }}>
-                      <TabBtn active={forecastTargetMargin === 0.1} onClick={() => setForecastTargetMargin(0.1)}>10%</TabBtn>
-                      <TabBtn active={forecastTargetMargin === 0.2} onClick={() => setForecastTargetMargin(0.2)}>20%</TabBtn>
-                      <TabBtn active={forecastTargetMargin === 0.3} onClick={() => setForecastTargetMargin(0.3)}>30%</TabBtn>
-                    </div>
-                    <div className="wheelSubtle" style={{ marginTop: 6 }}>
-                      Для цели {Math.round(target * 100)}% цена спина ≈ <b>{needCoinsTarget ?? '—'}</b> монет.
-                    </div>
-
-                    <div className="wheelBlockTitle" style={{ marginTop: 12 }}>
-                      Сценарии (прибыль/день)
-                    </div>
-                    <div className="wheelScenarioRow">
-                      {scenarios.map((s) => {
-                        const val = calcProfDay(s.k);
-                        const tone: 'good' | 'bad' = val >= 0 ? 'good' : 'bad';
-                        return (
-                          <button
-                            key={s.key}
-                            type="button"
-                            className={'wheelScenario ' + (forecastScenario === s.key ? 'is-active' : '')}
-                            onClick={() => setForecastScenario(s.key)}
-                          >
-                            <div className="wheelScenario__t">{s.title}</div>
-                            <div className={'wheelScenario__v ' + (tone === 'good' ? 'is-good' : 'is-bad')}>
-                              {moneyFromCent(val, currency)}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {recs.length ? (
-                      <div style={{ marginTop: 12 }}>
-                        <div className="wheelBlockTitle">Рекомендации</div>
-                        <div className="wheelRecs">
-                          {recs.slice(0, 3).map((r, i) => (
-                            <Tip key={i} tone={r.tone}>
-                              <b>{r.title}</b>
-                              <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.body}</div>
-                            </Tip>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })()}
+              {coinCostCentPerCoin <= 0 ? (
+                <div style={{ marginTop: 12 }}>
+                  <Tip tone="warn">
+                    Заполни “Стоимость монеты и валюта” — иначе прогноз в деньгах будет неточным.
+                  </Tip>
+                </div>
+              ) : null}
             </Collapsible>
-          </CardContent>
-        </Card>
+          </SgCardContent>
+        </SgCard>
       ) : null}
 
       {/* ===== TAB: STOCK ===== */}
       {tab === 'stock' ? (
         <>
-          <Card className="sgpCard">
-            <CardHeader className="sgpCardHead">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <CardTitle>Склад призов</CardTitle>
-                <Pill>Учёт: <b>{inventory.trackedCount}</b></Pill>
-                <Pill>Закончились: <b>{inventory.outOfStockCount}</b></Pill>
-                <Pill>Мало (≤ {inventory.lowThreshold}): <b>{inventory.lowStockCount}</b></Pill>
+          <SgCard>
+            <SgCardHeader>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <SgCardTitle>Склад призов</SgCardTitle>
+                <SgpPill>Учёт: <b>{inventory.trackedCount}</b></SgpPill>
+                <SgpPill>Закончились: <b>{inventory.outOfStockCount}</b></SgpPill>
+                <SgpPill>Мало (≤ {inventory.lowThreshold}): <b>{inventory.lowStockCount}</b></SgpPill>
               </div>
 
               <IconBtn active={openStock} onClick={() => setOpenStock((v) => !v)} title="Свернуть/развернуть">
                 {openStock ? '—' : '+'}
               </IconBtn>
-            </CardHeader>
+            </SgCardHeader>
 
-            <CardContent>
+            <SgCardContent>
               <Collapsible open={openStock}>
-                <div className="wheelStockHead">
-                  <div className="wheelStockCol wheelStockCol--name">Название</div>
-                  <div className="wheelStockCol">Активен</div>
-                  <div className="wheelStockCol">Учёт</div>
-                  <div className="wheelStockCol">Остаток</div>
-                  <div className="wheelStockCol">Авто-выкл</div>
+                <div className="sgp-stockHead">
+                  <div className="sgp-stockCol sgp-stockCol--name">Название</div>
+                  <div className="sgp-stockCol">Активен</div>
+                  <div className="sgp-stockCol">Учёт</div>
+                  <div className="sgp-stockCol">Остаток</div>
+                  <div className="sgp-stockCol">Авто-выкл</div>
                 </div>
 
-                <div className="wheelStockList">
+                <div className="sgp-stockList">
                   {items.map((p) => {
                     const code = p.prize_code;
                     const d = draft[code] || {
@@ -1210,26 +956,22 @@ export default function Wheel() {
                     const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
                     const swz = tracked && !!d.stop_when_zero;
 
-                    const rowTone = !active ? 'off' : (tracked ? (out ? 'out' : (low ? 'low' : 'on')) : 'on');
+                    const tone = !active ? 'off' : (tracked ? (out ? 'out' : (low ? 'low' : 'on')) : 'on');
 
                     return (
-                      <div key={code} className={'wheelStockRow tone-' + rowTone}>
-                        <div className="wheelStockCol wheelStockCol--name">
-                          <div className="wheelStockName">{p.title || code}</div>
-                          <div className="wheelStockSub">
+                      <div key={code} className={'sgp-stockRow tone-' + tone}>
+                        <div className="sgp-stockCol sgp-stockCol--name">
+                          <div className="sgp-stockName">{p.title || code}</div>
+                          <div className="sgp-stockSub">
                             {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'} · код: {code}
                           </div>
 
-                          {out && swz ? (
-                            <div className="wheelStockHint is-bad">Закончились — приз не выпадает</div>
-                          ) : null}
-                          {!out && low ? (
-                            <div className="wheelStockHint is-warn">Скоро закончатся (≤ {inventory.lowThreshold})</div>
-                          ) : null}
+                          {out && swz ? <div className="sgp-stockHint is-bad">Закончились — приз не выпадает</div> : null}
+                          {!out && low ? <div className="sgp-stockHint is-warn">Скоро закончатся (≤ {inventory.lowThreshold})</div> : null}
                         </div>
 
-                        <div className="wheelStockCol">
-                          <Toggle
+                        <div className="sgp-stockCol">
+                          <SgToggle
                             checked={active}
                             onChange={(v) => {
                               if (!v) {
@@ -1241,8 +983,8 @@ export default function Wheel() {
                           />
                         </div>
 
-                        <div className="wheelStockCol">
-                          <Toggle
+                        <div className="sgp-stockCol">
+                          <SgToggle
                             checked={tracked}
                             disabled={!active}
                             onChange={(v) => {
@@ -1256,8 +998,8 @@ export default function Wheel() {
                           />
                         </div>
 
-                        <div className="wheelStockCol">
-                          <Input
+                        <div className="sgp-stockCol">
+                          <SgInput
                             value={d.qty_left}
                             onChange={(e) => patchDraft(code, { qty_left: (e.target as any).value })}
                             placeholder={tracked ? '0' : '—'}
@@ -1265,8 +1007,8 @@ export default function Wheel() {
                           />
                         </div>
 
-                        <div className="wheelStockCol">
-                          <Toggle
+                        <div className="sgp-stockCol">
+                          <SgToggle
                             checked={tracked && !!d.stop_when_zero}
                             disabled={!tracked}
                             onChange={(v) => {
@@ -1279,83 +1021,148 @@ export default function Wheel() {
                     );
                   })}
 
-                  {!items.length && !qStats.isLoading ? <div className="wheelEmpty">Нет призов.</div> : null}
+                  {!items.length && !qStats.isLoading ? <div className="sgp-muted">Нет призов.</div> : null}
                 </div>
 
                 <div style={{ marginTop: 12 }}>
-                  <Tip tone="warn">
-                    {saveMsg ? <span>{saveMsg}</span> : (
-                      <span>Подсказка: если “Учёт остатков” выключен — поля неактивны, это нормально.</span>
-                    )}
+                  <Tip tone={saveMsg.startsWith('Ошибка') ? 'bad' : 'warn'}>
+                    {saveMsg ? saveMsg : 'Подсказка: если “Учёт остатков” выключен — поля неактивны, это нормально.'}
                   </Tip>
                 </div>
               </Collapsible>
-            </CardContent>
+            </SgCardContent>
 
-            <CardFooter>
+            <SgCardFooter>
               <SgActions
                 primaryLabel="Сохранить склад"
                 onPrimary={saveStock}
                 state={stockSaveState}
                 errorText={saveMsg?.startsWith('Ошибка') ? saveMsg : undefined}
-                left={<span className="wheelSubtle">Меняется только склад (active/track/qty/auto-off).</span>}
+                left={<span className="sgp-muted">Меняется только склад (active/track/qty/auto-off).</span>}
               />
-            </CardFooter>
-          </Card>
+            </SgCardFooter>
+          </SgCard>
 
-          {/* app_settings block BELOW stock */}
-          <Card className="sgpCard">
-            <CardHeader className="sgpCardHead">
-              <CardTitle>Стоимость монеты и валюта</CardTitle>
-              <div className="wheelSubtle">пример: USD + 0.10 = “1 монета = 10 центов”</div>
-            </CardHeader>
+          <div style={{ height: 12 }} />
 
-            <CardContent>
+          <SgCard>
+            <SgCardHeader>
+              <div>
+                <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
+                <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
+              </div>
+            </SgCardHeader>
+
+            <SgCardContent>
               <SgFormRow
                 label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
                 hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
               >
-                <Input
+                <SgInput
                   value={coinValueDraft}
-                  onChange={(e) => setCoinValueDraft(e.target.value)}
+                  onChange={(e) => setCoinValueDraft((e.target as any).value)}
                   placeholder="1.00"
                 />
               </SgFormRow>
 
               <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
-                <select
+                <SgSelect
                   value={currencyDraft}
                   onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
-                  className="sg-input"
                 >
                   <option value="RUB">RUB (₽)</option>
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
-                </select>
+                </SgSelect>
               </SgFormRow>
 
               {coinMsg ? <Tip tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Tip> : null}
-            </CardContent>
+            </SgCardContent>
 
-            <CardFooter>
+            <SgCardFooter>
               <SgActions
                 primaryLabel="Сохранить"
                 onPrimary={saveAppSettings}
                 state={coinSaveState}
                 errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
-                left={
-                  <span className="wheelSubtle">
-                    Используется в прогнозе и оценке себестоимости.
-                  </span>
-                }
+                left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
               />
-            </CardFooter>
-          </Card>
+            </SgCardFooter>
+          </SgCard>
         </>
       ) : null}
 
-      {/* ===== Shimmer (optional) ===== */}
       {isLoading ? <ShimmerLine /> : null}
     </SgPage>
   );
 }
+
+/* ======================================================================================
+   Minimal required premium CSS (append to sg-premium.scss)
+
+   (You can move this to your stylesheet; kept here as reference of classes used)
+======================================================================================
+
+.sgp-wheel {}
+.sgp-muted { opacity:.72; font-size:12px; }
+
+.sgp-pill{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px;
+  border:1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.70);
+  font-size:12px;
+}
+
+.sgp-seg{ display:inline-flex; gap:6px; padding:4px; border-radius:999px; border:1px solid rgba(0,0,0,.10); background: rgba(255,255,255,.55); }
+.sgp-seg__btn{ height:32px; padding:0 12px; border-radius:999px; border:0; background:transparent; font-weight:700; cursor:pointer; }
+.sgp-seg__btn.is-active{ background: rgba(0,0,0,.88); color:#fff; }
+
+.sgp-rangebar{ display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+.sgp-rangebar__custom{ display:flex; align-items:center; gap:8px; }
+.sgp-date{ width: 170px; }
+
+.sgp-chartctl{ display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+.sgp-chartctl__icons{ display:flex; gap:8px; }
+
+.sgp-facts{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+.sgp-kv__row{ display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.06); }
+.sgp-kv__row:last-child{ border-bottom:0; }
+
+.sgp-toplist{ display:flex; flex-direction:column; gap:10px; }
+.sgp-toprow{ display:flex; gap:10px; align-items:flex-start; }
+.sgp-toprow__idx{ width:18px; opacity:.6; font-weight:800; }
+.sgp-toprow__mid{ flex:1; }
+.sgp-toprow__title{ font-weight:800; }
+.sgp-toprow__sub{ font-size:12px; opacity:.7; margin-top:2px; }
+.sgp-toprow__bar{ margin-top:6px; height:8px; border-radius:999px; background: rgba(0,0,0,.06); overflow:hidden; }
+.sgp-toprow__barFill{ height:100%; background: rgba(0,0,0,.55); border-radius:999px; }
+.sgp-toprow__val{ font-weight:800; }
+
+.sgp-metrics{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.sgp-metric{ border:1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.60); border-radius:14px; padding:10px; }
+.sgp-metric__k{ font-size:12px; opacity:.7; }
+.sgp-metric__v{ margin-top:6px; font-size:16px; font-weight:900; }
+
+@media (max-width: 1100px){
+  .sgp-metrics{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.sgp-stockHead,
+.sgp-stockRow{
+  display:grid;
+  grid-template-columns: 1fr 90px 90px 140px 110px;
+  gap: 10px;
+  align-items:center;
+}
+.sgp-stockHead{ padding: 8px 0; font-size:12px; opacity:.7; }
+.sgp-stockRow{ padding: 10px 0; border-top:1px solid rgba(0,0,0,.06); }
+.sgp-stockCol--name{ min-width: 0; }
+.sgp-stockName{ font-weight:900; }
+.sgp-stockSub{ font-size:12px; opacity:.7; margin-top:2px; }
+.sgp-stockHint{ margin-top:6px; font-size:12px; }
+.sgp-stockHint.is-bad{ opacity: .95; }
+.sgp-stockHint.is-warn{ opacity: .85; }
+
+====================================================================================== */
