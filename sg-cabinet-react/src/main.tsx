@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './styles/global.scss';
+import './styles/sg-premium.scss';
 
 // apply saved theme ASAP (before first paint)
 try{
