@@ -1,1089 +1,19 @@
-/* src/styles/sg-premium.scss
-   SG Premium UI Kit (SGP)
-   - Safe overlay on top of global.scss (no breaking changes)
-   - Namespace: sgp-*
-   - Keep legacy SGP utility classes (sgpCard/sgpSeg/...) + add new primitives (sgp-card/sgp-btn/sgp-input/sgp-toggle)
-*/
+/* =========================================================
+   SGP — SINGLE SOURCE OF TRUTH (ETALON)
+   Put this block at the VERY BOTTOM of src/styles/sg-premium.scss
+   After that: remove/disable all older duplicated sgp-* blocks above.
+========================================================= */
 
-/* =========================
-   Tokens (legacy kit)
-========================= */
+/* -------------------------
+   0) Tokens
+------------------------- */
 :root{
-  --sg-r-xl: 22px;
-  --sg-r-lg: 18px;
-  --sg-r-md: 14px;
-  --sg-r-sm: 12px;
+  /* base font for UI text */
+  --sgp-font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  --sg-bd: rgba(15,23,42,.10);
-  --sg-bd2: rgba(15,23,42,.08);
-
-  --sg-card: rgba(255,255,255,.88);
-  --sg-card2: rgba(255,255,255,.96);
-  --sg-soft: rgba(15,23,42,.03);
-
-  --sg-shadow: 0 10px 26px rgba(15,23,42,.06);
-  --sg-shadow2: 0 16px 40px rgba(15,23,42,.10);
-  --sg-in: inset 0 1px 0 rgba(255,255,255,.70);
-
-  --sg-warnTint: rgba(245,158,11,.08);
-  --sg-warnBd: rgba(245,158,11,.18);
-
-  --sg-dangerTint: rgba(239,68,68,.08);
-  --sg-dangerBd: rgba(239,68,68,.18);
-
-  --sg-goodTint: rgba(34,197,94,.08);
-  --sg-goodBd: rgba(34,197,94,.18);
-
-  --sg-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
-}
-
-/* =========================
-   Layout helpers (legacy kit)
-========================= */
-.sgpGrid{
-  display:grid;
-  grid-template-columns: 1.65fr 1fr;
-  gap:12px;
-  margin-top:12px;
-}
-@media (max-width: 1100px){
-  .sgpGrid{ grid-template-columns: 1fr; }
-}
-.sgpRightSticky{ position: sticky; top: 10px; }
-
-/* =========================
-   Card (legacy kit)
-========================= */
-.sgpCard{
-  border:1px solid var(--sg-bd2) !important;
-  border-radius: var(--sg-r-xl) !important;
-  background: var(--sg-card) !important;
-  box-shadow: var(--sg-in) !important;
-  overflow: hidden;
-}
-.sgpCard--lift{
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
-}
-.sgpCard--lift:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--sg-glow), var(--sg-in) !important;
-  border-color: rgba(15,23,42,.12) !important;
-  background: var(--sg-card2) !important;
-}
-
-/* Health tint modifiers */
-.sgpCard.is-health-good{
-  border-color: var(--sg-goodBd) !important;
-  background: linear-gradient(0deg, var(--sg-goodTint), rgba(255,255,255,.90)) !important;
-}
-.sgpCard.is-health-warn{
-  border-color: var(--sg-warnBd) !important;
-  background: linear-gradient(0deg, var(--sg-warnTint), rgba(255,255,255,.90)) !important;
-}
-.sgpCard.is-health-bad{
-  border-color: var(--sg-dangerBd) !important;
-  background: linear-gradient(0deg, var(--sg-dangerTint), rgba(255,255,255,.90)) !important;
-}
-
-.sgpCardHead{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  padding:14px 14px 10px 14px;
-  border-bottom:1px solid rgba(15,23,42,.08);
-}
-.sgpTitle{ font-weight: 900; }
-.sgpSub{
-  margin-top:4px;
-  opacity:.78;
-  font-size:13px;
-}
-
-/* =========================
-   Row (legacy kit)
-========================= */
-.sgpRow{
-  position:relative;
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  border-radius: var(--sg-r-md);
-  border:1px solid rgba(15,23,42,.07);
-  background: rgba(255,255,255,.80);
-  box-shadow: var(--sg-in);
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
-}
-.sgpRow:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--sg-shadow), var(--sg-in);
-  border-color: rgba(15,23,42,.12);
-  background: var(--sg-warnTint);
-}
-.sgpRow.is-warn{
-  border-color: var(--sg-warnBd) !important;
-  background: linear-gradient(0deg, var(--sg-warnTint), rgba(255,255,255,.86)) !important;
-}
-.sgpRow.is-bad{
-  border-color: var(--sg-dangerBd) !important;
-  background: linear-gradient(0deg, var(--sg-dangerTint), rgba(255,255,255,.86)) !important;
-}
-.sgpRow.is-good{
-  border-color: var(--sg-goodBd) !important;
-  background: linear-gradient(0deg, var(--sg-goodTint), rgba(255,255,255,.86)) !important;
-}
-.sgpRowLeft{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-.sgpRowTitle{
-  font-weight:900;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.sgpRowMeta{
-  margin-top:2px;
-  font-size:12px;
-  opacity:.75;
-}
-.sgpRowRight{
-  text-align:right;
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-}
-.sgpRowVal{ font-weight:950; }
-.sgpRowSub{
-  font-size:12px;
-  opacity:.72;
-  font-weight:800;
-}
-
-/* =========================
-   Skeleton shimmer (legacy kit)
-========================= */
-.sgpShimmerLine{
-  position:relative;
-  height:10px;
-  border-radius:999px;
-  background: rgba(15,23,42,.06);
-  overflow:hidden;
-}
-.sgpShimmerLine__shine{
-  position:absolute;
-  inset:-40% -60% -40% -60%;
-  background: linear-gradient(90deg,
-    rgba(255,255,255,0) 0%,
-    rgba(255,255,255,.55) 45%,
-    rgba(255,255,255,0) 80%
-  );
-  transform: translateX(-35%);
-  animation: sgpShimmer 1.5s ease-in-out infinite;
-  opacity:.8;
-}
-@keyframes sgpShimmer{
-  0%{ transform: translateX(-35%); }
-  100%{ transform: translateX(35%); }
-}
-
-/* =========================
-   Tip tooltip (legacy kit)
-========================= */
-.sgpTip{
-  position:relative;
-  display:inline-flex;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.92);
-  opacity:.86;
-  flex:0 0 auto;
-}
-.sgpTip::before{
-  content:"?";
-  margin:auto;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.72;
-}
-.sgpTip.is-dev::before{
-  content:"DEV";
-  font-size:9px;
-  letter-spacing:.04em;
-}
-.sgpTip:hover{ opacity:1; }
-.sgpTip::after{
-  content:attr(data-tip);
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  padding:8px 10px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.14);
-  background:rgba(255,255,255,.98);
-  box-shadow: 0 18px 40px rgba(15,23,42,.14);
-  font-weight:900;
-  font-size:12px;
-  white-space:nowrap;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .12s ease;
-  z-index:9999;
-}
-.sgpTip.is-top::after{ bottom: calc(100% + 10px); }
-.sgpTip.is-bottom::after{ top: calc(100% + 10px); }
-.sgpTip:hover::after{ opacity:1; }
-
-/* =========================
-   Health badge (legacy kit)
-========================= */
-.sgpHealthBadge{
-  height:32px;
-  padding:0 10px 0 8px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.10);
-  background: rgba(255,255,255,.78);
-  box-shadow: var(--sg-in);
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  cursor:default;
-  user-select:none;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.96;
-}
-.sgpHealthBadge.is-compact{
-  height:28px;
-  padding:0 8px 0 6px;
-  border-radius:13px;
-  font-size:11px;
-}
-.sgpHealthBadge__icon{
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:1100;
-  line-height:1;
-}
-.sgpHealthBadge__txt{
-  opacity:.86;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.sgpHealthBadge.is-good{
-  border-color: var(--sg-goodBd);
-  background: rgba(255,255,255,.86);
-}
-.sgpHealthBadge.is-good .sgpHealthBadge__icon{
-  border:1px solid var(--sg-goodBd);
-  background: var(--sg-goodTint);
-  color: rgba(22,163,74,.95);
-}
-.sgpHealthBadge.is-warn{
-  border-color: var(--sg-warnBd);
-  background: rgba(255,255,255,.86);
-}
-.sgpHealthBadge.is-warn .sgpHealthBadge__icon{
-  border:1px solid var(--sg-warnBd);
-  background: var(--sg-warnTint);
-  color: rgba(245,158,11,.95);
-}
-.sgpHealthBadge.is-bad{
-  border-color: var(--sg-dangerBd);
-  background: rgba(255,255,255,.86);
-}
-.sgpHealthBadge.is-bad .sgpHealthBadge__icon{
-  border:1px solid var(--sg-dangerBd);
-  background: var(--sg-dangerTint);
-  color: rgba(239,68,68,.95);
-}
-
-/* =========================
-   Collapsible (legacy kit)
-========================= */
-.sgpColl{
-  border:1px solid rgba(15,23,42,.08);
-  border-radius: var(--sg-r-xl);
-  background: rgba(255,255,255,.90);
-  box-shadow: var(--sg-in);
-  overflow:hidden;
-}
-.sgpColl.is-good{ border-color: var(--sg-goodBd); }
-.sgpColl.is-warn{ border-color: var(--sg-warnBd); }
-.sgpColl.is-bad{ border-color: var(--sg-dangerBd); }
-
-.sgpColl.is-good .sgpColl__head{ background: linear-gradient(90deg, var(--sg-goodTint), transparent 44%); }
-.sgpColl.is-warn .sgpColl__head{ background: linear-gradient(90deg, var(--sg-warnTint), transparent 44%); }
-.sgpColl.is-bad  .sgpColl__head{ background: linear-gradient(90deg, var(--sg-dangerTint), transparent 44%); }
-
-.sgpColl__head{
-  width:100%;
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 12px;
-  cursor:pointer;
-  border:0;
-  background:transparent;
-  text-align:left;
-}
-.sgpColl__title{
-  font-weight:1000;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.sgpColl__sub{
-  margin-top:3px;
-  font-size:12px;
-  opacity:.78;
-}
-.sgpColl__right{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-.sgpColl__chev{
-  width:10px;
-  height:10px;
-  border-right:2px solid rgba(15,23,42,.45);
-  border-bottom:2px solid rgba(15,23,42,.45);
-  transform: rotate(45deg);
-  transition: transform .16s ease;
-  opacity:.85;
-}
-.sgpColl.is-open .sgpColl__chev{ transform: rotate(225deg); }
-.sgpColl__body{
-  max-height: 0px;
-  overflow:hidden;
-  transition: max-height .22s ease;
-  padding: 0 12px;
-}
-.sgpColl.is-open .sgpColl__body{
-  max-height: 1400px;
-  padding: 0 12px 12px 12px;
-}
-
-/* =========================
-   Segmented + Icon buttons (legacy kit)
-========================= */
-.sgpSeg{
-  display:inline-flex;
-  gap:6px;
-  padding:4px;
-  border-radius:16px;
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.78);
-  box-shadow: var(--sg-in);
-}
-.sgpSegBtn{
-  height:32px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid transparent;
-  background:transparent;
-  cursor:pointer;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.9;
-}
-.sgpSegBtn:hover{ opacity:1; }
-.sgpSegBtn.is-active{
-  background:rgba(15,23,42,.04);
-  border-color:rgba(15,23,42,.10);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in);
-  opacity:1;
-}
-
-.sgpIconGroup{
-  display:inline-flex;
-  gap:6px;
-  padding:4px;
-  border-radius:16px;
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.78);
-  box-shadow: var(--sg-in);
-}
-.sgpIconBtn{
-  width:34px;
-  height:34px;
-  border-radius:12px;
-  border:1px solid transparent;
-  background:transparent;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:none;
-  opacity:.92;
-}
-.sgpIconBtn:hover{ opacity:1; }
-.sgpIconBtn.is-active{
-  background:rgba(15,23,42,.04);
-  border-color:rgba(15,23,42,.10);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in);
-  opacity:1;
-}
-.sgpIconBtn svg{
-  width:16px;
-  height:16px;
-  opacity:.78;
-}
-.sgpIconBtn.is-active svg{ opacity:.92; }
-
-
-/* =============================================================================
-   NEW: SGP Primitives (safe, namespaced, does not touch sg-*)
-   Used by new SGP pages like Wheel.tsx you replaced.
-============================================================================= */
-
-:root{
-  --sgp-radius-card: 18px;
-  --sgp-radius-control: 14px;
-
-  --sgp-border: rgba(0,0,0,.10);
-  --sgp-border-strong: rgba(0,0,0,.16);
-
-  --sgp-bg-card: rgba(255,255,255,.86);
-  --sgp-bg-card2: rgba(255,255,255,.70);
-
-  --sgp-shadow: 0 10px 30px rgba(0,0,0,.08);
-  --sgp-shadow2: 0 16px 40px rgba(0,0,0,.10);
-  --sgp-in: inset 0 1px 0 rgba(255,255,255,.70);
-
-  --sgp-pad-card: 14px;
-  --sgp-control-h: 42px;
-}
-
-/* Page (SgPage) */
-.sgp-page{
-  width: 100%;
-  padding: 0; /* width/paddings controlled by app layout */
-}
-.sgp-page__header{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-.sgp-page__headLeft{ min-width: 0; }
-.sgp-page__title{
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
-.sgp-page__subtitle{
-  margin-top: 6px;
-  font-size: 13px;
-  opacity: .75;
-}
-.sgp-page__actions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-
-.sgp-page__grid{
-  display:grid;
-  grid-template-columns: 1fr 360px;
-  gap: 14px;
-  align-items:start;
-}
-.sgp-page__grid--single{ grid-template-columns: 1fr; }
-.sgp-page__main{ min-width:0; }
-.sgp-page__aside{ position: relative; }
-
-@media (max-width: 1100px){
-  .sgp-page__grid{ grid-template-columns: 1fr; }
-}
-
-/* Card primitive */
-.sgp-card{
-  border-radius: var(--sgp-radius-card);
-  border: 1px solid var(--sgp-border);
-  background: var(--sgp-bg-card);
-  box-shadow: var(--sgp-shadow);
-  overflow: hidden;
-}
-.sgp-card--subtle{ background: var(--sgp-bg-card2); }
-.sgp-card--outline{
-  background: transparent;
-  box-shadow: none;
-  border: 1px solid var(--sgp-border-strong);
-}
-
-.sgp-card__header{
-  padding: var(--sgp-pad-card);
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap: 12px;
-}
-.sgp-card__title{
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-.sgp-card__sub{
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: .7;
-}
-.sgp-card__content{
-  padding: 0 var(--sgp-pad-card) var(--sgp-pad-card);
-}
-.sgp-card__footer{
-  padding: var(--sgp-pad-card);
-  border-top: 1px solid var(--sgp-border);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-}
-
-/* Input primitive */
-.sgp-input{
-  height: var(--sgp-control-h);
-  border-radius: var(--sgp-radius-control);
-  border: 1px solid var(--sgp-border);
-  background: rgba(255,255,255,.9);
-  padding: 0 12px;
-  outline: none;
-  width: 100%;
-}
-.sgp-input:focus{ border-color: var(--sgp-border-strong); }
-.sgp-select{ padding-right: 34px; }
-
-/* Button primitive */
-.sgp-btn{
-  height: var(--sgp-control-h);
-  border-radius: var(--sgp-radius-control);
-  border: 1px solid var(--sgp-border);
-  padding: 0 14px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  background: rgba(255,255,255,.9);
-}
-.sgp-btn--primary{
-  border-color: rgba(0,0,0,.10);
-  background: rgba(0,0,0,.90);
-  color: #fff;
-}
-.sgp-btn--secondary{ background: rgba(255,255,255,.9); }
-.sgp-btn--ghost{ background: transparent; }
-.sgp-btn--danger{
-  background: rgba(190, 38, 38, .92);
-  color: #fff;
-  border-color: rgba(190, 38, 38, .32);
-}
-.sgp-btn--sm{
-  height: 36px;
-  padding: 0 12px;
-  font-size: 13px;
-}
-.sgp-btn.is-disabled{
-  opacity: .55;
-  cursor: not-allowed;
-}
-.sgp-btn__spinner{
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  border: 2px solid rgba(255,255,255,.35);
-  border-top-color: rgba(255,255,255,.92);
-  animation: sgpspin .9s linear infinite;
-}
-.sgp-btn--secondary .sgp-btn__spinner,
-.sgp-btn--ghost .sgp-btn__spinner{
-  border-color: rgba(0,0,0,.18);
-  border-top-color: rgba(0,0,0,.55);
-}
-@keyframes sgpspin{ to { transform: rotate(360deg); } }
-
-/* Toggle primitive */
-.sgp-toggle{ display:inline-flex; align-items:center; cursor:pointer; }
-.sgp-toggle.is-disabled{ opacity: .55; cursor:not-allowed; }
-.sgp-toggle__input{ position:absolute; opacity:0; pointer-events:none; }
-.sgp-toggle__track{
-  width: 44px;
-  height: 26px;
-  border-radius: 999px;
-  border: 1px solid var(--sgp-border);
-  background: rgba(0,0,0,.06);
-  position: relative;
-  transition: background .15s ease, border-color .15s ease;
-}
-.sgp-toggle__thumb{
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.95);
-  box-shadow: 0 6px 18px rgba(0,0,0,.14);
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  transition: transform .15s ease;
-}
-.sgp-toggle.is-checked .sgp-toggle__track{
-  background: rgba(0,0,0,.86);
-  border-color: rgba(0,0,0,.10);
-}
-.sgp-toggle.is-checked .sgp-toggle__thumb{
-  transform: translateX(18px);
-}
-
-/* =============================================================================
-   Wheel page helpers (classes used by Wheel.tsx we sent)
-============================================================================= */
-
-/* tiny muted text */
-.sgp-muted{ opacity:.72; font-size:12px; }
-
-/* pill */
-.sgp-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.70);
-  font-size:12px;
-}
-
-/* segment buttons (Wheel local) */
-.sgp-seg{
-  display:inline-flex;
-  gap:6px;
-  padding:4px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.55);
-}
-.sgp-seg__btn{
-  height:32px;
-  padding:0 12px;
-  border-radius:999px;
-  border:0;
-  background:transparent;
-  font-weight:700;
-  cursor:pointer;
-}
-.sgp-seg__btn.is-active{
-  background: rgba(0,0,0,.88);
-  color:#fff;
-}
-
-/* rangebar */
-.sgp-rangebar{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:10px;
-}
-.sgp-rangebar__custom{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.sgp-date{ width: 170px; }
-
-/* chart controls */
-.sgp-chartctl{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  align-items:flex-end;
-}
-.sgp-chartctl__icons{ display:flex; gap:8px; }
-
-/* footer facts pills */
-.sgp-facts{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-/* key-value list (aside) */
-.sgp-kv__row{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  padding:6px 0;
-  border-bottom:1px solid rgba(0,0,0,.06);
-}
-.sgp-kv__row:last-child{ border-bottom:0; }
-
-/* toplist */
-.sgp-toplist{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.sgp-toprow{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-}
-.sgp-toprow__idx{
-  width:18px;
-  opacity:.6;
-  font-weight:800;
-}
-.sgp-toprow__mid{ flex:1; min-width:0; }
-.sgp-toprow__title{ font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.sgp-toprow__sub{ font-size:12px; opacity:.7; margin-top:2px; }
-.sgp-toprow__bar{
-  margin-top:6px;
-  height:8px;
-  border-radius:999px;
-  background: rgba(0,0,0,.06);
-  overflow:hidden;
-}
-.sgp-toprow__barFill{
-  height:100%;
-  background: rgba(0,0,0,.55);
-  border-radius:999px;
-}
-.sgp-toprow__val{ font-weight:800; }
-
-/* metrics grid */
-.sgp-metrics{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-.sgp-metric{
-  border:1px solid rgba(0,0,0,.08);
-  background: rgba(255,255,255,.60);
-  border-radius:14px;
-  padding:10px;
-}
-.sgp-metric__k{ font-size:12px; opacity:.7; }
-.sgp-metric__v{ margin-top:6px; font-size:16px; font-weight:900; }
-@media (max-width: 1100px){
-  .sgp-metrics{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-/* stock table */
-.sgp-stockHead,
-.sgp-stockRow{
-  display:grid;
-  grid-template-columns: 1fr 90px 90px 140px 110px;
-  gap: 10px;
-  align-items:center;
-}
-.sgp-stockHead{
-  padding: 8px 0;
-  font-size:12px;
-  opacity:.7;
-}
-.sgp-stockRow{
-  padding: 10px 0;
-  border-top:1px solid rgba(0,0,0,.06);
-}
-.sgp-stockCol--name{ min-width: 0; }
-.sgp-stockName{ font-weight:900; }
-.sgp-stockSub{ font-size:12px; opacity:.7; margin-top:2px; }
-.sgp-stockHint{ margin-top:6px; font-size:12px; }
-.sgp-stockHint.is-bad{ opacity: .95; }
-.sgp-stockHint.is-warn{ opacity: .85; }
-
-@media (max-width: 1100px){
-  .sgp-stockHead,
-  .sgp-stockRow{
-    grid-template-columns: 1fr 80px 80px 120px 100px;
-  }
-}
-
-
-
-
-
-
-/* =========================
-   SGP Cards: premium by default
-========================= */
-
-:root{
-  --sgp-goodTint: rgba(34,197,94,.10);
-  --sgp-goodBd: rgba(34,197,94,.22);
-
-  --sgp-warnTint: rgba(245,158,11,.10);
-  --sgp-warnBd: rgba(245,158,11,.22);
-
-  --sgp-badTint: rgba(239,68,68,.10);
-  --sgp-badBd: rgba(239,68,68,.22);
-
-  --sgp-neutralTint: rgba(15,23,42,.045);
-}
-
-/* base premium glass + soft gradients */
-.sgp-card{
-  position: relative;
-  border-radius: var(--sgp-radius-card);
-  border: 1px solid rgba(0,0,0,.10);
-  background:
-    radial-gradient(1200px 600px at 20% -10%, var(--sgp-neutralTint), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(0,0,0,.035), rgba(0,0,0,0) 55%),
-    rgba(255,255,255,.86);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.70), 0 10px 30px rgba(0,0,0,.07);
-  overflow: hidden;
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
-}
-
-/* sheen */
-.sgp-card::before{
-  content:"";
-  position:absolute;
-  inset:-2px;
-  border-radius: calc(var(--sgp-radius-card) + 2px);
-  background:
-    radial-gradient(650px 200px at 18% 0%, rgba(255,255,255,.58), rgba(255,255,255,0) 62%),
-    radial-gradient(650px 220px at 86% 10%, rgba(255,255,255,.38), rgba(255,255,255,0) 66%);
-  opacity:.26;
-  pointer-events:none;
-  transition: opacity .16s ease, transform .16s ease;
-}
-
-.sgp-card.is-lift:hover{
-  transform: translateY(-1px);
-  border-color: rgba(0,0,0,.14);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.70), 0 16px 42px rgba(0,0,0,.10);
-}
-.sgp-card.is-lift:hover::before{
-  opacity:.40;
-  transform: translateY(-1px);
-}
-
-.sgp-card:focus-within{
-  border-color: rgba(0,0,0,.16);
-  box-shadow: 0 0 0 3px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.70), 0 16px 42px rgba(0,0,0,.10);
-}
-
-/* variants */
-.sgp-card--subtle{
-  background:
-    radial-gradient(1000px 520px at 25% -10%, rgba(0,0,0,.04), rgba(0,0,0,0) 60%),
-    rgba(255,255,255,.72);
-}
-.sgp-card--outline{
-  background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(0,0,0,.03), rgba(0,0,0,0) 60%),
-    transparent;
-  box-shadow: none;
-  border-color: rgba(0,0,0,.18);
-}
-
-/* tones (soft tinted) */
-.sgp-card.is-good{
-  border-color: var(--sgp-goodBd);
-  background:
-    radial-gradient(1200px 600px at 20% -10%, var(--sgp-goodTint), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(0,0,0,.03), rgba(0,0,0,0) 55%),
-    rgba(255,255,255,.86);
-}
-.sgp-card.is-warn{
-  border-color: var(--sgp-warnBd);
-  background:
-    radial-gradient(1200px 600px at 20% -10%, var(--sgp-warnTint), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(0,0,0,.03), rgba(0,0,0,0) 55%),
-    rgba(255,255,255,.86);
-}
-.sgp-card.is-bad{
-  border-color: var(--sgp-badBd);
-  background:
-    radial-gradient(1200px 600px at 20% -10%, var(--sgp-badTint), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(0,0,0,.03), rgba(0,0,0,0) 55%),
-    rgba(255,255,255,.86);
-}
-
-/* card inner structure */
-.sgp-card__header{
-  padding: var(--sgp-pad-card);
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap: 12px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
-.sgp-card__title{
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-}
-.sgp-card__sub{
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: .72;
-}
-.sgp-card__content{
-  padding: 0 var(--sgp-pad-card) var(--sgp-pad-card);
-}
-.sgp-card__footer{
-  padding: var(--sgp-pad-card);
-  border-top: 1px solid rgba(0,0,0,.06);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-}
-
-/* reduce motion */
-@media (prefers-reduced-motion: reduce){
-  .sgp-card{ transition:none !important; }
-  .sgp-card.is-lift:hover{ transform:none !important; }
-  .sgp-card::before{ transition:none !important; }
-}
-
-
-
-/* =========================
-   SGP Status (corner badge)
-========================= */
-
-.sgp-card__headerLeft { min-width: 0; }
-.sgp-card__headerRight { flex: 0 0 auto; display:flex; align-items:center; gap:8px; }
-
-/* badge */
-.sgp-status{
-  height: 32px;
-  padding: 0 10px 0 8px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.10);
-  background: rgba(255,255,255,.78);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.70);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  user-select: none;
-  font-weight: 900;
-  font-size: 12px;
-  opacity: .96;
-  line-height: 1;
-}
-
-.sgp-status.is-compact{
-  height: 28px;
-  padding: 0 8px 0 6px;
-  border-radius: 13px;
-  font-size: 11px;
-}
-
-.sgp-status__icon{
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-weight: 1000;
-  opacity: .92;
-}
-
-.sgp-status__txt{
-  opacity:.86;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
-
-/* tones */
-.sgp-status--ok{
-  border-color: rgba(34,197,94,.22);
-}
-.sgp-status--ok .sgp-status__icon{
-  border: 1px solid rgba(34,197,94,.22);
-  background: rgba(34,197,94,.10);
-  color: rgba(22,163,74,.95);
-}
-
-.sgp-status--warn{
-  border-color: rgba(245,158,11,.22);
-}
-.sgp-status--warn .sgp-status__icon{
-  border: 1px solid rgba(245,158,11,.22);
-  background: rgba(245,158,11,.10);
-  color: rgba(245,158,11,.95);
-}
-
-.sgp-status--bad{
-  border-color: rgba(239,68,68,.22);
-}
-.sgp-status--bad .sgp-status__icon{
-  border: 1px solid rgba(239,68,68,.22);
-  background: rgba(239,68,68,.10);
-  color: rgba(239,68,68,.95);
-}
-
-.sgp-status--dev{
-  border-color: rgba(0,0,0,.14);
-}
-.sgp-status--dev .sgp-status__icon{
-  width: 22px;
-  height: 18px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,.14);
-  background: rgba(0,0,0,.06);
-  color: rgba(0,0,0,.70);
-  font-size: 9px;
-  letter-spacing: .06em;
-}
-
-/* =========================
-   SGP Chart theme variables
-========================= */
-
-:root{
-  --sgp-chart-pos: rgba(34,197,94,.65);
-  --sgp-chart-neg: rgba(239,68,68,.55);
-  --sgp-chart-neutral: rgba(0,0,0,.70);
-  --sgp-chart-grid: rgba(0,0,0,.08);
-  --sgp-chart-axis: rgba(0,0,0,.55);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===========================
-   SGP Premium Standard (global)
-=========================== */
-
-:root{
-    /* body (можешь оставить Inter или тоже сделать system) */
-  --sgp-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
-  /* headings = строго системный */
+  /* headings font (system-like, per your request) */
   --sgp-font-head: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-
-   
   /* radii */
   --sgp-r-xl: 22px;
   --sgp-r-lg: 18px;
@@ -1098,115 +28,14 @@
   /* borders/shadows */
   --sgp-bd: rgba(15,23,42,.10);
   --sgp-bd2: rgba(15,23,42,.08);
-  --sgp-in: inset 0 1px 0 rgba(255,255,255,.70);
-  --sgp-shadow: 0 10px 26px rgba(15,23,42,.06);
-  --sgp-shadow2: 0 16px 40px rgba(15,23,42,.10);
-  --sgp-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
-
-  /* tones */
-  --sgp-good-tint: rgba(34,197,94,.08);
-  --sgp-good-bd: rgba(34,197,94,.18);
-
-  --sgp-warn-tint: rgba(245,158,11,.08);
-  --sgp-warn-bd: rgba(245,158,11,.18);
-
-  --sgp-bad-tint: rgba(239,68,68,.08);
-  --sgp-bad-bd: rgba(239,68,68,.18);
-
-  /* charts (soft) */
-  --sgp-chart-grid: rgba(15,23,42,.08);
-  --sgp-chart-axis: rgba(15,23,42,.55);
-  --sgp-chart-revenue: rgba(59,130,246,.55);
-  --sgp-chart-cost: rgba(148,163,184,.75);
-  --sgp-chart-cum: rgba(15,23,42,.45);
-  --sgp-chart-good: rgba(16,185,129,.45);
-  --sgp-chart-bad: rgba(239,68,68,.45);
-}
-
-/* Base card */
-.sgp-card{
-  border: 1px solid var(--sgp-bd2);
-  border-radius: var(--sgp-r-xl);
-  background: var(--sgp-card-bg);
-  box-shadow: var(--sgp-in);
-  overflow:hidden;
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
-}
-.sgp-card.is-lift:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--sgp-glow), var(--sgp-in);
-  border-color: rgba(15,23,42,.12);
-  background: var(--sgp-card-bg2);
-}
-
-/* Card tone */
-.sgp-card.tone-good{ border-color: var(--sgp-good-bd); background: linear-gradient(0deg, var(--sgp-good-tint), var(--sgp-card-bg)); }
-.sgp-card.tone-warn{ border-color: var(--sgp-warn-bd); background: linear-gradient(0deg, var(--sgp-warn-tint), var(--sgp-card-bg)); }
-.sgp-card.tone-bad { border-color: var(--sgp-bad-bd);  background: linear-gradient(0deg, var(--sgp-bad-tint),  var(--sgp-card-bg)); }
-
-/* Icon-only badge (top-right) */
-.sgp-health{
-  width:28px; height:28px;
-  border-radius: 999px;
-  border: 0;
-  background: rgba(15,23,42,.04);
-  display:inline-flex; align-items:center; justify-content:center;
-  cursor: default;
-  box-shadow: var(--sgp-in);
-  opacity:.92;
-}
-.sgp-health:hover{ opacity:1; }
-.sgp-health[data-tone="good"]{ background: var(--sgp-good-tint); color: rgba(22,163,74,.95); }
-.sgp-health[data-tone="warn"]{ background: var(--sgp-warn-tint); color: rgba(245,158,11,.95); }
-.sgp-health[data-tone="bad"] { background: var(--sgp-bad-tint);  color: rgba(239,68,68,.95); }
-
-/* Icon buttons (no border, soft active) */
-.sgp-iconbtn{
-  width:34px; height:34px;
-  border-radius: 14px;
-  border:0;
-  background: transparent;
-  display:inline-flex; align-items:center; justify-content:center;
-  cursor:pointer;
-  opacity:.88;
-  transition: background .14s ease, opacity .14s ease, transform .14s ease;
-}
-.sgp-iconbtn:hover{ opacity:1; background: rgba(15,23,42,.04); }
-.sgp-iconbtn.is-active{ background: rgba(15,23,42,.06); opacity:1; }
-
-
-
-
-
-
-/* =========================================================
-   SGP ETALON BLOCK (soft cards + correct fonts + tone logic)
-   Paste whole block into src/styles/sg-premium.scss (bottom)
-========================================================= */
-
-/* ---------- Tokens (soft, like screenshot) ---------- */
-:root{
-  --sgp-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
-  --sgp-r-xl: 22px;
-  --sgp-r-lg: 18px;
-  --sgp-r-md: 14px;
-  --sgp-r-sm: 12px;
-
-  --sgp-bd: rgba(15,23,42,.10);
-  --sgp-bd2: rgba(15,23,42,.08);
   --sgp-bd-strong: rgba(15,23,42,.14);
 
-  --sgp-card-bg: rgba(255,255,255,.88);
-  --sgp-card-bg2: rgba(255,255,255,.96);
-  --sgp-soft: rgba(15,23,42,.03);
-
   --sgp-in: inset 0 1px 0 rgba(255,255,255,.70);
   --sgp-shadow: 0 10px 26px rgba(15,23,42,.06);
   --sgp-shadow2: 0 16px 40px rgba(15,23,42,.10);
   --sgp-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
 
-  /* tints for tone logic */
+  /* tone tints (soft like screenshot) */
   --sgp-goodTint: rgba(34,197,94,.08);
   --sgp-goodBd: rgba(34,197,94,.18);
 
@@ -1218,7 +47,7 @@
 
   --sgp-neutralTint: rgba(15,23,42,.035);
 
-  /* chart soft colors */
+  /* charts */
   --sgp-chart-grid: rgba(15,23,42,.08);
   --sgp-chart-axis: rgba(15,23,42,.55);
   --sgp-chart-revenue: rgba(59,130,246,.45);
@@ -1228,26 +57,45 @@
   --sgp-chart-bad: rgba(239,68,68,.40);
 }
 
-/* ---------- Typography base ---------- */
+
+/* -------------------------
+   1) Typography scope
+------------------------- */
 .sgp-page,
 .sgp-page *{
   font-family: var(--sgp-font);
 }
 
-.sgp-page__title{
-  font-weight: 900;
-  letter-spacing: -0.02em;
+.sgp-page__title,
+.sgp-card__title,
+.sgp-toprow__title,
+.sgp-stockName,
+.sgp-metric__v{
+  font-family: var(--sgp-font-head);
 }
+
+.sgp-page__title{
+  font-size: 20px;
+  font-weight: 800; /* not crazy bold */
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
 .sgp-page__subtitle{
+  margin-top: 6px;
   font-size: 13px;
   opacity: .75;
 }
 
-.sgp-muted{ opacity:.72; font-size:12px; }
+.sgp-muted{
+  opacity:.72;
+  font-size:12px;
+}
 
-/* =========================================================
-   Cards (sgp-card) — soft glass + lift like screenshot
-========================================================= */
+
+/* -------------------------
+   2) Card (soft glass + lift)
+------------------------- */
 .sgp-card{
   position: relative;
   border: 1px solid var(--sgp-bd2);
@@ -1261,7 +109,7 @@
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
 
-/* sheen */
+/* subtle sheen */
 .sgp-card::before{
   content:"";
   position:absolute;
@@ -1275,7 +123,7 @@
   transition: opacity .16s ease, transform .16s ease;
 }
 
-/* lift on hover */
+/* hover lift */
 .sgp-card.is-lift:hover,
 .sgp-wheel .sgp-card:hover{
   transform: translateY(-1px);
@@ -1297,7 +145,7 @@
   box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in);
 }
 
-/* inner structure */
+/* inner layout */
 .sgp-card__header{
   padding:14px 14px 10px;
   display:flex;
@@ -1308,7 +156,7 @@
 }
 .sgp-card__title{
   font-size:16px;
-  font-weight:900;
+  font-weight:800;
   letter-spacing:-0.01em;
 }
 .sgp-card__sub{
@@ -1326,15 +174,9 @@
   gap:12px;
 }
 
-/* =========================================================
-   Tone logic for cards (when inside there is alert/warn/etc)
-   Use on card root: .tone-good / .tone-warn / .tone-bad / .tone-neutral
-========================================================= */
+/* card tones (apply on card root) */
 .sgp-card.tone-neutral{
-  border-color: rgba(15,23,42,.10);
-  background:
-    radial-gradient(1200px 600px at 18% -12%, rgba(15,23,42,.03), rgba(0,0,0,0) 60%),
-    var(--sgp-card-bg);
+  border-color: var(--sgp-bd2);
 }
 .sgp-card.tone-good{
   border-color: var(--sgp-goodBd);
@@ -1355,10 +197,10 @@
     var(--sgp-card-bg);
 }
 
-/* =========================================================
-   Hint / Comment (bottom message blocks)
-   Use: <div class="sgp-hint tone-good|tone-warn|tone-bad|tone-neutral">
-========================================================= */
+
+/* -------------------------
+   3) Hint / comment blocks
+------------------------- */
 .sgp-hint{
   border-radius: 16px;
   border:1px solid rgba(15,23,42,.10);
@@ -1366,9 +208,10 @@
   box-shadow: var(--sgp-in);
   padding:10px 12px;
   font-size:13px;
-  font-weight:800;
+  font-weight:700; /* not super bold */
   line-height:1.25;
 }
+
 .sgp-hint.tone-neutral{
   border-color: rgba(15,23,42,.10);
   background: linear-gradient(0deg, rgba(15,23,42,.03), rgba(255,255,255,.78));
@@ -1386,9 +229,10 @@
   background: linear-gradient(0deg, var(--sgp-badTint), rgba(255,255,255,.80));
 }
 
-/* =========================================================
-   Segmented + tabs (like screenshot)
-========================================================= */
+
+/* -------------------------
+   4) Segmented controls (NO dark active, NO white text)
+------------------------- */
 .sgp-seg{
   display:inline-flex;
   gap:6px;
@@ -1398,39 +242,41 @@
   background: rgba(255,255,255,.70);
   box-shadow: var(--sgp-in);
 }
+
 .sgp-seg__btn{
   height:32px;
   padding:0 12px;
   border-radius:999px;
   border:1px solid transparent;
   background:transparent;
-  font-weight:900;
+  font-weight:700;        /* less bold */
+  font-size:13px;
+  color: rgba(15,23,42,.86);
   cursor:pointer;
-  opacity:.88;
+  opacity:.92;
   transition: background .14s ease, box-shadow .14s ease, border-color .14s ease, opacity .14s ease;
 }
+
 .sgp-seg__btn:hover{
   opacity:1;
   background: rgba(15,23,42,.03);
 }
+
 .sgp-seg__btn.is-active{
-  background: rgba(15,23,42,.06);
-  border-color: rgba(15,23,42,.10);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sgp-in);
+  background: rgba(255,255,255,.92);
+  color: rgba(15,23,42,.92);
+  border-color: rgba(15,23,42,.12);
+  box-shadow:0 10px 22px rgba(15,23,42,.06), var(--sgp-in);
   opacity:1;
 }
 
-/* icons group (R/C/P/Σ) */
-.sgp-iconGroup{
-  display:inline-flex;
-  gap:6px;
-  padding:4px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.10);
-  background: rgba(255,255,255,.70);
-  box-shadow: var(--sgp-in);
-}
-.sgpIconBtn, /* legacy */
+
+/* -------------------------
+   5) Icon buttons group (R/C/P/Σ)
+------------------------- */
+.sgp-chartctl__icons{ display:flex; gap:8px; }
+
+.sgpIconBtn,
 .sgp-iconbtn{
   width:34px;
   height:34px;
@@ -1441,10 +287,12 @@
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  font-weight:900;
+  font-weight:700; /* less bold */
+  color: rgba(15,23,42,.80);
   opacity:.92;
   transition: transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease, opacity .14s ease;
 }
+
 .sgpIconBtn:hover,
 .sgp-iconbtn:hover{
   opacity:1;
@@ -1453,24 +301,20 @@
   border-color: rgba(15,23,42,.12);
   background: rgba(255,255,255,.96);
 }
+
 .sgpIconBtn.is-active,
 .sgp-iconbtn.is-active{
-  background: rgba(15,23,42,.06);
+  background: rgba(15,23,42,.05);
   border-color: rgba(15,23,42,.14);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sgp-in);
+  box-shadow:0 10px 22px rgba(15,23,42,.06), var(--sgp-in);
+  color: rgba(15,23,42,.92);
   opacity:1;
 }
 
-/* one-row header controls (при выигрыше/при выдаче + icons) */
-.sgp-chartbar{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
 
-/* footer facts */
+/* -------------------------
+   6) Pills (footer facts etc.)
+------------------------- */
 .sgp-pill{
   display:inline-flex;
   align-items:center;
@@ -1480,6 +324,7 @@
   border:1px solid rgba(15,23,42,.10);
   background: rgba(255,255,255,.70);
   font-size:12px;
+  box-shadow: var(--sgp-in);
 }
 .sgp-facts{
   display:flex;
@@ -1488,14 +333,16 @@
   justify-content:flex-end;
 }
 
-/* =========================================================
-   Metrics inside card — “mini-cards” like screenshot
-========================================================= */
+
+/* -------------------------
+   7) Metrics mini-cards (like screenshot)
+------------------------- */
 .sgp-metrics{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap:10px;
 }
+
 .sgp-metric{
   border:1px solid rgba(15,23,42,.08);
   background: rgba(255,255,255,.78);
@@ -1504,26 +351,35 @@
   box-shadow: var(--sgp-in);
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
+
 .sgp-metric:hover{
   transform: translateY(-1px);
   box-shadow: var(--sgp-shadow), var(--sgp-in);
   border-color: rgba(15,23,42,.12);
   background: rgba(255,255,255,.92);
 }
-.sgp-metric__k{ font-size:12px; opacity:.7; font-weight:700; }
+
+.sgp-metric__k{
+  font-size:12px;
+  opacity:.7;
+  font-weight:600;
+}
+
 .sgp-metric__v{
   margin-top:6px;
   font-size:16px;
-  font-weight:950;
+  font-weight:800;
   letter-spacing:-0.01em;
 }
+
 @media (max-width:1100px){
   .sgp-metrics{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* =========================================================
-   Toplist + KV (aside)
-========================================================= */
+
+/* -------------------------
+   8) KV + toplist (aside)
+------------------------- */
 .sgp-kv__row{
   display:flex;
   justify-content:space-between;
@@ -1535,9 +391,9 @@
 
 .sgp-toplist{ display:flex; flex-direction:column; gap:10px; }
 .sgp-toprow{ display:flex; gap:10px; align-items:flex-start; }
-.sgp-toprow__idx{ width:18px; opacity:.6; font-weight:900; }
+.sgp-toprow__idx{ width:18px; opacity:.6; font-weight:700; }
 .sgp-toprow__mid{ flex:1; min-width:0; }
-.sgp-toprow__title{ font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sgp-toprow__title{ font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sgp-toprow__sub{ font-size:12px; opacity:.7; margin-top:2px; }
 .sgp-toprow__bar{
   margin-top:6px;
@@ -1551,11 +407,12 @@
   background: rgba(15,23,42,.55);
   border-radius:999px;
 }
-.sgp-toprow__val{ font-weight:900; }
+.sgp-toprow__val{ font-weight:800; }
 
-/* =========================================================
-   Stock table + row-level alert tint (card has tone, row has gradient)
-========================================================= */
+
+/* -------------------------
+   9) Stock table + row-level soft tint
+------------------------- */
 .sgp-stockHead,
 .sgp-stockRow{
   display:grid;
@@ -1563,25 +420,31 @@
   gap:10px;
   align-items:center;
 }
+
 .sgp-stockHead{
   padding:8px 0;
   font-size:12px;
   opacity:.7;
 }
+
 .sgp-stockRow{
   padding:10px 0;
   border-top:1px solid rgba(15,23,42,.06);
 }
+
 .sgp-stockCol--name{ min-width:0; }
-.sgp-stockName{ font-weight:950; }
+.sgp-stockName{ font-weight:800; }
 .sgp-stockSub{ font-size:12px; opacity:.7; margin-top:2px; }
 .sgp-stockHint{ margin-top:6px; font-size:12px; }
 .sgp-stockHint.is-bad{ opacity:.95; }
 .sgp-stockHint.is-warn{ opacity:.85; }
 
-/* row tones */
-.sgp-stockRow.tone-out{ background: linear-gradient(90deg, var(--sgp-badTint), transparent 60%); }
-.sgp-stockRow.tone-low{ background: linear-gradient(90deg, var(--sgp-warnTint), transparent 60%); }
+.sgp-stockRow.tone-out{
+  background: linear-gradient(90deg, var(--sgp-badTint), transparent 60%);
+}
+.sgp-stockRow.tone-low{
+  background: linear-gradient(90deg, var(--sgp-warnTint), transparent 60%);
+}
 
 @media (max-width:1100px){
   .sgp-stockHead,
@@ -1590,9 +453,10 @@
   }
 }
 
-/* =========================================================
-   Inputs (soft) — if you use sgp-input in Wheel date etc
-========================================================= */
+
+/* -------------------------
+   10) Inputs (Wheel date inputs use .sgp-input)
+------------------------- */
 .sgp-input{
   height:42px;
   border-radius:14px;
@@ -1623,7 +487,10 @@
   gap:8px;
 }
 
-/* reduced motion */
+
+/* -------------------------
+   11) Reduced motion
+------------------------- */
 @media (prefers-reduced-motion: reduce){
   .sgp-card,
   .sgp-metric,
