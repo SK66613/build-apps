@@ -675,3 +675,82 @@
 .sgp-wheel .sgp-card + .sgp-card{
   margin-top: 14px;
 }
+
+/* =========================================================
+   Wheel — corner status icons ( ! ✓ DEV etc )
+========================================================= */
+
+.sgp-wheel .sgp-card__headerRight{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* базовый круг */
+.sgp-wheel .sgp-health,
+.sgp-wheel .sgp-status{
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  font-weight:700;
+  border:1px solid rgba(15,23,42,.12);
+  background: rgba(15,23,42,.04);
+  color: rgba(15,23,42,.75);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  transition:
+    transform .14s cubic-bezier(.2,.9,.2,1.2),
+    background .14s ease,
+    border-color .14s ease,
+    box-shadow .14s ease;
+  cursor:default;
+}
+
+/* hover лёгкий lift */
+.sgp-wheel .sgp-health:hover,
+.sgp-wheel .sgp-status:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+/* === tones === */
+
+/* good (✓) */
+.sgp-wheel .sgp-health[data-tone="good"],
+.sgp-wheel .sgp-status--ok{
+  background: rgba(34,197,94,.10);
+  border-color: rgba(34,197,94,.25);
+  color: rgba(22,163,74,.95);
+}
+
+/* warn (!) */
+.sgp-wheel .sgp-health[data-tone="warn"],
+.sgp-wheel .sgp-status--warn{
+  background: rgba(245,158,11,.10);
+  border-color: rgba(245,158,11,.25);
+  color: rgba(245,158,11,.95);
+}
+
+/* bad (!) */
+.sgp-wheel .sgp-health[data-tone="bad"],
+.sgp-wheel .sgp-status--bad{
+  background: rgba(239,68,68,.10);
+  border-color: rgba(239,68,68,.25);
+  color: rgba(239,68,68,.95);
+}
+
+/* DEV badge (квадратный вид) */
+.sgp-wheel .sgp-status--dev{
+  width:auto;
+  height:24px;
+  padding:0 8px;
+  border-radius:10px;
+  font-size:10px;
+  letter-spacing:.06em;
+  background: rgba(15,23,42,.06);
+  border-color: rgba(15,23,42,.18);
+  color: rgba(15,23,42,.7);
+}
