@@ -98,35 +98,58 @@
 
 
 /* -------------------------
-   2) Card (soft glass + premium air)
+   2) Card (PREMIUM glass + halo + sheen)
 ------------------------- */
 .sgp-card{
   position: relative;
   border: 1px solid var(--sgp-bd2);
   border-radius: var(--sgp-r-xl);
+
+  /* стекло + мягкая “подсветка” от фона */
   background:
-    radial-gradient(1200px 600px at 18% -12%, var(--sgp-neutralTint), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 520px at 112% 0%, rgba(15,23,42,.03), rgba(0,0,0,0) 55%),
+    radial-gradient(900px 520px at 110% -10%, rgba(15,23,42,.035), rgba(0,0,0,0) 58%),
+    radial-gradient(900px 520px at 10% -18%, rgba(15,23,42,.030), rgba(0,0,0,0) 62%),
     var(--sgp-card-bg);
 
-  /* NEW: add base "air" shadow to look premium even without hover */
-  box-shadow: var(--sgp-in), var(--sgp-shadow);
+  /* ДОРОГО: 1) внутренний блик 2) внешняя “аура” */
+  box-shadow:
+    var(--sgp-in),
+    0 1px 0 rgba(255,255,255,.55),
+    0 10px 26px rgba(15,23,42,.07),
+    0 1px 0 rgba(15,23,42,.05);
 
   overflow: hidden;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
 
-/* subtle sheen */
+/* ДОРОГО: тонкий “ореол” по краю (как у айфоновских карточек) */
+.sgp-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius: inherit;
+  pointer-events:none;
+
+  /* 1px rim + мягкий edge */
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.55),
+    inset 0 0 0 2px rgba(255,255,255,.12);
+  opacity:.55;
+}
+
+/* ДОРОГО: блик сверху (реально читаемый) */
 .sgp-card::before{
   content:"";
   position:absolute;
   inset:-2px;
   border-radius: calc(var(--sgp-r-xl) + 2px);
-  background:
-    radial-gradient(650px 200px at 18% 0%, rgba(255,255,255,.62), rgba(255,255,255,0) 62%),
-    radial-gradient(650px 220px at 86% 10%, rgba(255,255,255,.42), rgba(255,255,255,0) 66%);
-  opacity:.26; /* NEW: slightly stronger */
   pointer-events:none;
+
+  background:
+    radial-gradient(700px 220px at 18% 0%, rgba(255,255,255,.72), rgba(255,255,255,0) 62%),
+    radial-gradient(720px 240px at 86% 8%, rgba(255,255,255,.48), rgba(255,255,255,0) 66%),
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 38%);
+  opacity:.22;
   transition: opacity .16s ease, transform .16s ease;
 }
 
@@ -136,75 +159,35 @@
   transform: translateY(-1px);
   border-color: rgba(15,23,42,.12);
 
-  /* NEW: keep premium glow + deeper hover air */
-  box-shadow: var(--sgp-in), var(--sgp-glow);
+  /* ДОРОГО: чётче glow + глубина */
+  box-shadow:
+    var(--sgp-in),
+    0 1px 0 rgba(255,255,255,.60),
+    0 16px 40px rgba(15,23,42,.10),
+    0 0 0 1px rgba(15,23,42,.10);
 
   background:
-    radial-gradient(1200px 600px at 18% -12%, rgba(15,23,42,.03), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 520px at 112% 0%, rgba(15,23,42,.03), rgba(0,0,0,0) 55%),
+    radial-gradient(900px 520px at 110% -10%, rgba(15,23,42,.035), rgba(0,0,0,0) 58%),
+    radial-gradient(900px 520px at 10% -18%, rgba(15,23,42,.030), rgba(0,0,0,0) 62%),
     var(--sgp-card-bg2);
 }
 .sgp-card.is-lift:hover::before,
 .sgp-wheel .sgp-card:hover::before{
-  opacity:.38;          /* NEW */
+  opacity:.34;
   transform: translateY(-1px);
 }
-
-.sgp-card:focus-within{
-  border-color: var(--sgp-bd-strong);
-  box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in), var(--sgp-shadow);
-}
-
-/* inner layout */
-.sgp-card__header{
-  padding:14px 14px 10px;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:12px;
-  border-bottom:1px solid rgba(15,23,42,.06);
-}
-.sgp-card__title{
-  font-size:16px;
-  font-weight:800;
-  letter-spacing:-0.01em;
-}
-.sgp-card__sub{
-  margin-top:4px;
-  font-size:12px;
+.sgp-card.is-lift:hover::after,
+.sgp-wheel .sgp-card:hover::after{
   opacity:.72;
 }
-.sgp-card__content{ padding:12px 14px 14px; }
-.sgp-card__footer{
-  padding:12px 14px;
-  border-top:1px solid rgba(15,23,42,.06);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
 
-/* card tones (apply on card root) */
-.sgp-card.tone-neutral{
-  border-color: var(--sgp-bd2);
-}
-.sgp-card.tone-good{
-  border-color: var(--sgp-goodBd);
-  background:
-    radial-gradient(1200px 600px at 18% -12%, var(--sgp-goodTint), rgba(0,0,0,0) 60%),
-    var(--sgp-card-bg);
-}
-.sgp-card.tone-warn{
-  border-color: var(--sgp-warnBd);
-  background:
-    radial-gradient(1200px 600px at 18% -12%, var(--sgp-warnTint), rgba(0,0,0,0) 60%),
-    var(--sgp-card-bg);
-}
-.sgp-card.tone-bad{
-  border-color: var(--sgp-badBd);
-  background:
-    radial-gradient(1200px 600px at 18% -12%, var(--sgp-badTint), rgba(0,0,0,0) 60%),
-    var(--sgp-card-bg);
+/* focus */
+.sgp-card:focus-within{
+  border-color: var(--sgp-bd-strong);
+  box-shadow:
+    var(--sgp-in),
+    0 0 0 3px rgba(15,23,42,.06),
+    0 12px 34px rgba(15,23,42,.08);
 }
 
 
