@@ -35,11 +35,18 @@ export function SgCard({
 export function SgCardHeader({
   className,
   children,
+  right,
 }: {
   className?: string;
   children: React.ReactNode;
+  right?: React.ReactNode;
 }) {
-  return <div className={clsx('sgp-card__header', className)}>{children}</div>;
+  return (
+    <div className={clsx('sgp-card__header', className)}>
+      <div className="sgp-card__headerLeft">{children}</div>
+      {right ? <div className="sgp-card__headerRight">{right}</div> : null}
+    </div>
+  );
 }
 
 export function SgCardTitle({
