@@ -1,17 +1,32 @@
 import React from 'react';
 import clsx from 'clsx';
 
+type Tone = 'neutral' | 'good' | 'warn' | 'bad';
+type Variant = 'default' | 'subtle' | 'outline';
+
 export function SgCard({
   className,
   children,
   variant = 'default',
+  tone = 'neutral',
+  lift = true,
 }: {
   className?: string;
   children: React.ReactNode;
-  variant?: 'default' | 'subtle' | 'outline';
+  variant?: Variant;
+  tone?: Tone;
+  lift?: boolean;
 }) {
   return (
-    <section className={clsx('sgp-card', `sgp-card--${variant}`, className)}>
+    <section
+      className={clsx(
+        'sgp-card',
+        `sgp-card--${variant}`,
+        tone !== 'neutral' && `is-${tone}`,
+        lift && 'is-lift',
+        className,
+      )}
+    >
       {children}
     </section>
   );
