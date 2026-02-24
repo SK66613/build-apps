@@ -3,7 +3,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
-import { Card, Input, Button } from '../components/ui';
+import { Card, Input } from '../components/ui';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -17,23 +17,13 @@ import {
 } from 'recharts';
 
 /**
- * SALES — Cabinet “дорого как Wheel”
- * - Премиум карточки: glass + lift + аккуратный hover + подсветка “не дешевая”
- * - Шиммер-строки (переливаются) для таблиц/строк метрик
- * - Under-chart tabs как у колеса
- * - Collapsible секции (нажатием сворачивать/разворачивать)
- * - Alerts: красный восклицательный знак сверху справа (не “кислотный”)
+ * SALES — “one-to-one” по ощущению с Wheel:
+ * - мягкие карточки/бордеры/hover как в “Складе”
+ * - график: Area + Line(штрих) + Bar(цилиндры) + такие же кнопки накладкой
+ * - без “лишних” осей/кумулятивов (только дневные значения)
+ * - цвета оставляем “как у тебя в оригинале” (var(--accent), var(--accent2))
  *
- * DEV (для разработчика): сейчас endpoints — заглушки / mock fallback.
- * Потом просто заменить queryFn на реальные роуты воркера.
- *
- * План endpoints (потом прикрутим в worker):
- *  - GET  /api/cabinet/apps/:appId/sales/kpi?from&to
- *  - GET  /api/cabinet/apps/:appId/sales/timeseries?from&to
- *  - GET  /api/cabinet/apps/:appId/sales/funnel?from&to
- *  - GET  /api/cabinet/apps/:appId/sales/cashiers?from&to
- *  - GET  /api/cabinet/apps/:appId/sales/customers?from&to
- *  - GET  /api/cabinet/apps/:appId/sales/live?from&to
+ * DEV: сейчас данные mock, потом просто заменить queryFn на реальные роуты воркера.
  */
 
 type SalesRange = { from: string; to: string };
@@ -41,7 +31,7 @@ type SalesRange = { from: string; to: string };
 type SalesSettings = {
   coin_value_cents?: number;
   currency?: string; // RUB|USD|EUR
-  cashback_pct?: number; // optional
+  cashback_pct?: number;
 };
 
 type SalesKPI = {
@@ -52,8 +42,7 @@ type SalesKPI = {
   cashback_issued_coins: number;
   redeem_confirmed_coins: number;
 
-  // optional quality signals (alerts)
-  pending_confirms?: number; // сколько операций “зависло”
+  pending_confirms?: number;
   cancel_rate?: number; // 0..1
 };
 
@@ -78,13 +67,13 @@ type SalesFunnel = {
 };
 
 type CashierRow = {
-  cashier_label: string; // name or tg id
+  cashier_label: string;
   orders: number;
   revenue_cents: number;
   confirm_rate: number; // 0..1
   cancel_rate: number; // 0..1
   median_confirm_minutes: number;
-  alerts?: string[]; // for UI badges
+  alerts?: string[];
 };
 
 type CustomerRow = {
@@ -92,7 +81,7 @@ type CustomerRow = {
   orders: number;
   revenue_cents: number;
   ltv_cents: number;
-  last_seen: string; // YYYY-MM-DD
+  last_seen: string;
   segment: 'new' | 'repeat' | 'saver' | 'spender';
 };
 
@@ -178,50 +167,17 @@ function fmtPct(x: number | null | undefined, d = '—') {
   return `${(Number(x) * 100).toFixed(1)}%`;
 }
 
-/** ===== chart helpers (дорого как wheel) ===== */
-function compactMoneyTickFromCents(v: any, currency: string) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '';
-  const sym = currencyLabel(currency);
-  const units = n / 100; // cents -> money
-
-  const abs = Math.abs(units);
-  const sign = units < 0 ? '-' : '';
-
-  if (abs >= 1_000_000) return `${sign}${sym}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}${sym}${(abs / 1_000).toFixed(1)}k`;
-  if (abs >= 100) return `${sign}${sym}${Math.round(abs)}`;
-  return `${sign}${sym}${abs.toFixed(0)}`;
+function niceMoneyTick(vCents: number) {
+  const v = Number(vCents);
+  if (!Number.isFinite(v)) return '';
+  const x = Math.round(v / 100); // rub
+  const ax = Math.abs(x);
+  if (ax >= 1_000_000) return `${(x / 1_000_000).toFixed(1)}M`;
+  if (ax >= 10_000) return `${(x / 1000).toFixed(0)}k`;
+  return String(x);
 }
 
-function domainFrom(values: number[], padRatio = 0.10): [number, number] {
-  const finite = values.filter((x) => Number.isFinite(x));
-  if (!finite.length) return [0, 1];
-
-  let min = Math.min(...finite);
-  let max = Math.max(...finite);
-
-  if (min === max) {
-    const delta = Math.max(1, Math.abs(min) * 0.12);
-    return [min - delta, max + delta];
-  }
-
-  const span = max - min;
-  const pad = span * padRatio;
-
-  min = min - pad;
-  max = max + pad;
-
-  // если есть и + и - — делаем “красиво” симметрично вокруг 0
-  if (min < 0 && max > 0) {
-    const absMax = Math.max(Math.abs(min), Math.abs(max));
-    return [-absMax * 1.02, absMax * 1.02];
-  }
-
-  return [min, max];
-}
-
-/* ====== Premium UI helpers ====== */
+/* ===== Premium UI helpers ===== */
 
 function AlertDot({ title }: { title: string }) {
   return (
@@ -258,35 +214,31 @@ function ShimmerLine({ w }: { w?: number }) {
   );
 }
 
-function Switch({
-  checked,
-  onChange,
-  disabled,
+function IconBtn({
+  title,
+  active,
+  onClick,
+  children,
 }: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  disabled?: boolean;
+  title: string;
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      className={'sgSwitch ' + (checked ? 'is-on' : 'is-off') + (disabled ? ' is-disabled' : '')}
-      onClick={(e) => {
-        if (disabled) return;
-        try {
-          (e.currentTarget as any).blur?.();
-        } catch (_) {}
-        onChange(!checked);
-      }}
-      aria-pressed={checked}
-      aria-disabled={!!disabled}
+      className={'sgIconBtn ' + (active ? 'is-active' : '')}
+      onClick={onClick}
+      title={title}
+      aria-pressed={!!active}
     >
-      <span className="sgSwitch__knob" />
+      {children}
     </button>
   );
 }
 
-/* ====== Mock data (fallback) ====== */
+/* ===== Mock data (fallback) ===== */
 
 function mkMock(range: SalesRange, settings: SalesSettings) {
   const dates = listDaysISO(range.from, range.to);
@@ -294,15 +246,14 @@ function mkMock(range: SalesRange, settings: SalesSettings) {
   let buyersBase = 40;
 
   const days: SalesDay[] = dates.map((d, i) => {
-    // gentle seasonality + noise
     const wave = Math.sin(i / 3.2) * 0.25 + 0.85;
     const orders = Math.max(8, Math.round((18 + (i % 5) * 3) * wave));
     buyersBase = Math.max(18, buyersBase + (i % 2 === 0 ? 1 : -1));
     const buyers = Math.max(10, Math.round(buyersBase * wave));
     const avg = 52000 + Math.round(14000 * Math.sin(i / 2.8)); // cents
     const revenue = Math.max(0, orders * avg);
-    const cashbackCoins = Math.round((revenue / 100) * 0.06); // fake
-    const redeemCoins = Math.round((revenue / 100) * 0.045); // fake
+    const cashbackCoins = Math.round((revenue / 100) * 0.06);
+    const redeemCoins = Math.round((revenue / 100) * 0.045);
     const net = Math.round(redeemCoins * coinCents - cashbackCoins * coinCents);
     return {
       date: d,
@@ -319,11 +270,11 @@ function mkMock(range: SalesRange, settings: SalesSettings) {
     revenue_cents: days.reduce((s, x) => s + x.revenue_cents, 0),
     orders: days.reduce((s, x) => s + x.orders, 0),
     buyers: Math.max(1, Math.round(days.reduce((s, x) => s + x.buyers, 0) / Math.max(1, days.length))),
-    repeat_rate: 0.36 + (Math.sin(days.length / 4) * 0.05),
+    repeat_rate: 0.36 + Math.sin(days.length / 4) * 0.05,
     cashback_issued_coins: days.reduce((s, x) => s + x.cashback_coins, 0),
     redeem_confirmed_coins: days.reduce((s, x) => s + x.redeem_coins, 0),
     pending_confirms: Math.round(3 + (days.length % 4)),
-    cancel_rate: 0.06 + (Math.sin(days.length / 3) * 0.01),
+    cancel_rate: 0.06 + Math.sin(days.length / 3) * 0.01,
   };
 
   const funnel: SalesFunnel = {
@@ -374,7 +325,7 @@ function mkMock(range: SalesRange, settings: SalesSettings) {
   return { kpi, days, funnel, cashiers, customers, settings };
 }
 
-/* ====== Collapsible ====== */
+/* ===== Collapsible ===== */
 
 function Collapsible({
   title,
@@ -413,28 +364,30 @@ function Collapsible({
   );
 }
 
-/* ====== Page ====== */
+/* ===== Page ===== */
 
 export default function Sales() {
   const { appId, range, setRange }: any = useAppState();
 
-  // tabs under chart
   const [tab, setTab] = React.useState<'summary' | 'funnel' | 'cashiers' | 'customers' | 'live'>('summary');
 
-  // quick range (same UX as Wheel)
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
   const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
 
-  // collapsibles
   const [openKpi, setOpenKpi] = React.useState(true);
   const [openInsights, setOpenInsights] = React.useState(true);
   const [openTop, setOpenTop] = React.useState(true);
 
-  // cost basis toggle (в Sales тоже пригодится: net от confirmed vs issued — потом)
+  // как в wheel: confirmed/issued
   const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
 
-  // settings draft (UI only, later from worker)
+  // overlay кнопки “как в колесе” (3 штуки)
+  const [showBars, setShowBars] = React.useState(true);  // “цилиндры”
+  const [showNet, setShowNet] = React.useState(true);    // “П” (profit/net)
+  const [showArea, setShowArea] = React.useState(true);  // “заливка”
+
+  // settings draft (UI only)
   const [currencyDraft, setCurrencyDraft] = React.useState('RUB');
   const [coinValueDraft, setCoinValueDraft] = React.useState('1.00');
 
@@ -454,18 +407,9 @@ export default function Sales() {
     if (kind === 'custom') return;
 
     const anchor = range?.to || new Date().toISOString().slice(0, 10);
-    if (kind === 'day') {
-      applyRange(anchor, anchor);
-      return;
-    }
-    if (kind === 'week') {
-      applyRange(isoAddDays(anchor, -6), anchor);
-      return;
-    }
-    if (kind === 'month') {
-      applyRange(isoAddDays(anchor, -29), anchor);
-      return;
-    }
+    if (kind === 'day') return applyRange(anchor, anchor);
+    if (kind === 'week') return applyRange(isoAddDays(anchor, -6), anchor);
+    if (kind === 'month') return applyRange(isoAddDays(anchor, -29), anchor);
   }
 
   const settings: SalesSettings = React.useMemo(() => {
@@ -478,11 +422,15 @@ export default function Sales() {
     };
   }, [coinValueDraft, currencyDraft]);
 
-  // ===== queries (placeholder, but “дорого” даже в loading)
   const qAll = useQuery({
     enabled: !!appId && !!range?.from && !!range?.to,
-    queryKey: ['sales_mock', appId, range?.from, range?.to, settings.currency, settings.coin_value_cents],
+    queryKey: ['sales_mock', appId, range?.from, range?.to, settings.currency, settings.coin_value_cents, basis],
     queryFn: async () => {
+      // позже:
+      // const kpi = await apiFetch(`/api/cabinet/apps/${appId}/sales/kpi?${qs(range)}`);
+      // const ts  = await apiFetch(`/api/cabinet/apps/${appId}/sales/timeseries?${qs(range)}`);
+      // ...
+      // basis учитывать на бэке
       return mkMock(range as SalesRange, settings);
     },
     staleTime: 10_000,
@@ -558,21 +506,15 @@ export default function Sales() {
   const insights = React.useMemo(() => {
     const out: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string; dev?: string }> = [];
 
-    if (totals.net >= 0) {
-      out.push({
-        tone: 'good',
-        title: 'Net эффект положительный',
-        body: `Списание покрывает кэшбэк: ${moneyFromCent(totals.net, currency)} за период.`,
-        dev: 'DEV: net = redeem_confirmed_coins*coin_value - cashback_issued_coins*coin_value',
-      });
-    } else {
-      out.push({
-        tone: 'warn',
-        title: 'Net эффект отрицательный',
-        body: `Кэшбэк “тяжелее” списаний: ${moneyFromCent(totals.net, currency)}. Подумай о промо на списание / правилах.`,
-        dev: 'DEV: позже добавим переключатель basis=issued/confirmed и разнесём статусы',
-      });
-    }
+    out.push({
+      tone: totals.net >= 0 ? 'good' : 'warn',
+      title: totals.net >= 0 ? 'Net эффект положительный' : 'Net эффект отрицательный',
+      body:
+        totals.net >= 0
+          ? `Списание покрывает кэшбэк: ${moneyFromCent(totals.net, currency)} за период.`
+          : `Кэшбэк “тяжелее” списаний: ${moneyFromCent(totals.net, currency)}. Подумай о промо на списание / правилах.`,
+      dev: 'DEV: net = redeem_confirmed_coins*coin_value - cashback_issued_coins*coin_value',
+    });
 
     if (totals.pending > 0) {
       out.push({
@@ -583,21 +525,15 @@ export default function Sales() {
       });
     }
 
-    if (totals.repeat >= 0.35) {
-      out.push({
-        tone: 'good',
-        title: 'Повторяемость норм',
-        body: `Repeat rate: ${fmtPct(totals.repeat)}. Можно аккуратно повышать списания без потери маржи.`,
-        dev: 'DEV: repeat_rate считать по customer_tg_id: repeat / total_unique',
-      });
-    } else {
-      out.push({
-        tone: 'warn',
-        title: 'Повторяемость можно поднять',
-        body: `Repeat rate: ${fmtPct(totals.repeat)}. Дай “сладкий” повод вернуться: авто-пуш “у вас накопилось N монет”.`,
-        dev: 'DEV: сегменты клиентов + cron рассылка',
-      });
-    }
+    out.push({
+      tone: totals.repeat >= 0.35 ? 'good' : 'warn',
+      title: totals.repeat >= 0.35 ? 'Повторяемость норм' : 'Повторяемость можно поднять',
+      body:
+        totals.repeat >= 0.35
+          ? `Repeat rate: ${fmtPct(totals.repeat)}. Можно аккуратно повышать списания без потери маржи.`
+          : `Repeat rate: ${fmtPct(totals.repeat)}. Дай “сладкий” повод вернуться: авто-пуш “у вас накопилось N монет”.`,
+      dev: 'DEV: repeat_rate считать по customer_tg_id',
+    });
 
     return out.slice(0, 4);
   }, [totals.net, totals.pending, totals.repeat, currency]);
@@ -610,65 +546,43 @@ export default function Sales() {
     .sort((a, b) => (b.ltv_cents || 0) - (a.ltv_cents || 0))
     .slice(0, 6);
 
-  /** ===== улучшение графика: как в колесе, без cumulative ===== */
+  // чтобы Tooltip и серия “orders” не ломали “денежный” форматтер
   const chartData = React.useMemo(() => {
-    // basis пока UI-only: структура готова
-    // позже ты просто начнёшь отдавать net_cents_confirmed / net_cents_issued с бэка
     return (days || []).map((d: SalesDay) => ({
       ...d,
-      net_for_chart: Number(d.net_cents) || 0,
-      revenue_for_chart: Number(d.revenue_cents) || 0,
-      orders_for_chart: Number(d.orders) || 0,
+      // orders bars на отдельной оси, но tooltip покажем красиво
+      orders_count: d.orders,
     }));
   }, [days]);
-
-  const moneyDomain = React.useMemo<[number, number]>(() => {
-    const vals: number[] = [];
-    for (const r of chartData) {
-      vals.push(Number(r.revenue_for_chart));
-      vals.push(Number(r.net_for_chart));
-    }
-    return domainFrom(vals, 0.12);
-  }, [chartData]);
-
-  const ordersDomain = React.useMemo<[number, number]>(() => {
-    const vals = chartData.map((r) => Number(r.orders_for_chart) || 0);
-    const max = Math.max(1, ...vals);
-    return [0, Math.ceil(max * 1.18)];
-  }, [chartData]);
 
   return (
     <div className="sg-page salesPage">
       <style>{`
 :root{
-  --sg-r-xl: 18px;
-  --sg-r-lg: 16px;
+  /* чуть мягче, ближе к Wheel/Склад */
+  --sg-r-xl: 22px;
+  --sg-r-lg: 18px;
   --sg-r-md: 14px;
   --sg-r-sm: 12px;
-  --sg-r-xs: 10px;
 
   --sg-bd: rgba(15,23,42,.10);
   --sg-bd2: rgba(15,23,42,.08);
 
-  --sg-bg: rgba(255,255,255,.62);
-  --sg-bg2: rgba(255,255,255,.78);
-  --sg-bg3: rgba(15,23,42,.03);
+  --sg-card: rgba(255,255,255,.88);
+  --sg-card2: rgba(255,255,255,.96);
+  --sg-soft: rgba(15,23,42,.03);
 
-  --sg-sh1: 0 10px 24px rgba(15,23,42,.06);
-  --sg-sh2: 0 16px 46px rgba(15,23,42,.10);
-  --sg-in1: inset 0 1px 0 rgba(255,255,255,.56);
+  --sg-shadow: 0 10px 26px rgba(15,23,42,.06);
+  --sg-shadow2: 0 16px 40px rgba(15,23,42,.10);
+  --sg-in: inset 0 1px 0 rgba(255,255,255,.70);
 
-  --sg-ok-bg: rgba(34,197,94,.10);
-  --sg-ok-bd: rgba(34,197,94,.20);
+  --sg-warnTint: rgba(245,158,11,.08); /* как “Склад” */
+  --sg-warnBd: rgba(245,158,11,.18);
 
-  --sg-warn-bg: rgba(245,158,11,.10);
-  --sg-warn-bd: rgba(245,158,11,.22);
+  --sg-dangerTint: rgba(239,68,68,.08);
+  --sg-dangerBd: rgba(239,68,68,.18);
 
-  --sg-bad-bg: rgba(239,68,68,.09);
-  --sg-bad-bd: rgba(239,68,68,.20);
-
-  /* “дорогой” glow — очень мягкий, без дешёвой кислотности */
-  --sg-glow: 0 0 0 1px rgba(15,23,42,.08), 0 18px 42px rgba(15,23,42,.10);
+  --sg-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
 }
 
 .salesPage .wheelHead{ display:flex; gap:14px; align-items:flex-start; }
@@ -679,9 +593,10 @@ export default function Sales() {
   display:flex; align-items:center; gap:0; flex-wrap:nowrap;
   height:46px; box-sizing:border-box;
   border:1px solid rgba(15,23,42,.12);
-  border-radius:12px;
-  background:rgba(255,255,255,.60);
+  border-radius:16px;
+  background:rgba(255,255,255,.84);
   overflow:hidden;
+  box-shadow: var(--sg-in);
 }
 .salesQuickTabs{ border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; }
 .salesQuickRange{
@@ -700,7 +615,7 @@ export default function Sales() {
   box-sizing:border-box;
   border-radius:12px;
   border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.90);
+  background:rgba(255,255,255,.96);
   font:inherit;
   font-weight:900;
   font-size:13px;
@@ -737,9 +652,18 @@ export default function Sales() {
 .salesCard{
   border:1px solid var(--sg-bd2) !important;
   border-radius: var(--sg-r-xl) !important;
-  background: var(--sg-bg2) !important;
-  box-shadow: var(--sg-in1) !important;
+  background: var(--sg-card) !important;
+  box-shadow: var(--sg-in) !important;
   overflow: hidden;
+}
+.salesCard--lift{
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+.salesCard--lift:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--sg-glow), var(--sg-in) !important;
+  border-color: rgba(15,23,42,.12) !important;
+  background: var(--sg-card2) !important;
 }
 
 .salesCardHead{
@@ -754,8 +678,83 @@ export default function Sales() {
 .salesChartWrap{
   position:relative;
   width:100%;
-  height:320px;
+  height: 340px; /* ближе к Wheel */
 }
+@media (max-width: 1100px){
+  .salesChartWrap{ height: 320px; }
+}
+
+/* overlay controls — как в Wheel */
+.salesChartTopControls{
+  position:absolute;
+  top: 10px;
+  right: 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  z-index:5;
+  pointer-events:auto;
+}
+.salesSeg{
+  display:inline-flex;
+  gap:6px;
+  padding:4px;
+  border-radius:16px;
+  border:1px solid rgba(15,23,42,.08);
+  background:rgba(255,255,255,.78);
+  box-shadow: var(--sg-in);
+}
+.salesSegBtn{
+  height:32px;
+  padding:0 12px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  font-weight:1000;
+  font-size:12px;
+  opacity:.9;
+}
+.salesSegBtn:hover{ opacity:1; }
+.salesSegBtn.is-active{
+  background:rgba(15,23,42,.04);
+  border-color:rgba(15,23,42,.10);
+  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in);
+  opacity:1;
+}
+
+.salesIconGroup{
+  display:inline-flex;
+  gap:6px;
+  padding:4px;
+  border-radius:16px;
+  border:1px solid rgba(15,23,42,.08);
+  background:rgba(255,255,255,.78);
+  box-shadow: var(--sg-in);
+}
+.sgIconBtn{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:none;
+  opacity:.92;
+}
+.sgIconBtn:hover{ opacity:1; }
+.sgIconBtn.is-active{
+  background:rgba(15,23,42,.04);
+  border-color:rgba(15,23,42,.10);
+  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in);
+  opacity:1;
+}
+.sgIconBtn svg{ width:16px; height:16px; opacity:.78; }
+.sgIconBtn.is-active svg{ opacity:.92; }
+
 .salesChartOverlay{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
@@ -775,11 +774,12 @@ export default function Sales() {
   margin:10px 14px 14px 14px;
   border:1px solid var(--sg-bd);
   border-radius: var(--sg-r-xl);
-  background: var(--sg-bg);
-  box-shadow: var(--sg-sh1), var(--sg-in1);
+  background: rgba(255,255,255,.86);
+  box-shadow: var(--sg-shadow), var(--sg-in);
   padding:14px;
 }
 
+/* Tiles */
 .salesTiles{
   display:grid;
   grid-template-columns: repeat(5, 1fr);
@@ -791,20 +791,18 @@ export default function Sales() {
 .salesTile{
   position:relative;
   border:1px solid rgba(15,23,42,.08);
-  background: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.88);
   border-radius: var(--sg-r-lg);
   padding:12px 12px;
-  box-shadow: var(--sg-in1);
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  box-shadow: var(--sg-in);
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
   text-align:left;
 }
 .salesTile:hover{
   transform: translateY(-1px);
-  box-shadow: var(--sg-glow), var(--sg-in1);
+  box-shadow: var(--sg-shadow2), var(--sg-in);
   border-color: rgba(15,23,42,.12);
-}
-.salesTile:active{
-  transform: translateY(0px) scale(.995);
+  background: rgba(255,255,255,.96);
 }
 .salesTileLbl{
   font-weight:900;
@@ -826,7 +824,7 @@ export default function Sales() {
   opacity:.78;
 }
 
-/* expensive row */
+/* Rows — hover как “Склад”: мягкий warm */
 .sgRow{
   position:relative;
   display:flex;
@@ -836,14 +834,15 @@ export default function Sales() {
   padding:10px 10px;
   border-radius: var(--sg-r-md);
   border:1px solid rgba(15,23,42,.07);
-  background: rgba(255,255,255,.60);
-  box-shadow: var(--sg-in1);
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  background: rgba(255,255,255,.80);
+  box-shadow: var(--sg-in);
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
 }
 .sgRow:hover{
   transform: translateY(-1px);
-  box-shadow: var(--sg-sh1), var(--sg-in1);
+  box-shadow: var(--sg-shadow), var(--sg-in);
   border-color: rgba(15,23,42,.12);
+  background: var(--sg-warnTint);
 }
 .sgRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
 .sgRowTitle{ font-weight:900; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -876,14 +875,14 @@ export default function Sales() {
   100%{ transform: translateX(35%); }
 }
 
-/* alert dot (top-right) */
+/* alert dot */
 .sgAlertDot{
   width:22px; height:22px;
   border-radius:999px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  border:1px solid rgba(239,68,68,.26);
+  border:1px solid rgba(239,68,68,.24);
   background: rgba(239,68,68,.10);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 12px 24px rgba(15,23,42,.10);
 }
@@ -894,7 +893,7 @@ export default function Sales() {
   color: rgba(239,68,68,.95);
 }
 
-/* tooltips (hover only, no sticky) */
+/* tooltips */
 .sgTip{
   position:relative;
   display:inline-flex;
@@ -902,8 +901,8 @@ export default function Sales() {
   height:18px;
   border-radius:999px;
   border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.86);
-  opacity:.85;
+  background:rgba(255,255,255,.92);
+  opacity:.86;
   flex:0 0 auto;
 }
 .sgTip::before{
@@ -941,8 +940,8 @@ export default function Sales() {
 .sgColl{
   border:1px solid rgba(15,23,42,.08);
   border-radius: var(--sg-r-xl);
-  background: rgba(255,255,255,.70);
-  box-shadow: var(--sg-in1);
+  background: rgba(255,255,255,.90);
+  box-shadow: var(--sg-in);
   overflow:hidden;
 }
 .sgColl__head{
@@ -985,76 +984,8 @@ export default function Sales() {
   padding: 0 12px 12px 12px;
 }
 
-/* Right sidebar sticky */
-.salesRightSticky{
-  position: sticky;
-  top: 10px;
-}
-
-/* Segmented tabs */
-.salesSeg{
-  display:inline-flex;
-  gap:8px;
-  padding:4px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.55);
-}
-.salesSegBtn{
-  height:32px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid transparent;
-  background:transparent;
-  cursor:pointer;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.9;
-}
-.salesSegBtn:hover{ opacity:1; }
-.salesSegBtn.is-active{
-  background:rgba(15,23,42,.04);
-  border-color:rgba(15,23,42,.10);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in1);
-  opacity:1;
-}
-
-/* Switch (premium) */
-.sgSwitch{
-  width:64px;
-  height:28px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.10);
-  background:rgba(15,23,42,.05);
-  position:relative;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:flex-start;
-  padding:0 5px;
-  box-shadow:0 1px 0 rgba(15,23,42,.03);
-  transition: background .12s ease, border-color .12s ease, opacity .12s ease, filter .12s ease;
-}
-.sgSwitch.is-on{
-  background:rgba(34,197,94,.18);
-  border-color:rgba(34,197,94,.22);
-  justify-content:flex-end;
-  filter:saturate(1.05);
-}
-.sgSwitch.is-off{
-  background:rgba(239,68,68,.06);
-  border-color:rgba(239,68,68,.12);
-  filter:saturate(.92);
-}
-.sgSwitch.is-disabled{ opacity:.45; cursor:not-allowed; }
-.sgSwitch__knob{
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  background:#fff;
-  border:1px solid rgba(15,23,42,.12);
-  box-shadow:0 8px 16px rgba(15,23,42,.10);
-}
+/* Right sticky */
+.salesRightSticky{ position: sticky; top: 10px; }
       `}</style>
 
       {/* ===== HEAD ===== */}
@@ -1062,7 +993,7 @@ export default function Sales() {
         <div>
           <h1 className="sg-h1">Продажи (QR)</h1>
           <div className="sg-sub">
-            Премиум-кабинет в стиле “Колеса”. Сейчас данные — mock (для дизайна). Потом подключим воркер.
+            График/карточки — один стиль с Wheel. Сейчас данные — mock (для дизайна), потом подключим воркер.
           </div>
         </div>
 
@@ -1099,22 +1030,22 @@ export default function Sales() {
       <div className="salesGrid">
         {/* LEFT */}
         <div className="salesLeft">
-          <Card className="salesCard">
+          <Card className="salesCard salesCard--lift">
             <div className="salesCardHead">
               <div>
                 <div className="salesTitle">
                   Факт: выручка / net эффект
                   <span style={{ marginLeft: 10 }}>
-                    <Tip
-                      dev
-                      text="DEV: сюда потом подтянем /sales/timeseries. Сейчас mock."
-                    />
+                    <Tip dev text="DEV: сюда потом подтянем /sales/timeseries. Сейчас mock." />
                   </span>
                 </div>
                 <div className="salesSub">{range?.from} — {range?.to}</div>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div className="salesChartWrap">
+              {/* top overlay controls — “как в колесе” */}
+              <div className="salesChartTopControls">
                 <div className="salesSeg" role="tablist" aria-label="basis">
                   <button
                     type="button"
@@ -1122,28 +1053,64 @@ export default function Sales() {
                     onClick={() => setBasis('confirmed')}
                     title="Net по подтверждённым операциям"
                   >
-                    confirmed
+                    при подтвержд.
                   </button>
                   <button
                     type="button"
                     className={'salesSegBtn ' + (basis === 'issued' ? 'is-active' : '')}
                     onClick={() => setBasis('issued')}
-                    title="Net по выданным (issued) — позже"
+                    title="Net по выданным (issued) — позже на бэке"
                   >
-                    issued
+                    при выдаче
                   </button>
+                </div>
+
+                <div className="salesIconGroup" aria-label="chart overlays">
+                  <IconBtn
+                    title="Цилиндры (заказы)"
+                    active={showBars}
+                    onClick={() => setShowBars(v => !v)}
+                  >
+                    {/* “квадратик” как на wheel */}
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <rect x="6" y="7" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                      <path d="M8 15h8" stroke="currentColor" strokeWidth="2" opacity=".6" />
+                    </svg>
+                  </IconBtn>
+
+                  <IconBtn
+                    title="Заливка (выручка)"
+                    active={showArea}
+                    onClick={() => setShowArea(v => !v)}
+                  >
+                    {/* “линии” */}
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path d="M5 16c3-6 6 2 9-4s5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      <path d="M5 18h14" stroke="currentColor" strokeWidth="2" opacity=".45" />
+                    </svg>
+                  </IconBtn>
+
+                  <IconBtn
+                    title="П — Net (profit)"
+                    active={showNet}
+                    onClick={() => setShowNet(v => !v)}
+                  >
+                    {/* “П” */}
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path d="M7 18V7h10v11" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                      <path d="M9 10h6" stroke="currentColor" strokeWidth="2" opacity=".6" />
+                    </svg>
+                  </IconBtn>
                 </div>
 
                 {primaryAlert ? <AlertDot title={primaryAlert.title} /> : null}
               </div>
-            </div>
 
-            {/* ===== CHART (улучшен) ===== */}
-            <div className="salesChartWrap">
               {!isLoading && !isError && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 10, right: 18, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
+                  <ComposedChart data={chartData} margin={{ top: 34, right: 18, left: 6, bottom: 0 }}>
+                    {/* сетка “как у wheel”: лёгкая */}
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.22} />
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 12 }}
@@ -1151,30 +1118,29 @@ export default function Sales() {
                       tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
                     />
 
-                    {/* Деньги — слева (единственная денежная шкала, без cumulative) */}
+                    {/* money axis (как в wheel: одна читаемая шкала) */}
                     <YAxis
                       yAxisId="money"
-                      domain={moneyDomain as any}
                       tick={{ fontSize: 12 }}
-                      width={72}
-                      tickFormatter={(v: any) => compactMoneyTickFromCents(v, currency)}
+                      width={54}
+                      tickFormatter={(v: any) => niceMoneyTick(Number(v))}
                     />
 
-                    {/* Кол-во заказов — справа (как в колесе: отдельная шкала, не мешает деньгам) */}
+                    {/* orders axis — скрытая шкала, только для bar */}
                     <YAxis
-                      yAxisId="count"
+                      yAxisId="orders"
                       orientation="right"
-                      domain={ordersDomain as any}
-                      tick={{ fontSize: 12 }}
-                      width={44}
-                      tickFormatter={(v: any) => String(Math.round(Number(v) || 0))}
+                      width={10}
+                      tick={false}
+                      axisLine={false}
+                      tickLine={false}
                     />
 
                     <Tooltip
                       formatter={(val: any, name: any) => {
-                        if (name === 'revenue_for_chart') return [moneyFromCent(val, currency), 'Выручка/день'];
-                        if (name === 'net_for_chart') return [moneyFromCent(val, currency), 'Net/день'];
-                        if (name === 'orders_for_chart') return [val, 'Заказы/день'];
+                        if (name === 'revenue_cents') return [moneyFromCent(val, currency), 'Выручка/день'];
+                        if (name === 'net_cents') return [moneyFromCent(val, currency), 'Net/день'];
+                        if (name === 'orders_count') return [val, 'Заказы/день'];
                         return [val, name];
                       }}
                       labelFormatter={(_: any, payload: any) => {
@@ -1183,43 +1149,48 @@ export default function Sales() {
                       }}
                     />
 
-                    {/* Area: Revenue (цвета как у тебя) */}
-                    <Area
-                      yAxisId="money"
-                      type="monotone"
-                      dataKey="revenue_for_chart"
-                      name="revenue_for_chart"
-                      stroke="var(--accent2)"
-                      fill="var(--accent)"
-                      fillOpacity={0.10}
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
+                    {/* Area — выручка */}
+                    {showArea && (
+                      <Area
+                        yAxisId="money"
+                        type="monotone"
+                        dataKey="revenue_cents"
+                        name="revenue_cents"
+                        stroke="var(--accent2)"
+                        fill="var(--accent)"
+                        fillOpacity={0.12}
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                      />
+                    )}
 
-                    {/* Line: Net (цвет как у тебя, пунктир) */}
-                    <Line
-                      yAxisId="money"
-                      type="monotone"
-                      dataKey="net_for_chart"
-                      name="net_for_chart"
-                      stroke="var(--accent2)"
-                      strokeWidth={2}
-                      strokeDasharray="6 4"
-                      dot={false}
-                      isAnimationActive={false}
-                    />
+                    {/* Line — net (profit) */}
+                    {showNet && (
+                      <Line
+                        yAxisId="money"
+                        type="monotone"
+                        dataKey="net_cents"
+                        name="net_cents"
+                        stroke="var(--accent2)"
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                      />
+                    )}
 
-                    {/* Cylinders: Orders (на count-оси, чтобы не ломать деньги) */}
-                    <Bar
-                      yAxisId="count"
-                      dataKey="orders_for_chart"
-                      name="orders_for_chart"
-                      fill="var(--accent)"
-                      fillOpacity={0.18}
-                      radius={[10, 10, 10, 10]}
-                      isAnimationActive={false}
-                    />
+                    {/* Bars — заказы (цилиндры) */}
+                    {showBars && (
+                      <Bar
+                        yAxisId="orders"
+                        dataKey="orders_count"
+                        name="orders_count"
+                        fill="var(--accent)"
+                        fillOpacity={0.18}
+                        radius={[12, 12, 12, 12]}
+                        barSize={14}
+                      />
+                    )}
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -1240,7 +1211,7 @@ export default function Sales() {
               )}
             </div>
 
-            {/* UNDER TABS */}
+            {/* UNDER TABS (как wheel) */}
             <div className="salesUnderTabs">
               <div className="sg-tabs wheelUnderTabs__seg">
                 <button className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')} onClick={() => setTab('summary')}>Сводка</button>
@@ -1479,7 +1450,7 @@ export default function Sales() {
                   <div style={{ fontWeight: 1000 }}>
                     Кассиры <span style={{ marginLeft: 8 }}><Tip dev text="DEV: /sales/cashiers агрегация по cashier_tg_id" /></span>
                   </div>
-                  <div className="sg-muted">наведи на строки — подсветка + lift</div>
+                  <div className="sg-muted">наведи на строки — подсветка как “Склад”</div>
                 </div>
 
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1499,7 +1470,7 @@ export default function Sales() {
                   )) : topCashiers.map((c) => {
                     const bad = c.cancel_rate >= 0.12 || c.confirm_rate <= 0.86;
                     return (
-                      <div className="sgRow" key={c.cashier_label}>
+                      <div className="sgRow" key={c.cashier_label} style={bad ? { borderColor: 'var(--sg-warnBd)' as any } : undefined}>
                         <div className="sgRowLeft">
                           <div style={{ minWidth: 0 }}>
                             <div className="sgRowTitle">{c.cashier_label}</div>
@@ -1560,7 +1531,7 @@ export default function Sales() {
                     const isSpender = c.segment === 'spender';
                     const alert = isSaver ? 'Накопил и не тратит' : isSpender ? 'Часто тратит — VIP' : '';
                     return (
-                      <div className="sgRow" key={c.customer_label}>
+                      <div className="sgRow" key={c.customer_label} style={isSaver ? { background: 'rgba(245,158,11,.06)' } : undefined}>
                         <div className="sgRowLeft">
                           <div style={{ minWidth: 0 }}>
                             <div className="sgRowTitle">{c.customer_label}</div>
@@ -1672,7 +1643,7 @@ export default function Sales() {
         <div className="salesRight">
           <div className="salesRightSticky">
             {/* Summary PRO */}
-            <Card className="salesCard" style={{ marginBottom: 12 }}>
+            <Card className="salesCard salesCard--lift" style={{ marginBottom: 12 }}>
               <div className="salesCardHead">
                 <div>
                   <div className="salesTitle">
@@ -1699,8 +1670,8 @@ export default function Sales() {
                         <div>
                           <div className="sgRowTitle">Список алертов</div>
                           <div className="sgRowMeta">
-                            <span className="sg-muted">Дорогая подсветка — без кислотных цветов</span>
-                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: алерты рассчитывать на бэке и отдавать массивом" /></span>
+                            <span className="sg-muted">Мягкая подсветка (без кислотности)</span>
+                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: алерты считать на бэке и отдавать массивом" /></span>
                           </div>
                         </div>
                       </div>
@@ -1711,7 +1682,7 @@ export default function Sales() {
                     </div>
 
                     {alerts.length ? alerts.slice(0, 4).map((a) => (
-                      <div className="sgRow" key={a.key}>
+                      <div className="sgRow" key={a.key} style={a.sev === 'bad' ? { borderColor: 'var(--sg-dangerBd)' as any, background: 'var(--sg-dangerTint)' as any } : undefined}>
                         <div className="sgRowLeft">
                           <div>
                             <div className="sgRowTitle">{a.title}</div>
@@ -1869,7 +1840,7 @@ export default function Sales() {
             </Card>
 
             {/* Settings block (UI-only) */}
-            <Card className="salesCard">
+            <Card className="salesCard salesCard--lift">
               <div className="salesCardHead">
                 <div>
                   <div className="salesTitle">
