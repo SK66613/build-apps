@@ -178,6 +178,49 @@ function fmtPct(x: number | null | undefined, d = '—') {
   return `${(Number(x) * 100).toFixed(1)}%`;
 }
 
+/** ===== chart helpers (дорого как wheel) ===== */
+function compactMoneyTickFromCents(v: any, currency: string) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  const sym = currencyLabel(currency);
+  const units = n / 100; // cents -> money
+
+  const abs = Math.abs(units);
+  const sign = units < 0 ? '-' : '';
+
+  if (abs >= 1_000_000) return `${sign}${sym}${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}${sym}${(abs / 1_000).toFixed(1)}k`;
+  if (abs >= 100) return `${sign}${sym}${Math.round(abs)}`;
+  return `${sign}${sym}${abs.toFixed(0)}`;
+}
+
+function domainFrom(values: number[], padRatio = 0.10): [number, number] {
+  const finite = values.filter((x) => Number.isFinite(x));
+  if (!finite.length) return [0, 1];
+
+  let min = Math.min(...finite);
+  let max = Math.max(...finite);
+
+  if (min === max) {
+    const delta = Math.max(1, Math.abs(min) * 0.12);
+    return [min - delta, max + delta];
+  }
+
+  const span = max - min;
+  const pad = span * padRatio;
+
+  min = min - pad;
+  max = max + pad;
+
+  // если есть и + и - — делаем “красиво” симметрично вокруг 0
+  if (min < 0 && max > 0) {
+    const absMax = Math.max(Math.abs(min), Math.abs(max));
+    return [-absMax * 1.02, absMax * 1.02];
+  }
+
+  return [min, max];
+}
+
 /* ====== Premium UI helpers ====== */
 
 function AlertDot({ title }: { title: string }) {
@@ -440,11 +483,6 @@ export default function Sales() {
     enabled: !!appId && !!range?.from && !!range?.to,
     queryKey: ['sales_mock', appId, range?.from, range?.to, settings.currency, settings.coin_value_cents],
     queryFn: async () => {
-      // DEV: replace with real calls later; for now return mock fast
-      // Example:
-      // const kpi = await apiFetch(`/api/cabinet/apps/${appId}/sales/kpi?${qs(range)}`);
-      // const ts  = await apiFetch(`/api/cabinet/apps/${appId}/sales/timeseries?${qs(range)}`);
-      // ...
       return mkMock(range as SalesRange, settings);
     },
     staleTime: 10_000,
@@ -571,6 +609,33 @@ export default function Sales() {
   const topCustomers = [...customers]
     .sort((a, b) => (b.ltv_cents || 0) - (a.ltv_cents || 0))
     .slice(0, 6);
+
+  /** ===== улучшение графика: как в колесе, без cumulative ===== */
+  const chartData = React.useMemo(() => {
+    // basis пока UI-only: структура готова
+    // позже ты просто начнёшь отдавать net_cents_confirmed / net_cents_issued с бэка
+    return (days || []).map((d: SalesDay) => ({
+      ...d,
+      net_for_chart: Number(d.net_cents) || 0,
+      revenue_for_chart: Number(d.revenue_cents) || 0,
+      orders_for_chart: Number(d.orders) || 0,
+    }));
+  }, [days]);
+
+  const moneyDomain = React.useMemo<[number, number]>(() => {
+    const vals: number[] = [];
+    for (const r of chartData) {
+      vals.push(Number(r.revenue_for_chart));
+      vals.push(Number(r.net_for_chart));
+    }
+    return domainFrom(vals, 0.12);
+  }, [chartData]);
+
+  const ordersDomain = React.useMemo<[number, number]>(() => {
+    const vals = chartData.map((r) => Number(r.orders_for_chart) || 0);
+    const max = Math.max(1, ...vals);
+    return [0, Math.ceil(max * 1.18)];
+  }, [chartData]);
 
   return (
     <div className="sg-page salesPage">
@@ -1073,10 +1138,11 @@ export default function Sales() {
               </div>
             </div>
 
+            {/* ===== CHART (улучшен) ===== */}
             <div className="salesChartWrap">
               {!isLoading && !isError && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={days} margin={{ top: 8, right: 18, left: 0, bottom: 0 }}>
+                  <ComposedChart data={chartData} margin={{ top: 10, right: 18, left: 8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
                     <XAxis
                       dataKey="date"
@@ -1084,21 +1150,31 @@ export default function Sales() {
                       interval="preserveStartEnd"
                       tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
                     />
+
+                    {/* Деньги — слева (единственная денежная шкала, без cumulative) */}
                     <YAxis
                       yAxisId="money"
+                      domain={moneyDomain as any}
                       tick={{ fontSize: 12 }}
-                      width={54}
-                      tickFormatter={(v: any) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) return '';
-                        return String(Math.round(n / 100));
-                      }}
+                      width={72}
+                      tickFormatter={(v: any) => compactMoneyTickFromCents(v, currency)}
                     />
+
+                    {/* Кол-во заказов — справа (как в колесе: отдельная шкала, не мешает деньгам) */}
+                    <YAxis
+                      yAxisId="count"
+                      orientation="right"
+                      domain={ordersDomain as any}
+                      tick={{ fontSize: 12 }}
+                      width={44}
+                      tickFormatter={(v: any) => String(Math.round(Number(v) || 0))}
+                    />
+
                     <Tooltip
                       formatter={(val: any, name: any) => {
-                        if (name === 'revenue_cents') return [moneyFromCent(val, currency), 'Выручка/день'];
-                        if (name === 'net_cents') return [moneyFromCent(val, currency), 'Net/день'];
-                        if (name === 'orders') return [val, 'Заказы/день'];
+                        if (name === 'revenue_for_chart') return [moneyFromCent(val, currency), 'Выручка/день'];
+                        if (name === 'net_for_chart') return [moneyFromCent(val, currency), 'Net/день'];
+                        if (name === 'orders_for_chart') return [val, 'Заказы/день'];
                         return [val, name];
                       }}
                       labelFormatter={(_: any, payload: any) => {
@@ -1107,35 +1183,42 @@ export default function Sales() {
                       }}
                     />
 
+                    {/* Area: Revenue (цвета как у тебя) */}
                     <Area
                       yAxisId="money"
                       type="monotone"
-                      dataKey="revenue_cents"
-                      name="revenue_cents"
+                      dataKey="revenue_for_chart"
+                      name="revenue_for_chart"
                       stroke="var(--accent2)"
                       fill="var(--accent)"
                       fillOpacity={0.10}
+                      strokeWidth={2}
                       dot={false}
+                      isAnimationActive={false}
                     />
 
+                    {/* Line: Net (цвет как у тебя, пунктир) */}
                     <Line
                       yAxisId="money"
                       type="monotone"
-                      dataKey="net_cents"
-                      name="net_cents"
+                      dataKey="net_for_chart"
+                      name="net_for_chart"
                       stroke="var(--accent2)"
                       strokeWidth={2}
                       strokeDasharray="6 4"
                       dot={false}
+                      isAnimationActive={false}
                     />
 
+                    {/* Cylinders: Orders (на count-оси, чтобы не ломать деньги) */}
                     <Bar
-                      yAxisId="money"
-                      dataKey="orders"
-                      name="orders"
+                      yAxisId="count"
+                      dataKey="orders_for_chart"
+                      name="orders_for_chart"
                       fill="var(--accent)"
                       fillOpacity={0.18}
                       radius={[10, 10, 10, 10]}
+                      isAnimationActive={false}
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
