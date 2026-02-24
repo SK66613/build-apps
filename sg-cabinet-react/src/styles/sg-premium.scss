@@ -1076,9 +1076,14 @@
 =========================== */
 
 :root{
-  /* typography */
+    /* body (можешь оставить Inter или тоже сделать system) */
   --sgp-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
+  /* headings = строго системный */
+  --sgp-font-head: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+
+   
   /* radii */
   --sgp-r-xl: 22px;
   --sgp-r-lg: 18px;
