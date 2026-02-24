@@ -208,7 +208,9 @@ function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
   const v = Number(value || 0);
   const fill =
-    v >= 0 ? 'var(--sgp-good, rgba(16,185,129,.85))' : 'var(--sgp-bad, rgba(239,68,68,.85))';
+    v >= 0
+      ? 'var(--sgp-chart-good, rgba(16,185,129,.55))'
+      : 'var(--sgp-chart-bad, rgba(239,68,68,.55))';
 
   // recharts can pass negative heights; normalize:
   const h = Math.abs(Number(height) || 0);
@@ -280,7 +282,7 @@ export default function Wheel() {
 
   const coinCostCentPerCoin = React.useMemo(() => {
     const units = Number(String(coinValueDraft).replace(',', '.'));
-    const cents = Math.floor(units * 100);
+    const cents = Math.round(units * 100); // ✅ round, not floor
     return Number.isFinite(cents) ? Math.max(0, cents) : 0;
   }, [coinValueDraft]);
 
@@ -289,7 +291,7 @@ export default function Wheel() {
     setCoinMsg('');
 
     const units = Number(String(coinValueDraft).replace(',', '.'));
-    const cents = Math.floor(units * 100);
+    const cents = Math.round(units * 100); // ✅ round, not floor
 
     if (!Number.isFinite(units) || units <= 0 || !Number.isFinite(cents) || cents <= 0) {
       setCoinMsg('Введите корректную стоимость 1 монеты.');
@@ -399,6 +401,7 @@ export default function Wheel() {
     track_qty: boolean;
     qty_left: string;
     stop_when_zero: boolean;
+    dirty?: boolean; // ✅ user touched
   };
 
   const [draft, setDraft] = React.useState<Record<string, DraftRow>>({});
@@ -407,20 +410,30 @@ export default function Wheel() {
 
   React.useEffect(() => {
     if (!items.length) return;
+
     setDraft((prev) => {
       const next = { ...prev };
+
       for (const p of items) {
         const code = p.prize_code;
         if (!code) continue;
-        if (next[code] === undefined) {
-          next[code] = {
-            active: !!p.active,
-            track_qty: !!p.track_qty,
-            qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
-            stop_when_zero: !!p.stop_when_zero,
-          };
+
+        const serverRow: DraftRow = {
+          active: !!p.active,
+          track_qty: !!p.track_qty,
+          qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
+          stop_when_zero: !!p.stop_when_zero,
+        };
+
+        if (!next[code]) {
+          next[code] = serverRow;
+          continue;
         }
+
+        // ✅ if not edited by user — refresh from server
+        if (!next[code].dirty) next[code] = serverRow;
       }
+
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -435,6 +448,7 @@ export default function Wheel() {
         qty_left: d[code]?.qty_left ?? '',
         stop_when_zero: !!d[code]?.stop_when_zero,
         ...patch,
+        dirty: true,
       },
     }));
   }
@@ -634,6 +648,9 @@ export default function Wheel() {
   const redeemTone: 'good' | 'warn' | 'bad' =
     fact.wins <= 0 ? 'warn' : (fact.redeemRatePct >= 70 ? 'good' : (fact.redeemRatePct >= 40 ? 'warn' : 'bad'));
 
+  // ✅ card tone for “Выдача призов”: only warn/bad tint (good stays neutral)
+  const redeemCardTone: 'neutral' | 'warn' | 'bad' = redeemTone === 'good' ? 'neutral' : redeemTone;
+
   const stockSaveState: SgSaveState =
     savingStock ? 'saving'
       : (saveMsg?.startsWith('Сохранено') ? 'saved'
@@ -688,7 +705,7 @@ export default function Wheel() {
       }
       aside={
         <div className="sgp-aside">
-          <SgCard>
+          <SgCard className={`tone-${redeemCardTone}`}>
             <SgCardHeader
               right={<HealthBadge tone={redeemTone} title={redeemTone.toUpperCase()} />}
             >
@@ -706,7 +723,7 @@ export default function Wheel() {
 
               <div style={{ marginTop: 10 }}>
                 {fact.wins <= 0 ? (
-                  <Hint tone="warn">Пока нет данных за период.</Hint>
+                  <Hint tone="neutral">Пока нет данных за период.</Hint>
                 ) : redeemTone === 'good' ? (
                   <Hint tone="good">Отлично. Призы реально забирают.</Hint>
                 ) : redeemTone === 'warn' ? (
@@ -903,7 +920,7 @@ export default function Wheel() {
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <Hint tone="warn">
+                <Hint tone="neutral">
                   Подсказка: “Факт” считается по снимкам в <b>wheel_spins</b>, прогноз — по текущим весам/себестоимости.
                 </Hint>
               </div>
@@ -1028,8 +1045,10 @@ export default function Wheel() {
                     const tracked = active && !!d.track_qty;
 
                     const qRaw = String(d.qty_left ?? '').trim();
-                    const baseQty = qtyLeft(p) ?? 0;
-                    const qNum = tracked ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0))) : null;
+                    const baseQty = qtyLeft(p); // ✅ keep null, do not coerce to 0
+                    const qNum = tracked
+                      ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0)))
+                      : null;
 
                     const out = tracked && (qNum !== null && qNum <= 0);
                     const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
