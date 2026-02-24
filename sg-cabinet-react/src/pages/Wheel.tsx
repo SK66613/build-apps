@@ -863,14 +863,14 @@ export default function Wheel() {
           {openSummary ? (
             <SgCardContent>
               <div className="sgp-metrics">
-                <div className="sgp-metric"><div className="sgp-metric__k">Спинов</div><div className="sgp-metric__v">{fact.spins}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Выручка</div><div className="sgp-metric__v">{moneyFromCent(fact.revenue_cents, currency)}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Расход</div><div className="sgp-metric__v">{moneyFromCent(fact.payout_cents, currency)}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Прибыль</div><div className="sgp-metric__v">{moneyFromCent(fact.profit_cents, currency)}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Выигрышей</div><div className="sgp-metric__v">{fact.wins}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Выдано</div><div className="sgp-metric__v">{fact.redeemed}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Доля выдачи</div><div className="sgp-metric__v">{fact.redeemRatePct}%</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">Активных призов</div><div className="sgp-metric__v">{activeCount} / {items.length}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">СПИНОВ</div><div className="sgp-metric__v">{fact.spins}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(fact.revenue_cents, currency)}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">РАСХОД</div><div className="sgp-metric__v">{moneyFromCent(fact.payout_cents, currency)}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">ПРИБЫЛЬ</div><div className="sgp-metric__v">{moneyFromCent(fact.profit_cents, currency)}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">ВЫЙГРЫШЕЙ</div><div className="sgp-metric__v">{fact.wins}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">ВЫДАНО</div><div className="sgp-metric__v">{fact.redeemed}</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">ДОЛЯ ВЫДАЧИ</div><div className="sgp-metric__v">{fact.redeemRatePct}%</div></div>
+                <div className="sgp-metric"><div className="sgp-metric__k">АКТИВНЫХ ПРИЗОВ</div><div className="sgp-metric__v">{activeCount} / {items.length}</div></div>
               </div>
 
               <div style={{ marginTop: 12 }}>
