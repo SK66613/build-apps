@@ -22,13 +22,7 @@ import {
  * - график: Area + Line(штрих) + Bar(цилиндры) + overlay controls
  * - без “лишних” осей/кумулятивов (только дневные значения)
  *
- * PREMIUM (встроено справа):
- * - tiers (прогрессивный cashback)
- * - ranks (ранги по покупкам/выручке)
- * - alerts (правила тревог + мягкие подсветки)
- * - automation (авто-напоминания/сценарии)
- *
- * DEV: сейчас данные mock, конфиг хранится локально (localStorage), структура 1:1 под будущий воркер.
+ * DEV: сейчас данные mock, потом просто заменить queryFn на реальные роуты воркера.
  */
 
 type SalesRange = { from: string; to: string };
@@ -104,15 +98,6 @@ function toInt(v: any, d = 0) {
   return Math.trunc(n);
 }
 
-function toNum(v: any, d = 0) {
-  const n = Number(String(v ?? '').trim().replace(',', '.'));
-  return Number.isFinite(n) ? n : d;
-}
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
 function isoAddDays(iso: string, deltaDays: number) {
   try {
     const d = new Date(iso + 'T00:00:00Z');
@@ -184,14 +169,14 @@ function fmtPct(x: number | null | undefined, d = '—') {
 function niceMoneyTick(vCents: number) {
   const v = Number(vCents);
   if (!Number.isFinite(v)) return '';
-  const x = Math.round(v / 100);
+  const x = Math.round(v / 100); // rub
   const ax = Math.abs(x);
   if (ax >= 1_000_000) return `${(x / 1_000_000).toFixed(1)}M`;
   if (ax >= 10_000) return `${(x / 1000).toFixed(0)}k`;
   return String(x);
 }
 
-/* ===== Premium helpers (health/alerts) ===== */
+/* ===== Premium UI helpers ===== */
 
 type HealthTone = 'good' | 'warn' | 'bad';
 type AlertItem = { key: string; title: string; sev: 'warn' | 'bad' };
@@ -286,167 +271,6 @@ function IconBtn({
       {children}
     </button>
   );
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-  hint,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={'sgToggle ' + (checked ? 'is-on' : 'is-off')}
-      onClick={() => onChange(!checked)}
-      aria-pressed={checked}
-      title={hint || label}
-    >
-      <span className="sgToggle__track">
-        <span className="sgToggle__thumb" />
-      </span>
-      <span className="sgToggle__lbl">{label}</span>
-    </button>
-  );
-}
-
-function uid(prefix = 'id') {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
-}
-
-/* ===== Premium config (local mock, 1:1 for future worker) ===== */
-
-type CashbackTier = {
-  id: string;
-  enabled: boolean;
-  title: string; // e.g. “VIP”
-  min_orders_lifetime?: number | null; // gate by lifetime orders
-  min_revenue_cents_lifetime?: number | null; // gate by lifetime revenue
-  cashback_pct: number; // percent, e.g. 3.5
-  cap_coins_per_day?: number | null; // optional cap
-  note?: string;
-};
-
-type RankRule = {
-  id: string;
-  enabled: boolean;
-  title: string; // e.g. “Бронза”
-  min_orders_lifetime: number;
-  badge_emoji?: string;
-  perks_note?: string;
-};
-
-type AlertRule = {
-  id: string;
-  enabled: boolean;
-  key: 'pending_confirms' | 'cancel_rate' | 'repeat_rate' | 'net_negative' | 'slow_confirm';
-  warn_threshold: number; // meaning depends on key
-  bad_threshold: number; // meaning depends on key
-  note?: string;
-};
-
-type AutomationRule = {
-  id: string;
-  enabled: boolean;
-  key:
-    | 'remind_pending_cashier'
-    | 'remind_customer_spend'
-    | 'vip_thanks'
-    | 'reactivate_saver';
-  when: 'hourly' | 'daily' | 'weekly';
-  cooldown_minutes: number;
-  template_ru: string;
-  note?: string;
-};
-
-type SalesPremiumConfig = {
-  version: number;
-  coin_value_cents: number;
-  currency: 'RUB' | 'USD' | 'EUR';
-
-  tiers: CashbackTier[];
-  ranks: RankRule[];
-  alerts: AlertRule[];
-  automation: AutomationRule[];
-
-  updated_at: string; // ISO
-};
-
-function defaultPremiumConfig(currency: 'RUB' | 'USD' | 'EUR', coinValueCents: number): SalesPremiumConfig {
-  return {
-    version: 1,
-    currency,
-    coin_value_cents: Math.max(1, Math.floor(coinValueCents || 100)),
-    tiers: [
-      {
-        id: uid('tier'),
-        enabled: true,
-        title: 'Base',
-        min_orders_lifetime: null,
-        min_revenue_cents_lifetime: null,
-        cashback_pct: 2.5,
-        cap_coins_per_day: null,
-        note: 'Базовый кэшбэк для всех.',
-      },
-      {
-        id: uid('tier'),
-        enabled: true,
-        title: 'VIP',
-        min_orders_lifetime: 8,
-        min_revenue_cents_lifetime: null,
-        cashback_pct: 4.0,
-        cap_coins_per_day: null,
-        note: 'Повышаем % тем, кто часто покупает.',
-      },
-    ],
-    ranks: [
-      { id: uid('rank'), enabled: true, title: 'Бронза', min_orders_lifetime: 3, badge_emoji: '🥉', perks_note: 'Стикер + чуть выше кэшбэк' },
-      { id: uid('rank'), enabled: true, title: 'Серебро', min_orders_lifetime: 7, badge_emoji: '🥈', perks_note: 'Ранний доступ к акциям' },
-      { id: uid('rank'), enabled: true, title: 'Золото', min_orders_lifetime: 12, badge_emoji: '🥇', perks_note: 'VIP бонусы / приглашения' },
-    ],
-    alerts: [
-      { id: uid('al'), enabled: true, key: 'pending_confirms', warn_threshold: 4, bad_threshold: 8, note: 'Шумит, если касса не подтверждает.' },
-      { id: uid('al'), enabled: true, key: 'cancel_rate', warn_threshold: 0.08, bad_threshold: 0.12, note: 'Отмены выше нормы.' },
-      { id: uid('al'), enabled: true, key: 'repeat_rate', warn_threshold: 0.22, bad_threshold: 0.16, note: 'Низкая повторяемость.' },
-      { id: uid('al'), enabled: true, key: 'net_negative', warn_threshold: 0, bad_threshold: -1, note: 'Net отрицательный.' },
-    ],
-    automation: [
-      {
-        id: uid('au'),
-        enabled: true,
-        key: 'remind_pending_cashier',
-        when: 'hourly',
-        cooldown_minutes: 60,
-        template_ru: 'Есть неподтверждённые операции. Проверь кассу и нажми “подтвердить/отменить”.',
-        note: 'Пинг кассирам, если висит pending.',
-      },
-      {
-        id: uid('au'),
-        enabled: true,
-        key: 'remind_customer_spend',
-        when: 'daily',
-        cooldown_minutes: 24 * 60,
-        template_ru: 'У вас накопилось {coins} монет — можно списать на скидку сегодня 🙂',
-        note: 'Пуш “накопил — потрать”.',
-      },
-    ],
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function safeJsonParse<T>(s: string | null, fallback: T): T {
-  try {
-    if (!s) return fallback;
-    const v = JSON.parse(s);
-    return (v ?? fallback) as T;
-  } catch (_) {
-    return fallback;
-  }
 }
 
 /* ===== Mock data (fallback) ===== */
@@ -618,48 +442,6 @@ function Collapsible({
   );
 }
 
-/* ===== Premium mapping helpers ===== */
-
-function alertKeyLabel(key: AlertRule['key']) {
-  if (key === 'pending_confirms') return 'Pending подтверждения';
-  if (key === 'cancel_rate') return 'Cancel rate';
-  if (key === 'repeat_rate') return 'Repeat rate';
-  if (key === 'net_negative') return 'Net ниже 0';
-  if (key === 'slow_confirm') return 'Долгое подтверждение';
-  return key;
-}
-function alertKeyHint(key: AlertRule['key']) {
-  if (key === 'pending_confirms') return 'Сработает, если много неподтверждённых операций.';
-  if (key === 'cancel_rate') return 'Сработает, если много отмен в кассе.';
-  if (key === 'repeat_rate') return 'Сработает, если клиенты не возвращаются.';
-  if (key === 'net_negative') return 'Сработает, если Net (списание − кэшбэк) уходит в минус.';
-  if (key === 'slow_confirm') return 'Сработает, если median подтверждения > порога.';
-  return '';
-}
-function alertUnit(key: AlertRule['key']) {
-  if (key === 'cancel_rate') return 'доля (0..1)';
-  if (key === 'repeat_rate') return 'доля (0..1)';
-  if (key === 'pending_confirms') return 'шт';
-  if (key === 'slow_confirm') return 'мин';
-  if (key === 'net_negative') return 'cents';
-  return '';
-}
-
-function automationKeyLabel(key: AutomationRule['key']) {
-  if (key === 'remind_pending_cashier') return 'Напоминать кассиру про pending';
-  if (key === 'remind_customer_spend') return 'Пуш “потрать монеты”';
-  if (key === 'vip_thanks') return 'Спасибо VIP после покупки';
-  if (key === 'reactivate_saver') return 'Реактивация “накопил и молчит”';
-  return key;
-}
-
-function whenLabel(w: AutomationRule['when']) {
-  if (w === 'hourly') return 'каждый час';
-  if (w === 'daily') return 'ежедневно';
-  if (w === 'weekly') return 'еженедельно';
-  return w;
-}
-
 /* ===== Page ===== */
 
 export default function Sales() {
@@ -681,20 +463,13 @@ export default function Sales() {
   const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
 
   // overlay кнопки “как в колесе” (3 штуки)
-  const [showBars, setShowBars] = React.useState(true);
-  const [showNet, setShowNet] = React.useState(true);
-  const [showArea, setShowArea] = React.useState(true);
+  const [showBars, setShowBars] = React.useState(true); // “цилиндры”
+  const [showNet, setShowNet] = React.useState(true); // “П” (profit/net)
+  const [showArea, setShowArea] = React.useState(true); // “заливка”
 
   // settings draft (UI only)
-  const [currencyDraft, setCurrencyDraft] = React.useState<'RUB' | 'USD' | 'EUR'>('RUB');
+  const [currencyDraft, setCurrencyDraft] = React.useState('RUB');
   const [coinValueDraft, setCoinValueDraft] = React.useState('1.00');
-
-  // PREMIUM panel state
-  const [premiumTab, setPremiumTab] = React.useState<'tiers' | 'ranks' | 'alerts' | 'automation'>(
-    'tiers',
-  );
-  const [premiumCfg, setPremiumCfg] = React.useState<SalesPremiumConfig | null>(null);
-  const [premiumDirty, setPremiumDirty] = React.useState(false);
 
   React.useEffect(() => {
     setCustomFrom(range?.from || '');
@@ -742,6 +517,7 @@ export default function Sales() {
       // позже:
       // const kpi = await apiFetch(`/api/cabinet/apps/${appId}/sales/kpi?${qs(range)}`);
       // const ts  = await apiFetch(`/api/cabinet/apps/${appId}/sales/timeseries?${qs(range)}`);
+      // ...
       // basis учитывать на бэке
       return mkMock(range as SalesRange, settings);
     },
@@ -752,35 +528,8 @@ export default function Sales() {
   const isError = qAll.isError;
 
   const data = qAll.data;
-  const currency = String(data?.settings?.currency || settings.currency || 'RUB').toUpperCase() as
-    | 'RUB'
-    | 'USD'
-    | 'EUR';
-  const coinCents = Math.max(
-    1,
-    toInt(data?.settings?.coin_value_cents ?? settings.coin_value_cents ?? 100, 100),
-  );
-
-  // init/load premium config (localStorage) — structure matches future worker payload
-  React.useEffect(() => {
-    const key = `sg_sales_premium_cfg:${String(appId || 'noapp')}`;
-    const fallback = defaultPremiumConfig(currencyDraft, coinCents);
-    const stored = safeJsonParse<SalesPremiumConfig>(localStorage.getItem(key), fallback);
-
-    // keep currency/coin in sync with UI draft if config is empty
-    const next: SalesPremiumConfig = {
-      ...stored,
-      currency: stored.currency || currencyDraft,
-      coin_value_cents: Number.isFinite(stored.coin_value_cents)
-        ? stored.coin_value_cents
-        : Math.max(1, coinCents),
-      updated_at: stored.updated_at || new Date().toISOString(),
-    };
-
-    setPremiumCfg(next);
-    setPremiumDirty(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appId]);
+  const currency = String(data?.settings?.currency || settings.currency || 'RUB').toUpperCase();
+  const coinCents = Math.max(1, toInt(data?.settings?.coin_value_cents ?? settings.coin_value_cents ?? 100, 100));
 
   const kpi = data?.kpi;
   const days = data?.days || [];
@@ -827,64 +576,22 @@ export default function Sales() {
     };
   }, [kpi, coinCents, range?.from, range?.to]);
 
-  // === alerts computed from metrics (later: backend) + “premium rules” override thresholds
-  const computedAlerts: AlertItem[] = React.useMemo(() => {
+  const alerts: AlertItem[] = React.useMemo(() => {
     const out: AlertItem[] = [];
+    if (totals.pending >= 8) out.push({ key: 'pending', title: 'Много неподтверждённых операций', sev: 'bad' });
+    else if (totals.pending >= 4) out.push({ key: 'pending', title: 'Есть неподтверждённые операции', sev: 'warn' });
 
-    // baseline defaults (если premiumCfg ещё не готов)
-    const ruleByKey = new Map<AlertRule['key'], AlertRule>();
-    (premiumCfg?.alerts || []).forEach((r) => {
-      if (r.enabled) ruleByKey.set(r.key, r);
-    });
+    if (totals.cancelRate >= 0.12) out.push({ key: 'cancel', title: 'Высокий процент отмен', sev: 'bad' });
+    else if (totals.cancelRate >= 0.08) out.push({ key: 'cancel', title: 'Отмены выше нормы', sev: 'warn' });
 
-    function pickThresholds(
-      key: AlertRule['key'],
-      defWarn: number,
-      defBad: number,
-    ): { warn: number; bad: number } {
-      const r = ruleByKey.get(key);
-      if (!r) return { warn: defWarn, bad: defBad };
-      return { warn: Number(r.warn_threshold), bad: Number(r.bad_threshold) };
-    }
-
-    // pending confirms
-    {
-      const t = pickThresholds('pending_confirms', 4, 8);
-      if (totals.pending >= t.bad) out.push({ key: 'pending', title: 'Много неподтверждённых операций', sev: 'bad' });
-      else if (totals.pending >= t.warn) out.push({ key: 'pending', title: 'Есть неподтверждённые операции', sev: 'warn' });
-    }
-
-    // cancel rate
-    {
-      const t = pickThresholds('cancel_rate', 0.08, 0.12);
-      if (totals.cancelRate >= t.bad) out.push({ key: 'cancel', title: 'Высокий процент отмен', sev: 'bad' });
-      else if (totals.cancelRate >= t.warn) out.push({ key: 'cancel', title: 'Отмены выше нормы', sev: 'warn' });
-    }
-
-    // repeat rate (тут “ниже — хуже”, поэтому пороги инвертируем по смыслу)
-    {
-      const r = ruleByKey.get('repeat_rate');
-      const warn = r ? Number(r.warn_threshold) : 0.22;
-      const bad = r ? Number(r.bad_threshold) : 0.16;
-      if (totals.orders > 20 && totals.repeat <= bad) out.push({ key: 'repeat', title: 'Очень низкая повторяемость', sev: 'bad' });
-      else if (totals.orders > 20 && totals.repeat <= warn) out.push({ key: 'repeat', title: 'Низкая повторяемость', sev: 'warn' });
-    }
-
-    // net negative
-    {
-      const r = ruleByKey.get('net_negative');
-      const warn = r ? Number(r.warn_threshold) : 0; // если ниже 0 — warn
-      const bad = r ? Number(r.bad_threshold) : -1; // если ниже -1 (любой минус) — bad по умолчанию
-      // по смыслу: warn_threshold обычно 0, bad_threshold обычно -1 (то есть <0)
-      if (totals.net < warn && totals.net < bad) out.push({ key: 'net', title: 'Net ушёл в минус', sev: 'bad' });
-      else if (totals.net < warn) out.push({ key: 'net', title: 'Net отрицательный', sev: 'warn' });
-    }
+    if (totals.repeat < 0.22 && totals.orders > 20)
+      out.push({ key: 'repeat', title: 'Низкая повторяемость', sev: 'warn' });
 
     return out;
-  }, [totals.pending, totals.cancelRate, totals.repeat, totals.orders, totals.net, premiumCfg?.alerts]);
+  }, [totals.pending, totals.cancelRate, totals.repeat, totals.orders]);
 
-  const healthTone: HealthTone = React.useMemo(() => toneFromAlerts(computedAlerts), [computedAlerts]);
-  const healthTitle = React.useMemo(() => joinAlertTitles(computedAlerts, 4), [computedAlerts]);
+  const healthTone: HealthTone = React.useMemo(() => toneFromAlerts(alerts), [alerts]);
+  const healthTitle = React.useMemo(() => joinAlertTitles(alerts, 4), [alerts]);
 
   const insights = React.useMemo(() => {
     const out: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string; dev?: string }> = [];
@@ -918,19 +625,8 @@ export default function Sales() {
       dev: 'DEV: repeat_rate считать по customer_tg_id',
     });
 
-    // premium hint: progressive tiers present?
-    const tiersOn = (premiumCfg?.tiers || []).filter((t) => t.enabled).length;
-    out.push({
-      tone: tiersOn >= 2 ? 'good' : 'warn',
-      title: tiersOn >= 2 ? 'Есть прогрессивные уровни кэшбэка' : 'Добавь VIP-уровень (tiers)',
-      body:
-        tiersOn >= 2
-          ? `Уровней активных: ${tiersOn}. Это повышает retention — клиент “копит” до следующего ранга.`
-          : 'Сделай минимум 2 уровня: Base и VIP (по кол-ву покупок). Это хорошо продаётся как “премиум-автоматизация”.',
-    });
-
     return out.slice(0, 4);
-  }, [totals.net, totals.pending, totals.repeat, currency, premiumCfg?.tiers]);
+  }, [totals.net, totals.pending, totals.repeat, currency]);
 
   const topCashiers = [...cashiers]
     .sort((a, b) => (b.revenue_cents || 0) - (a.revenue_cents || 0))
@@ -940,85 +636,17 @@ export default function Sales() {
     .sort((a, b) => (b.ltv_cents || 0) - (a.ltv_cents || 0))
     .slice(0, 6);
 
+  // чтобы Tooltip и серия “orders” не ломали “денежный” форматтер
   const chartData = React.useMemo(() => {
     return (days || []).map((d: SalesDay) => ({
       ...d,
+      // orders bars на отдельной оси, но tooltip покажем красиво
       orders_count: d.orders,
     }));
   }, [days]);
 
   const cardToneCls =
     healthTone === 'bad' ? 'is-health-bad' : healthTone === 'warn' ? 'is-health-warn' : 'is-health-good';
-
-  // ===== Premium mutations =====
-  function patchPremium(next: SalesPremiumConfig) {
-    setPremiumCfg(next);
-    setPremiumDirty(true);
-  }
-
-  function savePremium() {
-    if (!premiumCfg) return;
-    const key = `sg_sales_premium_cfg:${String(appId || 'noapp')}`;
-    const next: SalesPremiumConfig = { ...premiumCfg, updated_at: new Date().toISOString() };
-    localStorage.setItem(key, JSON.stringify(next));
-    setPremiumCfg(next);
-    setPremiumDirty(false);
-  }
-
-  function resetPremium() {
-    const next = defaultPremiumConfig(currencyDraft, coinCents);
-    patchPremium(next);
-  }
-
-  function exportPremium(): string {
-    try {
-      return JSON.stringify(premiumCfg, null, 2);
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function importPremiumJson(s: string) {
-    try {
-      const v = JSON.parse(String(s || ''));
-      if (!v || typeof v !== 'object') return;
-      patchPremium(v as SalesPremiumConfig);
-    } catch (_) {
-      // no-op
-    }
-  }
-
-  // ===== Derived previews for premium =====
-  const premiumPreview = React.useMemo(() => {
-    const cfg = premiumCfg;
-    if (!cfg) return { activeTiers: 0, activeRanks: 0, activeAlerts: 0, activeAutomation: 0 };
-
-    return {
-      activeTiers: cfg.tiers.filter((t) => t.enabled).length,
-      activeRanks: cfg.ranks.filter((t) => t.enabled).length,
-      activeAlerts: cfg.alerts.filter((t) => t.enabled).length,
-      activeAutomation: cfg.automation.filter((t) => t.enabled).length,
-    };
-  }, [premiumCfg]);
-
-  const premiumHealthTone: HealthTone = React.useMemo(() => {
-    // “здоровье конфигурации” — чтобы продавать премиум: если мало правил — warn.
-    const cfg = premiumCfg;
-    if (!cfg) return 'warn';
-    const tiers = cfg.tiers.filter((t) => t.enabled).length;
-    const auto = cfg.automation.filter((a) => a.enabled).length;
-
-    if (tiers >= 2 && auto >= 1) return 'good';
-    if (tiers >= 1) return 'warn';
-    return 'bad';
-  }, [premiumCfg]);
-
-  const premiumHealthTitle = React.useMemo(() => {
-    if (!premiumCfg) return 'Конфиг не загружен';
-    if (premiumHealthTone === 'good') return 'Premium настроен: tiers + automation активны';
-    if (premiumHealthTone === 'warn') return 'Можно усилить: добавь ещё tier или включи automation';
-    return 'Premium почти пустой: включи хотя бы Base tier';
-  }, [premiumCfg, premiumHealthTone]);
 
   return (
     <div className="sg-page salesPage">
@@ -1456,11 +1084,11 @@ export default function Sales() {
   padding: 0 12px;
 }
 .sgColl.is-open .sgColl__body{
-  max-height: 1600px;
+  max-height: 1200px;
   padding: 0 12px 12px 12px;
 }
 
-/* Health badge */
+/* Health badge (yellow/red/green, with tooltip) */
 .sgHealthBadge{
   height:32px;
   padding:0 10px 0 8px;
@@ -1526,137 +1154,13 @@ export default function Sales() {
 
 /* Right sticky */
 .salesRightSticky{ position: sticky; top: 10px; }
-
-/* Premium panel micro-UI */
-.sgBtn{
-  height:34px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.12);
-  background: rgba(255,255,255,.90);
-  box-shadow: var(--sg-in);
-  cursor:pointer;
-  font-weight:1000;
-  font-size:12px;
-}
-.sgBtn:hover{ box-shadow: var(--sg-shadow), var(--sg-in); }
-.sgBtn.is-primary{
-  border-color: rgba(15,23,42,.16);
-  background: rgba(15,23,42,.04);
-}
-.sgBtn:disabled{ opacity:.55; cursor:not-allowed; }
-
-.sgMiniNote{
-  font-size:12px;
-  opacity:.78;
-}
-
-.sgInlineActions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-
-.sgDivider{
-  height:1px;
-  background: rgba(15,23,42,.10);
-  margin:10px 0;
-}
-
-.sgToggle{
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
-  border:1px solid rgba(15,23,42,.10);
-  background: rgba(255,255,255,.86);
-  box-shadow: var(--sg-in);
-  border-radius:14px;
-  padding:6px 10px;
-  cursor:pointer;
-  font-weight:1000;
-  font-size:12px;
-  user-select:none;
-}
-.sgToggle__track{
-  width:36px;
-  height:20px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.12);
-  background: rgba(15,23,42,.06);
-  position:relative;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.70);
-}
-.sgToggle__thumb{
-  width:16px;
-  height:16px;
-  border-radius:999px;
-  background: rgba(255,255,255,.96);
-  border:1px solid rgba(15,23,42,.12);
-  position:absolute;
-  top:50%;
-  transform: translateY(-50%);
-  left:2px;
-  transition: left .14s ease;
-  box-shadow: 0 10px 20px rgba(15,23,42,.10);
-}
-.sgToggle.is-on .sgToggle__track{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.22); }
-.sgToggle.is-on .sgToggle__thumb{ left:18px; }
-.sgToggle__lbl{ opacity:.92; }
-
-.sgGridForm{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:10px;
-}
-@media (max-width:1100px){
-  .sgGridForm{ grid-template-columns:1fr; }
-}
-
-.sgRowGrid{
-  display:grid;
-  grid-template-columns: 1.1fr .8fr .8fr .8fr auto;
-  gap:8px;
-  align-items:end;
-}
-@media (max-width:1100px){
-  .sgRowGrid{ grid-template-columns:1fr 1fr; }
-}
-
-.sgFieldLbl{ font-size:12px; opacity:.78; font-weight:900; margin-bottom:6px; }
-.sgTextArea{
-  width:100%;
-  min-height:80px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.12);
-  background: rgba(255,255,255,.96);
-  box-shadow: var(--sg-in);
-  font:inherit;
-  font-weight:900;
-  font-size:13px;
-  resize:vertical;
-}
-
-.sgSmallIcon{
-  width:34px;
-  height:34px;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.12);
-  background: rgba(255,255,255,.90);
-  box-shadow: var(--sg-in);
-  cursor:pointer;
-}
-.sgSmallIcon:hover{ box-shadow: var(--sg-shadow), var(--sg-in); }
-.sgSmallIcon.is-danger{
-  border-color: rgba(239,68,68,.20);
-  background: rgba(239,68,68,.06);
-}
-
       `}</style>
 
       {/* ===== HEAD ===== */}
       <div className="wheelHead">
         <div>
           <h1 className="sg-h1">Продажи (QR)</h1>
-          <div className="sg-sub">
-            График/карточки — один стиль с Wheel. Сейчас данные — mock, конфиг Premium справа — локальный (под будущий воркер).
-          </div>
+          <div className="sg-sub">График/карточки — один стиль с Wheel. Сейчас данные — mock, потом подключим воркер.</div>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -1706,6 +1210,7 @@ export default function Sales() {
             </div>
 
             <div className="salesChartWrap">
+              {/* top overlay controls */}
               <div className="salesChartTopControls">
                 <div className="salesSeg" role="tablist" aria-label="basis">
                   <button
@@ -1749,6 +1254,7 @@ export default function Sales() {
                   </IconBtn>
                 </div>
 
+                {/* ✅ Health button with tooltip (exactly what you asked: yellow/red with "!"; green if ok) */}
                 <HealthBadge tone={healthTone} title={healthTitle} />
               </div>
 
@@ -2132,7 +1638,7 @@ export default function Sales() {
                         </div>
                       </div>
                     );
-                  })) }
+                  }))}
                 </div>
               </div>
             )}
@@ -2201,7 +1707,7 @@ export default function Sales() {
                         </div>
                       </div>
                     );
-                  })) }
+                  }))}
                 </div>
               </div>
             )}
@@ -2209,4 +1715,329 @@ export default function Sales() {
             {/* TAB: LIVE */}
             {tab === 'live' && (
               <div className="salesUnderPanel">
-                <div style={{ fontWeight:
+                <div style={{ fontWeight: 1000 }}>
+                  Live лента <span style={{ marginLeft: 8 }}><Tip dev text="DEV: /sales/live последние N событий (sales_events)" /></span>
+                </div>
+
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {(isLoading ? Array.from({ length: 5 }).map((_, i) => (
+                    <div className="sgRow" key={i}>
+                      <div className="sgRowLeft">
+                        <div style={{ width: '100%' }}>
+                          <div className="sgRowTitle"><ShimmerLine w={70} /></div>
+                          <div className="sgRowMeta"><ShimmerLine w={92} /></div>
+                        </div>
+                      </div>
+                      <div className="sgRowRight">
+                        <div className="sgRowVal">—</div>
+                        <div className="sgRowSub">—</div>
+                      </div>
+                    </div>
+                  )) : (
+                    <>
+                      <div className="sgRow is-good">
+                        <div className="sgRowLeft">
+                          <div>
+                            <div className="sgRowTitle">sale_recorded</div>
+                            <div className="sgRowMeta">
+                              Покупка 520 ₽ · cashback +31 мон · кассир #2 · 12:44
+                              <span style={{ marginLeft: 8 }}><Tip text="Подсказка: hover-only" /></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">ok</div>
+                          <div className="sgRowSub">event</div>
+                        </div>
+                      </div>
+
+                      <div className="sgRow is-good">
+                        <div className="sgRowLeft">
+                          <div>
+                            <div className="sgRowTitle">redeem_confirmed</div>
+                            <div className="sgRowMeta">Списано 120 мон · net +12 ₽ · кассир #1 · 12:40</div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">vip</div>
+                          <div className="sgRowSub">segment</div>
+                        </div>
+                      </div>
+
+                      <div className="sgRow is-warn">
+                        <div className="sgRowLeft">
+                          <div>
+                            <div className="sgRowTitle">cashback_pending</div>
+                            <div className="sgRowMeta">Ждёт подтверждения · кассир #2 · 12:33</div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">risk</div>
+                          <div className="sgRowSub">alert</div>
+                        </div>
+                      </div>
+                    </>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* RIGHT */}
+        <div className="salesRight">
+          <div className="salesRightSticky">
+            {/* Summary PRO */}
+            <Card className={`salesCard salesCard--lift ${cardToneCls}`} style={{ marginBottom: 12 }}>
+              <div className="salesCardHead">
+                <div>
+                  <div className="salesTitle">
+                    Summary PRO
+                    <span style={{ marginLeft: 10 }}><Tip text="Подсказки при наведении. Нажимай секции — сворачиваются." /></span>
+                  </div>
+                  <div className="salesSub">Сигналы качества + рекомендации</div>
+                </div>
+                <HealthBadge tone={healthTone} title={healthTitle} />
+              </div>
+
+              <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Collapsible
+                  title="Ключевые сигналы"
+                  sub="что нужно починить в первую очередь"
+                  open={openKpi}
+                  onToggle={() => setOpenKpi(v => !v)}
+                  healthTone={healthTone}
+                  healthTitle={healthTitle}
+                  right={<span className="sg-muted" style={{ fontWeight: 900 }}>{alerts.length ? `${alerts.length} алерт(а)` : 'нет алертов'}</span>}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className={'sgRow ' + (alerts.length ? (healthTone === 'bad' ? 'is-bad' : 'is-warn') : 'is-good')}>
+                      <div className="sgRowLeft">
+                        <div>
+                          <div className="sgRowTitle">Список алертов</div>
+                          <div className="sgRowMeta">
+                            <span className="sg-muted">Мягкая подсветка (без кислотности)</span>
+                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: алерты считать на бэке и отдавать массивом" /></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="sgRowRight">
+                        <div className="sgRowVal">{alerts.length}</div>
+                        <div className="sgRowSub">{alerts.length ? 'внимание' : 'ok'}</div>
+                      </div>
+                    </div>
+
+                    {alerts.length ? alerts.slice(0, 4).map((a) => (
+                      <div className={'sgRow ' + (a.sev === 'bad' ? 'is-bad' : 'is-warn')} key={a.key}>
+                        <div className="sgRowLeft">
+                          <div>
+                            <div className="sgRowTitle">
+                              {a.title}
+                              <span style={{ marginLeft: 10 }}>
+                                <HealthBadge tone={a.sev === 'bad' ? 'bad' : 'warn'} title={a.title} compact />
+                              </span>
+                            </div>
+                            <div className="sgRowMeta">
+                              sev: <b>{a.sev}</b>
+                              <span style={{ marginLeft: 8 }}><Tip text="Подсказка: наведи на ! (справа)" /></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">{a.sev === 'bad' ? '!' : '·'}</div>
+                          <div className="sgRowSub">{a.sev}</div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="sgRow is-good">
+                        <div className="sgRowLeft">
+                          <div>
+                            <div className="sgRowTitle">Всё спокойно</div>
+                            <div className="sgRowMeta">Пока нет критичных отклонений</div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">ok</div>
+                          <div className="sgRowSub">clean</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Collapsible>
+
+                <Collapsible
+                  title="Инсайты"
+                  sub="умные подсказки (с привязкой к метрикам)"
+                  open={openInsights}
+                  onToggle={() => setOpenInsights(v => !v)}
+                  healthTone={healthTone === 'bad' ? 'warn' : 'good'} // инсайты не должны “кричать” красным
+                  healthTitle={healthTone === 'bad' ? 'Есть проблемы: исправь алерты — инсайты станут точнее.' : 'Ок'}
+                  right={<span className="sg-muted" style={{ fontWeight: 900 }}>4 cards</span>}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                    {isLoading ? (
+                      <>
+                        <div className="sgRow"><div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={54} /></div><div className="sgRowMeta"><ShimmerLine w={92} /></div></div></div></div>
+                        <div className="sgRow"><div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={62} /></div><div className="sgRowMeta"><ShimmerLine w={88} /></div></div></div></div>
+                      </>
+                    ) : insights.map((x, i) => (
+                      <div className={'sgRow ' + (x.tone === 'bad' ? 'is-bad' : x.tone === 'warn' ? 'is-warn' : 'is-good')} key={i}>
+                        <div className="sgRowLeft">
+                          <div style={{ minWidth: 0 }}>
+                            <div className="sgRowTitle">
+                              {x.title}
+                              <span style={{ marginLeft: 10 }}><Tip text={x.body} /></span>
+                              {x.dev ? <span style={{ marginLeft: 8 }}><Tip dev text={x.dev} /></span> : null}
+                            </div>
+                            <div className="sgRowMeta">{x.body}</div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">{x.tone}</div>
+                          <div className="sgRowSub">insight</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Collapsible>
+
+                <Collapsible
+                  title="Топ списки"
+                  sub="кто приносит деньги / кто косячит"
+                  open={openTop}
+                  onToggle={() => setOpenTop(v => !v)}
+                  healthTone="good"
+                  healthTitle="Ок"
+                  right={<span className="sg-muted" style={{ fontWeight: 900 }}>Top 6</span>}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                    <div className="sgRow">
+                      <div className="sgRowLeft">
+                        <div>
+                          <div className="sgRowTitle">Топ кассиров по выручке</div>
+                          <div className="sgRowMeta">
+                            <span className="sg-muted">Сравни confirm/cancel и медиану времени</span>
+                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: sort by revenue_cents desc" /></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="sgRowRight">
+                        <div className="sgRowVal">{topCashiers.length}</div>
+                        <div className="sgRowSub">rows</div>
+                      </div>
+                    </div>
+
+                    {isLoading ? (
+                      <div className="sgRow">
+                        <div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={44} /></div><div className="sgRowMeta"><ShimmerLine w={90} /></div></div></div>
+                        <div className="sgRowRight"><div className="sgRowVal">—</div><div className="sgRowSub">—</div></div>
+                      </div>
+                    ) : (
+                      topCashiers.slice(0, 3).map((c) => (
+                        <div className="sgRow" key={'topc_' + c.cashier_label}>
+                          <div className="sgRowLeft">
+                            <div>
+                              <div className="sgRowTitle">{c.cashier_label}</div>
+                              <div className="sgRowMeta">
+                                confirm <b>{fmtPct(c.confirm_rate)}</b> · cancel <b>{fmtPct(c.cancel_rate)}</b> · median <b>{c.median_confirm_minutes.toFixed(1)}m</b>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="sgRowRight">
+                            <div className="sgRowVal">{moneyFromCent(c.revenue_cents, currency)}</div>
+                            <div className="sgRowSub">revenue</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    <div className="sgRow">
+                      <div className="sgRowLeft">
+                        <div>
+                          <div className="sgRowTitle">Топ клиентов по LTV</div>
+                          <div className="sgRowMeta">
+                            <span className="sg-muted">Отсюда делаем VIP/retention сценарии</span>
+                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: segment rules (saver/spender) позже" /></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="sgRowRight">
+                        <div className="sgRowVal">{topCustomers.length}</div>
+                        <div className="sgRowSub">rows</div>
+                      </div>
+                    </div>
+
+                    {!isLoading && topCustomers.slice(0, 3).map((c) => (
+                      <div className="sgRow" key={'topu_' + c.customer_label}>
+                        <div className="sgRowLeft">
+                          <div>
+                            <div className="sgRowTitle">{c.customer_label}</div>
+                            <div className="sgRowMeta">
+                              сегмент <b>{c.segment}</b> · заказов <b>{c.orders}</b> · last <b>{c.last_seen}</b>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="sgRowRight">
+                          <div className="sgRowVal">{moneyFromCent(c.ltv_cents, currency)}</div>
+                          <div className="sgRowSub">LTV</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Collapsible>
+              </div>
+            </Card>
+
+            {/* Settings block (UI-only) */}
+            <Card className="salesCard salesCard--lift">
+              <div className="salesCardHead">
+                <div>
+                  <div className="salesTitle">
+                    Стоимость монеты (UI)
+                    <span style={{ marginLeft: 10 }}><Tip dev text="DEV: потом /settings (coin_value_cents + currency)" /></span>
+                  </div>
+                  <div className="salesSub">Нужно для пересчёта монет → деньги</div>
+                </div>
+              </div>
+
+              <div style={{ padding: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12, alignItems: 'end' }}>
+                  <div>
+                    <div className="sg-muted" style={{ marginBottom: 6 }}>
+                      1 монета = (в {currencyLabel(currencyDraft)})
+                    </div>
+                    <Input value={coinValueDraft} onChange={(e: any) => setCoinValueDraft(e.target.value)} placeholder="1.00" />
+                    <div className="sg-muted" style={{ marginTop: 6 }}>
+                      = {moneyFromCent(coinCents, currencyDraft)} / монета
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="sg-muted" style={{ marginBottom: 6 }}>Валюта</div>
+                    <select
+                      value={currencyDraft}
+                      onChange={(e: any) => setCurrencyDraft(String(e.target.value || 'RUB').toUpperCase())}
+                      className="sg-input"
+                      style={{ height: 38, width: '100%' }}
+                    >
+                      <option value="RUB">RUB (₽)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button type="button" className="sg-tab is-active" disabled>
+                    Сохранить (позже)
+                  </button>
+                  <span className="sg-muted">DEV: позже сделаем PUT /settings и invalidate queries</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
