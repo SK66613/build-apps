@@ -814,3 +814,10 @@
 .sgp-wheel .sgp-toggle.is-disabled .sgp-toggle__track{
   filter: saturate(.6);
 }
+
+/* Wheel: tabs bar between cards */
+.sgp-wheelTabsBar{
+  display:flex;
+  justify-content:flex-start;
+  margin: 10px 0 12px; /* между карточками */
+}
