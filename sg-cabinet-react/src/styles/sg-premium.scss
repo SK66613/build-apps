@@ -1058,3 +1058,113 @@
   --sgp-chart-grid: rgba(0,0,0,.08);
   --sgp-chart-axis: rgba(0,0,0,.55);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===========================
+   SGP Premium Standard (global)
+=========================== */
+
+:root{
+  /* typography */
+  --sgp-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* radii */
+  --sgp-r-xl: 22px;
+  --sgp-r-lg: 18px;
+  --sgp-r-md: 14px;
+  --sgp-r-sm: 12px;
+
+  /* surfaces */
+  --sgp-card-bg: rgba(255,255,255,.88);
+  --sgp-card-bg2: rgba(255,255,255,.96);
+  --sgp-soft: rgba(15,23,42,.03);
+
+  /* borders/shadows */
+  --sgp-bd: rgba(15,23,42,.10);
+  --sgp-bd2: rgba(15,23,42,.08);
+  --sgp-in: inset 0 1px 0 rgba(255,255,255,.70);
+  --sgp-shadow: 0 10px 26px rgba(15,23,42,.06);
+  --sgp-shadow2: 0 16px 40px rgba(15,23,42,.10);
+  --sgp-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
+
+  /* tones */
+  --sgp-good-tint: rgba(34,197,94,.08);
+  --sgp-good-bd: rgba(34,197,94,.18);
+
+  --sgp-warn-tint: rgba(245,158,11,.08);
+  --sgp-warn-bd: rgba(245,158,11,.18);
+
+  --sgp-bad-tint: rgba(239,68,68,.08);
+  --sgp-bad-bd: rgba(239,68,68,.18);
+
+  /* charts (soft) */
+  --sgp-chart-grid: rgba(15,23,42,.08);
+  --sgp-chart-axis: rgba(15,23,42,.55);
+  --sgp-chart-revenue: rgba(59,130,246,.55);
+  --sgp-chart-cost: rgba(148,163,184,.75);
+  --sgp-chart-cum: rgba(15,23,42,.45);
+  --sgp-chart-good: rgba(16,185,129,.45);
+  --sgp-chart-bad: rgba(239,68,68,.45);
+}
+
+/* Base card */
+.sgp-card{
+  border: 1px solid var(--sgp-bd2);
+  border-radius: var(--sgp-r-xl);
+  background: var(--sgp-card-bg);
+  box-shadow: var(--sgp-in);
+  overflow:hidden;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+.sgp-card.is-lift:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--sgp-glow), var(--sgp-in);
+  border-color: rgba(15,23,42,.12);
+  background: var(--sgp-card-bg2);
+}
+
+/* Card tone */
+.sgp-card.tone-good{ border-color: var(--sgp-good-bd); background: linear-gradient(0deg, var(--sgp-good-tint), var(--sgp-card-bg)); }
+.sgp-card.tone-warn{ border-color: var(--sgp-warn-bd); background: linear-gradient(0deg, var(--sgp-warn-tint), var(--sgp-card-bg)); }
+.sgp-card.tone-bad { border-color: var(--sgp-bad-bd);  background: linear-gradient(0deg, var(--sgp-bad-tint),  var(--sgp-card-bg)); }
+
+/* Icon-only badge (top-right) */
+.sgp-health{
+  width:28px; height:28px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(15,23,42,.04);
+  display:inline-flex; align-items:center; justify-content:center;
+  cursor: default;
+  box-shadow: var(--sgp-in);
+  opacity:.92;
+}
+.sgp-health:hover{ opacity:1; }
+.sgp-health[data-tone="good"]{ background: var(--sgp-good-tint); color: rgba(22,163,74,.95); }
+.sgp-health[data-tone="warn"]{ background: var(--sgp-warn-tint); color: rgba(245,158,11,.95); }
+.sgp-health[data-tone="bad"] { background: var(--sgp-bad-tint);  color: rgba(239,68,68,.95); }
+
+/* Icon buttons (no border, soft active) */
+.sgp-iconbtn{
+  width:34px; height:34px;
+  border-radius: 14px;
+  border:0;
+  background: transparent;
+  display:inline-flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  opacity:.88;
+  transition: background .14s ease, opacity .14s ease, transform .14s ease;
+}
+.sgp-iconbtn:hover{ opacity:1; background: rgba(15,23,42,.04); }
+.sgp-iconbtn.is-active{ background: rgba(15,23,42,.06); opacity:1; }
