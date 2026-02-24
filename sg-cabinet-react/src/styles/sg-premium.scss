@@ -507,3 +507,88 @@
   }
   .sgp-card::before{ transition:none !important; }
 }
+
+
+
+
+
+
+/* =========================================================
+   Wheel layout fixes:
+   - custom dates slide-in on the SAME ROW
+   - chart header controls in ONE ROW
+   - spring press animation for buttons
+========================================================= */
+
+/* ONE ROW header range */
+.sgp-rangebar{ width:100%; }
+.sgp-rangebar__row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+/* slide-in wrapper for custom range */
+.sgp-rangebar__customWrap{
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+  max-width:0;
+  opacity:0;
+  transform: translateY(-2px);
+  transition:
+    max-width .22s ease,
+    opacity .16s ease,
+    transform .22s ease;
+}
+.sgp-rangebar__customWrap.is-open{
+  max-width: 520px; /* enough for 2 dates + button */
+  opacity:1;
+  transform: translateY(0);
+}
+@media (max-width: 900px){
+  .sgp-rangebar__customWrap.is-open{ max-width: 100%; }
+}
+
+/* custom controls stay in one line */
+.sgp-rangebar__custom{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* chart header: one row */
+.sgp-chartbar{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* press "spring" feel */
+.sgp-press,
+.sgp-seg__btn,
+.sgpIconBtn,
+.sgp-iconbtn,
+.sgp-input{
+  transition: transform .12s cubic-bezier(.2, 1.4, .3, 1), box-shadow .14s ease, background .14s ease, border-color .14s ease;
+}
+
+.sgp-press:active,
+.sgp-seg__btn:active,
+.sgpIconBtn:active,
+.sgp-iconbtn:active{
+  transform: translateY(1px) scale(.97);
+}
+
+/* optional: slightly “pop back” on focus (feels springy after click) */
+.sgp-press:focus-visible,
+.sgp-seg__btn:focus-visible,
+.sgpIconBtn:focus-visible,
+.sgp-iconbtn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in);
+}
