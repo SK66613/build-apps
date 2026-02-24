@@ -1,7 +1,7 @@
 /* =========================================================
-   SGP — SINGLE SOURCE OF TRUTH (ETALON)
+   SGP — SINGLE SOURCE OF TRUTH (ETALON) — CLEANED + PREMIUM
    Put this block at the VERY BOTTOM of src/styles/sg-premium.scss
-   After that: remove/disable all older duplicated sgp-* blocks above.
+   Дубли удалены. Оставлены только последние варианты.
 ========================================================= */
 
 /* -------------------------
@@ -11,7 +11,7 @@
   /* base font for UI text */
   --sgp-font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  /* headings font (system-like, per your request) */
+  /* headings font (system-like) */
   --sgp-font-head: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
   /* radii */
@@ -31,11 +31,15 @@
   --sgp-bd-strong: rgba(15,23,42,.14);
 
   --sgp-in: inset 0 1px 0 rgba(255,255,255,.70);
+
+  /* base soft air (NEW: slightly stronger for "premium") */
   --sgp-shadow: 0 10px 26px rgba(15,23,42,.06);
   --sgp-shadow2: 0 16px 40px rgba(15,23,42,.10);
+
+  /* glow for hover */
   --sgp-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
 
-  /* tone tints (soft like screenshot) */
+  /* tone tints */
   --sgp-goodTint: rgba(34,197,94,.08);
   --sgp-goodBd: rgba(34,197,94,.18);
 
@@ -76,7 +80,7 @@
 
 .sgp-page__title{
   font-size: 20px;
-  font-weight: 800; /* not crazy bold */
+  font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
@@ -94,7 +98,7 @@
 
 
 /* -------------------------
-   2) Card (soft glass + lift)
+   2) Card (soft glass + premium air)
 ------------------------- */
 .sgp-card{
   position: relative;
@@ -104,7 +108,10 @@
     radial-gradient(1200px 600px at 18% -12%, var(--sgp-neutralTint), rgba(0,0,0,0) 60%),
     radial-gradient(900px 520px at 112% 0%, rgba(15,23,42,.03), rgba(0,0,0,0) 55%),
     var(--sgp-card-bg);
-  box-shadow: var(--sgp-in);
+
+  /* NEW: add base "air" shadow to look premium even without hover */
+  box-shadow: var(--sgp-in), var(--sgp-shadow);
+
   overflow: hidden;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
@@ -116,9 +123,9 @@
   inset:-2px;
   border-radius: calc(var(--sgp-r-xl) + 2px);
   background:
-    radial-gradient(650px 200px at 18% 0%, rgba(255,255,255,.58), rgba(255,255,255,0) 62%),
-    radial-gradient(650px 220px at 86% 10%, rgba(255,255,255,.38), rgba(255,255,255,0) 66%);
-  opacity:.22;
+    radial-gradient(650px 200px at 18% 0%, rgba(255,255,255,.62), rgba(255,255,255,0) 62%),
+    radial-gradient(650px 220px at 86% 10%, rgba(255,255,255,.42), rgba(255,255,255,0) 66%);
+  opacity:.26; /* NEW: slightly stronger */
   pointer-events:none;
   transition: opacity .16s ease, transform .16s ease;
 }
@@ -128,7 +135,10 @@
 .sgp-wheel .sgp-card:hover{
   transform: translateY(-1px);
   border-color: rgba(15,23,42,.12);
-  box-shadow: var(--sgp-glow), var(--sgp-in);
+
+  /* NEW: keep premium glow + deeper hover air */
+  box-shadow: var(--sgp-in), var(--sgp-glow);
+
   background:
     radial-gradient(1200px 600px at 18% -12%, rgba(15,23,42,.03), rgba(0,0,0,0) 60%),
     radial-gradient(900px 520px at 112% 0%, rgba(15,23,42,.03), rgba(0,0,0,0) 55%),
@@ -136,13 +146,13 @@
 }
 .sgp-card.is-lift:hover::before,
 .sgp-wheel .sgp-card:hover::before{
-  opacity:.34;
+  opacity:.38;          /* NEW */
   transform: translateY(-1px);
 }
 
 .sgp-card:focus-within{
   border-color: var(--sgp-bd-strong);
-  box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in);
+  box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in), var(--sgp-shadow);
 }
 
 /* inner layout */
@@ -208,7 +218,7 @@
   box-shadow: var(--sgp-in);
   padding:10px 12px;
   font-size:13px;
-  font-weight:700; /* not super bold */
+  font-weight:700;
   line-height:1.25;
 }
 
@@ -249,19 +259,17 @@
   border-radius:999px;
   border:1px solid transparent;
   background:transparent;
-  font-weight:700;        /* less bold */
+  font-weight:700;
   font-size:13px;
   color: rgba(15,23,42,.86);
   cursor:pointer;
   opacity:.92;
-  transition: background .14s ease, box-shadow .14s ease, border-color .14s ease, opacity .14s ease;
+  transition: background .14s ease, box-shadow .14s ease, border-color .14s ease, opacity .14s ease, transform .12s cubic-bezier(.2,1.4,.3,1);
 }
-
 .sgp-seg__btn:hover{
   opacity:1;
   background: rgba(15,23,42,.03);
 }
-
 .sgp-seg__btn.is-active{
   background: rgba(255,255,255,.92);
   color: rgba(15,23,42,.92);
@@ -272,10 +280,8 @@
 
 
 /* -------------------------
-   5) Icon buttons group (R/C/P/Σ)
+   5) Icon buttons group (R/C/P/Σ) base style
 ------------------------- */
-.sgp-chartctl__icons{ display:flex; gap:8px; }
-
 .sgpIconBtn,
 .sgp-iconbtn{
   width:34px;
@@ -287,12 +293,11 @@
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  font-weight:700; /* less bold */
+  font-weight:700;
   color: rgba(15,23,42,.80);
   opacity:.92;
-  transition: transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease, opacity .14s ease;
+  transition: transform .14s cubic-bezier(.2,1.4,.3,1), box-shadow .14s ease, background .14s ease, border-color .14s ease, opacity .14s ease;
 }
-
 .sgpIconBtn:hover,
 .sgp-iconbtn:hover{
   opacity:1;
@@ -301,7 +306,6 @@
   border-color: rgba(15,23,42,.12);
   background: rgba(255,255,255,.96);
 }
-
 .sgpIconBtn.is-active,
 .sgp-iconbtn.is-active{
   background: rgba(15,23,42,.05);
@@ -335,14 +339,13 @@
 
 
 /* -------------------------
-   7) Metrics mini-cards (like screenshot)
+   7) Metrics mini-cards
 ------------------------- */
 .sgp-metrics{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap:10px;
 }
-
 .sgp-metric{
   border:1px solid rgba(15,23,42,.08);
   background: rgba(255,255,255,.78);
@@ -351,27 +354,23 @@
   box-shadow: var(--sgp-in);
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
-
 .sgp-metric:hover{
   transform: translateY(-1px);
   box-shadow: var(--sgp-shadow), var(--sgp-in);
   border-color: rgba(15,23,42,.12);
   background: rgba(255,255,255,.92);
 }
-
 .sgp-metric__k{
   font-size:12px;
   opacity:.7;
   font-weight:600;
 }
-
 .sgp-metric__v{
   margin-top:6px;
   font-size:16px;
   font-weight:800;
   letter-spacing:-0.01em;
 }
-
 @media (max-width:1100px){
   .sgp-metrics{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -420,18 +419,15 @@
   gap:10px;
   align-items:center;
 }
-
 .sgp-stockHead{
   padding:8px 0;
   font-size:12px;
   opacity:.7;
 }
-
 .sgp-stockRow{
   padding:10px 0;
   border-top:1px solid rgba(15,23,42,.06);
 }
-
 .sgp-stockCol--name{ min-width:0; }
 .sgp-stockName{ font-weight:800; }
 .sgp-stockSub{ font-size:12px; opacity:.7; margin-top:2px; }
@@ -439,12 +435,8 @@
 .sgp-stockHint.is-bad{ opacity:.95; }
 .sgp-stockHint.is-warn{ opacity:.85; }
 
-.sgp-stockRow.tone-out{
-  background: linear-gradient(90deg, var(--sgp-badTint), transparent 60%);
-}
-.sgp-stockRow.tone-low{
-  background: linear-gradient(90deg, var(--sgp-warnTint), transparent 60%);
-}
+.sgp-stockRow.tone-out{ background: linear-gradient(90deg, var(--sgp-badTint), transparent 60%); }
+.sgp-stockRow.tone-low{ background: linear-gradient(90deg, var(--sgp-warnTint), transparent 60%); }
 
 @media (max-width:1100px){
   .sgp-stockHead,
@@ -455,7 +447,7 @@
 
 
 /* -------------------------
-   10) Inputs (Wheel date inputs use .sgp-input)
+   10) Inputs
 ------------------------- */
 .sgp-input{
   height:42px;
@@ -465,7 +457,7 @@
   padding:0 12px;
   outline:none;
   width:100%;
-  transition: box-shadow .14s ease, border-color .14s ease, background .14s ease;
+  transition: box-shadow .14s ease, border-color .14s ease, background .14s ease, transform .12s cubic-bezier(.2,1.4,.3,1);
 }
 .sgp-input:focus{
   border-color: rgba(15,23,42,.16);
@@ -473,19 +465,6 @@
   background: rgba(255,255,255,.98);
 }
 .sgp-date{ width:170px; }
-
-/* rangebar */
-.sgp-rangebar{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:10px;
-}
-.sgp-rangebar__custom{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
 
 
 /* -------------------------
@@ -496,7 +475,8 @@
   .sgp-metric,
   .sgpIconBtn,
   .sgp-iconbtn,
-  .sgp-seg__btn{
+  .sgp-seg__btn,
+  .sgp-input{
     transition:none !important;
   }
   .sgp-wheel .sgp-card:hover,
@@ -509,15 +489,12 @@
 }
 
 
-
-
-
-
 /* =========================================================
    Wheel layout fixes:
-   - custom dates slide-in on the SAME ROW
+   - custom dates slide-in on SAME ROW
    - chart header controls in ONE ROW
    - spring press animation for buttons
+   - restore main+aside grid (old behavior)
 ========================================================= */
 
 /* ONE ROW header range */
@@ -544,7 +521,7 @@
     transform .22s ease;
 }
 .sgp-rangebar__customWrap.is-open{
-  max-width: 520px; /* enough for 2 dates + button */
+  max-width: 520px;
   opacity:1;
   transform: translateY(0);
 }
@@ -574,17 +551,14 @@
 .sgpIconBtn,
 .sgp-iconbtn,
 .sgp-input{
-  transition: transform .12s cubic-bezier(.2, 1.4, .3, 1), box-shadow .14s ease, background .14s ease, border-color .14s ease;
+  transition: transform .12s cubic-bezier(.2, 1.4, .3, 1), box-shadow .14s ease, background .14s ease, border-color .14s ease, opacity .14s ease;
 }
-
 .sgp-press:active,
 .sgp-seg__btn:active,
 .sgpIconBtn:active,
 .sgp-iconbtn:active{
   transform: translateY(1px) scale(.97);
 }
-
-/* optional: slightly “pop back” on focus (feels springy after click) */
 .sgp-press:focus-visible,
 .sgp-seg__btn:focus-visible,
 .sgpIconBtn:focus-visible,
@@ -593,12 +567,13 @@
   box-shadow: 0 0 0 3px rgba(15,23,42,.06), var(--sgp-in);
 }
 
-/* ===== SgPage layout: MAIN + ASIDE (old behavior) ===== */
-.sgp-page{
-  width: 100%;
+/* вернуть воздух между большими карточками */
+.sgp-wheel .sgp-card + .sgp-card{
+  margin-top: 14px;
 }
 
-/* Header row stays as-is */
+/* ===== SgPage layout: MAIN + ASIDE (old behavior) ===== */
+.sgp-page{ width: 100%; }
 .sgp-page__header{
   display:flex;
   align-items:flex-start;
@@ -606,80 +581,28 @@
   gap:14px;
   margin-bottom:14px;
 }
-
-/* THE GRID: left main + right aside */
 .sgp-page__grid{
   display:grid !important;
-  grid-template-columns: minmax(0, 1fr) 360px !important; /* right column like before */
+  grid-template-columns: minmax(0, 1fr) 360px !important;
   gap:14px !important;
   align-items:start !important;
 }
-
-/* when page is single-column explicitly */
-.sgp-page__grid--single{
-  grid-template-columns: 1fr !important;
-}
-
-/* ensure main doesn't overflow */
-.sgp-page__main{
-  min-width: 0 !important;
-}
-
-/* ASIDE column is separate, sticky */
-.sgp-page__aside{
-  position: relative !important;
-}
+.sgp-page__grid--single{ grid-template-columns: 1fr !important; }
+.sgp-page__main{ min-width: 0 !important; }
+.sgp-page__aside{ position: relative !important; }
 .sgp-page__aside > .sgp-aside{
   position: sticky !important;
   top: 10px !important;
 }
-
-/* responsive: stack */
 @media (max-width: 1100px){
-  .sgp-page__grid{
-    grid-template-columns: 1fr !important;
-  }
-  .sgp-page__aside > .sgp-aside{
-    position: static !important;
-    top: auto !important;
-  }
+  .sgp-page__grid{ grid-template-columns: 1fr !important; }
+  .sgp-page__aside > .sgp-aside{ position: static !important; top: auto !important; }
 }
 
-
-/* Toggle indicator under stock toggle */
-.sgp-wheel .sgp-stockRow .sgp-toggle{
-  position: relative;
-}
-
-.sgp-wheel .sgp-stockRow .sgp-toggle__track::after{
-  content:"";
-  position:absolute;
-  left:6px;
-  right:6px;
-  bottom:-6px;
-  height:3px;
-  border-radius:999px;
-  background: rgba(239,68,68,.45); /* OFF = red */
-}
-
-.sgp-wheel .sgp-stockRow .sgp-toggle.is-checked .sgp-toggle__track::after{
-  background: rgba(34,197,94,.45); /* ON = green */
-}
-
-/* Минимальный gap между иконками графика */
-.sgp-wheel .sgp-chartctl__icons{
-  gap: 4px;
-}
-
-/* вернуть воздух между большими карточками */
-.sgp-wheel .sgp-card + .sgp-card{
-  margin-top: 14px;
-}
 
 /* =========================================================
    Wheel — corner status icons ( ! ✓ DEV etc )
 ========================================================= */
-
 .sgp-wheel .sgp-card__headerRight{
   display:flex;
   align-items:center;
@@ -708,33 +631,25 @@
     box-shadow .14s ease;
   cursor:default;
 }
-
-/* hover лёгкий lift */
 .sgp-wheel .sgp-health:hover,
 .sgp-wheel .sgp-status:hover{
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.7);
 }
 
-/* === tones === */
-
-/* good (✓) */
+/* tones */
 .sgp-wheel .sgp-health[data-tone="good"],
 .sgp-wheel .sgp-status--ok{
   background: rgba(34,197,94,.10);
   border-color: rgba(34,197,94,.25);
   color: rgba(22,163,74,.95);
 }
-
-/* warn (!) */
 .sgp-wheel .sgp-health[data-tone="warn"],
 .sgp-wheel .sgp-status--warn{
   background: rgba(245,158,11,.10);
   border-color: rgba(245,158,11,.25);
   color: rgba(245,158,11,.95);
 }
-
-/* bad (!) */
 .sgp-wheel .sgp-health[data-tone="bad"],
 .sgp-wheel .sgp-status--bad{
   background: rgba(239,68,68,.10);
@@ -742,7 +657,7 @@
   color: rgba(239,68,68,.95);
 }
 
-/* DEV badge (квадратный вид) */
+/* DEV badge */
 .sgp-wheel .sgp-status--dev{
   width:auto;
   height:24px;
@@ -756,144 +671,21 @@
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* =========================================================
-   Wheel fixes ONLY:
-   - Stock toggles (no native checkboxes, toggle look + red/green hint)
-   - Chart icon group spacing (R/C/P/Σ compact + dividers)
-   - Press spring animation (.sgp-press)
+   Wheel — CHART: compact icon group (R/C/P/Σ) + dividers
+   (оставлен последний вариант)
 ========================================================= */
-
-.sgp-wheel .sgp-press{
-  transition: transform .12s cubic-bezier(.2,.9,.2,1.2);
-}
-.sgp-wheel .sgp-press:active{
-  transform: scale(.97);
-}
-
-/* -------------------------
-   STOCK: force toggle style
-   (если вдруг где-то рендерится checkbox)
-------------------------- */
-.sgp-wheel .sgp-stockRow input[type="checkbox"]{
-  appearance: none;
-  -webkit-appearance: none;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  position: absolute;
-  pointer-events: none;
-}
-
-/* SgToggle primitives — усиливаем специфичность, чтобы не перебивалось */
-.sgp-wheel .sgp-toggle{
-  display:inline-flex;
-  align-items:center;
-  cursor:pointer;
-  position: relative;
-}
-
-.sgp-wheel .sgp-toggle__input{
-  position:absolute !important;
-  opacity:0 !important;
-  pointer-events:none !important;
-}
-
-.sgp-wheel .sgp-toggle__track{
-  width: 44px;
-  height: 26px;
-  border-radius: 999px;
-  border: 1px solid rgba(15,23,42,.14);
-  background: rgba(15,23,42,.06);
-  position: relative;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
-}
-
-.sgp-wheel .sgp-toggle__thumb{
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.95);
-  box-shadow: 0 6px 18px rgba(0,0,0,.14);
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  transition: transform .15s ease;
-}
-
-/* красная “подложка” снизу когда OFF */
-.sgp-wheel .sgp-toggle__track::after{
-  content:"";
-  position:absolute;
-  left: 6px;
-  right: 6px;
-  bottom: -6px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(239,68,68,.35);
-  opacity: .9;
-}
-
-/* ON */
-.sgp-wheel .sgp-toggle.is-checked .sgp-toggle__track{
-  background: rgba(15,23,42,.86);
-  border-color: rgba(15,23,42,.18);
-}
-.sgp-wheel .sgp-toggle.is-checked .sgp-toggle__thumb{
-  transform: translateX(18px);
-}
-/* зелёная “подложка” снизу когда ON */
-.sgp-wheel .sgp-toggle.is-checked .sgp-toggle__track::after{
-  background: rgba(34,197,94,.40);
-}
-
-/* disabled */
-.sgp-wheel .sgp-toggle.is-disabled{
-  opacity:.55;
-  cursor:not-allowed;
-}
-.sgp-wheel .sgp-toggle.is-disabled .sgp-toggle__track::after{
-  opacity:.45;
-}
-
-/* -------------------------
-   CHART: compact icon group
-   (R/C/P/Σ) — минимальные отступы + разделители
-------------------------- */
 .sgp-wheel .sgp-chartbar{
   display:flex;
   align-items:center;
-  gap:10px;            /* между “при выдаче/выигрыше” и R/C/P/Σ */
+  gap:10px;
   flex-wrap:wrap;
   justify-content:flex-end;
 }
 
 .sgp-wheel .sgp-iconGroup{
   display:inline-flex;
-  gap:2px;             /* вот оно — минимальный зазор */
+  gap:2px;
   padding:3px;
   border-radius:999px;
   border:1px solid rgba(15,23,42,.10);
@@ -901,7 +693,6 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
 }
 
-/* IconBtn у тебя, скорее всего, рисует кнопку с классом sgpIconBtn */
 .sgp-wheel .sgp-iconGroup .sgpIconBtn{
   width:34px;
   height:34px;
@@ -913,26 +704,20 @@
   opacity:.92;
   transition: transform .12s cubic-bezier(.2,.9,.2,1.2), background .14s ease, opacity .14s ease;
 }
-
-/* “пружина” на иконках */
 .sgp-wheel .sgp-iconGroup .sgpIconBtn:active{
   transform: scale(.96);
 }
-
-/* лёгкий hover */
 .sgp-wheel .sgp-iconGroup .sgpIconBtn:hover{
   opacity:1;
   background: rgba(15,23,42,.04);
 }
-
-/* активная */
 .sgp-wheel .sgp-iconGroup .sgpIconBtn.is-active{
   opacity:1;
   background: rgba(15,23,42,.06);
   box-shadow: 0 10px 18px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.7);
 }
 
-/* разделители между кнопками как на твоём скрине */
+/* dividers */
 .sgp-wheel .sgp-iconGroup .sgpIconBtn + .sgpIconBtn{
   position: relative;
 }
@@ -946,9 +731,10 @@
   background: rgba(15,23,42,.10);
 }
 
-/* === Wheel: Toggle track colors (ON=green, OFF=red) === */
 
-/* базовый track */
+/* =========================================================
+   Wheel — TOGGLES: track is red/green (последний вариант)
+========================================================= */
 .sgp-wheel .sgp-toggle__track{
   width: 44px;
   height: 26px;
@@ -962,7 +748,7 @@
   background: rgba(239,68,68,.18);
 }
 
-/* убираем нижнюю полоску если она была */
+/* убираем нижнюю полоску если была в старых дублях */
 .sgp-wheel .sgp-toggle__track::after{ content:none !important; }
 
 /* ON = мягко зелёный */
@@ -971,7 +757,7 @@
   border-color: rgba(34,197,94,.30);
 }
 
-/* thumb оставляем как есть */
+/* thumb */
 .sgp-wheel .sgp-toggle__thumb{
   width: 22px;
   height: 22px;
@@ -987,7 +773,7 @@
   transform: translateX(18px);
 }
 
-/* disabled чуть приглушим */
+/* disabled */
 .sgp-wheel .sgp-toggle.is-disabled .sgp-toggle__track{
   filter: saturate(.6);
   opacity: .75;
