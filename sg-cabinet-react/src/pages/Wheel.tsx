@@ -66,7 +66,6 @@ type WheelTimeseriesDay = {
   wins: number;
   redeemed: number;
 
-  // money snapshots (cents) from wheel_spins
   revenue_cents: number;
   payout_issued_cents: number;
   payout_redeemed_cents: number;
@@ -76,7 +75,7 @@ type WheelTimeseriesDay = {
 
 type AppSettings = {
   coin_value_cents?: number;
-  currency?: string; // 'RUB' | 'USD' | 'EUR' | ...
+  currency?: string;
 };
 
 /** ========= Helpers ========= */
@@ -185,7 +184,7 @@ function SegBtn({
   return (
     <button
       type="button"
-      className={active ? 'sgp-seg__btn is-active' : 'sgp-seg__btn'}
+      className={(active ? 'sgp-seg__btn is-active ' : 'sgp-seg__btn ') + 'sgp-press'}
       onClick={onClick}
     >
       {children}
@@ -208,11 +207,8 @@ function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
   const v = Number(value || 0);
   const fill =
-    v >= 0
-      ? 'var(--sgp-chart-good, rgba(16,185,129,.55))'
-      : 'var(--sgp-chart-bad, rgba(239,68,68,.55))';
+    v >= 0 ? 'var(--sgp-chart-good, rgba(16,185,129,.45))' : 'var(--sgp-chart-bad, rgba(239,68,68,.40))';
 
-  // recharts can pass negative heights; normalize:
   const h = Math.abs(Number(height) || 0);
   const yy = Number(height) >= 0 ? y : y - h;
 
@@ -224,27 +220,20 @@ export default function Wheel() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
-  // under-chart tabs
   const [tab, setTab] = React.useState<'summary' | 'forecast' | 'stock'>('summary');
-
-  // cost basis for fact + forecast
   const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
-  // chart layers
   const [showRevenue, setShowRevenue] = React.useState(true);
   const [showPayout, setShowPayout] = React.useState(false);
   const [showProfitBars, setShowProfitBars] = React.useState(true);
   const [showCum, setShowCum] = React.useState(true);
 
-  // quick ranges
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
   const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
 
-  // Aside: top list metric
   const [topMetric, setTopMetric] = React.useState<'wins' | 'redeemed'>('wins');
 
-  // collapsibles (simple local)
   const [openSummary, setOpenSummary] = React.useState(true);
   const [openForecast, setOpenForecast] = React.useState(true);
   const [openStock, setOpenStock] = React.useState(true);
@@ -257,7 +246,7 @@ export default function Wheel() {
     staleTime: 30_000,
   });
 
-  const [coinValueDraft, setCoinValueDraft] = React.useState<string>('1'); // in currency units
+  const [coinValueDraft, setCoinValueDraft] = React.useState<string>('1');
   const [currencyDraft, setCurrencyDraft] = React.useState<string>('RUB');
   const [savingCoin, setSavingCoin] = React.useState(false);
   const [coinMsg, setCoinMsg] = React.useState<string>('');
@@ -273,7 +262,6 @@ export default function Wheel() {
     if (!Number.isFinite(units) || units <= 0) return;
 
     setCoinValueDraft((prev) => {
-      // do not overwrite if user already changed it
       if (prev !== '1' && prev !== '1.0' && prev !== '1.00') return prev;
       return String(units);
     });
@@ -282,7 +270,7 @@ export default function Wheel() {
 
   const coinCostCentPerCoin = React.useMemo(() => {
     const units = Number(String(coinValueDraft).replace(',', '.'));
-    const cents = Math.round(units * 100); // ✅ round, not floor
+    const cents = Math.floor(units * 100);
     return Number.isFinite(cents) ? Math.max(0, cents) : 0;
   }, [coinValueDraft]);
 
@@ -291,7 +279,7 @@ export default function Wheel() {
     setCoinMsg('');
 
     const units = Number(String(coinValueDraft).replace(',', '.'));
-    const cents = Math.round(units * 100); // ✅ round, not floor
+    const cents = Math.floor(units * 100);
 
     if (!Number.isFinite(units) || units <= 0 || !Number.isFinite(cents) || cents <= 0) {
       setCoinMsg('Введите корректную стоимость 1 монеты.');
@@ -395,13 +383,12 @@ export default function Wheel() {
     };
   }, [qTs.data?.days, costBasis]);
 
-  // ===== STOCK draft (only operational fields) =====
+  // ===== STOCK draft =====
   type DraftRow = {
     active: boolean;
     track_qty: boolean;
     qty_left: string;
     stop_when_zero: boolean;
-    dirty?: boolean; // ✅ user touched
   };
 
   const [draft, setDraft] = React.useState<Record<string, DraftRow>>({});
@@ -410,30 +397,20 @@ export default function Wheel() {
 
   React.useEffect(() => {
     if (!items.length) return;
-
     setDraft((prev) => {
       const next = { ...prev };
-
       for (const p of items) {
         const code = p.prize_code;
         if (!code) continue;
-
-        const serverRow: DraftRow = {
-          active: !!p.active,
-          track_qty: !!p.track_qty,
-          qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
-          stop_when_zero: !!p.stop_when_zero,
-        };
-
-        if (!next[code]) {
-          next[code] = serverRow;
-          continue;
+        if (next[code] === undefined) {
+          next[code] = {
+            active: !!p.active,
+            track_qty: !!p.track_qty,
+            qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
+            stop_when_zero: !!p.stop_when_zero,
+          };
         }
-
-        // ✅ if not edited by user — refresh from server
-        if (!next[code].dirty) next[code] = serverRow;
       }
-
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -448,7 +425,6 @@ export default function Wheel() {
         qty_left: d[code]?.qty_left ?? '',
         stop_when_zero: !!d[code]?.stop_when_zero,
         ...patch,
-        dirty: true,
       },
     }));
   }
@@ -503,7 +479,7 @@ export default function Wheel() {
     }
   }
 
-  // ===== inventory counters (for UX hints) =====
+  // ===== inventory counters =====
   const inventory = React.useMemo(() => {
     const tracked = items.filter((p) => isTracked(p));
     const trackedCount = tracked.length;
@@ -573,7 +549,6 @@ export default function Wheel() {
 
     const profitCent = Math.round(spinRevenueCent - payoutCent);
 
-    // spins/day
     const daysN = Math.max(1, listDaysISO(range.from, range.to).length || 1);
     const autoSpd = fact.spins / daysN;
     const manual = Number(String(spinsPerDayDraft || '').replace(',', '.'));
@@ -634,22 +609,17 @@ export default function Wheel() {
     return { series };
   }, [qTs.data?.days, range.from, range.to, costBasis]);
 
-  // ===== status =====
   const isLoading = qStats.isLoading || qTs.isLoading;
   const isError = qStats.isError || qTs.isError;
 
   const activeCount = items.filter((i) => (Number(i.active) || 0) ? true : false).length;
 
-  // Aside: top prizes
   const top = [...items]
     .sort((a, b) => (Number((b as any)[topMetric]) || 0) - (Number((a as any)[topMetric]) || 0))
     .slice(0, 7);
 
   const redeemTone: 'good' | 'warn' | 'bad' =
     fact.wins <= 0 ? 'warn' : (fact.redeemRatePct >= 70 ? 'good' : (fact.redeemRatePct >= 40 ? 'warn' : 'bad'));
-
-  // ✅ card tone for “Выдача призов”: only warn/bad tint (good stays neutral)
-  const redeemCardTone: 'neutral' | 'warn' | 'bad' = redeemTone === 'good' ? 'neutral' : redeemTone;
 
   const stockSaveState: SgSaveState =
     savingStock ? 'saving'
@@ -661,6 +631,8 @@ export default function Wheel() {
       : (coinMsg === 'Сохранено' ? 'saved'
         : (coinMsg?.startsWith('Ошибка') ? 'error' : 'idle'));
 
+  const customOpen = quick === 'custom';
+
   return (
     <SgPage
       className="sgp-wheel"
@@ -668,47 +640,48 @@ export default function Wheel() {
       subtitle={<span>Факт по <b>wheel_spins</b> + прогноз EV/ROI (по весам/себестоимости/цене спина).</span>}
       actions={
         <div className="sgp-rangebar">
-          <div className="sgp-seg">
-            <SegBtn active={quick === 'day'} onClick={() => pickQuick('day')}>День</SegBtn>
-            <SegBtn active={quick === 'week'} onClick={() => pickQuick('week')}>Неделя</SegBtn>
-            <SegBtn active={quick === 'month'} onClick={() => pickQuick('month')}>Месяц</SegBtn>
-            <SegBtn active={quick === 'custom'} onClick={() => pickQuick('custom')}>Свой</SegBtn>
-          </div>
-
-          {quick === 'custom' ? (
-            <div className="sgp-rangebar__custom">
-              <span className="sgp-muted">от</span>
-              <input
-                type="date"
-                className="sgp-input sgp-date"
-                value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
-              />
-              <span className="sgp-muted">до</span>
-              <input
-                type="date"
-                className="sgp-input sgp-date"
-                value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
-              />
-              <SgButton
-                variant="secondary"
-                size="sm"
-                onClick={() => applyRange(customFrom, customTo)}
-                disabled={!customFrom || !customTo}
-              >
-                Применить
-              </SgButton>
+          {/* ONE ROW: quick + custom */}
+          <div className="sgp-rangebar__row">
+            <div className="sgp-seg">
+              <SegBtn active={quick === 'day'} onClick={() => pickQuick('day')}>День</SegBtn>
+              <SegBtn active={quick === 'week'} onClick={() => pickQuick('week')}>Неделя</SegBtn>
+              <SegBtn active={quick === 'month'} onClick={() => pickQuick('month')}>Месяц</SegBtn>
+              <SegBtn active={quick === 'custom'} onClick={() => pickQuick('custom')}>Свой</SegBtn>
             </div>
-          ) : null}
+
+            <div className={customOpen ? 'sgp-rangebar__customWrap is-open' : 'sgp-rangebar__customWrap'}>
+              <div className="sgp-rangebar__custom">
+                <span className="sgp-muted">от</span>
+                <input
+                  type="date"
+                  className="sgp-input sgp-date sgp-press"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                />
+                <span className="sgp-muted">до</span>
+                <input
+                  type="date"
+                  className="sgp-input sgp-date sgp-press"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                />
+                <SgButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => applyRange(customFrom, customTo)}
+                  disabled={!customFrom || !customTo}
+                >
+                  Применить
+                </SgButton>
+              </div>
+            </div>
+          </div>
         </div>
       }
       aside={
         <div className="sgp-aside">
-          <SgCard className={`tone-${redeemCardTone}`}>
-            <SgCardHeader
-              right={<HealthBadge tone={redeemTone} title={redeemTone.toUpperCase()} />}
-            >
+          <SgCard>
+            <SgCardHeader right={<HealthBadge tone={redeemTone} title={redeemTone.toUpperCase()} />}>
               <div>
                 <SgCardTitle>Выдача призов</SgCardTitle>
                 <SgCardSub>за выбранный период</SgCardSub>
@@ -723,7 +696,7 @@ export default function Wheel() {
 
               <div style={{ marginTop: 10 }}>
                 {fact.wins <= 0 ? (
-                  <Hint tone="neutral">Пока нет данных за период.</Hint>
+                  <Hint tone="warn">Пока нет данных за период.</Hint>
                 ) : redeemTone === 'good' ? (
                   <Hint tone="good">Отлично. Призы реально забирают.</Hint>
                 ) : redeemTone === 'warn' ? (
@@ -784,7 +757,8 @@ export default function Wheel() {
       <SgCard>
         <SgCardHeader
           right={
-            <div className="sgp-chartctl">
+            // ONE ROW: (при выигрыше/при выдаче) + R/C/P/Σ
+            <div className="sgp-chartbar">
               <div className="sgp-seg">
                 <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
                   при выигрыше
@@ -794,7 +768,7 @@ export default function Wheel() {
                 </SegBtn>
               </div>
 
-              <div className="sgp-chartctl__icons">
+              <div className="sgp-iconGroup">
                 <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
                 <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>C</IconBtn>
                 <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>P</IconBtn>
@@ -839,21 +813,10 @@ export default function Wheel() {
                     }}
                   />
 
-                  {showProfitBars ? (
-                    <Bar dataKey="profit" name="profit" shape={<ProfitBarShape />} />
-                  ) : null}
-
-                  {showRevenue ? (
-                    <Line type="monotone" dataKey="revenue" name="revenue" dot={false} />
-                  ) : null}
-
-                  {showPayout ? (
-                    <Line type="monotone" dataKey="payout" name="payout" dot={false} />
-                  ) : null}
-
-                  {showCum ? (
-                    <Line type="monotone" dataKey="cum_profit" name="cum_profit" dot={false} />
-                  ) : null}
+                  {showProfitBars ? <Bar dataKey="profit" name="profit" shape={<ProfitBarShape />} /> : null}
+                  {showRevenue ? <Line type="monotone" dataKey="revenue" name="revenue" dot={false} /> : null}
+                  {showPayout ? <Line type="monotone" dataKey="payout" name="payout" dot={false} /> : null}
+                  {showCum ? <Line type="monotone" dataKey="cum_profit" name="cum_profit" dot={false} /> : null}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -888,11 +851,7 @@ export default function Wheel() {
         <SgCard>
           <SgCardHeader
             right={
-              <IconBtn
-                active={openSummary}
-                onClick={() => setOpenSummary((v) => !v)}
-                title="Свернуть/развернуть"
-              >
+              <IconBtn active={openSummary} onClick={() => setOpenSummary((v) => !v)} title="Свернуть/развернуть">
                 {openSummary ? '—' : '+'}
               </IconBtn>
             }
@@ -920,7 +879,7 @@ export default function Wheel() {
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <Hint tone="neutral">
+                <Hint tone="warn">
                   Подсказка: “Факт” считается по снимкам в <b>wheel_spins</b>, прогноз — по текущим весам/себестоимости.
                 </Hint>
               </div>
@@ -934,11 +893,7 @@ export default function Wheel() {
         <SgCard>
           <SgCardHeader
             right={
-              <IconBtn
-                active={openForecast}
-                onClick={() => setOpenForecast((v) => !v)}
-                title="Свернуть/развернуть"
-              >
+              <IconBtn active={openForecast} onClick={() => setOpenForecast((v) => !v)} title="Свернуть/развернуть">
                 {openForecast ? '—' : '+'}
               </IconBtn>
             }
@@ -1004,11 +959,7 @@ export default function Wheel() {
           <SgCard>
             <SgCardHeader
               right={
-                <IconBtn
-                  active={openStock}
-                  onClick={() => setOpenStock((v) => !v)}
-                  title="Свернуть/развернуть"
-                >
+                <IconBtn active={openStock} onClick={() => setOpenStock((v) => !v)} title="Свернуть/развернуть">
                   {openStock ? '—' : '+'}
                 </IconBtn>
               }
@@ -1045,10 +996,8 @@ export default function Wheel() {
                     const tracked = active && !!d.track_qty;
 
                     const qRaw = String(d.qty_left ?? '').trim();
-                    const baseQty = qtyLeft(p); // ✅ keep null, do not coerce to 0
-                    const qNum = tracked
-                      ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0)))
-                      : null;
+                    const baseQty = qtyLeft(p) ?? 0;
+                    const qNum = tracked ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0))) : null;
 
                     const out = tracked && (qNum !== null && qNum <= 0);
                     const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
