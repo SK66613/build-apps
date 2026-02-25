@@ -265,9 +265,7 @@ function toggleOnly(k: Exclude<OpenedKey, null>) {
 
   const [topMetric, setTopMetric] = React.useState<'wins' | 'redeemed'>('wins');
 
-  const [openSummary, setOpenSummary] = React.useState(true);
-  const [openForecast, setOpenForecast] = React.useState(true);
-  const [openStock, setOpenStock] = React.useState(true);
+
 
   // ===== SETTINGS (app_settings) =====
   const qSettings = useQuery({
