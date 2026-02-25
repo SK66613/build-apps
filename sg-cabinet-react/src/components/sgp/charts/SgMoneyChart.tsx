@@ -46,21 +46,20 @@ function useResizeWidth<T extends HTMLElement>() {
 }
 
 /**
- * Wide bars + tiny gap between categories (premium look)
- * gapPx — расстояние между столбиками (в px)
+ * Wide bars with tiny gap:
+ * - barSize ~ per-cell width minus 1..2px
  */
-function barSizeWideWithGap(containerW: number, points: number, gapPx: number) {
+function barSizeWide(containerW: number, points: number) {
   if (!containerW || points <= 0) return 12;
 
-  // приблизительная полезная ширина (margin/оси)
-  const usable = Math.max(0, containerW - 24 - 14 - 18);
+  const usable = Math.max(0, containerW - 24 - 14 - 18); // margin-ish
   const per = usable / points;
 
-  // бар почти на всю "клетку", но оставляем небольшой gap
-  const raw = per - gapPx;
+  // хотим почти впритык, но оставить 1-2px “разрез” между столбиками
+  const raw = per - 2;
 
-  // минималка/защита
-  return Math.round(clamp(raw, 4, 999));
+  // safety clamp
+  return Math.round(clamp(raw, 6, 999));
 }
 
 export function SgMoneyChart({
@@ -93,10 +92,7 @@ export function SgMoneyChart({
   const { ref, width } = useResizeWidth<HTMLDivElement>();
   const points = data?.length || 0;
 
-  // ✅ маленькое расстояние между столбиками
-  const gapPx = 2;
-
-  const barSize = barSizeWideWithGap(width, points, gapPx);
+  const barSize = barSizeWide(width, points);
 
   return (
     <div ref={ref} style={{ height }}>
@@ -104,7 +100,9 @@ export function SgMoneyChart({
         <ComposedChart
           data={data}
           margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
-          barCategoryGap={gapPx} // ✅ это и есть gap МЕЖДУ категориями (между барами)
+          // tiny gaps between categories/bars:
+          barGap={1}
+          barCategoryGap={1}
         >
           <CartesianGrid stroke={theme.grid} strokeDasharray="4 6" vertical={false} />
 
@@ -175,9 +173,9 @@ export function SgMoneyChart({
             <Bar
               dataKey="profit"
               name="profit"
-              barSize={barSize}           // ✅ широкие
+              barSize={barSize}
+              shape={<ProfitBarShape />}
               isAnimationActive={false}
-              shape={<ProfitBarShape />}  // ✅ единый стиль
             />
           ) : null}
 
