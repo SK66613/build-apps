@@ -800,7 +800,6 @@ export default function Wheel() {
     fmtTick={(iso) => fmtDDMM(iso)}
     moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
   />
-) : null}
             {/* ✅ “воздух”: градиенты для profit bars (pos/neg) */}
             <defs>
               <linearGradient id="sgpBarPos" x1="0" y1="0" x2="0" y2="1">
