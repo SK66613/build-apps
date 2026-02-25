@@ -221,7 +221,7 @@ export default function Wheel() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
- 
+  const [tab, setTab] = React.useState<'summary' | 'forecast' | 'stock'>('summary');
   const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
   const [showRevenue, setShowRevenue] = React.useState(true);
@@ -235,7 +235,9 @@ export default function Wheel() {
 
   const [topMetric, setTopMetric] = React.useState<'wins' | 'redeemed'>('wins');
 
-
+  const [openSummary, setOpenSummary] = React.useState(true);
+  const [openForecast, setOpenForecast] = React.useState(true);
+  const [openStock, setOpenStock] = React.useState(true);
 
   // ===== SETTINGS (app_settings) =====
   const qSettings = useQuery({
@@ -274,18 +276,6 @@ export default function Wheel() {
     const cents = Math.floor(units * 100);
     return Number.isFinite(cents) ? Math.max(0, cents) : 0;
   }, [coinValueDraft]);
-
-
-
-  const [opened, setOpened] = React.useState<'summary' | 'forecast' | 'stock'>('summary');
-
-function openOnly(k: 'summary' | 'forecast' | 'stock') {
-  setOpened(k);
-}
-
-function toggleOnly(k: 'summary' | 'forecast' | 'stock') {
-  setOpened((cur) => (cur === k ? cur : k)); // если хочешь разрешить "закрыть всё", скажи — дам вариант
-}
 
 
 
@@ -821,9 +811,9 @@ function toggleOnly(k: 'summary' | 'forecast' | 'stock') {
       {/* ===== TABS BAR BETWEEN CARDS ===== */}
 <div className="sgp-wheelTabsBar">
   <div className="sgp-seg">
-    <SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
-    <SegBtn active={opened === 'forecast'} onClick={() => openOnly('forecast')}>Прогноз</SegBtn>
-    <SegBtn active={opened === 'stock'} onClick={() => openOnly('stock')}>Склад</SegBtn>
+    <SegBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</SegBtn>
+    <SegBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</SegBtn>
+    <SegBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</SegBtn>
   </div>
 </div>
 
@@ -844,8 +834,8 @@ function toggleOnly(k: 'summary' | 'forecast' | 'stock') {
       </div>
     }
     collapsible
-  open={opened === 'forecast'}                 // ✅ вместо openForecast
-  onToggleOpen={() => toggleOnly('forecast')}  // ✅ вместо setOpenForecast
+    open={openSummary}
+    onToggleOpen={() => setOpenSummary((v) => !v)}
   >
     <div className="sgp-metrics">
       <div className="sgp-metric"><div className="sgp-metric__k">СПИНОВ</div><div className="sgp-metric__v">{fact.spins}</div></div>
@@ -878,9 +868,9 @@ function toggleOnly(k: 'summary' | 'forecast' | 'stock') {
         />
       </div>
     }
-   collapsible
-  open={opened === 'forecast'}                 // ✅ вместо openForecast
-  onToggleOpen={() => toggleOnly('forecast')}  // ✅ вместо setOpenForecast
+    collapsible
+    open={openForecast}
+    onToggleOpen={() => setOpenForecast((v) => !v)}
   >
     {/* ...твой контент forecast без изменений... */}
   </SgSectionCard>
