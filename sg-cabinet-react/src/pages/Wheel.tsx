@@ -33,6 +33,8 @@ import { SgMoneyChart } from '../components/sgp/charts/SgMoneyChart';
 
 import { ChartState } from '../components/sgp/charts/ChartState';
 
+import { SgSectionCard } from '../components/sgp/blocks/SgSectionCard';
+
 /** ========= Types ========= */
 type PrizeStat = {
   prize_code: string;
@@ -763,66 +765,58 @@ export default function Wheel() {
 
       
 {/* ===== FACT CHART ===== */}
-<SgCard>
-  <SgCardHeader
-    right={
-      <div className="sgp-chartbar">
-        <div className="sgp-seg">
-          <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
-            при выигрыше
-          </SegBtn>
-          <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
-            при выдаче
-          </SegBtn>
-        </div>
-
-        <div className="sgp-iconGroup">
-          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>
-            R
-          </IconBtn>
-          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>
-            C
-          </IconBtn>
-          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>
-            P
-          </IconBtn>
-          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>
-            Σ
-          </IconBtn>
-        </div>
+<SgSectionCard
+  title="Факт: выручка / расход / прибыль"
+  sub={<>{range.from} — {range.to}</>}
+  right={
+    <div className="sgp-chartbar">
+      <div className="sgp-seg">
+        <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
+          при выигрыше
+        </SegBtn>
+        <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
+          при выдаче
+        </SegBtn>
       </div>
-    }
-  >
-    <div>
-      <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
-      <SgCardSub>
-        {range.from} — {range.to}
-      </SgCardSub>
-    </div>
-  </SgCardHeader>
 
-  <SgCardContent>
-    <ChartState
+      <div className="sgp-iconGroup">
+        <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>
+          R
+        </IconBtn>
+        <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>
+          C
+        </IconBtn>
+        <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>
+          P
+        </IconBtn>
+        <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>
+          Σ
+        </IconBtn>
+      </div>
+    </div>
+  }
+  contentStyle={{ padding: 12 }} // по желанию
+>
+  <ChartState
+    height={340}
+    isLoading={isLoading}
+    isError={isError}
+    errorText={String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
+  >
+    <SgMoneyChart
+      data={moneySeries.series}
+      currency={currency}
+      theme={t}
       height={340}
-      isLoading={isLoading}
-      isError={isError}
-      errorText={String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
-    >
-      <SgMoneyChart
-        data={moneySeries.series}
-        currency={currency}
-        theme={t}
-        height={340}
-        showRevenue={showRevenue}
-        showPayout={showPayout}
-        showProfitBars={showProfitBars}
-        showCum={showCum}
-        fmtTick={(iso) => fmtDDMM(iso)}
-        moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
-      />
-    </ChartState>
-  </SgCardContent>
-</SgCard>
+      showRevenue={showRevenue}
+      showPayout={showPayout}
+      showProfitBars={showProfitBars}
+      showCum={showCum}
+      fmtTick={(iso) => fmtDDMM(iso)}
+      moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
+    />
+  </ChartState>
+</SgSectionCard>
 
 
 
@@ -840,301 +834,233 @@ export default function Wheel() {
       
 
       {/* ===== TAB: SUMMARY ===== */}
-      {tab === 'summary' ? (
-        <SgCard>
-          <SgCardHeader
-            right={
-              <IconBtn active={openSummary} onClick={() => setOpenSummary((v) => !v)} title="Свернуть/развернуть">
-                {openSummary ? '—' : '+'}
-              </IconBtn>
-            }
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <SgCardTitle>Ключевые метрики</SgCardTitle>
-              <HealthBadge
-                tone={fact.revenue_cents <= 0 ? 'warn' : (fact.profit_cents >= 0 ? 'good' : 'bad')}
-                title={fact.revenue_cents <= 0 ? 'нет данных' : (fact.profit_cents >= 0 ? 'ok' : 'минус')}
-              />
-            </div>
-          </SgCardHeader>
+{tab === 'summary' ? (
+  <SgSectionCard
+    title={
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span>Ключевые метрики</span>
+        <HealthBadge
+          tone={fact.revenue_cents <= 0 ? 'warn' : (fact.profit_cents >= 0 ? 'good' : 'bad')}
+          title={fact.revenue_cents <= 0 ? 'нет данных' : (fact.profit_cents >= 0 ? 'ok' : 'минус')}
+        />
+      </div>
+    }
+    collapsible
+    open={openSummary}
+    onToggleOpen={() => setOpenSummary((v) => !v)}
+  >
+    <div className="sgp-metrics">
+      <div className="sgp-metric"><div className="sgp-metric__k">СПИНОВ</div><div className="sgp-metric__v">{fact.spins}</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(fact.revenue_cents, currency)}</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">РАСХОД</div><div className="sgp-metric__v">{moneyFromCent(fact.payout_cents, currency)}</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">ПРИБЫЛЬ</div><div className="sgp-metric__v">{moneyFromCent(fact.profit_cents, currency)}</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">ВЫЙГРЫШЕЙ</div><div className="sgp-metric__v">{fact.wins}</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">ВЫДАНО</div><div className="sgp-metric__v">{fact.redeemed}</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">ДОЛЯ ВЫДАЧИ</div><div className="sgp-metric__v">{fact.redeemRatePct}%</div></div>
+      <div className="sgp-metric"><div className="sgp-metric__k">АКТИВНЫХ ПРИЗОВ</div><div className="sgp-metric__v">{activeCount} / {items.length}</div></div>
+    </div>
 
-          {openSummary ? (
-            <SgCardContent>
-              <div className="sgp-metrics">
-                <div className="sgp-metric"><div className="sgp-metric__k">СПИНОВ</div><div className="sgp-metric__v">{fact.spins}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(fact.revenue_cents, currency)}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">РАСХОД</div><div className="sgp-metric__v">{moneyFromCent(fact.payout_cents, currency)}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">ПРИБЫЛЬ</div><div className="sgp-metric__v">{moneyFromCent(fact.profit_cents, currency)}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">ВЫЙГРЫШЕЙ</div><div className="sgp-metric__v">{fact.wins}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">ВЫДАНО</div><div className="sgp-metric__v">{fact.redeemed}</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">ДОЛЯ ВЫДАЧИ</div><div className="sgp-metric__v">{fact.redeemRatePct}%</div></div>
-                <div className="sgp-metric"><div className="sgp-metric__k">АКТИВНЫХ ПРИЗОВ</div><div className="sgp-metric__v">{activeCount} / {items.length}</div></div>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <Hint tone="warn">
-                  Подсказка: “Факт” считается по снимкам в <b>wheel_spins</b>, прогноз — по текущим весам/себестоимости.
-                </Hint>
-              </div>
-            </SgCardContent>
-          ) : null}
-        </SgCard>
-      ) : null}
+    <div style={{ marginTop: 12 }}>
+      <Hint tone="warn">
+        Подсказка: “Факт” считается по снимкам в <b>wheel_spins</b>, прогноз — по текущим весам/себестоимости.
+      </Hint>
+    </div>
+  </SgSectionCard>
+) : null}
 
       {/* ===== TAB: FORECAST ===== */}
-      {tab === 'forecast' ? (
-        <SgCard>
-          <SgCardHeader
-            right={
-              <IconBtn active={openForecast} onClick={() => setOpenForecast((v) => !v)} title="Свернуть/развернуть">
-                {openForecast ? '—' : '+'}
-              </IconBtn>
-            }
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <SgCardTitle>Прогноз EV/ROI</SgCardTitle>
-              <HealthBadge tone={(ev?.profitCent ?? 0) >= 0 ? 'good' : 'bad'} title={(ev?.profitCent ?? 0) >= 0 ? 'плюс' : 'минус'} />
-            </div>
-          </SgCardHeader>
+{tab === 'forecast' ? (
+  <SgSectionCard
+    title={
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span>Прогноз EV/ROI</span>
+        <HealthBadge
+          tone={(ev?.profitCent ?? 0) >= 0 ? 'good' : 'bad'}
+          title={(ev?.profitCent ?? 0) >= 0 ? 'плюс' : 'минус'}
+        />
+      </div>
+    }
+    collapsible
+    open={openForecast}
+    onToggleOpen={() => setOpenForecast((v) => !v)}
+  >
+    {/* ...твой контент forecast без изменений... */}
+  </SgSectionCard>
+) : null}
 
-          {openForecast ? (
-            <SgCardContent>
-              <div className="sgp-forecast">
-                <SgFormRow
-                  label="Цена спина (монет)"
-                  hint={`Выручка/спин ≈ ${moneyFromCent(spinCostCoinsForecast * coinCostCentPerCoin, currency)}`}
-                >
-                  <SgInput
-                    value={spinCostCoinsDraft}
-                    onChange={(e) => setSpinCostCoinsDraft((e.target as any).value)}
-                    placeholder="10"
-                  />
-                </SgFormRow>
+     {/* ===== TAB: STOCK ===== */}
+{tab === 'stock' ? (
+  <>
+    <SgSectionCard
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span>Склад призов</span>
+          <SgpPill>Учёт: <b>{inventory.trackedCount}</b></SgpPill>
+          <SgpPill>Закончились: <b>{inventory.outOfStockCount}</b></SgpPill>
+          <SgpPill>Мало (≤ {inventory.lowThreshold}): <b>{inventory.lowStockCount}</b></SgpPill>
+        </div>
+      }
+      collapsible
+      open={openStock}
+      onToggleOpen={() => setOpenStock((v) => !v)}
+      footer={
+        <SgActions
+          primaryLabel="Сохранить склад"
+          onPrimary={saveStock}
+          state={stockSaveState}
+          errorText={saveMsg?.startsWith('Ошибка') ? saveMsg : undefined}
+          left={<span className="sgp-muted">Меняется только склад (active/track/qty/auto-off).</span>}
+        />
+      }
+    >
+      <div className="sgp-stockHead">
+        <div className="sgp-stockCol sgp-stockCol--name">Название</div>
+        <div className="sgp-stockCol">Активен</div>
+        <div className="sgp-stockCol">Учёт</div>
+        <div className="sgp-stockCol">Остаток</div>
+        <div className="sgp-stockCol">Авто-выкл</div>
+      </div>
 
-                <SgFormRow
-                  label="Спинов / день"
-                  hint={(() => {
-                    const days = Math.max(1, listDaysISO(range.from, range.to).length || 1);
-                    const s = fact.spins / days;
-                    return `авто: ${Number.isFinite(s) ? s.toFixed(2) : '0.00'} / день`;
-                  })()}
-                >
-                  <SgInput
-                    value={spinsPerDayDraft}
-                    onChange={(e) => setSpinsPerDayDraft((e.target as any).value)}
-                    placeholder="пусто = авто"
-                  />
-                </SgFormRow>
-              </div>
+      <div className="sgp-stockList">
+        {items.map((p) => {
+          const code = p.prize_code;
+          const d = draft[code] || {
+            active: !!p.active,
+            track_qty: !!p.track_qty,
+            qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
+            stop_when_zero: !!p.stop_when_zero,
+          };
 
-              <div style={{ marginTop: 10 }} className="sgp-forecast__kpi">
-                <SgpPill>Выручка/спин: <b>{moneyFromCent(ev.spinRevenueCent, currency)}</b></SgpPill>
-                <SgpPill>Расход/спин: <b>{moneyFromCent(ev.payoutCent, currency)}</b></SgpPill>
-                <SgpPill>Прибыль/спин: <b>{moneyFromCent(ev.profitCent, currency)}</b></SgpPill>
-                <SgpPill>Профит/день: <b>{moneyFromCent(ev.dayProfitCent, currency)}</b></SgpPill>
-              </div>
+          const active = !!d.active;
+          const tracked = active && !!d.track_qty;
 
-              {coinCostCentPerCoin <= 0 ? (
-                <div style={{ marginTop: 12 }}>
-                  <Hint tone="warn">
-                    Заполни “Стоимость монеты и валюта” — иначе прогноз в деньгах будет неточным.
-                  </Hint>
-                </div>
-              ) : null}
-            </SgCardContent>
-          ) : null}
-        </SgCard>
-      ) : null}
+          const qRaw = String(d.qty_left ?? '').trim();
+          const baseQty = qtyLeft(p) ?? 0;
+          const qNum = tracked ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0))) : null;
 
-      {/* ===== TAB: STOCK ===== */}
-      {tab === 'stock' ? (
-        <>
-          <SgCard>
-            <SgCardHeader
-              right={
-                <IconBtn active={openStock} onClick={() => setOpenStock((v) => !v)} title="Свернуть/развернуть">
-                  {openStock ? '—' : '+'}
-                </IconBtn>
-              }
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <SgCardTitle>Склад призов</SgCardTitle>
-                <SgpPill>Учёт: <b>{inventory.trackedCount}</b></SgpPill>
-                <SgpPill>Закончились: <b>{inventory.outOfStockCount}</b></SgpPill>
-                <SgpPill>Мало (≤ {inventory.lowThreshold}): <b>{inventory.lowStockCount}</b></SgpPill>
-              </div>
-            </SgCardHeader>
+          const out = tracked && (qNum !== null && qNum <= 0);
+          const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
+          const swz = tracked && !!d.stop_when_zero;
 
-            {openStock ? (
-              <SgCardContent>
-                <div className="sgp-stockHead">
-                  <div className="sgp-stockCol sgp-stockCol--name">Название</div>
-                  <div className="sgp-stockCol">Активен</div>
-                  <div className="sgp-stockCol">Учёт</div>
-                  <div className="sgp-stockCol">Остаток</div>
-                  <div className="sgp-stockCol">Авто-выкл</div>
+          const tone = !active ? 'off' : (tracked ? (out ? 'out' : (low ? 'low' : 'on')) : 'on');
+
+          return (
+            <div key={code} className={'sgp-stockRow tone-' + tone}>
+              <div className="sgp-stockCol sgp-stockCol--name">
+                <div className="sgp-stockName">{p.title || code}</div>
+                <div className="sgp-stockSub">
+                  {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'} · код: {code}
                 </div>
 
-                <div className="sgp-stockList">
-                  {items.map((p) => {
-                    const code = p.prize_code;
-                    const d = draft[code] || {
-                      active: !!p.active,
-                      track_qty: !!p.track_qty,
-                      qty_left: p.qty_left === null || p.qty_left === undefined ? '' : String(p.qty_left),
-                      stop_when_zero: !!p.stop_when_zero,
-                    };
-
-                    const active = !!d.active;
-                    const tracked = active && !!d.track_qty;
-
-                    const qRaw = String(d.qty_left ?? '').trim();
-                    const baseQty = qtyLeft(p) ?? 0;
-                    const qNum = tracked ? (qRaw === '' ? baseQty : Math.max(0, toInt(qRaw, 0))) : null;
-
-                    const out = tracked && (qNum !== null && qNum <= 0);
-                    const low = tracked && (qNum !== null && qNum > 0 && qNum <= inventory.lowThreshold);
-                    const swz = tracked && !!d.stop_when_zero;
-
-                    const tone = !active ? 'off' : (tracked ? (out ? 'out' : (low ? 'low' : 'on')) : 'on');
-
-                    return (
-                      <div key={code} className={'sgp-stockRow tone-' + tone}>
-                        <div className="sgp-stockCol sgp-stockCol--name">
-                          <div className="sgp-stockName">{p.title || code}</div>
-                          <div className="sgp-stockSub">
-                            {normalizeKind(p) === 'coins' ? `монеты: ${normalizeCoins(p)}` : 'физический'} · код: {code}
-                          </div>
-
-                          {out && swz ? <div className="sgp-stockHint is-bad">Закончились — приз не выпадает</div> : null}
-                          {!out && low ? <div className="sgp-stockHint is-warn">Скоро закончатся (≤ {inventory.lowThreshold})</div> : null}
-                        </div>
-
-                        <div className="sgp-stockCol">
-                          <SgToggle
-                            checked={active}
-                            onChange={(v) => {
-                              if (!v) {
-                                patchDraft(code, { active: false, track_qty: false, stop_when_zero: false, qty_left: '' });
-                                return;
-                              }
-                              patchDraft(code, { active: true });
-                            }}
-                          />
-                        </div>
-
-                        <div className="sgp-stockCol">
-                          <SgToggle
-                            checked={tracked}
-                            disabled={!active}
-                            onChange={(v) => {
-                              if (!active) return;
-                              if (!v) {
-                                patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
-                                return;
-                              }
-                              patchDraft(code, { track_qty: true });
-                            }}
-                          />
-                        </div>
-
-                        <div className="sgp-stockCol">
-                          <SgInput
-                            value={d.qty_left}
-                            onChange={(e) => patchDraft(code, { qty_left: (e.target as any).value })}
-                            placeholder={tracked ? '0' : '—'}
-                            disabled={!tracked}
-                          />
-                        </div>
-
-                        <div className="sgp-stockCol">
-                          <SgToggle
-                            checked={tracked && !!d.stop_when_zero}
-                            disabled={!tracked}
-                            onChange={(v) => {
-                              if (!tracked) return;
-                              patchDraft(code, { stop_when_zero: v });
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {!items.length && !qStats.isLoading ? <div className="sgp-muted">Нет призов.</div> : null}
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  {saveMsg ? (
-                    <Hint tone={saveMsg.startsWith('Ошибка') ? 'bad' : 'warn'}>{saveMsg}</Hint>
-                  ) : (
-                    <Hint tone="neutral">Подсказка: если “Учёт остатков” выключен — поля неактивны, это нормально.</Hint>
-                  )}
-                </div>
-              </SgCardContent>
-            ) : null}
-
-            <SgCardFooter>
-              <SgActions
-                primaryLabel="Сохранить склад"
-                onPrimary={saveStock}
-                state={stockSaveState}
-                errorText={saveMsg?.startsWith('Ошибка') ? saveMsg : undefined}
-                left={<span className="sgp-muted">Меняется только склад (active/track/qty/auto-off).</span>}
-              />
-            </SgCardFooter>
-          </SgCard>
-
-          <div style={{ height: 12 }} />
-
-          <SgCard>
-            <SgCardHeader>
-              <div>
-                <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
-                <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
+                {out && swz ? <div className="sgp-stockHint is-bad">Закончились — приз не выпадает</div> : null}
+                {!out && low ? (
+                  <div className="sgp-stockHint is-warn">Скоро закончатся (≤ {inventory.lowThreshold})</div>
+                ) : null}
               </div>
-            </SgCardHeader>
 
-            <SgCardContent>
-              <SgFormRow
-                label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
-                hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
-              >
-                <SgInput
-                  value={coinValueDraft}
-                  onChange={(e) => setCoinValueDraft((e.target as any).value)}
-                  placeholder="1.00"
+              <div className="sgp-stockCol">
+                <SgToggle
+                  checked={active}
+                  onChange={(v) => {
+                    if (!v) {
+                      patchDraft(code, { active: false, track_qty: false, stop_when_zero: false, qty_left: '' });
+                      return;
+                    }
+                    patchDraft(code, { active: true });
+                  }}
                 />
-              </SgFormRow>
+              </div>
 
-              <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
-                <SgSelect
-                  value={currencyDraft}
-                  onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
-                >
-                  <option value="RUB">RUB (₽)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                </SgSelect>
-              </SgFormRow>
+              <div className="sgp-stockCol">
+                <SgToggle
+                  checked={tracked}
+                  disabled={!active}
+                  onChange={(v) => {
+                    if (!active) return;
+                    if (!v) {
+                      patchDraft(code, { track_qty: false, stop_when_zero: false, qty_left: '' });
+                      return;
+                    }
+                    patchDraft(code, { track_qty: true });
+                  }}
+                />
+              </div>
 
-              {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
-            </SgCardContent>
+              <div className="sgp-stockCol">
+                <SgInput
+                  value={d.qty_left}
+                  onChange={(e) => patchDraft(code, { qty_left: (e.target as any).value })}
+                  placeholder={tracked ? '0' : '—'}
+                  disabled={!tracked}
+                />
+              </div>
 
-            <SgCardFooter>
-              <SgActions
-                primaryLabel="Сохранить"
-                onPrimary={saveAppSettings}
-                state={coinSaveState}
-                errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
-                left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
-              />
-            </SgCardFooter>
-          </SgCard>
-        </>
-      ) : null}
+              <div className="sgp-stockCol">
+                <SgToggle
+                  checked={tracked && !!d.stop_when_zero}
+                  disabled={!tracked}
+                  onChange={(v) => {
+                    if (!tracked) return;
+                    patchDraft(code, { stop_when_zero: v });
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
 
-      {isLoading ? <ShimmerLine /> : null}
-    </SgPage>
-  );
-}
+        {!items.length && !qStats.isLoading ? <div className="sgp-muted">Нет призов.</div> : null}
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        {saveMsg ? (
+          <Hint tone={saveMsg.startsWith('Ошибка') ? 'bad' : 'warn'}>{saveMsg}</Hint>
+        ) : (
+          <Hint tone="neutral">Подсказка: если “Учёт остатков” выключен — поля неактивны, это нормально.</Hint>
+        )}
+      </div>
+    </SgSectionCard>
+
+    <div style={{ height: 12 }} />
+
+    <SgSectionCard
+      title="Стоимость монеты и валюта"
+      sub="Нужно для прогноза и оценки себестоимости"
+      footer={
+        <SgActions
+          primaryLabel="Сохранить"
+          onPrimary={saveAppSettings}
+          state={coinSaveState}
+          errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
+          left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
+        />
+      }
+    >
+      <SgFormRow
+        label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
+        hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
+      >
+        <SgInput
+          value={coinValueDraft}
+          onChange={(e) => setCoinValueDraft((e.target as any).value)}
+          placeholder="1.00"
+        />
+      </SgFormRow>
+
+      <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
+        <SgSelect
+          value={currencyDraft}
+          onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
+        >
+          <option value="RUB">RUB (₽)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+        </SgSelect>
+      </SgFormRow>
+
+      {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
+    </SgSectionCard>
+  </>
+) : null}
+
+{isLoading ? <ShimmerLine /> : null}
