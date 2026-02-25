@@ -49,19 +49,14 @@ function barSizeAuto(containerW: number, points: number) {
   const usable = Math.max(0, containerW - 24 - 14 - 18);
   const per = usable / points;
 
-  // небольшой зазор между столбиками (подкрути 3..6)
+  // маленький зазор между столбиками (подкрути 3..6)
   const gapPx = points <= 10 ? 6 : points <= 24 ? 4 : 3;
 
   const raw = per - gapPx;
   return Math.round(clamp(raw, 6, 999));
 }
 
-/**
- * “Чистое стекло”:
- * - почти прозрачная заливка (почти нет цвета)
- * - дорогой вид: тонкий stroke + highlight + мягкая тень
- * - еле заметный tint по знаку (не муть, просто намёк)
- */
+/** “Стекло” но ЧЕТЧЕ: чуть выше fill, тоньше stroke, ярче блик */
 function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
 
@@ -73,20 +68,18 @@ function ProfitBarShape(props: any) {
   if (w <= 0 || h <= 0) return null;
 
   const v = Number(value || 0);
-  const isNeg = v < 0;
 
-  // ✅ почти прозрачный тинт (намёк на зел/красн)
-  const tintFill = isNeg ? 'rgba(239,68,68,.06)' : 'rgba(34,197,94,.06)';
+  // ✅ чуть четче (меньше мутности)
+  const fill = v >= 0 ? 'rgba(34,197,94,.24)' : 'rgba(239,68,68,.22)';
 
-  // ✅ единая обводка (дороже, чем цветная)
-  const stroke = 'rgba(15,23,42,.10)';
+  // ✅ единая, очень тонкая и “резкая” обводка
+  const stroke = 'rgba(15,23,42,.09)';
 
-  // ✅ скругление “столбик”, не “капсула”
-  const rx = Math.round(clamp(w * 0.10, 4, 9));
+  const rx = Math.round(clamp(w * 0.12, 4, 9));
 
   return (
     <g>
-      {/* очень лёгкая тень/воздух */}
+      {/* мягкая тень/воздух (слегка заметнее) */}
       <rect
         x={x}
         y={yy + 1}
@@ -94,11 +87,11 @@ function ProfitBarShape(props: any) {
         height={h}
         rx={rx}
         ry={rx}
-        fill="rgba(15,23,42,.08)"
-        opacity={0.10}
+        fill="rgba(15,23,42,.10)"
+        opacity={0.12}
       />
 
-      {/* стекло (почти прозрачное) */}
+      {/* основное стекло */}
       <rect
         x={x}
         y={yy}
@@ -106,34 +99,34 @@ function ProfitBarShape(props: any) {
         height={h}
         rx={rx}
         ry={rx}
-        fill={tintFill}
+        fill={fill}
         stroke={stroke}
-        strokeWidth={0.9}
+        strokeWidth={0.85}
         shapeRendering="geometricPrecision"
       />
 
-      {/* верхний блик (главный “дорогой” эффект) */}
+      {/* верхний блик — ярче, чтобы было “дороже” */}
       <rect
         x={x + 1}
         y={yy + 1}
         width={Math.max(0, w - 2)}
-        height={Math.max(0, Math.min(12, h * 0.22))}
+        height={Math.max(0, Math.min(12, h * 0.24))}
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
-        fill="rgba(255,255,255,.70)"
+        fill="rgba(255,255,255,.55)"
         opacity={0.42}
       />
 
-      {/* тонкая внутренняя линия внизу (как линза) */}
+      {/* тонкая нижняя “линза” (чуть четче) */}
       <rect
         x={x + 1}
-        y={yy + Math.max(0, h - 4)}
+        y={yy + Math.max(0, h - 5)}
         width={Math.max(0, w - 2)}
-        height={Math.min(3, h)}
+        height={Math.min(4, h)}
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
-        fill="rgba(255,255,255,.24)"
-        opacity={0.22}
+        fill="rgba(255,255,255,.22)"
+        opacity={0.28}
       />
     </g>
   );
@@ -170,7 +163,6 @@ export function SgMoneyChart({
   const points = data?.length || 0;
   const barSize = barSizeAuto(width, points);
 
-  // небольшой gap между столбиками (на уровне Chart)
   const barGapPx = points <= 10 ? 6 : points <= 24 ? 4 : 3;
 
   return (
