@@ -35,6 +35,8 @@ import {
   CartesianGrid,
 } from 'recharts';
 
+import { sgpChartTheme } from '../components/sgp/charts/theme';
+
 /** ========= Types ========= */
 type PrizeStat = {
   prize_code: string;
@@ -250,6 +252,8 @@ export default function Wheel() {
   const [currencyDraft, setCurrencyDraft] = React.useState<string>('RUB');
   const [savingCoin, setSavingCoin] = React.useState(false);
   const [coinMsg, setCoinMsg] = React.useState<string>('');
+
+  const t = sgpChartTheme();
 
   React.useEffect(() => {
     const cents = qSettings.data?.settings?.coin_value_cents;
@@ -783,20 +787,26 @@ export default function Wheel() {
           </div>
         </SgCardHeader>
 
-        <SgCardContent>
-          {!isLoading && !isError ? (
-            <div style={{ height: 340 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={moneySeries.series}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tickFormatter={(v) => fmtDDMM(String(v || ''))} />
-                  <YAxis
-                    tickFormatter={(v) => {
-                      const n = Number(v);
-                      if (!Number.isFinite(n)) return '';
-                      return String(Math.round(n / 100));
-                    }}
-                  />
+<CartesianGrid stroke={t.grid} strokeDasharray="4 6" />
+
+<XAxis
+  dataKey="date"
+  tickFormatter={(v) => fmtDDMM(String(v || ''))}
+  tick={{ fill: t.axis, fontSize: 12 }}
+  axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
+  tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
+/>
+
+<YAxis
+  tickFormatter={(v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '';
+    return String(Math.round(n / 100));
+  }}
+  tick={{ fill: t.axis, fontSize: 12 }}
+  axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
+  tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
+/>
                   <Tooltip
                     formatter={(val: any, name: any) => {
                       const v = Number(val);
