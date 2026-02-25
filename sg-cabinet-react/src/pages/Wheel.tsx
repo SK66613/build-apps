@@ -764,67 +764,27 @@ export default function Wheel() {
       
 {/* ===== FACT CHART ===== */}
 <SgCard>
-  <SgCardHeader
-    right={
-      <div className="sgp-chartbar">
-        <div className="sgp-seg">
-          <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
-            при выигрыше
-          </SegBtn>
-          <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
-            при выдаче
-          </SegBtn>
-        </div>
-
-        <div className="sgp-iconGroup">
-          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>
-            R
-          </IconBtn>
-          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>
-            C
-          </IconBtn>
-          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>
-            P
-          </IconBtn>
-          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>
-            Σ
-          </IconBtn>
-        </div>
-      </div>
-    }
+<SgCardContent>
+  <ChartState
+    height={340}
+    isLoading={isLoading}
+    isError={isError}
+    errorText={String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
   >
-    <div>
-      <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
-      <SgCardSub>
-        {range.from} — {range.to}
-      </SgCardSub>
-    </div>
-  </SgCardHeader>
-
-  <SgCardContent>
-    {!isLoading && !isError ? (
-      <SgMoneyChart
-        data={moneySeries.series}
-        currency={currency}
-        theme={t}
-        height={340}
-        showRevenue={showRevenue}
-        showPayout={showPayout}
-        showProfitBars={showProfitBars}
-        showCum={showCum}
-        fmtTick={(iso) => fmtDDMM(iso)}
-        moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
-      />
-    ) : null}
-
-    {isLoading ? <div className="sgp-muted">Загрузка…</div> : null}
-
-    {isError ? (
-      <Hint tone="bad">
-        Ошибка: {String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
-      </Hint>
-    ) : null}
-  </SgCardContent>
+    <SgMoneyChart
+      data={moneySeries.series}
+      currency={currency}
+      theme={t}
+      height={340}
+      showRevenue={showRevenue}
+      showPayout={showPayout}
+      showProfitBars={showProfitBars}
+      showCum={showCum}
+      fmtTick={(iso) => fmtDDMM(iso)}
+      moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
+    />
+  </ChartState>
+</SgCardContent>
 </SgCard>
 
 
