@@ -71,6 +71,29 @@
   --sgp-chart-neg: rgba(239,68,68,.22);   /* red fill */
   --sgp-chart-neutral: rgba(15,23,42,.60);
 
+
+
+
+     /* use your global Manrope everywhere */
+  --sgp-font: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --sgp-font-head: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* chart ink */
+  --sgp-chart-ink: rgba(15,23,42,.78);
+  --sgp-chart-inkSoft: rgba(15,23,42,.55);
+
+  /* premium grid (VERY soft) */
+  --sgp-chart-grid: rgba(15,23,42,.06);
+
+  /* area / bars */
+  --sgp-area-fill: rgba(59,130,246,.10);
+  --sgp-area-fill2: rgba(59,130,246,.02);
+  --sgp-bar-fill: rgba(59,130,246,.18);
+
+  /* profit colors */
+  --sgp-bar-good: rgba(34,197,94,.18);
+  --sgp-bar-bad: rgba(239,68,68,.16);
+
 }
 
 
@@ -836,38 +859,11 @@
 
 
 
-
-
-
-
-
-
 /* =========================================================
    Wheel — Chart premium (remove grey cloud, lighter grid, nicer fills)
    Place BELOW all previous sgp blocks (at the very bottom)
 ========================================================= */
 
-:root{
-  /* use your global Manrope everywhere */
-  --sgp-font: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --sgp-font-head: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-
-  /* chart ink */
-  --sgp-chart-ink: rgba(15,23,42,.78);
-  --sgp-chart-inkSoft: rgba(15,23,42,.55);
-
-  /* premium grid (VERY soft) */
-  --sgp-chart-grid: rgba(15,23,42,.06);
-
-  /* area / bars */
-  --sgp-area-fill: rgba(59,130,246,.10);
-  --sgp-area-fill2: rgba(59,130,246,.02);
-  --sgp-bar-fill: rgba(59,130,246,.18);
-
-  /* profit colors */
-  --sgp-bar-good: rgba(34,197,94,.18);
-  --sgp-bar-bad: rgba(239,68,68,.16);
-}
 
 /* 1) kill any “grey cloud” background inside chart card */
 .sgp-wheel .sgp-chartWrap,
