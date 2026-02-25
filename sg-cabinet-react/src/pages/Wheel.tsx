@@ -877,25 +877,23 @@ onToggleOpen={() => toggleOnly('summary')}
   </SgSectionCard>
 
 
-      {/* ===== TAB: FORECAST ===== */}
-{tab === 'forecast' ? (
-  <SgSectionCard
-    title={
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span>Прогноз EV/ROI</span>
-        <HealthBadge
-          tone={(ev?.profitCent ?? 0) >= 0 ? 'good' : 'bad'}
-          title={(ev?.profitCent ?? 0) >= 0 ? 'плюс' : 'минус'}
-        />
-      </div>
-    }
-    collapsible
-open={opened === 'forecast' && openForecast}
-onToggleOpen={() => toggleOnly('forecast')}
-  >
-    {/* ...твой контент forecast без изменений... */}
-  </SgSectionCard>
-) : null}
+            {/* ===== TAB: FORECAST ===== */}
+      <SgSectionCard
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>Прогноз EV/ROI</span>
+            <HealthBadge
+              tone={(ev?.profitCent ?? 0) >= 0 ? 'good' : 'bad'}
+              title={(ev?.profitCent ?? 0) >= 0 ? 'плюс' : 'минус'}
+            />
+          </div>
+        }
+        collapsible
+        open={opened === 'forecast' && openForecast}
+        onToggleOpen={() => toggleOnly('forecast')}
+      >
+        {/* ...твой контент forecast без изменений... */}
+      </SgSectionCard>
 
 
 
@@ -905,82 +903,83 @@ onToggleOpen={() => toggleOnly('forecast')}
 
       
 
-    {/* ===== TAB: STOCK ===== */}
-
-  <>
-    <SgStockCard
-      title="Склад призов"
-open={opened === 'stock' && openStock}
-onToggleOpen={() => toggleOnly('stock')}
-      items={items}
-      isLoading={qStats.isLoading}
-      inventory={inventory}
-      draft={draft}
-      patchDraft={patchDraft}
-      saveMsg={saveMsg}
-      saveState={stockSaveState}
-      onSave={saveStock}
-      getCode={(p) => String((p as any).prize_code || '')}
-      getTitle={(p) => String((p as any).title || (p as any).prize_code || '')}
-      getSubline={(p) => (
+     {/* ===== TAB: STOCK ===== */}
+      {opened === 'stock' ? (
         <>
-          {normalizeKind(p as any) === 'coins'
-            ? `монеты: ${normalizeCoins(p as any)}`
-            : 'физический'}{' '}
-          · код: {String((p as any).prize_code || '')}
-        </>
-      )}
-      qtyLeft={(p) => qtyLeft(p as any)}
-      isTracked={(p) => isTracked(p as any)}
-    />
-
-    <div style={{ height: 12 }} />
-
-    <SgCard>
-      <SgCardHeader>
-        <div>
-          <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
-          <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
-        </div>
-      </SgCardHeader>
-
-      <SgCardContent>
-        <SgFormRow
-          label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
-          hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
-        >
-          <SgInput
-            value={coinValueDraft}
-            onChange={(e) => setCoinValueDraft((e.target as any).value)}
-            placeholder="1.00"
+          <SgStockCard
+            title="Склад призов"
+            open={opened === 'stock' && openStock}
+            onToggleOpen={() => toggleOnly('stock')}
+            items={items}
+            isLoading={qStats.isLoading}
+            inventory={inventory}
+            draft={draft}
+            patchDraft={patchDraft}
+            saveMsg={saveMsg}
+            saveState={stockSaveState}
+            onSave={saveStock}
+            getCode={(p) => String((p as any).prize_code || '')}
+            getTitle={(p) => String((p as any).title || (p as any).prize_code || '')}
+            getSubline={(p) => (
+              <>
+                {normalizeKind(p as any) === 'coins'
+                  ? `монеты: ${normalizeCoins(p as any)}`
+                  : 'физический'}{' '}
+                · код: {String((p as any).prize_code || '')}
+              </>
+            )}
+            qtyLeft={(p) => qtyLeft(p as any)}
+            isTracked={(p) => isTracked(p as any)}
           />
-        </SgFormRow>
 
-        <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
-          <SgSelect
-            value={currencyDraft}
-            onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
-          >
-            <option value="RUB">RUB (₽)</option>
-            <option value="USD">USD ($)</option>
-            <option value="EUR">EUR (€)</option>
-          </SgSelect>
-        </SgFormRow>
+          <div style={{ height: 12 }} />
 
-        {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
-      </SgCardContent>
+          <SgCard>
+            <SgCardHeader>
+              <div>
+                <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
+                <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
+              </div>
+            </SgCardHeader>
 
-      <SgCardFooter>
-        <SgActions
-          primaryLabel="Сохранить"
-          onPrimary={saveAppSettings}
-          state={coinSaveState}
-          errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
-          left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
-        />
-      </SgCardFooter>
-    </SgCard>
-  </>
+            <SgCardContent>
+              <SgFormRow
+                label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
+                hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
+              >
+                <SgInput
+                  value={coinValueDraft}
+                  onChange={(e) => setCoinValueDraft((e.target as any).value)}
+                  placeholder="1.00"
+                />
+              </SgFormRow>
+
+              <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
+                <SgSelect
+                  value={currencyDraft}
+                  onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
+                >
+                  <option value="RUB">RUB (₽)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                </SgSelect>
+              </SgFormRow>
+
+              {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
+            </SgCardContent>
+
+            <SgCardFooter>
+              <SgActions
+                primaryLabel="Сохранить"
+                onPrimary={saveAppSettings}
+                state={coinSaveState}
+                errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
+                left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
+              />
+            </SgCardFooter>
+          </SgCard>
+        </>
+      ) : null}
 
 
 {isLoading ? <ShimmerLine /> : null}
