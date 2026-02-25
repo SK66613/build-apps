@@ -241,8 +241,6 @@ function openOnly(k: Exclude<OpenedKey, null>) {
 }
 
 function toggleOnly(k: Exclude<OpenedKey, null>) {
-  // если клик по открытому — закрываем ВСЁ и ставим opened=null,
-  // чтобы следующий клик мог снова открыть
   if (opened === k) {
     setOpened(null);
     setOpenSummary(false);
