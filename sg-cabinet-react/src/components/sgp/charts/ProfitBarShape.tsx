@@ -1,3 +1,4 @@
+// sg-cabinet-react/src/components/sgp/charts/ProfitBarShape.tsx
 import React from 'react';
 
 function clamp(n: number, a: number, b: number) {
@@ -8,33 +9,26 @@ function rgba([r, g, b]: [number, number, number], a: number) {
 }
 
 /**
- * Premium "mirror glass" bars (single source of truth)
- * - чистые цвета
- * - стекло: градиент (плотнее сверху, легче снизу)
- * - мягкая единая обводка
- * - верхний блик (зеркальность)
- * - тонкий цветной edge сверху (почти незаметно, но дорого)
- *
- * Хочешь “более стекло” -> уменьшаешь GLASS_A
- * Хочешь “сочнее” -> увеличиваешь GLASS_A
+ * Streamlined "premium glass" bar:
+ * - убрана верхняя шапочка / блик
+ * - убрана цветная тонкая edge
+ * - оставлен градиент для стекла (чтобы сохранить глубину)
+ * - очень тонкая нейтральная обводка
+ * - маленькое закругление (rx = 2..4)
  */
 
 // ====== COLORS (правь только тут) ======
-// Зеленый: чистый (не болотный)
-const POS_RGB: [number, number, number] = [34, 197, 94];  // emerald/green
-// Красный: чистый (при стекле станет чуть розоватым — это нормально)
-const NEG_RGB: [number, number, number] = [239, 68, 68];  // red
+const POS_RGB: [number, number, number] = [34, 197, 94];   // зеленый
+const NEG_RGB: [number, number, number] = [239, 68, 68];   // красный
 
-// ====== “MIXES” (правь только тут) ======
-const GLASS_A = 0.28;        // плотность стекла 0.18..0.40
-const GLASS_BOTTOM_K = 0.55; // насколько низ легче (0.45..0.70)
-const STROKE_A = 0.08;       // мягкая обводка (0.05..0.12)
-const SHADOW_A = 0.10;       // воздух/тень (0.06..0.14)
-const HIGHLIGHT_A = 0.38;    // зеркальный блик (0.25..0.55)
-const EDGE_A = 0.22;         // цветной edge сверху (0.12..0.28)
+// ====== MIX SETTINGS ======
+const GLASS_A = 0.28;       // заливка стеклом
+const GLASS_BOTTOM_K = 0.56;
+const STROKE_A = 0.07;      // очень тонкая нейтральная рамка
+const SHADOW_A = 0.10;      // мягкая тень/воздух
 
-// если хочешь вообще без скруглений — оставь 0
-const RADIUS = 0;
+// маленькое закругление
+const SMALL_RX = 3;
 
 export function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
@@ -49,22 +43,14 @@ export function ProfitBarShape(props: any) {
   const isNeg = Number(value) < 0;
   const baseRGB = isNeg ? NEG_RGB : POS_RGB;
 
-  // если хочешь “квадратные” — RADIUS=0
-  // если хочешь слегка мягче — поставь 4..6
-  const rx = RADIUS > 0 ? clamp(RADIUS, 0, 10) : 0;
+  const rx = Math.round(clamp(SMALL_RX, 0, 8));
 
-  // уникальный id градиента для каждого бара (чтобы не конфликтовали)
   const gid = `sgpGlass_${isNeg ? 'n' : 'p'}_${Math.round(x)}_${Math.round(yy)}_${Math.round(w)}_${Math.round(h)}`;
 
-  // верх плотнее, низ легче
   const aTop = clamp(GLASS_A, 0, 1);
   const aBot = clamp(GLASS_A * GLASS_BOTTOM_K, 0, 1);
 
-  // мягкая единая обводка
   const stroke = `rgba(15, 23, 42, ${clamp(STROKE_A, 0, 1)})`;
-
-  // размеры блика
-  const hiH = Math.max(0, Math.min(12, h * 0.22));
 
   return (
     <g>
@@ -76,7 +62,7 @@ export function ProfitBarShape(props: any) {
         </linearGradient>
       </defs>
 
-      {/* 1) воздух: мягкая тень (дороже) */}
+      {/* 1) воздух: мягкая тень/подложка */}
       <rect
         x={x}
         y={yy + 1}
@@ -88,7 +74,7 @@ export function ProfitBarShape(props: any) {
         opacity={clamp(SHADOW_A, 0, 1)}
       />
 
-      {/* 2) стекло: градиентная заливка */}
+      {/* 2) основное "стекло" - градиент */}
       <rect
         x={x}
         y={yy}
@@ -98,35 +84,11 @@ export function ProfitBarShape(props: any) {
         ry={rx}
         fill={`url(#${gid})`}
         stroke={stroke}
-        strokeWidth={1}
+        strokeWidth={0.6}
         shapeRendering="geometricPrecision"
       />
 
-      {/* 3) верхний блик (зеркальность) */}
-      {hiH > 0 ? (
-        <rect
-          x={x + 1}
-          y={yy + 1}
-          width={Math.max(0, w - 2)}
-          height={hiH}
-          rx={rx > 0 ? Math.max(2, rx - 2) : 0}
-          ry={rx > 0 ? Math.max(2, rx - 2) : 0}
-          fill="rgba(255,255,255,.92)"
-          opacity={clamp(HIGHLIGHT_A, 0, 1)}
-        />
-      ) : null}
-
-      {/* 4) тонкий цветной edge сверху (супер-деликатно) */}
-      <rect
-        x={x + 0.5}
-        y={yy + 0.5}
-        width={Math.max(0, w - 1)}
-        height={Math.max(0, Math.min(2, h))}
-        rx={rx > 0 ? Math.max(2, rx - 2) : 0}
-        ry={rx > 0 ? Math.max(2, rx - 2) : 0}
-        fill={rgba(baseRGB, 0.85)}
-        opacity={clamp(EDGE_A, 0, 1)}
-      />
+      {/* (блик и цветной edge удалены — чистый и дорогой вид) */}
     </g>
   );
 }
