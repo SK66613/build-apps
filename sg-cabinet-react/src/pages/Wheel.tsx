@@ -31,7 +31,7 @@ import { sgpChartTheme } from '../components/sgp/charts/theme';
 
 import { SgMoneyChart } from '../components/sgp/charts/SgMoneyChart';
 
-
+import { ChartState } from '../components/sgp/charts/ChartState';
 
 /** ========= Types ========= */
 type PrizeStat = {
