@@ -909,7 +909,7 @@ onToggleOpen={() => toggleOnly('summary')}
 {/* ===== ACC: BOOST (сразу после прогноза) ===== */}
 <SgBoostCard
   title="Буст"
-  sub="Автоматизация сообщений и бонусов для вовлечения (пока UI, воркер позже)"
+  sub="Автоматизация"
   open={opened === 'boost' && openBoost}
   onToggleOpen={() => toggleOnly('boost')}
 
