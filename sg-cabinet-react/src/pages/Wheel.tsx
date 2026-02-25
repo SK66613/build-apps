@@ -757,90 +757,108 @@ export default function Wheel() {
         </div>
       }
     >
-      {/* ===== FACT CHART ===== */}
-      <SgCard>
-        <SgCardHeader
-          right={
-            // ONE ROW: (при выигрыше/при выдаче) + R/C/P/Σ
-            <div className="sgp-chartbar">
-              <div className="sgp-seg">
-                <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
-                  при выигрыше
-                </SegBtn>
-                <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
-                  при выдаче
-                </SegBtn>
-              </div>
+     {/* ===== FACT CHART ===== */}
+<SgCard>
+  <SgCardHeader
+    right={
+      <div className="sgp-chartbar">
+        <div className="sgp-seg">
+          <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
+            при выигрыше
+          </SegBtn>
+          <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
+            при выдаче
+          </SegBtn>
+        </div>
 
-              <div className="sgp-iconGroup">
-                <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
-                <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>C</IconBtn>
-                <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>P</IconBtn>
-                <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>Σ</IconBtn>
-              </div>
-            </div>
-          }
-        >
-          <div>
-            <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
-            <SgCardSub>{range.from} — {range.to}</SgCardSub>
-          </div>
-        </SgCardHeader>
+        <div className="sgp-iconGroup">
+          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue(v => !v)}>R</IconBtn>
+          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout(v => !v)}>C</IconBtn>
+          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars(v => !v)}>P</IconBtn>
+          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum(v => !v)}>Σ</IconBtn>
+        </div>
+      </div>
+    }
+  >
+    <div>
+      <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
+      <SgCardSub>{range.from} — {range.to}</SgCardSub>
+    </div>
+  </SgCardHeader>
 
-<CartesianGrid stroke={t.grid} strokeDasharray="4 6" />
+  <SgCardContent>
+    {!isLoading && !isError ? (
+      <div style={{ height: 340 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={moneySeries.series}>
 
-<XAxis
-  dataKey="date"
-  tickFormatter={(v) => fmtDDMM(String(v || ''))}
-  tick={{ fill: t.axis, fontSize: 12 }}
-  axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
-  tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
-/>
+            <CartesianGrid stroke={t.grid} strokeDasharray="4 6" />
 
-<YAxis
-  tickFormatter={(v) => {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return '';
-    return String(Math.round(n / 100));
-  }}
-  tick={{ fill: t.axis, fontSize: 12 }}
-  axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
-  tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
-/>
-                  <Tooltip
-                    formatter={(val: any, name: any) => {
-                      const v = Number(val);
-                      if (!Number.isFinite(v)) return [val, name];
-                      if (name === 'profit') return [moneyFromCent(v, currency), 'Прибыль/день'];
-                      if (name === 'revenue') return [moneyFromCent(v, currency), 'Выручка/день'];
-                      if (name === 'payout') return [moneyFromCent(v, currency), 'Расход/день'];
-                      if (name === 'cum_profit') return [moneyFromCent(v, currency), 'Кум. прибыль'];
-                      return [val, name];
-                    }}
-                    labelFormatter={(_: any, payload: any) => {
-                      const d = payload?.[0]?.payload?.date;
-                      return d ? `Дата ${d}` : 'Дата';
-                    }}
-                  />
+            <XAxis
+              dataKey="date"
+              tickFormatter={(v) => fmtDDMM(String(v || ''))}
+              tick={{ fill: t.axis, fontSize: 12 }}
+              axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
+              tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
+            />
 
-                  {showProfitBars ? <Bar dataKey="profit" name="profit" shape={<ProfitBarShape />} /> : null}
-                  {showRevenue ? <Line type="monotone" dataKey="revenue" name="revenue" dot={false} /> : null}
-                  {showPayout ? <Line type="monotone" dataKey="payout" name="payout" dot={false} /> : null}
-                  {showCum ? <Line type="monotone" dataKey="cum_profit" name="cum_profit" dot={false} /> : null}
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          ) : null}
+            <YAxis
+              tickFormatter={(v) => {
+                const n = Number(v);
+                if (!Number.isFinite(n)) return '';
+                return String(Math.round(n / 100));
+              }}
+              tick={{ fill: t.axis, fontSize: 12 }}
+              axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
+              tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
+            />
 
-          {isLoading ? <div className="sgp-muted">Загрузка…</div> : null}
-          {isError ? (
-            <Hint tone="bad">
-              Ошибка: {String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
-            </Hint>
-          ) : null}
-        </SgCardContent>
+            <Tooltip
+              formatter={(val: any, name: any) => {
+                const v = Number(val);
+                if (!Number.isFinite(v)) return [val, name];
+                if (name === 'profit') return [moneyFromCent(v, currency), 'Прибыль/день'];
+                if (name === 'revenue') return [moneyFromCent(v, currency), 'Выручка/день'];
+                if (name === 'payout') return [moneyFromCent(v, currency), 'Расход/день'];
+                if (name === 'cum_profit') return [moneyFromCent(v, currency), 'Кум. прибыль'];
+                return [val, name];
+              }}
+              labelFormatter={(_: any, payload: any) => {
+                const d = payload?.[0]?.payload?.date;
+                return d ? `Дата ${d}` : 'Дата';
+              }}
+            />
 
-      </SgCard>
+            {showProfitBars ? (
+              <Bar dataKey="profit" name="profit" shape={<ProfitBarShape />} />
+            ) : null}
+
+            {showRevenue ? (
+              <Line type="monotone" dataKey="revenue" name="revenue" dot={false} />
+            ) : null}
+
+            {showPayout ? (
+              <Line type="monotone" dataKey="payout" name="payout" dot={false} />
+            ) : null}
+
+            {showCum ? (
+              <Line type="monotone" dataKey="cum_profit" name="cum_profit" dot={false} />
+            ) : null}
+
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    ) : null}
+
+    {isLoading ? <div className="sgp-muted">Загрузка…</div> : null}
+
+    {isError ? (
+      <Hint tone="bad">
+        Ошибка: {String((qStats.error as any)?.message || (qTs.error as any)?.message || 'UNKNOWN')}
+      </Hint>
+    ) : null}
+  </SgCardContent>
+</SgCard>
 
       {/* ===== TABS BAR BETWEEN CARDS ===== */}
 <div className="sgp-wheelTabsBar">
