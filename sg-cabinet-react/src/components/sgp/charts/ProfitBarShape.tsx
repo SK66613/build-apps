@@ -17,7 +17,7 @@ function rgba([r, g, b]: [number, number, number], a: number) {
  */
 
 // “стекло” (насыщенность)
-const ALPHA = 0.22;       // 0.18..0.30
+const ALPHA = 0.14;       // 0.18..0.30
 const HIGHLIGHT = 0.38;   // 0.28..0.55
 const SHADOW = 0.10;      // 0.06..0.14
 
