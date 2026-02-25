@@ -11,11 +11,15 @@ function clamp(n: number, a: number, b: number) {
 }
 
 /**
- * Premium "glass" bar:
- * - почти прозрачная заливка (без мути)
- * - тонкая единая обводка
- * - внутренний блик сверху
- * - лёгкая тень вниз
+ * Single Source of Truth: premium glass bar
+ * Управляется токенами:
+ *  --sgp-chart-pos / --sgp-chart-neg       (база цвета)
+ *  --sgp-chart-stroke                      (единая обводка)
+ *  --sgp-bar-tint                          (насколько "плотная" заливка-стекло, 0..1)
+ *  --sgp-bar-highlight                     (яркость блика, 0..1)
+ *  --sgp-bar-shadow                        (сила тени, 0..1)
+ *
+ * По умолчанию — стекло (воздушно), но можно сделать насыщеннее одной цифрой.
  */
 export function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
@@ -29,22 +33,42 @@ export function ProfitBarShape(props: any) {
 
   const isNeg = Number(value) < 0;
 
-  // ✅ единые цвета из токенов (скручиваешь в scss один раз)
-  const pos = cssVar('--sgp-chart-pos', 'rgba(34,197,94,.32)');
-  const neg = cssVar('--sgp-chart-neg', 'rgba(239,68,68,.30)');
+  // базовые цвета (их ты правишь в scss один раз)
+  const pos = cssVar('--sgp-chart-pos', 'rgba(16,185,129,.34)'); // emerald
+  const neg = cssVar('--sgp-chart-neg', 'rgba(244,63,94,.30)');  // rose
+  const base = isNeg ? neg : pos;
 
-  // “стекло”: делаем не плотную заливку, а очень лёгкий тинт
-  // (тут можно крутить альфу)
-  const fill = isNeg ? 'rgba(239,68,68,.06)' : 'rgba(34,197,94,.06)';
-
-  // ✅ обводка одна, очень мягкая
+  // единая обводка (дороже чем цветная)
   const stroke = cssVar('--sgp-chart-stroke', 'rgba(15,23,42,.10)');
 
-  // чтобы не было капсул при широких барах
+  // “крутилки” прозрачности (строками, чтобы можно было задать в css как 0.14)
+  const tintA = Number(cssVar('--sgp-bar-tint', '0.16'));       // плотность стекла
+  const hiA = Number(cssVar('--sgp-bar-highlight', '0.42'));    // блик
+  const shA = Number(cssVar('--sgp-bar-shadow', '0.10'));       // тень
+
+  // clamp на случай мусора в css
+  const tint = clamp(Number.isFinite(tintA) ? tintA : 0.16, 0, 1);
+  const hi = clamp(Number.isFinite(hiA) ? hiA : 0.42, 0, 1);
+  const sh = clamp(Number.isFinite(shA) ? shA : 0.10, 0, 1);
+
+  // чтобы не было "капсул" при широких барах
   const rx = Math.round(clamp(w * 0.12, 4, 9));
 
-  // блик сверху можно чуть подкрашивать pos/neg (даёт “дороже”)
-  const highlight = isNeg ? 'rgba(255,255,255,.62)' : 'rgba(255,255,255,.62)';
+  // хитрость: заливаем base цветом, но маленькой альфой => чистое стекло, не муть
+  // (и при этом насыщенность регулируется --sgp-chart-pos/neg + --sgp-bar-tint)
+  const fill = base.replace(/rgba?\(([^)]+)\)/, (m) => {
+    // если base уже rgba(...) — просто подменим альфу
+    if (m.startsWith('rgba(')) {
+      const parts = m.slice(5, -1).split(',').map((s) => s.trim());
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${tint})`;
+    }
+    // если вдруг base = rgb(...) — добавим альфу
+    if (m.startsWith('rgb(')) {
+      const parts = m.slice(4, -1).split(',').map((s) => s.trim());
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${tint})`;
+    }
+    return m;
+  });
 
   return (
     <g>
@@ -56,8 +80,8 @@ export function ProfitBarShape(props: any) {
         height={h}
         rx={rx}
         ry={rx}
-        fill="rgba(15,23,42,.08)"
-        opacity={0.10}
+        fill="rgba(15,23,42,.12)"
+        opacity={sh}
       />
 
       {/* основное стекло */}
@@ -82,8 +106,8 @@ export function ProfitBarShape(props: any) {
         height={Math.max(0, Math.min(12, h * 0.22))}
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
-        fill={highlight}
-        opacity={0.42}
+        fill="rgba(255,255,255,.85)"
+        opacity={hi}
       />
 
       {/* микро-линия внизу (линза) */}
@@ -94,11 +118,11 @@ export function ProfitBarShape(props: any) {
         height={Math.min(3, h)}
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
-        fill="rgba(255,255,255,.22)"
+        fill="rgba(255,255,255,.26)"
         opacity={0.22}
       />
 
-      {/* тонкий edge-акцент по знаку (почти не заметно, но “читабельно”) */}
+      {/* тонкий edge-акцент по знаку */}
       <rect
         x={x + 0.5}
         y={yy + 0.5}
@@ -106,8 +130,8 @@ export function ProfitBarShape(props: any) {
         height={Math.max(0, Math.min(2, h))}
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
-        fill={isNeg ? neg : pos}
-        opacity={0.22}
+        fill={base}
+        opacity={0.18}
       />
     </g>
   );
