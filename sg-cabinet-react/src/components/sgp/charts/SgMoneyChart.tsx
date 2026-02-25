@@ -1,17 +1,15 @@
 import React from 'react';
-import { ChartFrame } from './ChartFrame';
+import { Area, Line, Bar } from 'recharts';
 
-import { RevenueArea } from './series/RevenueArea';
-import { PayoutLine } from './series/PayoutLine';
-import { ProfitBars } from './series/ProfitBars';
-import { CumLine } from './series/CumLine';
+import { ChartFrame } from './ChartFrame';
+import { ProfitBarShape } from './ProfitBarShape';
 
 type Datum = {
-  date: string;
-  revenue?: number;
-  payout?: number;
-  profit?: number;
-  cum_profit?: number;
+  date: string; // ISO YYYY-MM-DD
+  revenue?: number; // cents
+  payout?: number;  // cents
+  profit?: number;  // cents
+  cum_profit?: number; // cents
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -38,15 +36,21 @@ function useResizeWidth<T extends HTMLElement>() {
   return { ref, width: w };
 }
 
-// ✅ почти “впритык”, но с микро-зазором через barGap=1 в ChartFrame
+/**
+ * ✅ Широкие бары + маленький зазор между ними
+ * Идея: barSize ≈ ширина категории - 1px
+ */
 function barSizeTight(containerW: number, points: number) {
-  if (!containerW || points <= 0) return 12;
+  if (!containerW || points <= 0) return 10;
 
+  // примерно "полезная" ширина (оси/поля)
   const usable = Math.max(0, containerW - 24 - 14 - 18);
   const per = usable / points;
 
-  const raw = per * 0.98;
-  return Math.round(clamp(raw, 6, 999));
+  // оставляем микро-зазор
+  const raw = per - 1;
+
+  return Math.round(clamp(raw, 4, 999));
 }
 
 export function SgMoneyChart({
@@ -83,12 +87,11 @@ export function SgMoneyChart({
   return (
     <div ref={ref} style={{ height }}>
       <ChartFrame
-        data={data as any}
+        data={data}
         height={height}
         theme={theme}
-        // ✅ маленькое расстояние между столбиками
-        barGap={1}
-        barCategoryGap={0}
+        barGap={1}          // ✅ маленькое расстояние между барами
+        barCategoryGap={0}  // ✅ почти вплотную по категориям
         fmtTick={fmtTick}
         yTickFormatter={(v) => {
           const n = Number(v);
@@ -111,10 +114,57 @@ export function SgMoneyChart({
           return d ? `Дата ${d}` : 'Дата';
         }}
       >
-        {showRevenue ? <RevenueArea /> : null}
-        {showPayout ? <PayoutLine /> : null}
-        {showProfitBars ? <ProfitBars barSize={barSize} /> : null}
-        {showCum ? <CumLine /> : null}
+        {showRevenue ? (
+          <Area
+            type="monotone"
+            dataKey="revenue"
+            name="revenue"
+            stroke="var(--accent2)"
+            strokeWidth={2}
+            fill="var(--accent2)"
+            fillOpacity={0.10}
+            dot={false}
+            activeDot={{ r: 4 }}
+            isAnimationActive={false}
+          />
+        ) : null}
+
+        {showPayout ? (
+          <Line
+            type="monotone"
+            dataKey="payout"
+            name="payout"
+            dot={false}
+            stroke="rgba(148,163,184,.85)"
+            strokeWidth={2}
+            opacity={0.9}
+            isAnimationActive={false}
+          />
+        ) : null}
+
+        {showProfitBars ? (
+          <Bar
+            dataKey="profit"
+            name="profit"
+            barSize={barSize} // ✅ ширина управляется здесь
+            shape={<ProfitBarShape />}
+            isAnimationActive={false}
+          />
+        ) : null}
+
+        {showCum ? (
+          <Line
+            type="monotone"
+            dataKey="cum_profit"
+            name="cum_profit"
+            dot={false}
+            stroke="var(--accent2)"
+            strokeWidth={2}
+            strokeDasharray="6 6"
+            opacity={0.55}
+            isAnimationActive={false}
+          />
+        ) : null}
       </ChartFrame>
     </div>
   );
