@@ -46,69 +46,14 @@ export function ProfitBarShape(props: any) {
   // единая (не цветная) обводка => iOS / premium
   const stroke = `rgba(15, 23, 42, ${STROKE_A})`;
 
-  return (
-    <g>
-      {/* лёгкая тень вниз (воздух) */}
-      <rect
-        x={x}
-        y={yy + 1}
-        width={w}
-        height={h}
-        rx={rx}
-        ry={rx}
-        fill="rgba(15,23,42,.14)"
-        opacity={SHADOW}
-      />
-
-      {/* стекло */}
-      <rect
-        x={x}
-        y={yy}
-        width={w}
-        height={h}
-        rx={rx}
-        ry={rx}
-        fill={rgba(baseRGB, TINT)}
-        stroke={stroke}
-        strokeWidth={0.9}
-        shapeRendering="geometricPrecision"
-      />
-
-      {/* блик сверху */}
-      <rect
-        x={x + 1}
-        y={yy + 1}
-        width={Math.max(0, w - 2)}
-        height={Math.max(0, Math.min(12, h * 0.22))}
-        rx={Math.max(2, rx - 2)}
-        ry={Math.max(2, rx - 2)}
-        fill="rgba(255,255,255,.90)"
-        opacity={HIGHLIGHT}
-      />
-
-      {/* микро “линза” снизу */}
-      <rect
-        x={x + 1}
-        y={yy + Math.max(0, h - 4)}
-        width={Math.max(0, w - 2)}
-        height={Math.min(3, h)}
-        rx={Math.max(2, rx - 2)}
-        ry={Math.max(2, rx - 2)}
-        fill="rgba(255,255,255,.26)"
-        opacity={0.22}
-      />
-
-      {/* тонкая цветовая кромка сверху (почти незаметно, но чище) */}
-      <rect
-        x={x + 0.5}
-        y={yy + 0.5}
-        width={Math.max(0, w - 1)}
-        height={Math.max(0, Math.min(2, h))}
-        rx={Math.max(2, rx - 2)}
-        ry={Math.max(2, rx - 2)}
-        fill={rgba(baseRGB, 0.70)}
-        opacity={0.18}
-      />
-    </g>
-  );
-}
+return (
+  <rect
+    x={x}
+    y={yy}
+    width={w}
+    height={h}
+    rx={4}
+    ry={4}
+    fill={rgba(baseRGB, 1)}   // 👈 100% цвет, без прозрачности
+  />
+);
