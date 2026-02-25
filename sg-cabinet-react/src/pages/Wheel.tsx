@@ -24,23 +24,14 @@ import { HealthBadge } from '../components/sgp/HealthBadge';
 import { ShimmerLine } from '../components/sgp/ShimmerLine';
 import { IconBtn } from '../components/sgp/IconBtn';
 
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from 'recharts';
+
 
 import { sgpChartTheme } from '../components/sgp/charts/theme';
 
 
+import { SgMoneyChart } from '../components/sgp/charts/SgMoneyChart';
 
-import { Area, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ComposedChart } from 'recharts';
-import { ProfitBarShape } from '../components/sgp/charts/ProfitBarShape';
+
 
 /** ========= Types ========= */
 type PrizeStat = {
@@ -217,18 +208,7 @@ function Hint({
   return <div className={`sgp-hint tone-${tone}`}>{children}</div>;
 }
 
-/** ========= Chart bar shape: +/- ========= */
-function ProfitBarShape(props: any) {
-  const { x, y, width, height, value } = props;
-  const v = Number(value || 0);
-  const fill =
-    v >= 0 ? 'var(--sgp-chart-good, rgba(16,185,129,.45))' : 'var(--sgp-chart-bad, rgba(239,68,68,.40))';
 
-  const h = Math.abs(Number(height) || 0);
-  const yy = Number(height) >= 0 ? y : y - h;
-
-  return <rect x={x} y={yy} width={width} height={h} rx={6} ry={6} fill={fill} />;
-}
 
 /** ========= Page ========= */
 export default function Wheel() {
@@ -290,24 +270,6 @@ export default function Wheel() {
     const cents = Math.floor(units * 100);
     return Number.isFinite(cents) ? Math.max(0, cents) : 0;
   }, [coinValueDraft]);
-
-
-
-
-
-
-
-// ✅ helper: ширина баров зависит от длины диапазона (как в топ-дашбордах)
-function barSizeByPoints(n: number) {
-  if (n <= 8) return 22;     // день/неделя — жирно
-  if (n <= 14) return 18;    // 2 недели
-  if (n <= 31) return 14;    // месяц
-  if (n <= 60) return 10;    // 2 месяца
-  return 8;                  // длинный диапазон — аккуратно
-}
-
-
-
 
 
 
@@ -824,13 +786,21 @@ function barSizeByPoints(n: number) {
   </SgCardHeader>
 
   <SgCardContent>
-    {!isLoading && !isError ? (
-      <div style={{ height: 340 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={moneySeries.series}
-            margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
-          >
+
+{!isLoading && !isError ? (
+  <SgMoneyChart
+    data={moneySeries.series}
+    currency={currency}
+    theme={t}
+    height={340}
+    showRevenue={showRevenue}
+    showPayout={showPayout}
+    showProfitBars={showProfitBars}
+    showCum={showCum}
+    fmtTick={(iso) => fmtDDMM(iso)}
+    moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
+  />
+) : null}
             {/* ✅ “воздух”: градиенты для profit bars (pos/neg) */}
             <defs>
               <linearGradient id="sgpBarPos" x1="0" y1="0" x2="0" y2="1">
