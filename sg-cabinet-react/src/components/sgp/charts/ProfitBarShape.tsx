@@ -15,11 +15,11 @@ function rgba([r, g, b]: [number, number, number], a: number) {
 // прозрачность
 const ALPHA = 0.18;
 
-// 🟢 салатовый (lime, не болотный)
-const POS_RGB: [number, number, number] = [132, 204, 22];  // lime-500
+// 🟢 НЕОН-ЛАЙМ (кислотный)
+const POS_RGB: [number, number, number] = [190, 242, 100]; // neon lime
 
-// 🌸 розоватый (не алый)
-const NEG_RGB: [number, number, number] = [244, 114, 182]; // rose-400
+// 🌸 НЕОН-РОЗОВЫЙ (кислотный)
+const NEG_RGB: [number, number, number] = [251, 113, 209]; // neon pink
 
 export function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
