@@ -221,21 +221,20 @@ export default function Wheel() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
-  type OpenedKey = 'summary' | 'forecast' | 'stock';
+  type OpenedKey = 'summary' | 'forecast' | 'stock' | null;
 
 const [opened, setOpened] = React.useState<OpenedKey>('summary');
 
-function openOnly(k: OpenedKey) {
+function openOnly(k: Exclude<OpenedKey, null>) {
   setOpened(k);
   setOpenSummary(k === 'summary');
   setOpenForecast(k === 'forecast');
   setOpenStock(k === 'stock');
 }
 
-function toggleOnly(k: OpenedKey) {
-  // если кликнули по уже открытому — схлопываем его
+function toggleOnly(k: Exclude<OpenedKey, null>) {
   if (opened === k) {
-    setOpened(k); // оставляем "выбранным" таб, но контент спрячется
+    setOpened(null);
     setOpenSummary(false);
     setOpenForecast(false);
     setOpenStock(false);
@@ -243,6 +242,7 @@ function toggleOnly(k: OpenedKey) {
   }
   openOnly(k);
 }
+  
   const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
   const [showRevenue, setShowRevenue] = React.useState(true);
