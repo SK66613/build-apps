@@ -159,7 +159,10 @@ export function SgStockCard<T>(props: Props<T>) {
 
                 return (
                   <div key={code} className={'sgp-stockRow tone-' + tone}>
-                    <div className="sgp-stockCol sgp-stockCol--name">
+                    <div
+  className="sgp-stockCol sgp-stockCol--name"
+  style={{ paddingLeft: 14 }}
+>
                       <div className="sgp-stockName">{getTitle(row) || code}</div>
                       <div className="sgp-stockSub">{getSubline(row)}</div>
 
