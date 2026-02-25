@@ -842,28 +842,115 @@
 
 
 
+/* =========================================================
+   Wheel — Chart premium (remove grey cloud, lighter grid, nicer fills)
+   Place BELOW all previous sgp blocks (at the very bottom)
+========================================================= */
 
-export type SgpChartTheme = {
-  pos: string;
-  neg: string;
-  neutral: string;
-  grid: string;
-  axis: string;
-};
+:root{
+  /* use your global Manrope everywhere */
+  --sgp-font: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --sgp-font-head: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-function pick(css: CSSStyleDeclaration, name: string, fallback: string) {
-  const v = css.getPropertyValue(name).trim();
-  return v || fallback;
+  /* chart ink */
+  --sgp-chart-ink: rgba(15,23,42,.78);
+  --sgp-chart-inkSoft: rgba(15,23,42,.55);
+
+  /* premium grid (VERY soft) */
+  --sgp-chart-grid: rgba(15,23,42,.06);
+
+  /* area / bars */
+  --sgp-area-fill: rgba(59,130,246,.10);
+  --sgp-area-fill2: rgba(59,130,246,.02);
+  --sgp-bar-fill: rgba(59,130,246,.18);
+
+  /* profit colors */
+  --sgp-bar-good: rgba(34,197,94,.18);
+  --sgp-bar-bad: rgba(239,68,68,.16);
 }
 
-export function sgpChartTheme(): SgpChartTheme {
-  const css = getComputedStyle(document.documentElement);
+/* 1) kill any “grey cloud” background inside chart card */
+.sgp-wheel .sgp-chartWrap,
+.sgp-wheel .sgp-chart,
+.sgp-wheel .recharts-wrapper,
+.sgp-wheel .recharts-surface{
+  background: transparent !important;
+  filter: none !important;
+}
 
-  return {
-    pos: pick(css, '--sgp-chart-pos', 'rgba(34,197,94,.65)'),
-    neg: pick(css, '--sgp-chart-neg', 'rgba(239,68,68,.55)'),
-    neutral: pick(css, '--sgp-chart-neutral', 'rgba(0,0,0,.70)'),
-    grid: pick(css, '--sgp-chart-grid', 'rgba(0,0,0,.08)'),
-    axis: pick(css, '--sgp-chart-axis', 'rgba(0,0,0,.55)'),
-  };
+/* if your chart sits inside card content */
+.sgp-wheel .sgp-card__content{
+  background: transparent;
+}
+
+/* 2) make recharts grid super subtle + dashed */
+.sgp-wheel .recharts-cartesian-grid-horizontal line,
+.sgp-wheel .recharts-cartesian-grid-vertical line{
+  stroke: var(--sgp-chart-grid) !important;
+  stroke-dasharray: 4 6 !important;
+  opacity: 1 !important;
+}
+
+/* 3) axis lines & ticks softer */
+.sgp-wheel .recharts-cartesian-axis line{
+  stroke: rgba(15,23,42,.10) !important;
+}
+.sgp-wheel .recharts-cartesian-axis-tick line{
+  stroke: rgba(15,23,42,.10) !important;
+}
+.sgp-wheel .recharts-cartesian-axis-tick text{
+  fill: rgba(15,23,42,.58) !important;
+  font-family: var(--sgp-font) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* 4) tooltip: glass + premium */
+.sgp-wheel .recharts-default-tooltip{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.12) !important;
+  background: rgba(255,255,255,.94) !important;
+  box-shadow: 0 18px 42px rgba(15,23,42,.14) !important;
+  padding: 10px 12px !important;
+}
+.sgp-wheel .recharts-tooltip-label{
+  font-family: var(--sgp-font-head) !important;
+  font-weight: 800 !important;
+  color: rgba(15,23,42,.82) !important;
+}
+.sgp-wheel .recharts-tooltip-item{
+  font-family: var(--sgp-font) !important;
+  font-weight: 700 !important;
+  color: rgba(15,23,42,.72) !important;
+}
+
+/* 5) make bars semi-transparent (works if Bar uses <Rectangle> default) */
+.sgp-wheel .recharts-bar-rectangle path{
+  opacity: .55 !important;
+}
+
+/* 6) area under line looks “expensive”: soft opacity */
+.sgp-wheel .recharts-area-area path{
+  opacity: .75 !important;
+}
+
+/* 7) lines slightly softer */
+.sgp-wheel .recharts-line path{
+  opacity: .85 !important;
+}
+
+/* 8) CAPS utility (use on small KPI labels) */
+.sgp-caps{
+  font-family: var(--sgp-font-head);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .72;
+}
+
+/* numeric premium */
+.sgp-num{
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
