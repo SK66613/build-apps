@@ -14,8 +14,8 @@ import {
 type Datum = {
   date: string; // ISO YYYY-MM-DD
   revenue?: number; // cents
-  payout?: number;  // cents
-  profit?: number;  // cents
+  payout?: number; // cents
+  profit?: number; // cents
   cum_profit?: number; // cents
 };
 
@@ -43,6 +43,11 @@ function useResizeWidth<T extends HTMLElement>() {
   return { ref, width: w };
 }
 
+/**
+ * Адаптивная ширина баров:
+ * - НЕ даём стать “сосисками” на малом количестве точек
+ * - но и НЕ превращаем в “палки” на большом количестве
+ */
 function barSizeAuto(containerW: number, points: number) {
   if (!containerW || points <= 0) return 10;
 
@@ -50,11 +55,18 @@ function barSizeAuto(containerW: number, points: number) {
   const usable = Math.max(0, containerW - 24 - 14 - 18);
   const per = usable / points;
 
-  // доля под бар внутри категории (остальное — gap)
-  const raw = per * 0.62;
+  // сколько от клетки отдаём бару (меньше = меньше “сосисок”)
+  const raw = per * 0.50;
 
-  // рамки чтобы не было “палки” и не было “бревна”
-  return Math.round(clamp(raw, 6, 26));
+  // cap: при малом points ограничиваем максимальную толщину
+  const cap =
+    points <= 7 ? 14 :
+    points <= 10 ? 16 :
+    points <= 14 ? 18 :
+    points <= 31 ? 20 :
+    22;
+
+  return Math.round(clamp(raw, 6, cap));
 }
 
 /** Прозрачные бары с лёгкой обводкой (читаемо и “дорого”) */
@@ -62,21 +74,26 @@ function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
   const v = Number(value || 0);
 
-  const h = Math.abs(Number(height) || 0);
-  const yy = Number(height) >= 0 ? y : y - h;
+  const w = Math.max(0, Number(width) || 0);
+  const hRaw = Number(height) || 0;
+  const h = Math.abs(hRaw);
+  const yy = hRaw >= 0 ? y : y - h;
+
+  if (w <= 0 || h <= 0) return null;
 
   const fill = v >= 0 ? 'rgba(34,197,94,.22)' : 'rgba(239,68,68,.20)';
   const stroke = v >= 0 ? 'rgba(34,197,94,.55)' : 'rgba(239,68,68,.55)';
 
-  const rx = Math.round(clamp(width * 0.35, 6, 12));
+  // меньше скругление => меньше “колбасности”
+  const rx = Math.round(clamp(w * 0.22, 5, 10));
 
   return (
     <g>
-      <rect x={x} y={yy} width={width} height={h} rx={rx} ry={rx} fill={fill} />
+      <rect x={x} y={yy} width={w} height={h} rx={rx} ry={rx} fill={fill} />
       <rect
         x={x + 0.5}
         y={yy + 0.5}
-        width={Math.max(0, width - 1)}
+        width={Math.max(0, w - 1)}
         height={Math.max(0, h - 1)}
         rx={rx}
         ry={rx}
@@ -118,6 +135,12 @@ export function SgMoneyChart({
   const { ref, width } = useResizeWidth<HTMLDivElement>();
   const points = data?.length || 0;
   const barSize = barSizeAuto(width, points);
+
+  // ✅ “воздух” между категориями: при малом points делаем gap больше
+  const categoryGap =
+    points <= 10 ? '55%' :
+    points <= 20 ? '38%' :
+    '28%';
 
   return (
     <div ref={ref} style={{ height }}>
@@ -194,7 +217,7 @@ export function SgMoneyChart({
               name="profit"
               barSize={barSize}
               barGap={2}
-              barCategoryGap="28%"
+              barCategoryGap={categoryGap}
               shape={<ProfitBarShape />}
             />
           ) : null}
