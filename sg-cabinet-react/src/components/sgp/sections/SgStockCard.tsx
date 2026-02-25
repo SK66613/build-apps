@@ -258,3 +258,4 @@ export function SgStockCard<T>(props: Props<T>) {
     </SgCard>
   );
 }
+
