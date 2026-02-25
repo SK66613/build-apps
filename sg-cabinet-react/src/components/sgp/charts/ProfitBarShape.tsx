@@ -1,4 +1,3 @@
-// sg-cabinet-react/src/components/sgp/charts/ProfitBarShape.tsx
 import React from 'react';
 
 function clamp(n: number, a: number, b: number) {
@@ -10,20 +9,17 @@ function rgba([r, g, b]: [number, number, number], a: number) {
 }
 
 /**
- * Minimal premium bars
- * - чистый emerald / red
- * - только прозрачность
- * - без стекла
- * - без бликов
- * - без теней
+ * Lime + Rose premium bars
  */
 
-// 👇 крути 0.25 – 0.40
-const ALPHA = 0.32;
+// прозрачность
+const ALPHA = 0.34;
 
-// iOS-like чистые цвета
-const POS_RGB: [number, number, number] = [16, 185, 129]; // emerald
-const NEG_RGB: [number, number, number] = [239, 68, 68];  // red
+// 🟢 салатовый (lime, не болотный)
+const POS_RGB: [number, number, number] = [132, 204, 22];  // lime-500
+
+// 🌸 розоватый (не алый)
+const NEG_RGB: [number, number, number] = [244, 114, 182]; // rose-400
 
 export function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
@@ -38,7 +34,6 @@ export function ProfitBarShape(props: any) {
   const isNeg = Number(value) < 0;
   const baseRGB = isNeg ? NEG_RGB : POS_RGB;
 
-  // аккуратное скругление
   const rx = Math.round(clamp(w * 0.08, 3, 7));
 
   return (
@@ -50,7 +45,7 @@ export function ProfitBarShape(props: any) {
       rx={rx}
       ry={rx}
       fill={rgba(baseRGB, ALPHA)}
-      stroke="rgba(15,23,42,.08)"   // мягкий единый контур (можешь убрать)
+      stroke="rgba(15,23,42,.06)"
       strokeWidth={0.8}
       shapeRendering="geometricPrecision"
     />
