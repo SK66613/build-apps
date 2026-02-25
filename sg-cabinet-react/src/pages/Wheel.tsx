@@ -37,6 +37,8 @@ import {
 
 import { sgpChartTheme } from '../components/sgp/charts/theme';
 
+import { Area } from 'recharts';
+
 /** ========= Types ========= */
 type PrizeStat = {
   prize_code: string;
