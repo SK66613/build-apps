@@ -42,8 +42,8 @@ export function ProfitBarShape(props: any) {
   const stroke = cssVar('--sgp-chart-stroke', 'rgba(15,23,42,.10)');
 
   // “крутилки” прозрачности (строками, чтобы можно было задать в css как 0.14)
-  const tintA = Number(cssVar('--sgp-bar-tint', '0.36'));       // плотность стекла
-  const hiA = Number(cssVar('--sgp-bar-highlight', '0.42'));    // блик
+  const tintA = Number(cssVar('--sgp-bar-tint', '0.76'));       // плотность стекла
+  const hiA = Number(cssVar('--sgp-bar-highlight', '0.82'));    // блик
   const shA = Number(cssVar('--sgp-bar-shadow', '0.10'));       // тень
 
   // clamp на случай мусора в css
