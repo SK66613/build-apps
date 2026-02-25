@@ -14,8 +14,8 @@ import {
 type Datum = {
   date: string; // ISO YYYY-MM-DD
   revenue?: number; // cents
-  payout?: number; // cents
-  profit?: number; // cents
+  payout?: number;  // cents
+  profit?: number;  // cents
   cum_profit?: number; // cents
 };
 
@@ -44,34 +44,27 @@ function useResizeWidth<T extends HTMLElement>() {
 }
 
 /**
- * ШИРОКИЕ БАРЫ "ВПРИТЫК":
- * - пытаемся занять почти всю ширину "клетки" (per)
- * - есть maxCap, чтобы на малом числе дат не стали "сосисками"
+ * ✅ ШИРОКИЕ БАРЫ ВПРИТЫК:
+ * barSize ≈ ширина "клетки" (per) => бары заполняют категорию.
+ * Никаких cap — иначе “не меняется ширина” на малом количестве дат.
  */
 function barSizeAuto(containerW: number, points: number) {
   if (!containerW || points <= 0) return 12;
 
+  // примерная “полезная ширина” (оси/поля)
   const usable = Math.max(0, containerW - 24 - 14 - 18);
   const per = usable / points;
 
-  // почти вся клетка — чтобы было "впритык" при плотных данных
-  const raw = per * 0.96;
+  // почти вся клетка
+  const raw = per * 0.98;
 
-  // maxCap защищает от "сосисок" на 7-14 точках
-  const maxCap =
-    points <= 7 ? 18 :
-    points <= 10 ? 20 :
-    points <= 14 ? 22 :
-    points <= 31 ? 24 :
-    26;
-
-  return Math.round(clamp(raw, 7, maxCap));
+  // минималка чтобы не исчезали, максимум ограничим только здравым смыслом
+  return Math.round(clamp(raw, 6, 999));
 }
 
-/** Прозрачные бары + ЕДВА заметная единая обводка (дороже) */
+/** Полупрозрачные бары + одна мягкая универсальная обводка */
 function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
-  const v = Number(value || 0);
 
   const w = Math.max(0, Number(width) || 0);
   const hRaw = Number(height) || 0;
@@ -80,13 +73,14 @@ function ProfitBarShape(props: any) {
 
   if (w <= 0 || h <= 0) return null;
 
+  const v = Number(value || 0);
   const fill = v >= 0 ? 'rgba(34,197,94,.22)' : 'rgba(239,68,68,.20)';
 
-  // ✅ одна мягкая обводка для всех (почти незаметная)
-  const stroke = 'rgba(15,23,42,.08)';
+  // ✅ одна обводка (едва заметная)
+  const stroke = 'rgba(15,23,42,.07)';
 
-  // не превращаем в капсулы
-  const rx = Math.round(clamp(w * 0.16, 4, 8));
+  // чтобы не было "капсул" при широких барах
+  const rx = Math.round(clamp(w * 0.10, 4, 8));
 
   return (
     <rect
@@ -141,7 +135,7 @@ export function SgMoneyChart({
         <ComposedChart
           data={data}
           margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
-          // ✅ впритык: gap задаём на уровне Chart
+          // ✅ ВПРИТЫК: gap ставим на уровне Chart
           barGap={0}
           barCategoryGap={0}
         >
@@ -215,7 +209,6 @@ export function SgMoneyChart({
               dataKey="profit"
               name="profit"
               barSize={barSize}
-              // ✅ gap НЕ ставим на Bar — он игнорится/путается, держим на Chart
               shape={<ProfitBarShape />}
             />
           ) : null}
