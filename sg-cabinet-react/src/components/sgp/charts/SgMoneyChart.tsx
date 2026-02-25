@@ -1,3 +1,4 @@
+// sg-cabinet-react/src/components/sgp/charts/SgMoneyChart.tsx
 import React from 'react';
 import { Area, Line, Bar } from 'recharts';
 
@@ -7,8 +8,8 @@ import { ProfitBarShape } from './ProfitBarShape';
 type Datum = {
   date: string; // ISO YYYY-MM-DD
   revenue?: number; // cents
-  payout?: number;  // cents
-  profit?: number;  // cents
+  payout?: number; // cents
+  profit?: number; // cents
   cum_profit?: number; // cents
 };
 
@@ -53,6 +54,20 @@ function barSizeTight(containerW: number, points: number) {
   return Math.round(clamp(raw, 4, 999));
 }
 
+// ===== Premium line tokens (правь только тут) =====
+const LINE = {
+  // Выручка: спокойный premium-blue
+  revenueStroke: 'rgba(37, 99, 235, 0.92)',
+  revenueFill: 'rgba(37, 99, 235, 0.08)',
+
+  // Расход: нейтральный ink/slate
+  payoutStroke: 'rgba(15, 23, 42, 0.42)',
+
+  // Кумулятив: тёплый amber/orange (дорого рядом с green/red барами)
+  cumStroke: 'rgba(245, 158, 11, 0.82)',
+  cumDash: '6 6',
+};
+
 export function SgMoneyChart({
   data,
   currency,
@@ -90,8 +105,8 @@ export function SgMoneyChart({
         data={data}
         height={height}
         theme={theme}
-        barGap={1}          // ✅ маленькое расстояние между барами
-        barCategoryGap={0}  // ✅ почти вплотную по категориям
+        barGap={1} // ✅ маленькое расстояние между барами
+        barCategoryGap={0} // ✅ почти вплотную по категориям
         fmtTick={fmtTick}
         yTickFormatter={(v) => {
           const n = Number(v);
@@ -119,10 +134,10 @@ export function SgMoneyChart({
             type="monotone"
             dataKey="revenue"
             name="revenue"
-            stroke="var(--accent2)"
+            stroke={LINE.revenueStroke}
             strokeWidth={2}
-            fill="var(--accent2)"
-            fillOpacity={0.10}
+            fill={LINE.revenueFill}
+            fillOpacity={1}
             dot={false}
             activeDot={{ r: 4 }}
             isAnimationActive={false}
@@ -135,9 +150,9 @@ export function SgMoneyChart({
             dataKey="payout"
             name="payout"
             dot={false}
-            stroke="rgba(148,163,184,.85)"
+            stroke={LINE.payoutStroke}
             strokeWidth={2}
-            opacity={0.9}
+            opacity={1}
             isAnimationActive={false}
           />
         ) : null}
@@ -158,10 +173,10 @@ export function SgMoneyChart({
             dataKey="cum_profit"
             name="cum_profit"
             dot={false}
-            stroke="var(--accent2)"
+            stroke={LINE.cumStroke}
             strokeWidth={2}
-            strokeDasharray="6 6"
-            opacity={0.55}
+            strokeDasharray={LINE.cumDash}
+            opacity={1}
             isAnimationActive={false}
           />
         ) : null}
