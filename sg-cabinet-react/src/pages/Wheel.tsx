@@ -87,14 +87,7 @@ type AppSettings = {
 /** ========= Helpers ========= */
 
 
-// ✅ helper: ширина баров зависит от длины диапазона (как в топ-дашбордах)
-function barSizeByPoints(n: number) {
-  if (n <= 8) return 22;     // день/неделя — жирно
-  if (n <= 14) return 18;    // 2 недели
-  if (n <= 31) return 14;    // месяц
-  if (n <= 60) return 10;    // 2 месяца
-  return 8;                  // длинный диапазон — аккуратно
-}
+
 
 
 
@@ -296,6 +289,30 @@ export default function Wheel() {
     const cents = Math.floor(units * 100);
     return Number.isFinite(cents) ? Math.max(0, cents) : 0;
   }, [coinValueDraft]);
+
+
+
+
+
+
+
+// ✅ helper: ширина баров зависит от длины диапазона (как в топ-дашбордах)
+function barSizeByPoints(n: number) {
+  if (n <= 8) return 22;     // день/неделя — жирно
+  if (n <= 14) return 18;    // 2 недели
+  if (n <= 31) return 14;    // месяц
+  if (n <= 60) return 10;    // 2 месяца
+  return 8;                  // длинный диапазон — аккуратно
+}
+
+
+
+
+
+
+
+
+  
 
   async function saveAppSettings() {
     if (!appId) return;
