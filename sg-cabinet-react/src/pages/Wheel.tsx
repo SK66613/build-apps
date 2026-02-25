@@ -951,6 +951,23 @@ function barSizeByPoints(n: number) {
   </SgCardContent>
 </SgCard>
 
+
+
+
+
+      {/* ===== TABS BAR BETWEEN CARDS ===== */}
+<div className="sgp-wheelTabsBar">
+  <div className="sgp-seg">
+    <SegBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</SegBtn>
+    <SegBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</SegBtn>
+    <SegBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</SegBtn>
+  </div>
+</div>
+
+
+
+      
+
       {/* ===== TAB: SUMMARY ===== */}
       {tab === 'summary' ? (
         <SgCard>
