@@ -1,25 +1,25 @@
 import React from 'react';
 
-function cssVar(name: string, fallback: string) {
-  if (typeof window === 'undefined') return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback;
-}
-
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
 }
 
+// ✅ тут один раз крутишь “насыщенность стекла”
+const TINT = 0.28;      // 0.18..0.38 (выше = сочнее)
+const HIGHLIGHT = 0.40; // 0.30..0.55
+const SHADOW = 0.10;    // 0.06..0.14
+
+// ✅ “дорогие” базовые цвета (не болотный/не розовый)
+const POS_RGB: [number, number, number] = [16, 185, 129]; // emerald
+const NEG_RGB: [number, number, number] = [239, 68, 68];  // red
+const STROKE = 'rgba(15,23,42,.10)';
+
+function rgba([r, g, b]: [number, number, number], a: number) {
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
 /**
- * Single Source of Truth: premium glass bar
- * Управляется токенами:
- *  --sgp-chart-pos / --sgp-chart-neg       (база цвета)
- *  --sgp-chart-stroke                      (единая обводка)
- *  --sgp-bar-tint                          (насколько "плотная" заливка-стекло, 0..1)
- *  --sgp-bar-highlight                     (яркость блика, 0..1)
- *  --sgp-bar-shadow                        (сила тени, 0..1)
- *
- * По умолчанию — стекло (воздушно), но можно сделать насыщеннее одной цифрой.
+ * Single Source of Truth (FULL): color + glass + stroke + shine
  */
 export function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
@@ -32,47 +32,13 @@ export function ProfitBarShape(props: any) {
   if (w <= 0 || h <= 0) return null;
 
   const isNeg = Number(value) < 0;
+  const baseRGB = isNeg ? NEG_RGB : POS_RGB;
 
-  // базовые цвета (их ты правишь в scss один раз)
-  const pos = cssVar('--sgp-chart-pos', 'rgba(16,185,129,.34)'); // emerald
-  const neg = cssVar('--sgp-chart-neg', 'rgba(244,63,94,.30)');  // rose
-  const base = isNeg ? neg : pos;
-
-  // единая обводка (дороже чем цветная)
-  const stroke = cssVar('--sgp-chart-stroke', 'rgba(15,23,42,.10)');
-
-  // “крутилки” прозрачности (строками, чтобы можно было задать в css как 0.14)
-  const tintA = Number(cssVar('--sgp-bar-tint', '0.76'));       // плотность стекла
-  const hiA = Number(cssVar('--sgp-bar-highlight', '0.82'));    // блик
-  const shA = Number(cssVar('--sgp-bar-shadow', '0.10'));       // тень
-
-  // clamp на случай мусора в css
-  const tint = clamp(Number.isFinite(tintA) ? tintA : 0.16, 0, 1);
-  const hi = clamp(Number.isFinite(hiA) ? hiA : 0.42, 0, 1);
-  const sh = clamp(Number.isFinite(shA) ? shA : 0.10, 0, 1);
-
-  // чтобы не было "капсул" при широких барах
   const rx = Math.round(clamp(w * 0.12, 4, 9));
-
-  // хитрость: заливаем base цветом, но маленькой альфой => чистое стекло, не муть
-  // (и при этом насыщенность регулируется --sgp-chart-pos/neg + --sgp-bar-tint)
-  const fill = base.replace(/rgba?\(([^)]+)\)/, (m) => {
-    // если base уже rgba(...) — просто подменим альфу
-    if (m.startsWith('rgba(')) {
-      const parts = m.slice(5, -1).split(',').map((s) => s.trim());
-      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${tint})`;
-    }
-    // если вдруг base = rgb(...) — добавим альфу
-    if (m.startsWith('rgb(')) {
-      const parts = m.slice(4, -1).split(',').map((s) => s.trim());
-      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${tint})`;
-    }
-    return m;
-  });
 
   return (
     <g>
-      {/* мягкая тень/воздух */}
+      {/* воздух */}
       <rect
         x={x}
         y={yy + 1}
@@ -81,10 +47,10 @@ export function ProfitBarShape(props: any) {
         rx={rx}
         ry={rx}
         fill="rgba(15,23,42,.12)"
-        opacity={sh}
+        opacity={SHADOW}
       />
 
-      {/* основное стекло */}
+      {/* стекло */}
       <rect
         x={x}
         y={yy}
@@ -92,13 +58,13 @@ export function ProfitBarShape(props: any) {
         height={h}
         rx={rx}
         ry={rx}
-        fill={fill}
-        stroke={stroke}
+        fill={rgba(baseRGB, TINT)}
+        stroke={STROKE}
         strokeWidth={0.9}
         shapeRendering="geometricPrecision"
       />
 
-      {/* верхний блик */}
+      {/* блик */}
       <rect
         x={x + 1}
         y={yy + 1}
@@ -107,10 +73,10 @@ export function ProfitBarShape(props: any) {
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
         fill="rgba(255,255,255,.85)"
-        opacity={hi}
+        opacity={HIGHLIGHT}
       />
 
-      {/* микро-линия внизу (линза) */}
+      {/* линза снизу */}
       <rect
         x={x + 1}
         y={yy + Math.max(0, h - 4)}
@@ -122,7 +88,7 @@ export function ProfitBarShape(props: any) {
         opacity={0.22}
       />
 
-      {/* тонкий edge-акцент по знаку */}
+      {/* тонкий цветовой edge */}
       <rect
         x={x + 0.5}
         y={yy + 0.5}
@@ -130,8 +96,8 @@ export function ProfitBarShape(props: any) {
         height={Math.max(0, Math.min(2, h))}
         rx={Math.max(3, rx - 2)}
         ry={Math.max(3, rx - 2)}
-        fill={base}
-        opacity={0.18}
+        fill={rgba(baseRGB, 0.55)}
+        opacity={0.22}
       />
     </g>
   );
