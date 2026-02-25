@@ -22,7 +22,7 @@ const POS_RGB: [number, number, number] = [34, 197, 94];   // зеленый
 const NEG_RGB: [number, number, number] = [239, 68, 68];   // красный
 
 // ====== MIX SETTINGS ======
-const GLASS_A = 0.18;       // заливка стеклом
+const GLASS_A = 0.48;       // заливка стеклом
 const GLASS_BOTTOM_K = 0.56;
 const STROKE_A = 0.07;      // очень тонкая нейтральная рамка
 const SHADOW_A = 0.10;      // мягкая тень/воздух
