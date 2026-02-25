@@ -37,6 +37,8 @@ import { SgSectionCard } from '../components/sgp/blocks/SgSectionCard';
 
 import { SgTopListCard } from '../components/sgp/sections/SgTopListCard';
 
+import { SgStockCard } from '../components/sgp/sections/SgStockCard';
+
 /** ========= Types ========= */
 type PrizeStat = {
   prize_code: string;
