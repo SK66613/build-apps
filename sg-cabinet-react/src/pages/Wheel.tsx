@@ -903,36 +903,35 @@ onToggleOpen={() => toggleOnly('summary')}
 
       
 
-     {/* ===== TAB: STOCK ===== */}
-      {opened === 'stock' ? (
-        <>
-          <SgStockCard
-            title="Склад призов"
-            open={opened === 'stock' && openStock}
-            onToggleOpen={() => toggleOnly('stock')}
-            items={items}
-            isLoading={qStats.isLoading}
-            inventory={inventory}
-            draft={draft}
-            patchDraft={patchDraft}
-            saveMsg={saveMsg}
-            saveState={stockSaveState}
-            onSave={saveStock}
-            getCode={(p) => String((p as any).prize_code || '')}
-            getTitle={(p) => String((p as any).title || (p as any).prize_code || '')}
-            getSubline={(p) => (
-              <>
-                {normalizeKind(p as any) === 'coins'
-                  ? `монеты: ${normalizeCoins(p as any)}`
-                  : 'физический'}{' '}
-                · код: {String((p as any).prize_code || '')}
-              </>
-            )}
-            qtyLeft={(p) => qtyLeft(p as any)}
-            isTracked={(p) => isTracked(p as any)}
-          />
+{/* ===== TAB: STOCK ===== */}
+<>
+  <SgStockCard
+    title="Склад призов"
+    open={opened === 'stock' && openStock}
+    onToggleOpen={() => toggleOnly('stock')}
+    items={items}
+    isLoading={qStats.isLoading}
+    inventory={inventory}
+    draft={draft}
+    patchDraft={patchDraft}
+    saveMsg={saveMsg}
+    saveState={stockSaveState}
+    onSave={saveStock}
+    getCode={(p) => String((p as any).prize_code || '')}
+    getTitle={(p) => String((p as any).title || (p as any).prize_code || '')}
+    getSubline={(p) => (
+      <>
+        {normalizeKind(p as any) === 'coins'
+          ? `монеты: ${normalizeCoins(p as any)}`
+          : 'физический'}{' '}
+        · код: {String((p as any).prize_code || '')}
+      </>
+    )}
+    qtyLeft={(p) => qtyLeft(p as any)}
+    isTracked={(p) => isTracked(p as any)}
+  />
 
-          <div style={{ height: 12 }} />
+  <div style={{ height: 12 }} />
 
           <SgCard>
             <SgCardHeader>
