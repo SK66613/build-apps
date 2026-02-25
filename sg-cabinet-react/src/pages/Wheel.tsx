@@ -876,7 +876,15 @@ export default function Wheel() {
   </SgSectionCard>
 ) : null}
 
-     {/* ===== TAB: STOCK ===== */}
+
+
+
+
+
+
+      
+
+    {/* ===== TAB: STOCK ===== */}
 {tab === 'stock' ? (
   <>
     <SgStockCard
@@ -893,37 +901,17 @@ export default function Wheel() {
       onSave={saveStock}
       getCode={(p) => String((p as any).prize_code || '')}
       getTitle={(p) => String((p as any).title || (p as any).prize_code || '')}
-      getSubline={(p) =>
+      getSubline={(p) => (
         <>
           {normalizeKind(p as any) === 'coins'
             ? `монеты: ${normalizeCoins(p as any)}`
             : 'физический'}{' '}
           · код: {String((p as any).prize_code || '')}
         </>
-      }
+      )}
       qtyLeft={(p) => qtyLeft(p as any)}
       isTracked={(p) => isTracked(p as any)}
     />
-
-    <div style={{ height: 12 }} />
-
-    {/* ВТОРАЯ КАРТОЧКА "Стоимость монеты и валюта" пока оставляем как есть */}
-    <SgCard>
-      ...
-    </SgCard>
-  </>
-) : null}
-
-      <SgCardFooter>
-        <SgActions
-          primaryLabel="Сохранить склад"
-          onPrimary={saveStock}
-          state={stockSaveState}
-          errorText={saveMsg?.startsWith('Ошибка') ? saveMsg : undefined}
-          left={<span className="sgp-muted">Меняется только склад (active/track/qty/auto-off).</span>}
-        />
-      </SgCardFooter>
-    </SgCard>
 
     <div style={{ height: 12 }} />
 
