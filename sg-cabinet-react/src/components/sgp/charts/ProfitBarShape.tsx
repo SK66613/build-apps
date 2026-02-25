@@ -9,17 +9,26 @@ function rgba([r, g, b]: [number, number, number], a: number) {
 }
 
 /**
- * Lime + Rose premium bars
+ * Lime + Rose PREMIUM (glass) bars
+ * - тонкая единая обводка
+ * - лёгкая тень “воздух”
+ * - верхний highlight (дороже)
+ * - микро edge-акцент сверху цветом (почти незаметно, но “премиум”)
  */
 
-// прозрачность
-const ALPHA = 0.18;
+// “стекло” (насыщенность)
+const ALPHA = 0.22;       // 0.18..0.30
+const HIGHLIGHT = 0.38;   // 0.28..0.55
+const SHADOW = 0.10;      // 0.06..0.14
 
-// 🟢 НЕОН-ЛАЙМ (кислотный)
-const POS_RGB: [number, number, number] = [190, 242, 100]; // neon lime
+// 🟢 НЕОН-ЛАЙМ
+const POS_RGB: [number, number, number] = [190, 242, 100];
 
-// 🌸 НЕОН-РОЗОВЫЙ (кислотный)
-const NEG_RGB: [number, number, number] = [251, 113, 209]; // neon pink
+// 🌸 НЕОН-РОЗОВЫЙ
+const NEG_RGB: [number, number, number] = [251, 113, 209];
+
+// единая “дорогая” обводка (НЕ цветная)
+const STROKE = 'rgba(15,23,42,.07)';
 
 export function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
@@ -34,20 +43,76 @@ export function ProfitBarShape(props: any) {
   const isNeg = Number(value) < 0;
   const baseRGB = isNeg ? NEG_RGB : POS_RGB;
 
+  // меньше скругление => меньше “сосисок” при широких барах
   const rx = Math.round(clamp(w * 0.08, 3, 7));
 
+  // размеры бликов/линзы
+  const hiH = Math.max(0, Math.min(12, h * 0.22));
+  const lensH = Math.min(3, h);
+
   return (
-    <rect
-      x={x}
-      y={yy}
-      width={w}
-      height={h}
-      rx={rx}
-      ry={rx}
-      fill={rgba(baseRGB, ALPHA)}
-      stroke="rgba(15,23,42,.06)"
-      strokeWidth={0.8}
-      shapeRendering="geometricPrecision"
-    />
+    <g>
+      {/* 1) воздух: мягкая тень вниз */}
+      <rect
+        x={x}
+        y={yy + 1}
+        width={w}
+        height={h}
+        rx={rx}
+        ry={rx}
+        fill="rgba(15,23,42,.12)"
+        opacity={SHADOW}
+      />
+
+      {/* 2) стекло: основной слой */}
+      <rect
+        x={x}
+        y={yy}
+        width={w}
+        height={h}
+        rx={rx}
+        ry={rx}
+        fill={rgba(baseRGB, ALPHA)}
+        stroke={STROKE}
+        strokeWidth={0.85}
+        shapeRendering="geometricPrecision"
+      />
+
+      {/* 3) верхний блик (делает “дороже”) */}
+      <rect
+        x={x + 1}
+        y={yy + 1}
+        width={Math.max(0, w - 2)}
+        height={hiH}
+        rx={Math.max(2, rx - 2)}
+        ry={Math.max(2, rx - 2)}
+        fill="rgba(255,255,255,.92)"
+        opacity={HIGHLIGHT}
+      />
+
+      {/* 4) линза снизу: микро отражение */}
+      <rect
+        x={x + 1}
+        y={yy + Math.max(0, h - 4)}
+        width={Math.max(0, w - 2)}
+        height={lensH}
+        rx={Math.max(2, rx - 2)}
+        ry={Math.max(2, rx - 2)}
+        fill="rgba(255,255,255,.26)"
+        opacity={0.22}
+      />
+
+      {/* 5) тонкий цветовой edge сверху (почти незаметный акцент) */}
+      <rect
+        x={x + 0.5}
+        y={yy + 0.5}
+        width={Math.max(0, w - 1)}
+        height={Math.max(0, Math.min(2, h))}
+        rx={Math.max(2, rx - 2)}
+        ry={Math.max(2, rx - 2)}
+        fill={rgba(baseRGB, 0.70)}
+        opacity={0.16}
+      />
+    </g>
   );
 }
