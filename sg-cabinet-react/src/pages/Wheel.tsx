@@ -35,6 +35,8 @@ import { ChartState } from '../components/sgp/charts/ChartState';
 
 import { SgSectionCard } from '../components/sgp/blocks/SgSectionCard';
 
+import { SgTopListCard } from '../components/sgp/sections/SgTopListCard';
+
 /** ========= Types ========= */
 type PrizeStat = {
   prize_code: string;
@@ -715,46 +717,30 @@ export default function Wheel() {
 
           <div style={{ height: 12 }} />
 
-          <SgCard>
-            <SgCardHeader>
-              <div>
-                <SgCardTitle>Топ призов</SgCardTitle>
-                <SgCardSub>по {topMetric === 'wins' ? 'выигрышам' : 'выдачам'}</SgCardSub>
-              </div>
-            </SgCardHeader>
-            <SgCardContent>
-              <div className="sgp-seg" style={{ marginBottom: 10 }}>
-                <SegBtn active={topMetric === 'wins'} onClick={() => setTopMetric('wins')}>Выигрыши</SegBtn>
-                <SegBtn active={topMetric === 'redeemed'} onClick={() => setTopMetric('redeemed')}>Выдачи</SegBtn>
-              </div>
-
-              <div className="sgp-toplist">
-                {top.map((p, idx) => {
-                  const max = Math.max(1, Number((top[0] as any)?.[topMetric]) || 0);
-                  const val = Number((p as any)[topMetric]) || 0;
-                  const w = Math.round((val / max) * 100);
-                  return (
-                    <div key={p.prize_code || idx} className="sgp-toprow">
-                      <div className="sgp-toprow__idx">{idx + 1}</div>
-                      <div className="sgp-toprow__mid">
-                        <div className="sgp-toprow__title">{p.title || p.prize_code}</div>
-                        <div className="sgp-toprow__sub">
-                          {topMetric === 'wins'
-                            ? `выдачи: ${Number(p.redeemed) || 0}`
-                            : `выигрыши: ${Number(p.wins) || 0}`}
-                        </div>
-                        <div className="sgp-toprow__bar">
-                          <div className="sgp-toprow__barFill" style={{ width: `${w}%` }} />
-                        </div>
-                      </div>
-                      <div className="sgp-toprow__val">{val}</div>
-                    </div>
-                  );
-                })}
-                {!top.length ? <div className="sgp-muted">Пока пусто</div> : null}
-              </div>
-            </SgCardContent>
-          </SgCard>
+          <SgTopListCard
+  title="Топ призов"
+  subtitle={`по ${topMetric === 'wins' ? 'выигрышам' : 'выдачам'}`}
+  items={top} // или items если хочешь чтобы компонент сам сортировал (см ниже)
+  getId={(p: any) => String(p.prize_code || p.title || Math.random())}
+  getTitle={(p: any) => p.title || p.prize_code}
+  metrics={[
+    {
+      key: 'wins',
+      label: 'выигрышам',
+      value: (p: any) => Number(p.wins) || 0,
+      sub: (p: any) => `выдачи: ${Number(p.redeemed) || 0}`,
+    },
+    {
+      key: 'redeemed',
+      label: 'выдачам',
+      value: (p: any) => Number(p.redeemed) || 0,
+      sub: (p: any) => `выигрыши: ${Number(p.wins) || 0}`,
+    },
+  ]}
+  metricKey={topMetric}
+  onMetricKeyChange={(k) => setTopMetric(k as any)}
+  limit={7}
+/>
         </div>
       }
     >
