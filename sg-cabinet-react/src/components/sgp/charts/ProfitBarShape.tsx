@@ -12,9 +12,12 @@ function rgba([r, g, b]: [number, number, number], a: number) {
  * Streamlined "premium glass" bar:
  * - убрана верхняя шапочка / блик
  * - убрана цветная тонкая edge
- * - оставлен градиент для стекла (чтобы сохранить глубину)
+ * - оставлен градиент для стекла (глубина)
  * - очень тонкая нейтральная обводка
  * - маленькое закругление (rx = 2..4)
+ *
+ * ✅ FIX: для NEG (красных) градиент наоборот:
+ *    сверху слабее, снизу насыщеннее
  */
 
 // ====== COLORS (правь только тут) ======
@@ -22,8 +25,8 @@ const POS_RGB: [number, number, number] = [34, 197, 94];   // зеленый
 const NEG_RGB: [number, number, number] = [239, 68, 68];   // красный
 
 // ====== MIX SETTINGS ======
-const GLASS_A = 0.48;       // заливка стеклом
-const GLASS_BOTTOM_K = 0.56;
+const GLASS_A = 0.18;       // базовая "стеклянность"
+const GLASS_BOTTOM_K = 0.56; // сколько альфы оставить к низу (для POS)
 const STROKE_A = 0.07;      // очень тонкая нейтральная рамка
 const SHADOW_A = 0.10;      // мягкая тень/воздух
 
@@ -45,10 +48,20 @@ export function ProfitBarShape(props: any) {
 
   const rx = Math.round(clamp(SMALL_RX, 0, 8));
 
+  // уникальный id (чтобы не конфликтовали несколько баров)
   const gid = `sgpGlass_${isNeg ? 'n' : 'p'}_${Math.round(x)}_${Math.round(yy)}_${Math.round(w)}_${Math.round(h)}`;
 
-  const aTop = clamp(GLASS_A, 0, 1);
-  const aBot = clamp(GLASS_A * GLASS_BOTTOM_K, 0, 1);
+  // POS: сверху плотнее, снизу слабее (как было)
+  const aTopPos = clamp(GLASS_A, 0, 1);
+  const aBotPos = clamp(GLASS_A * GLASS_BOTTOM_K, 0, 1);
+
+  // ✅ NEG: сверху слабее, снизу плотнее (наоборот)
+  // (можно чуть усилить низ, но без грязи)
+  const aTopNeg = clamp(GLASS_A * GLASS_BOTTOM_K, 0, 1);
+  const aBotNeg = clamp(GLASS_A, 0, 1);
+
+  const aTop = isNeg ? aTopNeg : aTopPos;
+  const aBot = isNeg ? aBotNeg : aBotPos;
 
   const stroke = `rgba(15, 23, 42, ${clamp(STROKE_A, 0, 1)})`;
 
@@ -58,7 +71,7 @@ export function ProfitBarShape(props: any) {
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={rgba(baseRGB, aTop)} />
           <stop offset="70%" stopColor={rgba(baseRGB, aBot)} />
-          <stop offset="100%" stopColor={rgba(baseRGB, aBot * 0.92)} />
+          <stop offset="100%" stopColor={rgba(baseRGB, clamp(aBot * 0.92, 0, 1))} />
         </linearGradient>
       </defs>
 
@@ -87,8 +100,6 @@ export function ProfitBarShape(props: any) {
         strokeWidth={0.6}
         shapeRendering="geometricPrecision"
       />
-
-      {/* (блик и цветной edge удалены — чистый и дорогой вид) */}
     </g>
   );
 }
