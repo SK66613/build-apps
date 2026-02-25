@@ -44,25 +44,25 @@ function useResizeWidth<T extends HTMLElement>() {
 }
 
 /**
- * ✅ ШИРОКИЕ БАРЫ ВПРИТЫК:
- * barSize ≈ ширина "клетки" (per) => бары заполняют категорию.
- * Никаких cap — иначе “не меняется ширина” на малом количестве дат.
+ * ШИРОКИЕ БАРЫ + маленький gap между ними:
+ * - считаем ширину "клетки" per
+ * - вычитаем небольшой gap (в px), чтобы бары не слипались
+ * - бар = почти вся клетка => выглядит как топовые дашборды
  */
 function barSizeAuto(containerW: number, points: number) {
   if (!containerW || points <= 0) return 12;
 
-  // примерная “полезная ширина” (оси/поля)
   const usable = Math.max(0, containerW - 24 - 14 - 18);
   const per = usable / points;
 
-  // почти вся клетка
-  const raw = per * 0.98;
+  // маленький зазор между столбиками (на вкус: 2..6)
+  const gapPx = points <= 10 ? 6 : points <= 24 ? 4 : 3;
 
-  // минималка чтобы не исчезали, максимум ограничим только здравым смыслом
+  const raw = per - gapPx; // бар занимает почти всю "клетку"
   return Math.round(clamp(raw, 6, 999));
 }
 
-/** Полупрозрачные бары + одна мягкая универсальная обводка */
+/** “Воздушное стекло” бары: soft stroke + inner highlight + gentle shadow */
 function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
 
@@ -74,27 +74,66 @@ function ProfitBarShape(props: any) {
   if (w <= 0 || h <= 0) return null;
 
   const v = Number(value || 0);
-  const fill = v >= 0 ? 'rgba(34,197,94,.22)' : 'rgba(239,68,68,.20)';
+  const fill = v >= 0 ? 'rgba(34,197,94,.18)' : 'rgba(239,68,68,.16)';
 
-  // ✅ одна обводка (едва заметная)
-  const stroke = 'rgba(15,23,42,.07)';
+  // единая, почти невидимая обводка (дороже, чем цветная)
+  const stroke = 'rgba(15,23,42,.08)';
 
-  // чтобы не было "капсул" при широких барах
-  const rx = Math.round(clamp(w * 0.10, 4, 8));
+  // чтобы не становилось “капсулой” при ширине
+  const rx = Math.round(clamp(w * 0.12, 4, 9));
 
   return (
-    <rect
-      x={x}
-      y={yy}
-      width={w}
-      height={h}
-      rx={rx}
-      ry={rx}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={1}
-      shapeRendering="geometricPrecision"
-    />
+    <g>
+      {/* мягкая тень/воздух (очень легкая) */}
+      <rect
+        x={x}
+        y={yy + 1}
+        width={w}
+        height={h}
+        rx={rx}
+        ry={rx}
+        fill="rgba(15,23,42,.06)"
+        opacity={0.18}
+      />
+
+      {/* основное стекло */}
+      <rect
+        x={x}
+        y={yy}
+        width={w}
+        height={h}
+        rx={rx}
+        ry={rx}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={1}
+        shapeRendering="geometricPrecision"
+      />
+
+      {/* внутренний “блик” сверху */}
+      <rect
+        x={x + 1}
+        y={yy + 1}
+        width={Math.max(0, w - 2)}
+        height={Math.max(0, Math.min(10, h * 0.22))}
+        rx={Math.max(3, rx - 2)}
+        ry={Math.max(3, rx - 2)}
+        fill="rgba(255,255,255,.40)"
+        opacity={0.35}
+      />
+
+      {/* тонкая нижняя “линза” */}
+      <rect
+        x={x + 1}
+        y={yy + Math.max(0, h - 5)}
+        width={Math.max(0, w - 2)}
+        height={Math.min(4, h)}
+        rx={Math.max(3, rx - 2)}
+        ry={Math.max(3, rx - 2)}
+        fill="rgba(255,255,255,.18)"
+        opacity={0.22}
+      />
+    </g>
   );
 }
 
@@ -129,14 +168,16 @@ export function SgMoneyChart({
   const points = data?.length || 0;
   const barSize = barSizeAuto(width, points);
 
+  // маленький gap между столбиками — на уровне Chart (на Bar это нестабильно)
+  const barGapPx = points <= 10 ? 6 : points <= 24 ? 4 : 3;
+
   return (
-    <div ref={ref} style={{ height }}>
+    <div ref={ref} style={{ height, width: '100%' }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
           margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
-          // ✅ ВПРИТЫК: gap ставим на уровне Chart
-          barGap={0}
+          barGap={barGapPx}
           barCategoryGap={0}
         >
           <CartesianGrid stroke={theme.grid} strokeDasharray="4 6" vertical={false} />
