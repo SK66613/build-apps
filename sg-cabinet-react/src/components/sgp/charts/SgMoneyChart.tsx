@@ -6,11 +6,11 @@ import { ChartFrame } from './ChartFrame';
 import { ProfitBarShape } from './ProfitBarShape';
 
 type Datum = {
-  date: string; // ISO YYYY-MM-DD
-  revenue?: number; // cents
-  payout?: number; // cents
-  profit?: number; // cents
-  cum_profit?: number; // cents
+  date: string;
+  revenue?: number;
+  payout?: number;
+  profit?: number;
+  cum_profit?: number;
 };
 
 function clamp(n: number, a: number, b: number) {
@@ -38,35 +38,32 @@ function useResizeWidth<T extends HTMLElement>() {
 }
 
 /**
- * ✅ Широкие бары + маленький зазор между ними
- * Идея: barSize ≈ ширина категории - 1px
+ * Широкие бары + микро-зазор
  */
 function barSizeTight(containerW: number, points: number) {
   if (!containerW || points <= 0) return 10;
 
-  // примерно "полезная" ширина (оси/поля)
   const usable = Math.max(0, containerW - 24 - 14 - 18);
   const per = usable / points;
 
-  // оставляем микро-зазор
   const raw = per - 1;
-
   return Math.round(clamp(raw, 4, 999));
 }
 
-// ===== Premium line tokens (правь только тут) =====
-const LINE = {
-  // Выручка: спокойный premium-blue
-  revenueStroke: 'rgba(37, 99, 235, 0.92)',
-  revenueFill: 'rgba(37, 99, 235, 0.08)',
+/* ===============================
+   🎨 PREMIUM LINE PALETTE
+   =============================== */
 
-  // Расход: нейтральный ink/slate
-  payoutStroke: 'rgba(15, 23, 42, 0.42)',
+// 🟠 Выручка — тёплый дорогой orange
+const REVENUE_STROKE = 'rgba(249, 115, 22, 0.95)';   // orange-500
+const REVENUE_FILL   = 'rgba(249, 115, 22, 0.10)';   // прозрачная подложка
 
-  // Кумулятив: тёплый amber/orange (дорого рядом с green/red барами)
-  cumStroke: 'rgba(245, 158, 11, 0.82)',
-  cumDash: '6 6',
-};
+// ⚫ Расход — нейтральный graphite
+const PAYOUT_STROKE  = 'rgba(15, 23, 42, 0.45)';
+
+// ⚫ Кумулятив — чёрный аккуратный пунктир
+const CUM_STROKE     = 'rgba(15, 23, 42, 0.85)';
+const CUM_DASH       = '6 6';
 
 export function SgMoneyChart({
   data,
@@ -105,8 +102,8 @@ export function SgMoneyChart({
         data={data}
         height={height}
         theme={theme}
-        barGap={1} // ✅ маленькое расстояние между барами
-        barCategoryGap={0} // ✅ почти вплотную по категориям
+        barGap={1}
+        barCategoryGap={0}
         fmtTick={fmtTick}
         yTickFormatter={(v) => {
           const n = Number(v);
@@ -129,14 +126,15 @@ export function SgMoneyChart({
           return d ? `Дата ${d}` : 'Дата';
         }}
       >
+        {/* 🟠 Выручка */}
         {showRevenue ? (
           <Area
             type="monotone"
             dataKey="revenue"
             name="revenue"
-            stroke={LINE.revenueStroke}
-            strokeWidth={2}
-            fill={LINE.revenueFill}
+            stroke={REVENUE_STROKE}
+            strokeWidth={2.2}
+            fill={REVENUE_FILL}
             fillOpacity={1}
             dot={false}
             activeDot={{ r: 4 }}
@@ -144,38 +142,41 @@ export function SgMoneyChart({
           />
         ) : null}
 
+        {/* ⚫ Расход */}
         {showPayout ? (
           <Line
             type="monotone"
             dataKey="payout"
             name="payout"
             dot={false}
-            stroke={LINE.payoutStroke}
+            stroke={PAYOUT_STROKE}
             strokeWidth={2}
             opacity={1}
             isAnimationActive={false}
           />
         ) : null}
 
+        {/* 🟢/🔴 Profit bars */}
         {showProfitBars ? (
           <Bar
             dataKey="profit"
             name="profit"
-            barSize={barSize} // ✅ ширина управляется здесь
+            barSize={barSize}
             shape={<ProfitBarShape />}
             isAnimationActive={false}
           />
         ) : null}
 
+        {/* ⚫ Кумулятив — чёрный пунктир */}
         {showCum ? (
           <Line
             type="monotone"
             dataKey="cum_profit"
             name="cum_profit"
             dot={false}
-            stroke={LINE.cumStroke}
+            stroke={CUM_STROKE}
             strokeWidth={2}
-            strokeDasharray={LINE.cumDash}
+            strokeDasharray={CUM_DASH}
             opacity={1}
             isAnimationActive={false}
           />
