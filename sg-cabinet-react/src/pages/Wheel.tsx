@@ -756,7 +756,13 @@ export default function Wheel() {
         </div>
       }
     >
-    /* ===== FACT CHART ===== */
+
+
+
+
+
+      
+{/* ===== FACT CHART ===== */}
 <SgCard>
   <SgCardHeader
     right={
@@ -771,143 +777,44 @@ export default function Wheel() {
         </div>
 
         <div className="sgp-iconGroup">
-          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
-          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>C</IconBtn>
-          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>P</IconBtn>
-          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>Σ</IconBtn>
+          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>
+            R
+          </IconBtn>
+          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>
+            C
+          </IconBtn>
+          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>
+            P
+          </IconBtn>
+          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>
+            Σ
+          </IconBtn>
         </div>
       </div>
     }
   >
     <div>
       <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
-      <SgCardSub>{range.from} — {range.to}</SgCardSub>
+      <SgCardSub>
+        {range.from} — {range.to}
+      </SgCardSub>
     </div>
   </SgCardHeader>
 
   <SgCardContent>
-
-{!isLoading && !isError ? (
-  <SgMoneyChart
-    data={moneySeries.series}
-    currency={currency}
-    theme={t}
-    height={340}
-    showRevenue={showRevenue}
-    showPayout={showPayout}
-    showProfitBars={showProfitBars}
-    showCum={showCum}
-    fmtTick={(iso) => fmtDDMM(iso)}
-    moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
-  />
-            {/* ✅ “воздух”: градиенты для profit bars (pos/neg) */}
-            <defs>
-              <linearGradient id="sgpBarPos" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(34,197,94,.60)" />
-                <stop offset="70%" stopColor="rgba(34,197,94,.22)" />
-                <stop offset="100%" stopColor="rgba(34,197,94,.10)" />
-              </linearGradient>
-
-              <linearGradient id="sgpBarNeg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(239,68,68,.56)" />
-                <stop offset="70%" stopColor="rgba(239,68,68,.22)" />
-                <stop offset="100%" stopColor="rgba(239,68,68,.10)" />
-              </linearGradient>
-            </defs>
-
-            {/* grid — лёгкая, “дорогая” */}
-            <CartesianGrid stroke={t.grid} strokeDasharray="4 6" vertical={false} />
-
-            <XAxis
-              dataKey="date"
-              tickFormatter={(v) => fmtDDMM(String(v || ''))}
-              tick={{ fill: t.axis, fontSize: 12 }}
-              axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
-              tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
-            />
-
-            <YAxis
-              tickFormatter={(v) => {
-                const n = Number(v);
-                if (!Number.isFinite(n)) return '';
-                return String(Math.round(n / 100));
-              }}
-              tick={{ fill: t.axis, fontSize: 12 }}
-              axisLine={{ stroke: 'rgba(15,23,42,.10)' }}
-              tickLine={{ stroke: 'rgba(15,23,42,.10)' }}
-            />
-
-            <Tooltip
-              formatter={(val: any, name: any) => {
-                const v = Number(val);
-                if (!Number.isFinite(v)) return [val, name];
-                if (name === 'profit') return [moneyFromCent(v, currency), 'Прибыль/день'];
-                if (name === 'revenue') return [moneyFromCent(v, currency), 'Выручка/день'];
-                if (name === 'payout') return [moneyFromCent(v, currency), 'Расход/день'];
-                if (name === 'cum_profit') return [moneyFromCent(v, currency), 'Кум. прибыль'];
-                return [val, name];
-              }}
-              labelFormatter={(_: any, payload: any) => {
-                const d = payload?.[0]?.payload?.date;
-                return d ? `Дата ${d}` : 'Дата';
-              }}
-            />
-
-            {/* Revenue — заливка + линия (дорого) */}
-            {showRevenue ? (
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                name="revenue"
-                stroke="var(--accent2)"
-                strokeWidth={2}
-                fill="var(--accent2)"
-                fillOpacity={0.10}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            ) : null}
-
-            {/* Payout — нейтральная тонкая линия */}
-            {showPayout ? (
-              <Line
-                type="monotone"
-                dataKey="payout"
-                name="payout"
-                dot={false}
-                stroke="rgba(148,163,184,.85)"
-                strokeWidth={2}
-                opacity={0.9}
-              />
-            ) : null}
-
-            {/* Profit bars — ширина авто по диапазону + воздушный градиент через shape */}
-            {showProfitBars ? (
-              <Bar
-                dataKey="profit"
-                name="profit"
-                barSize={barSizeByPoints(moneySeries.series?.length || 0)}  // ✅ тут “как раньше”
-                radius={[12, 12, 12, 12]}
-                shape={<ProfitBarShape />}                                 // ✅ градиенты внутри shape
-              />
-            ) : null}
-
-            {/* Cum Σ — пунктир */}
-            {showCum ? (
-              <Line
-                type="monotone"
-                dataKey="cum_profit"
-                name="cum_profit"
-                dot={false}
-                stroke="var(--accent2)"
-                strokeWidth={2}
-                strokeDasharray="6 6"
-                opacity={0.55}
-              />
-            ) : null}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+    {!isLoading && !isError ? (
+      <SgMoneyChart
+        data={moneySeries.series}
+        currency={currency}
+        theme={t}
+        height={340}
+        showRevenue={showRevenue}
+        showPayout={showPayout}
+        showProfitBars={showProfitBars}
+        showCum={showCum}
+        fmtTick={(iso) => fmtDDMM(iso)}
+        moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
+      />
     ) : null}
 
     {isLoading ? <div className="sgp-muted">Загрузка…</div> : null}
@@ -919,8 +826,6 @@ export default function Wheel() {
     ) : null}
   </SgCardContent>
 </SgCard>
-
-
 
 
 
