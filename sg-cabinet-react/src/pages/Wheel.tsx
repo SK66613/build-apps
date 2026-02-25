@@ -37,8 +37,9 @@ import {
 
 import { sgpChartTheme } from '../components/sgp/charts/theme';
 
-import { Area } from 'recharts';
 
+
+import { Area, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ComposedChart } from 'recharts';
 import { ProfitBarShape } from '../components/sgp/charts/ProfitBarShape';
 
 /** ========= Types ========= */
