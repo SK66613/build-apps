@@ -44,32 +44,39 @@ function useResizeWidth<T extends HTMLElement>() {
 }
 
 /**
- * Адаптивная ширина баров:
- * - НЕ даём стать “сосисками” на малом количестве точек
- * - но и НЕ превращаем в “палки” на большом количестве
+ * ✅ Колонки “как в топ-дашбордах”:
+ * - barSize имеет МАКС ширину (maxBar)
+ * - когда дат мало, вместо “сосисок” растёт gap (воздух между датами)
+ * - когда дат много, barSize уменьшается, но не падает ниже minBar
  */
-function barSizeAuto(containerW: number, points: number) {
-  if (!containerW || points <= 0) return 10;
+function calcBarLayout(containerW: number, points: number) {
+  const minBar = 8;   // не палки
+  const maxBar = 20;  // максимальная ширина столбика на дату (подкрути 18/20/22)
 
-  // вычитаем приблизительные “служебные” поля графика
+  if (!containerW || points <= 0) {
+    return { barSize: 12, categoryGapPx: 14 };
+  }
+
+  // примерная “полезная ширина”
   const usable = Math.max(0, containerW - 24 - 14 - 18);
+
+  // ширина одной “категории” (одной даты)
   const per = usable / points;
 
-  // сколько от клетки отдаём бару (меньше = меньше “сосисок”)
-  const raw = per * 0.50;
+  // хотим, чтобы внутри категории был бар + gap вокруг
+  // gap делаем пикселями: на малом points увеличится, на большом уменьшится
+  const categoryGapPx = Math.round(clamp(per * 0.45, 10, 26));
 
-  // cap: при малом points ограничиваем максимальную толщину
-  const cap =
-    points <= 7 ? 14 :
-    points <= 10 ? 16 :
-    points <= 14 ? 18 :
-    points <= 31 ? 20 :
-    22;
+  // доступно под бар внутри одной категории с учетом gap
+  const availableForBar = per - categoryGapPx;
 
-  return Math.round(clamp(raw, 6, cap));
+  // бар берём как 90% доступного, но ограничиваем min/max
+  const barSize = Math.round(clamp(availableForBar * 0.90, minBar, maxBar));
+
+  return { barSize, categoryGapPx };
 }
 
-/** Прозрачные бары с лёгкой обводкой (читаемо и “дорого”) */
+/** Столбики (не “сосиски”): чуть меньше радиус */
 function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
   const v = Number(value || 0);
@@ -84,8 +91,8 @@ function ProfitBarShape(props: any) {
   const fill = v >= 0 ? 'rgba(34,197,94,.22)' : 'rgba(239,68,68,.20)';
   const stroke = v >= 0 ? 'rgba(34,197,94,.55)' : 'rgba(239,68,68,.55)';
 
-  // меньше скругление => меньше “колбасности”
-  const rx = Math.round(clamp(w * 0.22, 5, 10));
+  // радиус не должен превращать бар в “капсулу”
+  const rx = Math.round(clamp(w * 0.18, 4, 8));
 
   return (
     <g>
@@ -134,13 +141,11 @@ export function SgMoneyChart({
 }) {
   const { ref, width } = useResizeWidth<HTMLDivElement>();
   const points = data?.length || 0;
-  const barSize = barSizeAuto(width, points);
 
-  // ✅ “воздух” между категориями: при малом points делаем gap больше
-  const categoryGap =
-    points <= 10 ? '55%' :
-    points <= 20 ? '38%' :
-    '28%';
+  const { barSize, categoryGapPx } = React.useMemo(
+    () => calcBarLayout(width, points),
+    [width, points]
+  );
 
   return (
     <div ref={ref} style={{ height }}>
@@ -217,7 +222,7 @@ export function SgMoneyChart({
               name="profit"
               barSize={barSize}
               barGap={2}
-              barCategoryGap={categoryGap}
+              barCategoryGap={categoryGapPx} // ✅ пиксели, не проценты
               shape={<ProfitBarShape />}
             />
           ) : null}
