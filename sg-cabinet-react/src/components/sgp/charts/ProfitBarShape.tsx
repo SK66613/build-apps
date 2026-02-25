@@ -17,15 +17,15 @@ function rgba([r, g, b]: [number, number, number], a: number) {
  */
 
 // “стекло” (насыщенность)
-const ALPHA = 0.14;       // 0.18..0.30
+const ALPHA = 0.28;       // 0.18..0.30
 const HIGHLIGHT = 0.38;   // 0.28..0.55
 const SHADOW = 0.10;      // 0.06..0.14
 
-// 🟢 НЕОН-ЛАЙМ
-const POS_RGB: [number, number, number] = [190, 242, 100];
+// 🟢 Ultra Neon Green
+const POS_RGB: [number, number, number] = [66, 255, 0];
 
-// 🌸 НЕОН-РОЗОВЫЙ
-const NEG_RGB: [number, number, number] = [251, 113, 209];
+// 🔴 Ultra Neon Red
+const NEG_RGB: [number, number, number] = [255, 0, 60];
 
 // единая “дорогая” обводка (НЕ цветная)
 const STROKE = 'rgba(15,23,42,.07)';
