@@ -221,7 +221,28 @@ export default function Wheel() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
-  const [tab, setTab] = React.useState<'summary' | 'forecast' | 'stock'>('summary');
+  type OpenedKey = 'summary' | 'forecast' | 'stock';
+
+const [opened, setOpened] = React.useState<OpenedKey>('summary');
+
+function openOnly(k: OpenedKey) {
+  setOpened(k);
+  setOpenSummary(k === 'summary');
+  setOpenForecast(k === 'forecast');
+  setOpenStock(k === 'stock');
+}
+
+function toggleOnly(k: OpenedKey) {
+  // если кликнули по уже открытому — схлопываем его
+  if (opened === k) {
+    setOpened(k); // оставляем "выбранным" таб, но контент спрячется
+    setOpenSummary(false);
+    setOpenForecast(false);
+    setOpenStock(false);
+    return;
+  }
+  openOnly(k);
+}
   const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
   const [showRevenue, setShowRevenue] = React.useState(true);
@@ -811,9 +832,9 @@ export default function Wheel() {
       {/* ===== TABS BAR BETWEEN CARDS ===== */}
 <div className="sgp-wheelTabsBar">
   <div className="sgp-seg">
-    <SegBtn active={tab === 'summary'} onClick={() => setTab('summary')}>Сводка</SegBtn>
-    <SegBtn active={tab === 'forecast'} onClick={() => setTab('forecast')}>Прогноз</SegBtn>
-    <SegBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Склад</SegBtn>
+    <SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
+    <SegBtn active={opened === 'forecast'} onClick={() => openOnly('forecast')}>Прогноз</SegBtn>
+    <SegBtn active={opened === 'stock'} onClick={() => openOnly('stock')}>Склад</SegBtn>
   </div>
 </div>
 
@@ -822,7 +843,7 @@ export default function Wheel() {
       
 
       {/* ===== TAB: SUMMARY ===== */}
-{tab === 'summary' ? (
+
   <SgSectionCard
     title={
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -834,8 +855,8 @@ export default function Wheel() {
       </div>
     }
     collapsible
-    open={openSummary}
-    onToggleOpen={() => setOpenSummary((v) => !v)}
+open={opened === 'summary' && openSummary}
+onToggleOpen={() => toggleOnly('summary')}
   >
     <div className="sgp-metrics">
       <div className="sgp-metric"><div className="sgp-metric__k">СПИНОВ</div><div className="sgp-metric__v">{fact.spins}</div></div>
@@ -854,7 +875,7 @@ export default function Wheel() {
       </Hint>
     </div>
   </SgSectionCard>
-) : null}
+
 
       {/* ===== TAB: FORECAST ===== */}
 {tab === 'forecast' ? (
@@ -869,8 +890,8 @@ export default function Wheel() {
       </div>
     }
     collapsible
-    open={openForecast}
-    onToggleOpen={() => setOpenForecast((v) => !v)}
+open={opened === 'forecast' && openForecast}
+onToggleOpen={() => toggleOnly('forecast')}
   >
     {/* ...твой контент forecast без изменений... */}
   </SgSectionCard>
@@ -885,12 +906,12 @@ export default function Wheel() {
       
 
     {/* ===== TAB: STOCK ===== */}
-{tab === 'stock' ? (
+
   <>
     <SgStockCard
       title="Склад призов"
-      open={openStock}
-      onToggleOpen={() => setOpenStock((v) => !v)}
+open={opened === 'stock' && openStock}
+onToggleOpen={() => toggleOnly('stock')}
       items={items}
       isLoading={qStats.isLoading}
       inventory={inventory}
@@ -960,7 +981,7 @@ export default function Wheel() {
       </SgCardFooter>
     </SgCard>
   </>
-) : null}
+
 
 {isLoading ? <ShimmerLine /> : null}
 </SgPage>
