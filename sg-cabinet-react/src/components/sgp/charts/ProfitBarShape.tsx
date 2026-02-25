@@ -10,9 +10,18 @@ function rgba([r, g, b]: [number, number, number], a: number) {
 }
 
 /**
- * DEBUG MODE: solid bars (no glass, no opacity tricks)
- * Purpose: проверить “истинный” цвет без влияния стекла.
+ * Minimal premium bars
+ * - чистый emerald / red
+ * - только прозрачность
+ * - без стекла
+ * - без бликов
+ * - без теней
  */
+
+// 👇 крути 0.25 – 0.40
+const ALPHA = 0.32;
+
+// iOS-like чистые цвета
 const POS_RGB: [number, number, number] = [16, 185, 129]; // emerald
 const NEG_RGB: [number, number, number] = [239, 68, 68];  // red
 
@@ -29,8 +38,8 @@ export function ProfitBarShape(props: any) {
   const isNeg = Number(value) < 0;
   const baseRGB = isNeg ? NEG_RGB : POS_RGB;
 
-  // маленькое скругление чтобы не “колбаса”
-  const rx = Math.round(clamp(w * 0.06, 2, 6));
+  // аккуратное скругление
+  const rx = Math.round(clamp(w * 0.08, 3, 7));
 
   return (
     <rect
@@ -40,8 +49,9 @@ export function ProfitBarShape(props: any) {
       height={h}
       rx={rx}
       ry={rx}
-      fill={rgba(baseRGB, 1)} // 100% solid
-      stroke="none"
+      fill={rgba(baseRGB, ALPHA)}
+      stroke="rgba(15,23,42,.08)"   // мягкий единый контур (можешь убрать)
+      strokeWidth={0.8}
       shapeRendering="geometricPrecision"
     />
   );
