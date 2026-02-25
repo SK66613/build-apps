@@ -13,7 +13,7 @@ function rgba([r, g, b]: [number, number, number], a: number) {
  */
 
 // прозрачность
-const ALPHA = 0.34;
+const ALPHA = 0.18;
 
 // 🟢 салатовый (lime, не болотный)
 const POS_RGB: [number, number, number] = [132, 204, 22];  // lime-500
