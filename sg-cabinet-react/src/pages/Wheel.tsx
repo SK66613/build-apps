@@ -933,53 +933,58 @@ onToggleOpen={() => toggleOnly('summary')}
 
   <div style={{ height: 12 }} />
 
-          <SgCard>
-            <SgCardHeader>
-              <div>
-                <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
-                <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
-              </div>
-            </SgCardHeader>
+  {/*
+    ===== НАСТРОЙКА КУРСА МОНЕТЫ И ВАЛЮТЫ =====
+    (пока закомментировано)
+    Здесь настраивается "Стоимость монеты" и "Валюта" для прогноза/себестоимости.
+  */}
+  {/*
+  <SgCard>
+    <SgCardHeader>
+      <div>
+        <SgCardTitle>Стоимость монеты и валюта</SgCardTitle>
+        <SgCardSub>Нужно для прогноза и оценки себестоимости</SgCardSub>
+      </div>
+    </SgCardHeader>
 
-            <SgCardContent>
-              <SgFormRow
-                label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
-                hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
-              >
-                <SgInput
-                  value={coinValueDraft}
-                  onChange={(e) => setCoinValueDraft((e.target as any).value)}
-                  placeholder="1.00"
-                />
-              </SgFormRow>
+    <SgCardContent>
+      <SgFormRow
+        label={`Стоимость 1 монеты (${currencyLabel(currencyDraft)})`}
+        hint={`= ${moneyFromCent(coinCostCentPerCoin, currencyDraft)} / монета`}
+      >
+        <SgInput
+          value={coinValueDraft}
+          onChange={(e) => setCoinValueDraft((e.target as any).value)}
+          placeholder="1.00"
+        />
+      </SgFormRow>
 
-              <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
-                <SgSelect
-                  value={currencyDraft}
-                  onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
-                >
-                  <option value="RUB">RUB (₽)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                </SgSelect>
-              </SgFormRow>
+      <SgFormRow label="Валюта" hint={qSettings.isError ? 'settings: ошибка' : ''}>
+        <SgSelect
+          value={currencyDraft}
+          onChange={(e) => setCurrencyDraft(String((e.target as any).value || 'RUB').toUpperCase())}
+        >
+          <option value="RUB">RUB (₽)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+        </SgSelect>
+      </SgFormRow>
 
-              {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
-            </SgCardContent>
+      {coinMsg ? <Hint tone={coinMsg.startsWith('Ошибка') ? 'bad' : 'good'}>{coinMsg}</Hint> : null}
+    </SgCardContent>
 
-            <SgCardFooter>
-              <SgActions
-                primaryLabel="Сохранить"
-                onPrimary={saveAppSettings}
-                state={coinSaveState}
-                errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
-                left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
-              />
-            </SgCardFooter>
-          </SgCard>
-        </>
-      ) : null}
-
+    <SgCardFooter>
+      <SgActions
+        primaryLabel="Сохранить"
+        onPrimary={saveAppSettings}
+        state={coinSaveState}
+        errorText={coinMsg?.startsWith('Ошибка') ? coinMsg : undefined}
+        left={<span className="sgp-muted">Курс монеты используется только в аналитике.</span>}
+      />
+    </SgCardFooter>
+  </SgCard>
+  */}
+</>
 
 {isLoading ? <ShimmerLine /> : null}
 </SgPage>
