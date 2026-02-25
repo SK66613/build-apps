@@ -17,7 +17,7 @@ function rgba([r, g, b]: [number, number, number], a: number) {
  */
 
 // “стекло” (насыщенность)
-const ALPHA = 0.28;       // 0.18..0.30
+const ALPHA = 0.18;       // 0.18..0.30
 const HIGHLIGHT = 0.38;   // 0.28..0.55
 const SHADOW = 0.10;      // 0.06..0.14
 
@@ -70,8 +70,8 @@ export function ProfitBarShape(props: any) {
         y={yy}
         width={w}
         height={h}
-        rx={rx}
-        ry={rx}
+        rx={0}
+        ry={0}
         fill={rgba(baseRGB, ALPHA)}
         stroke={STROKE}
         strokeWidth={0.85}
