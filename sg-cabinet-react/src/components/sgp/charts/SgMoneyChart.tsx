@@ -44,39 +44,31 @@ function useResizeWidth<T extends HTMLElement>() {
 }
 
 /**
- * ✅ Колонки “как в топ-дашбордах”:
- * - barSize имеет МАКС ширину (maxBar)
- * - когда дат мало, вместо “сосисок” растёт gap (воздух между датами)
- * - когда дат много, barSize уменьшается, но не падает ниже minBar
+ * ШИРОКИЕ БАРЫ "ВПРИТЫК":
+ * - пытаемся занять почти всю ширину "клетки" (per)
+ * - есть maxCap, чтобы на малом числе дат не стали "сосисками"
  */
-function calcBarLayout(containerW: number, points: number) {
-  const minBar = 8;   // не палки
-  const maxBar = 20;  // максимальная ширина столбика на дату (подкрути 18/20/22)
+function barSizeAuto(containerW: number, points: number) {
+  if (!containerW || points <= 0) return 12;
 
-  if (!containerW || points <= 0) {
-    return { barSize: 12, categoryGapPx: 14 };
-  }
-
-  // примерная “полезная ширина”
   const usable = Math.max(0, containerW - 24 - 14 - 18);
-
-  // ширина одной “категории” (одной даты)
   const per = usable / points;
 
-  // хотим, чтобы внутри категории был бар + gap вокруг
-  // gap делаем пикселями: на малом points увеличится, на большом уменьшится
-  const categoryGapPx = Math.round(clamp(per * 0.45, 10, 26));
+  // почти вся клетка — чтобы было "впритык" при плотных данных
+  const raw = per * 0.96;
 
-  // доступно под бар внутри одной категории с учетом gap
-  const availableForBar = per - categoryGapPx;
+  // maxCap защищает от "сосисок" на 7-14 точках
+  const maxCap =
+    points <= 7 ? 18 :
+    points <= 10 ? 20 :
+    points <= 14 ? 22 :
+    points <= 31 ? 24 :
+    26;
 
-  // бар берём как 90% доступного, но ограничиваем min/max
-  const barSize = Math.round(clamp(availableForBar * 0.90, minBar, maxBar));
-
-  return { barSize, categoryGapPx };
+  return Math.round(clamp(raw, 7, maxCap));
 }
 
-/** Столбики (не “сосиски”): чуть меньше радиус */
+/** Прозрачные бары + ЕДВА заметная единая обводка (дороже) */
 function ProfitBarShape(props: any) {
   const { x, y, width, height, value } = props;
   const v = Number(value || 0);
@@ -89,26 +81,26 @@ function ProfitBarShape(props: any) {
   if (w <= 0 || h <= 0) return null;
 
   const fill = v >= 0 ? 'rgba(34,197,94,.22)' : 'rgba(239,68,68,.20)';
-  const stroke = v >= 0 ? 'rgba(34,197,94,.55)' : 'rgba(239,68,68,.55)';
 
-  // радиус не должен превращать бар в “капсулу”
-  const rx = Math.round(clamp(w * 0.18, 4, 8));
+  // ✅ одна мягкая обводка для всех (почти незаметная)
+  const stroke = 'rgba(15,23,42,.08)';
+
+  // не превращаем в капсулы
+  const rx = Math.round(clamp(w * 0.16, 4, 8));
 
   return (
-    <g>
-      <rect x={x} y={yy} width={w} height={h} rx={rx} ry={rx} fill={fill} />
-      <rect
-        x={x + 0.5}
-        y={yy + 0.5}
-        width={Math.max(0, w - 1)}
-        height={Math.max(0, h - 1)}
-        rx={rx}
-        ry={rx}
-        fill="transparent"
-        stroke={stroke}
-        strokeWidth={1}
-      />
-    </g>
+    <rect
+      x={x}
+      y={yy}
+      width={w}
+      height={h}
+      rx={rx}
+      ry={rx}
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={1}
+      shapeRendering="geometricPrecision"
+    />
   );
 }
 
@@ -141,16 +133,18 @@ export function SgMoneyChart({
 }) {
   const { ref, width } = useResizeWidth<HTMLDivElement>();
   const points = data?.length || 0;
-
-  const { barSize, categoryGapPx } = React.useMemo(
-    () => calcBarLayout(width, points),
-    [width, points]
-  );
+  const barSize = barSizeAuto(width, points);
 
   return (
     <div ref={ref} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 18, right: 14, left: 6, bottom: 0 }}>
+        <ComposedChart
+          data={data}
+          margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
+          // ✅ впритык: gap задаём на уровне Chart
+          barGap={0}
+          barCategoryGap={0}
+        >
           <CartesianGrid stroke={theme.grid} strokeDasharray="4 6" vertical={false} />
 
           <XAxis
@@ -221,8 +215,7 @@ export function SgMoneyChart({
               dataKey="profit"
               name="profit"
               barSize={barSize}
-              barGap={2}
-              barCategoryGap={categoryGapPx} // ✅ пиксели, не проценты
+              // ✅ gap НЕ ставим на Bar — он игнорится/путается, держим на Chart
               shape={<ProfitBarShape />}
             />
           ) : null}
