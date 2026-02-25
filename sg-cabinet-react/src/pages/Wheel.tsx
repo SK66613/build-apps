@@ -39,6 +39,8 @@ import { SgTopListCard } from '../components/sgp/sections/SgTopListCard';
 
 import { SgStockCard } from '../components/sgp/sections/SgStockCard';
 
+import { SgBoostCard } from '../components/sgp/sections/SgBoostCard';
+
 /** ========= Types ========= */
 type PrizeStat = {
   prize_code: string;
@@ -221,22 +223,31 @@ export default function Wheel() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
-  type OpenedKey = 'summary' | 'forecast' | 'stock' | null;
+type OpenedKey = 'summary' | 'forecast' | 'boost' | 'stock' | null;
 
 const [opened, setOpened] = React.useState<OpenedKey>('summary');
+
+const [openSummary, setOpenSummary] = React.useState(true);
+const [openForecast, setOpenForecast] = React.useState(true);
+const [openBoost, setOpenBoost] = React.useState(true);
+const [openStock, setOpenStock] = React.useState(true);
 
 function openOnly(k: Exclude<OpenedKey, null>) {
   setOpened(k);
   setOpenSummary(k === 'summary');
   setOpenForecast(k === 'forecast');
+  setOpenBoost(k === 'boost');
   setOpenStock(k === 'stock');
 }
 
 function toggleOnly(k: Exclude<OpenedKey, null>) {
+  // если клик по открытому — закрываем ВСЁ и ставим opened=null,
+  // чтобы следующий клик мог снова открыть
   if (opened === k) {
     setOpened(null);
     setOpenSummary(false);
     setOpenForecast(false);
+    setOpenBoost(false);
     setOpenStock(false);
     return;
   }
@@ -832,9 +843,10 @@ function toggleOnly(k: Exclude<OpenedKey, null>) {
       {/* ===== TABS BAR BETWEEN CARDS ===== */}
 <div className="sgp-wheelTabsBar">
   <div className="sgp-seg">
-    <SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
-    <SegBtn active={opened === 'forecast'} onClick={() => openOnly('forecast')}>Прогноз</SegBtn>
-    <SegBtn active={opened === 'stock'} onClick={() => openOnly('stock')}>Склад</SegBtn>
+<SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
+<SegBtn active={opened === 'forecast'} onClick={() => openOnly('forecast')}>Прогноз</SegBtn>
+<SegBtn active={opened === 'boost'} onClick={() => openOnly('boost')}>Буст</SegBtn>
+<SegBtn active={opened === 'stock'} onClick={() => openOnly('stock')}>Склад</SegBtn>
   </div>
 </div>
 
@@ -898,7 +910,37 @@ onToggleOpen={() => toggleOnly('summary')}
 
 
 
+{/* ===== ACC: BOOST (сразу после прогноза) ===== */}
+<SgBoostCard
+  title="Буст"
+  sub="Автоматизация сообщений и бонусов для вовлечения (пока UI, воркер позже)"
+  open={opened === 'boost' && openBoost}
+  onToggleOpen={() => toggleOnly('boost')}
 
+  // Пока мок-список (потом заменим на API)
+  items={[
+    { id: 'b1', name: 'Не крутил 3 дня — x2 монеты' },
+    { id: 'b2', name: 'Не крутил 7 дней — 1 бесплатный спин' },
+    { id: 'b3', name: 'Выиграл, но не забрал 24ч — напоминание' },
+    { id: 'b4', name: 'Happy Hour 18:00–20:00 — x3' },
+    { id: 'b5', name: 'Активация по ссылке — BOOST_X5' },
+  ]}
+  getId={(x: any) => x.id}
+  getName={(x: any) => x.name}
+
+  // Эти две строки — как показываем “Триггер/Награда” в таблице (можно упростить/изменить)
+  getTriggerLine={(row: any, d: any) => `${d.trigger_type}: ${d.trigger_value}`}
+  getRewardLine={(row: any, d: any) => `${d.reward_type}: ${d.reward_value} (TTL ${d.ttl_hours}ч)`}
+
+  // draft/patch/save — пока заглушки (чтобы UI уже жил)
+  draft={{}}
+  patchDraft={() => {}}
+
+  stats={{ activeCount: 0, pausedCount: 0, fired7d: 0, errors7d: 0 }}
+  saveMsg=""
+  saveState="idle"
+  onSave={() => {}}
+/>
 
 
       
