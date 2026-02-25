@@ -759,7 +759,16 @@ export default function Wheel() {
         </div>
       }
     >
-    {/* ===== FACT CHART ===== */}
+   // ✅ helper: ширина баров зависит от длины диапазона (как в топ-дашбордах)
+function barSizeByPoints(n: number) {
+  if (n <= 8) return 22;     // день/неделя — жирно
+  if (n <= 14) return 18;    // 2 недели
+  if (n <= 31) return 14;    // месяц
+  if (n <= 60) return 10;    // 2 месяца
+  return 8;                  // длинный диапазон — аккуратно
+}
+
+/* ===== FACT CHART ===== */
 <SgCard>
   <SgCardHeader
     right={
@@ -774,27 +783,17 @@ export default function Wheel() {
         </div>
 
         <div className="sgp-iconGroup">
-          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>
-            R
-          </IconBtn>
-          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>
-            C
-          </IconBtn>
-          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>
-            P
-          </IconBtn>
-          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>
-            Σ
-          </IconBtn>
+          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
+          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>C</IconBtn>
+          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>P</IconBtn>
+          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>Σ</IconBtn>
         </div>
       </div>
     }
   >
     <div>
       <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
-      <SgCardSub>
-        {range.from} — {range.to}
-      </SgCardSub>
+      <SgCardSub>{range.from} — {range.to}</SgCardSub>
     </div>
   </SgCardHeader>
 
@@ -802,7 +801,25 @@ export default function Wheel() {
     {!isLoading && !isError ? (
       <div style={{ height: 340 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={moneySeries.series} margin={{ top: 18, right: 14, left: 6, bottom: 0 }}>
+          <ComposedChart
+            data={moneySeries.series}
+            margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
+          >
+            {/* ✅ “воздух”: градиенты для profit bars (pos/neg) */}
+            <defs>
+              <linearGradient id="sgpBarPos" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(34,197,94,.60)" />
+                <stop offset="70%" stopColor="rgba(34,197,94,.22)" />
+                <stop offset="100%" stopColor="rgba(34,197,94,.10)" />
+              </linearGradient>
+
+              <linearGradient id="sgpBarNeg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(239,68,68,.56)" />
+                <stop offset="70%" stopColor="rgba(239,68,68,.22)" />
+                <stop offset="100%" stopColor="rgba(239,68,68,.10)" />
+              </linearGradient>
+            </defs>
+
             {/* grid — лёгкая, “дорогая” */}
             <CartesianGrid stroke={t.grid} strokeDasharray="4 6" vertical={false} />
 
@@ -841,7 +858,7 @@ export default function Wheel() {
               }}
             />
 
-            {/* Revenue — делаем “дорого”: заливка + линия */}
+            {/* Revenue — заливка + линия (дорого) */}
             {showRevenue ? (
               <Area
                 type="monotone"
@@ -869,16 +886,14 @@ export default function Wheel() {
               />
             ) : null}
 
-            {/* Profit bars — полупрозрачные + мягкий контур */}
+            {/* Profit bars — ширина авто по диапазону + воздушный градиент через shape */}
             {showProfitBars ? (
               <Bar
                 dataKey="profit"
                 name="profit"
+                barSize={barSizeByPoints(moneySeries.series?.length || 0)}  // ✅ тут “как раньше”
                 radius={[12, 12, 12, 12]}
-                barSize={14}
-                stroke="rgba(15,23,42,.08)"
-                strokeWidth={1}
-                shape={<ProfitBarShape />}
+                shape={<ProfitBarShape />}                                 // ✅ градиенты внутри shape
               />
             ) : null}
 
