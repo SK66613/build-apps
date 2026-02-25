@@ -757,7 +757,7 @@ export default function Wheel() {
         </div>
       }
     >
-     {/* ===== FACT CHART ===== */}
+    {/* ===== FACT CHART ===== */}
 <SgCard>
   <SgCardHeader
     right={
@@ -772,17 +772,27 @@ export default function Wheel() {
         </div>
 
         <div className="sgp-iconGroup">
-          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue(v => !v)}>R</IconBtn>
-          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout(v => !v)}>C</IconBtn>
-          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars(v => !v)}>P</IconBtn>
-          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum(v => !v)}>Σ</IconBtn>
+          <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>
+            R
+          </IconBtn>
+          <IconBtn active={showPayout} title="Расход" onClick={() => setShowPayout((v) => !v)}>
+            C
+          </IconBtn>
+          <IconBtn active={showProfitBars} title="Прибыль" onClick={() => setShowProfitBars((v) => !v)}>
+            P
+          </IconBtn>
+          <IconBtn active={showCum} title="Кумулятив" onClick={() => setShowCum((v) => !v)}>
+            Σ
+          </IconBtn>
         </div>
       </div>
     }
   >
     <div>
       <SgCardTitle>Факт: выручка / расход / прибыль</SgCardTitle>
-      <SgCardSub>{range.from} — {range.to}</SgCardSub>
+      <SgCardSub>
+        {range.from} — {range.to}
+      </SgCardSub>
     </div>
   </SgCardHeader>
 
@@ -790,9 +800,9 @@ export default function Wheel() {
     {!isLoading && !isError ? (
       <div style={{ height: 340 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={moneySeries.series}>
-
-            <CartesianGrid stroke={t.grid} strokeDasharray="4 6" />
+          <ComposedChart data={moneySeries.series} margin={{ top: 18, right: 14, left: 6, bottom: 0 }}>
+            {/* grid — лёгкая, “дорогая” */}
+            <CartesianGrid stroke={t.grid} strokeDasharray="4 6" vertical={false} />
 
             <XAxis
               dataKey="date"
@@ -829,22 +839,60 @@ export default function Wheel() {
               }}
             />
 
-            {showProfitBars ? (
-              <Bar dataKey="profit" name="profit" shape={<ProfitBarShape />} />
-            ) : null}
-
+            {/* Revenue — делаем “дорого”: заливка + линия */}
             {showRevenue ? (
-              <Line type="monotone" dataKey="revenue" name="revenue" dot={false} />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                name="revenue"
+                stroke="var(--accent2)"
+                strokeWidth={2}
+                fill="var(--accent2)"
+                fillOpacity={0.10}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
             ) : null}
 
+            {/* Payout — нейтральная тонкая линия */}
             {showPayout ? (
-              <Line type="monotone" dataKey="payout" name="payout" dot={false} />
+              <Line
+                type="monotone"
+                dataKey="payout"
+                name="payout"
+                dot={false}
+                stroke="rgba(148,163,184,.85)"
+                strokeWidth={2}
+                opacity={0.9}
+              />
             ) : null}
 
+            {/* Profit bars — полупрозрачные + мягкий контур */}
+            {showProfitBars ? (
+              <Bar
+                dataKey="profit"
+                name="profit"
+                radius={[12, 12, 12, 12]}
+                barSize={14}
+                stroke="rgba(15,23,42,.08)"
+                strokeWidth={1}
+                shape={<ProfitBarShape />}
+              />
+            ) : null}
+
+            {/* Cum Σ — пунктир */}
             {showCum ? (
-              <Line type="monotone" dataKey="cum_profit" name="cum_profit" dot={false} />
+              <Line
+                type="monotone"
+                dataKey="cum_profit"
+                name="cum_profit"
+                dot={false}
+                stroke="var(--accent2)"
+                strokeWidth={2}
+                strokeDasharray="6 6"
+                opacity={0.55}
+              />
             ) : null}
-
           </ComposedChart>
         </ResponsiveContainer>
       </div>
