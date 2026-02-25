@@ -108,7 +108,7 @@ export function ChartFrame({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
-          margin={{ top: 18, right: 14, left: 6, bottom: 0 }}
+          margin={{ top: 18, right: 14, left: 0, bottom: 0 }}
           barGap={barGap}
           barCategoryGap={barCategoryGap}
         >
