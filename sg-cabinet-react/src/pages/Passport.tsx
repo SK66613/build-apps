@@ -1,9 +1,33 @@
-// src/pages/Passport.tsx
+// sg-cabinet-react/src/pages/Passport.tsx
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAppState } from '../app/appState';
 import { apiFetch } from '../lib/api';
-import { Card, Input, Button } from '../components/ui';
+import { useAppState } from '../app/appState';
+
+import { SgPage } from '../components/sgp/layout/SgPage';
+import { SgFormRow } from '../components/sgp/ui/SgFormRow';
+import { SgActions, type SgSaveState } from '../components/sgp/ui/SgActions';
+
+import {
+  SgCard,
+  SgCardHeader,
+  SgCardTitle,
+  SgCardSub,
+  SgCardContent,
+} from '../components/sgp/ui/SgCard';
+
+import { SgButton } from '../components/sgp/ui/SgButton';
+import { SgInput, SgSelect } from '../components/sgp/ui/SgInput';
+import { SgToggle } from '../components/sgp/ui/SgToggle';
+
+import { HealthBadge } from '../components/sgp/HealthBadge';
+import { ShimmerLine } from '../components/sgp/ShimmerLine';
+import { IconBtn } from '../components/sgp/IconBtn';
+
+import { ChartState } from '../components/sgp/charts/ChartState';
+import { SgSectionCard } from '../components/sgp/blocks/SgSectionCard';
+import { SgTopListCard } from '../components/sgp/sections/SgTopListCard';
+
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -18,32 +42,40 @@ import {
 /** ========= Types ========= */
 type PassportSettings = {
   passport_key?: string;
-  total_styles?: number;     // сколько всего "стилей" в паспорте
-  require_pin?: number;      // 0|1
-  passport_active?: number;  // 0|1
-  show_offers?: number;      // 0|1
+  total_styles?: number; // цель
+  require_pin?: number; // 0|1
+  passport_active?: number; // 0|1
+  show_offers?: number; // 0|1
 };
 
 type PassportTimeseriesDay = {
   date: string; // YYYY-MM-DD
-  steps: number;            // сколько раз добавили штамп (style.collect)
-  active_users: number;     // уникальных tg_id за день
-  completed: number;        // сколько закрыли паспорт (достигли total_styles) за день
-  rewards_issued: number;   // сколько создали passport_rewards issued за день
-  rewards_redeemed: number; // сколько подтверждено кассиром (если есть redeemed) за день
-  pin_invalid: number;      // сколько ошибок pin_invalid за день
-  pin_used: number;         // сколько ошибок pin_used за день
+  steps: number;
+  active_users: number;
+  completed: number;
+  rewards_issued: number;
+  rewards_redeemed: number;
+  pin_invalid: number;
+  pin_used: number;
 };
 
 type PassportStyleStat = {
   style_id: string;
   title: string;
-  collects: number;          // сколько собрали этот стиль
-  unique_users: number;      // сколько уникальных пользователей собрали этот стиль
-  missing_share_pct?: number; // “на этом стиле застревают”
+  collects: number;
+  unique_users: number;
+  missing_share_pct?: number;
 };
 
-/** ========= Utils ========= */
+type PassportTopUser = {
+  tg_id: string;
+  title?: string; // display name (optional)
+  collects?: number;
+  completed?: number;
+  pending?: number;
+};
+
+/** ========= Helpers ========= */
 function qs(obj: Record<string, string | number | undefined | null>) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(obj)) {
@@ -64,25 +96,6 @@ function clampN(n: any, min: number, max: number) {
   return Math.max(min, Math.min(max, x));
 }
 
-function fmtDDMM(iso: string) {
-  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return iso;
-  return `${m[3]}.${m[2]}`;
-}
-
-function daysBetweenISO(fromISO: string, toISO: string) {
-  try {
-    const a = new Date(fromISO + 'T00:00:00Z').getTime();
-    const b = new Date(toISO + 'T00:00:00Z').getTime();
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return 1;
-    const diff = Math.abs(b - a);
-    const days = Math.floor(diff / (24 * 3600 * 1000)) + 1;
-    return Math.max(1, days);
-  } catch (_) {
-    return 1;
-  }
-}
-
 function isoAddDays(iso: string, deltaDays: number) {
   try {
     const d = new Date(iso + 'T00:00:00Z');
@@ -100,7 +113,7 @@ function listDaysISO(fromISO: string, toISO: string) {
   const out: string[] = [];
   if (!fromISO || !toISO) return out;
   let cur = fromISO;
-  for (let i = 0; i < 420; i++) {
+  for (let i = 0; i < 500; i++) {
     out.push(cur);
     if (cur === toISO) break;
     cur = isoAddDays(cur, 1);
@@ -108,220 +121,107 @@ function listDaysISO(fromISO: string, toISO: string) {
   return out;
 }
 
+function fmtDDMM(iso: string) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  return `${m[3]}.${m[2]}`;
+}
+
 function safeNum(v: any, d = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : d;
 }
 
-/* ==== Toggle (тумблер) ==== */
-function Switch({
-  checked,
-  onChange,
-  disabled,
+/** ========= Premium tiny UI bits ========= */
+function SegBtn({
+  active,
+  onClick,
+  children,
 }: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  disabled?: boolean;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      className={'sgSwitch ' + (checked ? 'is-on' : 'is-off') + (disabled ? ' is-disabled' : '')}
-      onClick={(e) => {
-        if (disabled) return;
-        try {
-          (e.currentTarget as any).blur?.();
-        } catch (_) {}
-        onChange(!checked);
-      }}
-      aria-pressed={checked}
-      aria-disabled={!!disabled}
+      className={(active ? 'sgp-seg__btn is-active ' : 'sgp-seg__btn ') + 'sgp-press'}
+      onClick={onClick}
     >
-      <span className="sgSwitch__knob" />
+      {children}
     </button>
   );
 }
 
-/** ===== icons for chart buttons ===== */
-function IcoSteps() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 12h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-      <path d="M4 12V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M8 12V5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
-      <path d="M12 12V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.65" />
-    </svg>
-  );
-}
-function IcoUsers() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M6.5 7.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M2.5 13c.6-2 2.3-3 4-3s3.4 1 4 3"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path d="M11 8.2a1.7 1.7 0 1 0 0-3.4" stroke="currentColor" strokeWidth="2" opacity={0.55} />
-      <path
-        d="M11.7 10.3c1.1.4 2.1 1.2 2.6 2.7"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        opacity={0.55}
-      />
-    </svg>
-  );
-}
-function IcoDone() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 8.3 6.1 11.2 13 4.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+function Hint({
+  tone = 'neutral',
+  children,
+}: {
+  tone?: 'neutral' | 'good' | 'warn' | 'bad';
+  children: React.ReactNode;
+}) {
+  return <div className={`sgp-hint tone-${tone}`}>{children}</div>;
 }
 
-function toneBadge(pct: number) {
+/** ========= Chart helpers ========= */
+type SeriesRow = {
+  date: string;
+  steps: number;
+  users: number;
+  completed: number;
+  rewards_issued: number;
+  rewards_redeemed: number;
+  pin_errors: number;
+};
+
+function toneByPct(pct: number): 'good' | 'warn' | 'bad' {
   const x = clampN(pct, 0, 100);
-  if (x >= 70) return { text: 'ОК', cls: 'ok' };
-  if (x >= 40) return { text: 'РИСК', cls: 'mid' };
-  return { text: 'ПЛОХО', cls: 'bad' };
+  if (x >= 70) return 'good';
+  if (x >= 40) return 'warn';
+  return 'bad';
 }
 
-function copyToClipboard(text: string) {
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
-  } catch (_) {}
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    return Promise.resolve();
-  } catch (_) {
-    return Promise.resolve();
-  }
-}
-
-/** ========= Premium policy models (UI-first) ========= */
-type SeasonPolicy = {
-  mode: 'infinite' | 'season';
-  season_days: number;        // длительность сезона в днях
-  season_grace_days: number;  // “грейс” после конца сезона
-  season_start_iso: string;   // якорь (может быть пусто)
-};
-
-type TierWindowPolicy = {
-  mode: 'none' | 'rolling';
-  tier_window_days: number;     // окно на закрытие тира
-  allow_catchup: boolean;       // можно ли “догонять”
-};
-
-type ResetPolicy = {
-  on_reward_redeemed: 'none' | 'next_tier' | 'new_cycle';
-  on_season_end: 'freeze' | 'reset_all';
-  keep_history: boolean; // для аналитики всегда true, но оставим как UI-понятность
-};
-
-type LimitsPolicy = {
-  max_collects_per_day: number;   // 0 = без лимита
-  max_collects_per_user_per_day: number; // 0 = без лимита
-  block_when_inactive: boolean;   // если акция выключена — запрещать collect
-};
-
-type RewardPolicy = {
-  issue_on_tier_complete: boolean;
-  issue_on_full_complete: boolean;
-  reward_expiry_days: number; // 0 = не истекает
-  rotation_mode: 'none' | 'daily' | 'weekly'; // ротация призов (потом)
-};
-
-type PassportPolicyBundle = {
-  preset: 'A_infinite' | 'B_season' | 'C_tier_windows' | 'D_marathon';
-  season: SeasonPolicy;
-  tier_window: TierWindowPolicy;
-  reset: ResetPolicy;
-  limits: LimitsPolicy;
-  reward: RewardPolicy;
-};
-
-function defaultPolicy(): PassportPolicyBundle {
-  return {
-    preset: 'A_infinite',
-    season: { mode: 'infinite', season_days: 30, season_grace_days: 2, season_start_iso: '' },
-    tier_window: { mode: 'none', tier_window_days: 30, allow_catchup: true },
-    reset: { on_reward_redeemed: 'new_cycle', on_season_end: 'reset_all', keep_history: true },
-    limits: { max_collects_per_day: 0, max_collects_per_user_per_day: 0, block_when_inactive: true },
-    reward: { issue_on_tier_complete: true, issue_on_full_complete: true, reward_expiry_days: 14, rotation_mode: 'none' },
-  };
-}
-
-function applyPreset(p: PassportPolicyBundle, preset: PassportPolicyBundle['preset']): PassportPolicyBundle {
-  const next = JSON.parse(JSON.stringify(p)) as PassportPolicyBundle;
-  next.preset = preset;
-
-  if (preset === 'A_infinite') {
-    next.season.mode = 'infinite';
-    next.tier_window.mode = 'none';
-    next.reset.on_reward_redeemed = 'new_cycle';
-    next.reset.on_season_end = 'reset_all';
-    next.reward.reward_expiry_days = 0;
-    return next;
-  }
-
-  if (preset === 'B_season') {
-    next.season.mode = 'season';
-    next.season.season_days = Math.max(7, toInt(next.season.season_days, 30));
-    next.season.season_grace_days = Math.max(0, toInt(next.season.season_grace_days, 2));
-    next.tier_window.mode = 'none';
-    next.reset.on_reward_redeemed = 'new_cycle';
-    next.reset.on_season_end = 'reset_all';
-    next.reward.reward_expiry_days = Math.max(1, toInt(next.reward.reward_expiry_days, 14));
-    return next;
-  }
-
-  if (preset === 'C_tier_windows') {
-    next.season.mode = 'infinite';
-    next.tier_window.mode = 'rolling';
-    next.tier_window.tier_window_days = Math.max(3, toInt(next.tier_window.tier_window_days, 30));
-    next.tier_window.allow_catchup = true;
-    next.reset.on_reward_redeemed = 'next_tier';
-    next.reset.on_season_end = 'freeze';
-    next.reward.reward_expiry_days = Math.max(1, toInt(next.reward.reward_expiry_days, 14));
-    return next;
-  }
-
-  // D_marathon
-  next.season.mode = 'season';
-  next.season.season_days = Math.max(7, toInt(next.season.season_days, 30));
-  next.season.season_grace_days = Math.max(0, toInt(next.season.season_grace_days, 3));
-  next.tier_window.mode = 'rolling';
-  next.tier_window.tier_window_days = Math.max(3, toInt(next.tier_window.tier_window_days, 30));
-  next.tier_window.allow_catchup = false;
-  next.reset.on_reward_redeemed = 'next_tier';
-  next.reset.on_season_end = 'freeze';
-  next.reward.reward_expiry_days = Math.max(1, toInt(next.reward.reward_expiry_days, 7));
-  next.reward.rotation_mode = 'weekly';
-  return next;
-}
-
+/** ========= Page ========= */
 export default function Passport() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
-  // ===== Under-chart tabs =====
-  const [tab, setTab] = React.useState<'summary' | 'autopilot' | 'ops' | 'premium'>('summary');
+  type OpenedKey = 'summary' | 'ranks' | 'boosts' | 'limits' | null;
 
-  // ===== chart layers =====
+  const [opened, setOpened] = React.useState<OpenedKey>('summary');
+  const [openSummary, setOpenSummary] = React.useState(true);
+  const [openRanks, setOpenRanks] = React.useState(true);
+  const [openBoosts, setOpenBoosts] = React.useState(true);
+  const [openLimits, setOpenLimits] = React.useState(true);
+
+  function openOnly(k: Exclude<OpenedKey, null>) {
+    setOpened(k);
+    setOpenSummary(k === 'summary');
+    setOpenRanks(k === 'ranks');
+    setOpenBoosts(k === 'boosts');
+    setOpenLimits(k === 'limits');
+  }
+
+  function toggleOnly(k: Exclude<OpenedKey, null>) {
+    if (opened === k) {
+      setOpened(null);
+      setOpenSummary(false);
+      setOpenRanks(false);
+      setOpenBoosts(false);
+      setOpenLimits(false);
+      return;
+    }
+    openOnly(k);
+  }
+
+  // ===== chart layers / basis =====
+  const [rewardBasis, setRewardBasis] = React.useState<'issued' | 'redeemed'>('issued');
+
   const [showSteps, setShowSteps] = React.useState(true);
-  const [showUsers, setShowUsers] = React.useState(false);
+  const [showUsers, setShowUsers] = React.useState(true);
   const [showCompleted, setShowCompleted] = React.useState(true);
+  const [showRewards, setShowRewards] = React.useState(false);
+  const [showErrors, setShowErrors] = React.useState(false);
 
   // ===== quick range =====
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
@@ -359,7 +259,7 @@ export default function Passport() {
 
   // ===== timeseries =====
   const qTs = useQuery({
-    enabled: !!appId,
+    enabled: !!appId && !!range?.from && !!range?.to,
     queryKey: ['passport_ts', appId, range.from, range.to],
     queryFn: () =>
       apiFetch<{ ok: true; days: PassportTimeseriesDay[]; settings?: PassportSettings; meta?: any }>(
@@ -368,10 +268,10 @@ export default function Passport() {
     staleTime: 10_000,
   });
 
-  // ===== per-style stats =====
-  const qStats = useQuery({
-    enabled: !!appId,
-    queryKey: ['passport_stats', appId, range.from, range.to],
+  // ===== per-style stats (optional, can be used later) =====
+  const qStyleStats = useQuery({
+    enabled: !!appId && !!range?.from && !!range?.to,
+    queryKey: ['passport_style_stats', appId, range.from, range.to],
     queryFn: () =>
       apiFetch<{ ok: true; items: PassportStyleStat[]; meta?: any }>(
         `/api/cabinet/apps/${appId}/passport/stats?${qs(range)}`
@@ -379,38 +279,34 @@ export default function Passport() {
     staleTime: 10_000,
   });
 
-  const isLoading = qSettings.isLoading || qTs.isLoading || qStats.isLoading;
-  const isError = qSettings.isError || qTs.isError || qStats.isError;
-
   const settings: PassportSettings = {
     ...(qSettings.data?.settings || {}),
     ...(qTs.data?.settings || {}),
   };
 
   const totalStyles = Math.max(0, toInt(settings.total_styles, 0));
+  const passportActive = !!toInt(settings.passport_active, 1);
   const requirePin = !!toInt(settings.require_pin, 0);
-  const passportActive = toInt(settings.passport_active, 1) ? true : false;
-  const showOffers = toInt(settings.show_offers, 1) ? true : false;
+  const showOffers = !!toInt(settings.show_offers, 1);
 
-  // ===== chart series (fill missing days to keep stable) =====
-  const series = React.useMemo(() => {
+  // ===== series (stable by days) =====
+  const series: SeriesRow[] = React.useMemo(() => {
     const map = new Map<string, PassportTimeseriesDay>();
-    for (const d of (qTs.data?.days || [])) {
-      if (d?.date) map.set(String(d.date), d);
-    }
-    const dates = listDaysISO(range.from, range.to);
+    for (const d of (qTs.data?.days || [])) if (d?.date) map.set(String(d.date), d);
 
+    const dates = listDaysISO(range.from, range.to);
     return dates.map((iso) => {
       const r = map.get(iso);
+      const pin_invalid = safeNum(r?.pin_invalid, 0);
+      const pin_used = safeNum(r?.pin_used, 0);
       return {
         date: iso,
         steps: safeNum(r?.steps, 0),
-        active_users: safeNum(r?.active_users, 0),
+        users: safeNum(r?.active_users, 0),
         completed: safeNum(r?.completed, 0),
         rewards_issued: safeNum(r?.rewards_issued, 0),
         rewards_redeemed: safeNum(r?.rewards_redeemed, 0),
-        pin_invalid: safeNum(r?.pin_invalid, 0),
-        pin_used: safeNum(r?.pin_used, 0),
+        pin_errors: Math.max(0, pin_invalid + pin_used),
       };
     });
   }, [qTs.data?.days, range.from, range.to]);
@@ -418,67 +314,60 @@ export default function Passport() {
   // ===== facts totals =====
   const fact = React.useMemo(() => {
     const days = series || [];
-    const steps = days.reduce((s, d) => s + safeNum((d as any).steps, 0), 0);
-    const users = days.reduce((s, d) => s + safeNum((d as any).active_users, 0), 0);
-    const completed = days.reduce((s, d) => s + safeNum((d as any).completed, 0), 0);
-    const issued = days.reduce((s, d) => s + safeNum((d as any).rewards_issued, 0), 0);
-    const redeemed = days.reduce((s, d) => s + safeNum((d as any).rewards_redeemed, 0), 0);
-    const pin_invalid = days.reduce((s, d) => s + safeNum((d as any).pin_invalid, 0), 0);
-    const pin_used = days.reduce((s, d) => s + safeNum((d as any).pin_used, 0), 0);
+    const steps = days.reduce((s, d) => s + safeNum(d.steps, 0), 0);
+    const users = days.reduce((s, d) => s + safeNum(d.users, 0), 0);
+    const completed = days.reduce((s, d) => s + safeNum(d.completed, 0), 0);
+    const issued = days.reduce((s, d) => s + safeNum(d.rewards_issued, 0), 0);
+    const redeemed = days.reduce((s, d) => s + safeNum(d.rewards_redeemed, 0), 0);
+    const pinErrors = days.reduce((s, d) => s + safeNum(d.pin_errors, 0), 0);
 
-    const activated = Math.max(users, 0); // proxy
-    const completionRatePct = activated > 0 ? Math.round((completed / activated) * 100) : 0;
+    const completionRatePct = users > 0 ? Math.round((completed / users) * 100) : 0;
     const redeemRatePct = completed > 0 ? Math.round((redeemed / completed) * 100) : 0;
-
     const pending = Math.max(0, issued - redeemed);
-    const pinErrors = Math.max(0, pin_invalid + pin_used);
 
     return {
       steps,
       users,
-      activated,
       completed,
       issued,
       redeemed,
       pending,
-      pin_invalid,
-      pin_used,
       pinErrors,
-      completionRatePct,
-      redeemRatePct,
+      completionRatePct: clampN(completionRatePct, 0, 100),
+      redeemRatePct: clampN(redeemRatePct, 0, 100),
     };
   }, [series]);
 
-  const period = React.useMemo(() => {
-    const days = daysBetweenISO(range.from, range.to);
-    const stepsPerDay = days > 0 ? fact.steps / days : 0;
-    const usersPerDay = days > 0 ? fact.users / days : 0;
-    const completedPerDay = days > 0 ? fact.completed / days : 0;
-    return { days, stepsPerDay, usersPerDay, completedPerDay };
-  }, [range.from, range.to, fact.steps, fact.users, fact.completed]);
+  const completionTone = toneByPct(fact.completionRatePct);
+  const redeemTone = toneByPct(fact.redeemRatePct);
 
-  const completionTone = React.useMemo(() => toneBadge(fact.completionRatePct), [fact.completionRatePct]);
-  const redeemTone = React.useMemo(() => toneBadge(fact.redeemRatePct), [fact.redeemRatePct]);
+  // ===== chart computed (rewards basis) =====
+  const chartData = React.useMemo(() => {
+    return series.map((d) => ({
+      ...d,
+      rewards: rewardBasis === 'redeemed' ? d.rewards_redeemed : d.rewards_issued,
+    }));
+  }, [series, rewardBasis]);
 
-  // ===== right column: top styles =====
-  const [topMetric, setTopMetric] = React.useState<'collects' | 'missing'>('collects');
-  const styleItems = qStats.data?.items || [];
-  const topStyles = React.useMemo(() => {
-    const arr = [...styleItems];
-    if (topMetric === 'collects') {
-      arr.sort((a, b) => safeNum(b.collects, 0) - safeNum(a.collects, 0));
-    } else {
-      arr.sort((a, b) => safeNum(b.missing_share_pct, 0) - safeNum(a.missing_share_pct, 0));
-    }
-    return arr.slice(0, 7);
-  }, [styleItems, topMetric]);
+  // ===== top users (right column) =====
+  const [topMetric, setTopMetric] = React.useState<'collects' | 'completed' | 'pending'>('collects');
 
-  // ===== live toggles (small block inside OPS) =====
+  const qTopUsers = useQuery({
+    enabled: !!appId && !!range?.from && !!range?.to,
+    queryKey: ['passport_top_users', appId, range.from, range.to, topMetric],
+    queryFn: () =>
+      apiFetch<{ ok: true; items: PassportTopUser[] }>(
+        `/api/cabinet/apps/${appId}/passport/users/top?${qs({ ...range, metric: topMetric })}`
+      ),
+    staleTime: 10_000,
+  });
+
+  const topUsers: PassportTopUser[] = (qTopUsers.data?.items || []).slice(0, 7);
+
+  // ===== Limits: live toggles + collect limits (draft) =====
   const [activeDraft, setActiveDraft] = React.useState<boolean>(passportActive);
   const [pinDraft, setPinDraft] = React.useState<boolean>(requirePin);
   const [offersDraft, setOffersDraft] = React.useState<boolean>(showOffers);
-  const [savingSettings, setSavingSettings] = React.useState(false);
-  const [settingsMsg, setSettingsMsg] = React.useState('');
 
   React.useEffect(() => {
     setActiveDraft(passportActive);
@@ -487,11 +376,19 @@ export default function Passport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passportActive, requirePin, showOffers]);
 
-  async function savePassportSettings() {
+  const [maxCollectsPerDayDraft, setMaxCollectsPerDayDraft] = React.useState<string>('0');
+  const [maxCollectsPerUserPerDayDraft, setMaxCollectsPerUserPerDayDraft] = React.useState<string>('0');
+  const [blockWhenInactiveDraft, setBlockWhenInactiveDraft] = React.useState<boolean>(true);
+
+  const [savingLimits, setSavingLimits] = React.useState(false);
+  const [limitsMsg, setLimitsMsg] = React.useState('');
+
+  async function saveLimits() {
     if (!appId) return;
-    setSettingsMsg('');
-    setSavingSettings(true);
+    setLimitsMsg('');
+    setSavingLimits(true);
     try {
+      // 1) live toggles (already exists)
       await apiFetch(`/api/cabinet/apps/${appId}/passport/settings`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -503,21 +400,35 @@ export default function Passport() {
           },
         }),
       });
-      setSettingsMsg('Сохранено');
+
+      // 2) limits (TODO: bind when backend is ready)
+      // await apiFetch(`/api/cabinet/apps/${appId}/passport/limits`, {...})
+      // For now: UI-first – still store locally in draft, just show "saved".
+      const max_collects_per_day = Math.max(0, toInt(maxCollectsPerDayDraft, 0));
+      const max_collects_per_user_per_day = Math.max(0, toInt(maxCollectsPerUserPerDayDraft, 0));
+      const block_when_inactive = blockWhenInactiveDraft ? 1 : 0;
+      void max_collects_per_day;
+      void max_collects_per_user_per_day;
+      void block_when_inactive;
+
+      setLimitsMsg('Сохранено');
       await qc.invalidateQueries({ queryKey: ['passport_settings', appId] });
       await qc.invalidateQueries({ queryKey: ['passport_ts', appId] });
-      await qc.invalidateQueries({ queryKey: ['passport_stats', appId] });
+      await qc.invalidateQueries({ queryKey: ['passport_style_stats', appId] });
     } catch (e: any) {
-      setSettingsMsg('Ошибка: ' + String(e?.message || e));
+      setLimitsMsg('Ошибка: ' + String(e?.message || e));
     } finally {
-      setSavingSettings(false);
+      setSavingLimits(false);
     }
   }
 
-  /** ===== AUTOPILOT (UI-first, later bind to worker /offers/*) ===== */
-  type AutoSeg = 'near_goal' | 'dormant_7d' | 'season_ends' | 'reward_waiting';
-  type AutopilotTpl = {
-    id: AutoSeg;
+  const limitsSaveState: SgSaveState =
+    savingLimits ? 'saving' : limitsMsg === 'Сохранено' ? 'saved' : limitsMsg.startsWith('Ошибка') ? 'error' : 'idle';
+
+  // ===== Boosts (UI-first, later bind to /offers/*) =====
+  type BoostId = 'near_goal' | 'dormant_7d' | 'reward_waiting' | 'season_ends';
+  type BoostRow = {
+    id: BoostId;
     title: string;
     enabled: boolean;
     ttl_hours: number;
@@ -527,11 +438,11 @@ export default function Passport() {
     hint: string;
   };
 
-  const [autopilotOn, setAutopilotOn] = React.useState<boolean>(true);
-  const [autopilot, setAutopilot] = React.useState<AutopilotTpl[]>([
+  const [boostsOn, setBoostsOn] = React.useState<boolean>(true);
+  const [boosts, setBoosts] = React.useState<BoostRow[]>([
     {
       id: 'near_goal',
-      title: 'Остался 1 штамп — дожимаем до приза',
+      title: 'Остался 1 штамп — дожать до приза',
       enabled: true,
       ttl_hours: 24,
       limit_per_user: 1,
@@ -541,13 +452,23 @@ export default function Passport() {
     },
     {
       id: 'dormant_7d',
-      title: 'Не было 7 дней — возвращаем',
+      title: 'Не было 7 дней — вернуть',
       enabled: false,
       ttl_hours: 48,
       limit_per_user: 1,
       button_label: 'Вернуться',
       message_text: 'Мы скучали! Вернись в ближайшие 48 часов — у тебя есть шанс добрать штампы ✨',
       hint: 'Сегмент: нет collect 7 дней. Триггерится по расписанию.',
+    },
+    {
+      id: 'reward_waiting',
+      title: 'Приз выдан, но не забран — напоминание',
+      enabled: true,
+      ttl_hours: 72,
+      limit_per_user: 3,
+      button_label: 'Забрать приз',
+      message_text: 'Твой приз уже готов 🎉 Покажи QR кассиру — забери подарок!',
+      hint: 'Сегмент: у пользователя есть passport_rewards issued (не redeemed).',
     },
     {
       id: 'season_ends',
@@ -559,1540 +480,717 @@ export default function Passport() {
       message_text: 'Сезон заканчивается скоро ⏳ Успей собрать штампы и получить приз!',
       hint: 'Сегмент: сезонный паспорт, до конца ≤ N дней (премиум).',
     },
-    {
-      id: 'reward_waiting',
-      title: 'Приз выдан (issued), но не забран — напоминание',
-      enabled: true,
-      ttl_hours: 72,
-      limit_per_user: 3,
-      button_label: 'Забрать приз',
-      message_text: 'Твой приз уже готов 🎉 Покажи QR кассиру — забери подарок!',
-      hint: 'Сегмент: у пользователя есть passport_rewards issued (не redeemed).',
-    },
   ]);
 
-  const [autoMsg, setAutoMsg] = React.useState<string>('');
-  function patchAutopilot(id: AutoSeg, patch: Partial<AutopilotTpl>) {
-    setAutopilot((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
-  }
-  async function saveAutopilotMock() {
-    setAutoMsg('Сохранено (пока локально). Следующий шаг — привязать к воркеру /offers/*.');
-    setTimeout(() => setAutoMsg(''), 2200);
+  function patchBoost(id: BoostId, patch: Partial<BoostRow>) {
+    setBoosts((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
   }
 
-  /** ===== OPS: cashier instructions ===== */
-  const [cashierText, setCashierText] = React.useState<string>(
-    [
-      'Инструкция кассиру (Паспорт):',
-      '1) Клиент показывает экран “Паспорт”.',
-      '2) Ты вводишь одноразовый PIN (из нашего списка/сообщения).',
-      '3) Если клиент завершил круг — покажет QR для выдачи приза.',
-      'Важно: PIN одноразовый. Если ошибка — попроси новый PIN.',
-    ].join('\n')
-  );
-  const [cashierCopyMsg, setCashierCopyMsg] = React.useState<string>('');
+  const [savingBoosts, setSavingBoosts] = React.useState(false);
+  const [boostsMsg, setBoostsMsg] = React.useState('');
 
-  async function copyCashier() {
-    await copyToClipboard(cashierText);
-    setCashierCopyMsg('Скопировано');
-    setTimeout(() => setCashierCopyMsg(''), 1500);
-  }
-
-  /** ===== PREMIUM policies (UI-first) ===== */
-  const [policy, setPolicy] = React.useState<PassportPolicyBundle>(() => defaultPolicy());
-  const [policyMsg, setPolicyMsg] = React.useState<string>('');
-  const [policySaving, setPolicySaving] = React.useState<boolean>(false);
-
-  function patchPolicy(path: string, value: any) {
-    setPolicy((prev) => {
-      const next: any = JSON.parse(JSON.stringify(prev));
-      const parts = String(path).split('.');
-      let cur: any = next;
-      for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]];
-      cur[parts[parts.length - 1]] = value;
-      return next as PassportPolicyBundle;
-    });
-  }
-
-  async function savePolicyMock() {
-    setPolicyMsg('');
-    setPolicySaving(true);
+  async function saveBoosts() {
+    setBoostsMsg('');
+    setSavingBoosts(true);
     try {
-      // UI-first: позже будет PUT /api/cabinet/apps/:id/passport/policy
-      setPolicyMsg('Сохранено (пока локально). Следующий шаг — привязать к воркеру (season/tier windows/reset).');
+      // TODO: PUT /api/cabinet/apps/:id/passport/boosts
+      // await apiFetch(`/api/cabinet/apps/${appId}/passport/boosts`, {...})
+      setBoostsMsg('Сохранено');
+    } catch (e: any) {
+      setBoostsMsg('Ошибка: ' + String(e?.message || e));
     } finally {
-      setPolicySaving(false);
-      setTimeout(() => setPolicyMsg(''), 2400);
+      setSavingBoosts(false);
     }
   }
 
-  // ===== small helpers for summaries =====
-  const pinHealthTone = React.useMemo(() => {
-    // грубо: если ошибок мало — ок
-    const total = Math.max(1, fact.steps);
-    const rate = Math.round((fact.pinErrors / total) * 100);
-    // 0-3% ok, 4-10 mid, 11+ bad
-    if (rate <= 3) return { text: 'ОК', cls: 'ok', rate };
-    if (rate <= 10) return { text: 'РИСК', cls: 'mid', rate };
-    return { text: 'ПЛОХО', cls: 'bad', rate };
-  }, [fact.pinErrors, fact.steps]);
+  const boostsSaveState: SgSaveState =
+    savingBoosts ? 'saving' : boostsMsg === 'Сохранено' ? 'saved' : boostsMsg.startsWith('Ошибка') ? 'error' : 'idle';
 
-  const pendingTone = React.useMemo(() => {
-    const pending = Math.max(0, fact.pending);
-    if (pending === 0) return { text: 'ОК', cls: 'ok' };
-    if (pending <= 3) return { text: 'РИСК', cls: 'mid' };
-    return { text: 'ПЛОХО', cls: 'bad' };
-  }, [fact.pending]);
+  // ===== Ranks (settings UI-first) =====
+  type RankRule = {
+    id: string;
+    rank: string; // e.g. "Bronze"
+    condition: 'steps_total' | 'completed_total' | 'completion_rate' | 'custom';
+    threshold: number; // meaning depends on condition
+    note?: string;
+    enabled: boolean;
+  };
+
+  const [rankRules, setRankRules] = React.useState<RankRule[]>([
+    {
+      id: 'r1',
+      rank: 'Bronze',
+      condition: 'steps_total',
+      threshold: 50,
+      note: 'Дать ранг если шагов за период ≥ 50',
+      enabled: true,
+    },
+    {
+      id: 'r2',
+      rank: 'Silver',
+      condition: 'completed_total',
+      threshold: 10,
+      note: 'Дать ранг если завершений за период ≥ 10',
+      enabled: true,
+    },
+    {
+      id: 'r3',
+      rank: 'Gold',
+      condition: 'completion_rate',
+      threshold: 60,
+      note: 'Дать ранг если completion ≥ 60%',
+      enabled: false,
+    },
+  ]);
+
+  function patchRankRule(id: string, patch: Partial<RankRule>) {
+    setRankRules((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+
+  function addRankRule() {
+    const id = 'r' + Math.random().toString(16).slice(2, 8);
+    setRankRules((prev) => [
+      ...prev,
+      { id, rank: 'New', condition: 'custom', threshold: 0, note: 'описание условия', enabled: false },
+    ]);
+  }
+
+  function removeRankRule(id: string) {
+    setRankRules((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  const [savingRanks, setSavingRanks] = React.useState(false);
+  const [ranksMsg, setRanksMsg] = React.useState('');
+
+  async function saveRanks() {
+    setRanksMsg('');
+    setSavingRanks(true);
+    try {
+      // TODO: PUT /api/cabinet/apps/:id/passport/ranks/settings
+      // await apiFetch(`/api/cabinet/apps/${appId}/passport/ranks/settings`, {...})
+      setRanksMsg('Сохранено');
+    } catch (e: any) {
+      setRanksMsg('Ошибка: ' + String(e?.message || e));
+    } finally {
+      setSavingRanks(false);
+    }
+  }
+
+  const ranksSaveState: SgSaveState =
+    savingRanks ? 'saving' : ranksMsg === 'Сохранено' ? 'saved' : ranksMsg.startsWith('Ошибка') ? 'error' : 'idle';
+
+  // ===== states =====
+  const isLoading = qSettings.isLoading || qTs.isLoading || qStyleStats.isLoading || qTopUsers.isLoading;
+  const isError = qSettings.isError || qTs.isError || qStyleStats.isError || qTopUsers.isError;
+
+  const summaryBadgeTone: 'good' | 'warn' | 'bad' =
+    !passportActive ? 'bad' : (fact.users <= 0 ? 'warn' : completionTone);
 
   return (
-    <div className="sg-page passportPage">
-      <style>{`
-        :root{
-          --sg-r-xl: 18px;
-          --sg-r-lg: 16px;
-          --sg-r-md: 14px;
-          --sg-r-xs: 10px;
-          --sg-bd: rgba(15,23,42,.10);
-          --sg-bd2: rgba(15,23,42,.08);
-          --sg-bg: rgba(255,255,255,.62);
-          --sg-bg2: rgba(255,255,255,.78);
-          --sg-in1: inset 0 1px 0 rgba(255,255,255,.55);
-          --sg-sh1: 0 10px 24px rgba(15,23,42,.06);
-        }
-
-        /* quick range wrapper (same vibe as Wheel) */
-        .psQuickWrap{
-          display:flex; align-items:center; gap:0; flex-wrap:nowrap;
-          height:46px;
-          border:1px solid rgba(15,23,42,.12);
-          border-radius:12px;
-          background:rgba(255,255,255,.60);
-          overflow:hidden;
-        }
-        .psQuickTabs{ border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; }
-        .psQuickRange{
-          display:flex; align-items:center; gap:8px;
-          height:100%;
-          padding:0 12px;
-          border:0; background:transparent;
-          position:relative;
-        }
-        .psQuickRange::before{
-          content:"";
-          position:absolute;
-          left:0; top:50%;
-          transform:translateY(-50%);
-          height:26px; width:1px;
-          background:rgba(15,23,42,.10);
-        }
-        .psQuickLbl{ font-weight:900; opacity:.75; font-size:12px; }
-
-        .psQuickDate{
-          width:150px;
-          height:34px;
-          padding:0 12px;
-          box-sizing:border-box;
-          border-radius:12px;
-          border:1px solid rgba(15,23,42,.12);
-          background:rgba(255,255,255,.90);
-          font:inherit;
-          font-weight:900;
-          font-size:13px;
-          font-variant-numeric:tabular-nums;
-          line-height:32px;
-          appearance:none;
-          -webkit-appearance:none;
-        }
-
-        .psApplyBtn{
-          height:34px;
-          line-height:34px;
-          padding:0 14px;
-          margin-left:6px;
-          border-radius:12px;
-          font:inherit;
-          font-weight:900;
-          font-size:13px;
-          white-space:nowrap;
-        }
-        .psApplyBtn:disabled{ opacity:.55; cursor:not-allowed; }
-
-        @media (max-width:1100px){
-          .psQuickWrap{ flex-wrap:wrap; height:auto; padding:6px; gap:10px; }
-          .psQuickRange{ width:100%; height:auto; padding:6px 8px; }
-          .psQuickRange::before{ display:none; }
-        }
-
-        /* chart wrapper */
-        .psChartWrap{ position:relative; width:100%; height:320px; }
-        .psChartOverlay{
-          position:absolute; inset:0;
-          display:flex; align-items:center; justify-content:center;
-          flex-direction:column; gap:10px;
-          background:rgba(255,255,255,.0);
-          pointer-events:none;
-        }
-        .psSpinner{
-          width:26px; height:26px; border-radius:999px;
-          border:3px solid rgba(15,23,42,.18);
-          border-top-color: rgba(15,23,42,.55);
-          animation: psSpin .8s linear infinite;
-        }
-        @keyframes psSpin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
-
-        /* premium panels */
-        .psUnderPanel{
-          border:1px solid var(--sg-bd) !important;
-          border-radius: var(--sg-r-xl) !important;
-          background: var(--sg-bg) !important;
-          box-shadow: var(--sg-sh1), var(--sg-in1) !important;
-          padding:14px !important;
-        }
-        .psUnderHead{
-          padding-bottom:10px;
-          margin-bottom:12px;
-          border-bottom:1px solid rgba(15,23,42,.08);
-        }
-        .sg-pill{
-          border:1px solid var(--sg-bd2) !important;
-          border-radius: var(--sg-r-lg) !important;
-          background: var(--sg-bg2) !important;
-          box-shadow: var(--sg-in1) !important;
-        }
-
-        /* small cards grid like Wheel */
-        .psGrid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        @media (max-width: 980px){ .psGrid2{ grid-template-columns:1fr; } }
-
-        .psCard{ padding:12px 12px; }
-        .psCardHead{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-        .psCardTitle{ font-weight:900; }
-
-        .psRows{ display:flex; flex-direction:column; gap:8px; }
-        .psRow{
-          display:flex; align-items:baseline; justify-content:space-between; gap:10px;
-          padding:8px 10px;
-          border-radius:14px;
-          border:1px solid rgba(15,23,42,.06);
-          background:rgba(255,255,255,.55);
-          box-shadow: var(--sg-in1);
-        }
-
-        .psBadge{
-          display:inline-flex; align-items:center;
-          height:22px; padding:0 10px;
-          border-radius:999px;
-          font-weight:900; font-size:12px;
-          border:1px solid rgba(15,23,42,.10);
-          background: rgba(255,255,255,.78);
-          box-shadow: var(--sg-in1);
-        }
-        .psBadge.ok{ background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.20); }
-        .psBadge.mid{ background: rgba(245,158,11,.10); border-color: rgba(245,158,11,.22); }
-        .psBadge.bad{ background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.20); }
-
-        /* Switch (same as Wheel premium compact) */
-        .sgSwitch{
-          width:64px; height:28px; border-radius:999px;
-          border:1px solid rgba(15,23,42,.10);
-          background:rgba(15,23,42,.05);
-          position:relative;
-          cursor:pointer;
-          display:inline-flex;
-          align-items:center;
-          justify-content:flex-start;
-          padding:0 5px;
-          box-shadow: var(--sg-in1);
-          transition: background .12s ease, border-color .12s ease, opacity .12s ease, filter .12s ease;
-        }
-        .sgSwitch.is-on{
-          background:rgba(34,197,94,.22);
-          border-color:rgba(34,197,94,.26);
-          justify-content:flex-end;
-          filter:saturate(1.05);
-        }
-        .sgSwitch.is-off{
-          background:rgba(239,68,68,.07);
-          border-color:rgba(239,68,68,.14);
-          filter:saturate(.92);
-        }
-        .sgSwitch.is-disabled{ opacity:.45; cursor:not-allowed; }
-        .sgSwitch__knob{
-          width:18px; height:18px; border-radius:999px;
-          background:#fff;
-          border:1px solid rgba(15,23,42,.12);
-          box-shadow: 0 8px 16px rgba(15,23,42,.10);
-        }
-
-        /* chart buttons */
-        .psChartBtns{ display:flex; gap:8px; flex-wrap:wrap; }
-        .psChartBtn{
-          height:32px;
-          padding:0 10px;
-          border-radius:12px;
-          border:1px solid rgba(15,23,42,.10);
-          background:rgba(255,255,255,.70);
-          font-weight:900;
-          cursor:pointer;
-          display:inline-flex;
-          align-items:center;
-          gap:8px;
-          opacity:.9;
-          box-shadow: var(--sg-in1);
-        }
-        .psChartBtn:hover{ opacity:1; }
-        .psChartBtn.is-active{
-          border-color: rgba(15,23,42,.16);
-          background: rgba(15,23,42,.04);
-          box-shadow: 0 12px 22px rgba(15,23,42,.06), var(--sg-in1);
-          opacity:1;
-        }
-
-        /* under tabs */
-        .psUnderTabs{ margin-top:10px; }
-        .psMuted{ opacity:.78; }
-
-        /* right widgets */
-        .psBarTrack{ height:10px; border-radius:999px; background:rgba(15,23,42,.06); overflow:hidden; }
-        .psBarFill{ height:100%; border-radius:999px; background: var(--accent); opacity:.35; }
-        .psRightMeta{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
-        .psTopList{ display:flex; flex-direction:column; gap:10px; }
-        .psTopRow{
-          display:flex; align-items:center; justify-content:space-between; gap:12px;
-          padding:10px 10px;
-          border-radius:16px;
-          border:1px solid rgba(15,23,42,.06);
-          background:rgba(255,255,255,.62);
-          box-shadow: var(--sg-in1);
-        }
-        .psTopTitle{ font-weight:900; }
-        .psTopSub{ font-size:12px; opacity:.75; margin-top:4px; }
-
-        /* textarea */
-        .psTextArea{
-          width:100%;
-          min-height:120px;
-          resize:vertical;
-          border-radius:14px;
-          border:1px solid rgba(15,23,42,.12);
-          background:rgba(255,255,255,.86);
-          padding:10px 12px;
-          font:inherit;
-          font-weight:800;
-          line-height:1.35;
-          box-shadow: var(--sg-in1);
-        }
-
-        .psMiniHint{
-          font-size:12px;
-          opacity:.78;
-          line-height:1.35;
-        }
-
-        .psPillRow{
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:12px;
-          padding:10px 10px;
-          border-radius:16px;
-          border:1px solid rgba(15,23,42,.06);
-          background:rgba(255,255,255,.62);
-          box-shadow: var(--sg-in1);
-        }
-
-        .psSelect{
-          height:38px;
-          border-radius:12px;
-          border:1px solid rgba(15,23,42,.12);
-          background:rgba(255,255,255,.90);
-          font:inherit;
-          font-weight:900;
-          padding:0 12px;
-          width:100%;
-        }
-
-        .psInline2{
-          display:grid;
-          grid-template-columns: 1fr 200px;
-          gap:12px;
-          align-items:end;
-        }
-        @media (max-width:980px){
-          .psInline2{ grid-template-columns: 1fr; }
-        }
-      `}</style>
-
-      {/* ===== Head ===== */}
-      <div className="wheelHead">
-        <div>
-          <h1 className="sg-h1">Паспорт</h1>
-          <div className="sg-sub">
-            Факт по шагам (style.collect) + завершениям и наградам (passport_rewards). Автопилот и сезонные политики — премиум слой.
-          </div>
-        </div>
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div className="psQuickWrap">
-            <div className="sg-tabs wheelMiniTabs psQuickTabs">
-              <button
-                type="button"
-                className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')}
-                onClick={() => pickQuick('day')}
-              >
-                День
-              </button>
-              <button
-                type="button"
-                className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')}
-                onClick={() => pickQuick('week')}
-              >
-                Неделя
-              </button>
-              <button
-                type="button"
-                className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')}
-                onClick={() => pickQuick('month')}
-              >
-                Месяц
-              </button>
-              <button
-                type="button"
-                className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')}
-                onClick={() => pickQuick('custom')}
-              >
-                Свой период
-              </button>
+    <SgPage
+      className="sgp-passport"
+      title="Паспорт"
+      subtitle={
+        <span>
+          Факт по <b>style.collect</b> + завершения/награды. Управление: <b>ранги</b>, <b>бусты</b>, <b>лимиты</b>.
+        </span>
+      }
+      actions={
+        <div className="sgp-rangebar">
+          <div className="sgp-rangebar__row">
+            <div className="sgp-seg">
+              <SegBtn active={quick === 'day'} onClick={() => pickQuick('day')}>День</SegBtn>
+              <SegBtn active={quick === 'week'} onClick={() => pickQuick('week')}>Неделя</SegBtn>
+              <SegBtn active={quick === 'month'} onClick={() => pickQuick('month')}>Месяц</SegBtn>
+              <SegBtn active={quick === 'custom'} onClick={() => pickQuick('custom')}>Свой</SegBtn>
             </div>
 
-            {quick === 'custom' && (
-              <div className="psQuickRange">
-                <span className="psQuickLbl">от</span>
-                <Input
+            <div className={quick === 'custom' ? 'sgp-rangebar__customWrap is-open' : 'sgp-rangebar__customWrap'}>
+              <div className="sgp-rangebar__custom">
+                <span className="sgp-muted">от</span>
+                <input
                   type="date"
+                  className="sgp-input sgp-date sgp-press"
                   value={customFrom}
-                  onChange={(e: any) => setCustomFrom(e.target.value)}
-                  className="psQuickDate"
+                  onChange={(e) => setCustomFrom(e.target.value)}
                 />
-                <span className="psQuickLbl">до</span>
-                <Input
+                <span className="sgp-muted">до</span>
+                <input
                   type="date"
+                  className="sgp-input sgp-date sgp-press"
                   value={customTo}
-                  onChange={(e: any) => setCustomTo(e.target.value)}
-                  className="psQuickDate"
+                  onChange={(e) => setCustomTo(e.target.value)}
                 />
-                <button
-                  type="button"
-                  className="sg-tab is-active psApplyBtn"
+                <SgButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => applyRange(customFrom, customTo)}
                   disabled={!customFrom || !customTo}
                 >
                   Применить
-                </button>
+                </SgButton>
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="wheelGrid">
-        {/* LEFT */}
-        <div className="wheelLeft">
-          <Card className="wheelCard">
-            <div className="wheelCardHead wheelCardHeadRow">
+      }
+      aside={
+        <div className="sgp-aside">
+          <SgCard>
+            <SgCardHeader
+              right={
+                <HealthBadge
+                  tone={summaryBadgeTone}
+                  title={!passportActive ? 'OFF' : (fact.users <= 0 ? 'NO DATA' : summaryBadgeTone.toUpperCase())}
+                />
+              }
+            >
               <div>
-                <div className="wheelCardTitle">Факт: шаги / пользователи / завершения</div>
-                <div className="wheelCardSub">
-                  {range.from} — {range.to}
-                  {totalStyles > 0 ? (
-                    <span className="psMuted"> · цель: {totalStyles} стилей</span>
-                  ) : (
-                    <span className="psMuted"> · цель: —</span>
-                  )}
-                </div>
+                <SgCardTitle>Состояние паспорта</SgCardTitle>
+                <SgCardSub>за выбранный период</SgCardSub>
               </div>
-
-              <div className="psChartBtns" role="tablist" aria-label="Слои графика">
-                <button
-                  type="button"
-                  className={'psChartBtn ' + (showSteps ? 'is-active' : '')}
-                  onClick={() => setShowSteps((v) => !v)}
-                  title="Шаги (collect)"
-                >
-                  <IcoSteps /> шаги
-                </button>
-                <button
-                  type="button"
-                  className={'psChartBtn ' + (showUsers ? 'is-active' : '')}
-                  onClick={() => setShowUsers((v) => !v)}
-                  title="Активные пользователи"
-                >
-                  <IcoUsers /> users
-                </button>
-                <button
-                  type="button"
-                  className={'psChartBtn ' + (showCompleted ? 'is-active' : '')}
-                  onClick={() => setShowCompleted((v) => !v)}
-                  title="Завершения"
-                >
-                  <IcoDone /> done
-                </button>
-              </div>
-            </div>
-
-            <div className="psChartWrap">
-              {!isLoading && !isError && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={series} margin={{ top: 8, right: 18, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.30} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      interval="preserveStartEnd"
-                      tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
-                    />
-                    <YAxis
-                      yAxisId="y"
-                      tick={{ fontSize: 12 }}
-                      width={54}
-                      tickFormatter={(v: any) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) return '';
-                        return String(Math.round(n));
-                      }}
-                    />
-                    <Tooltip
-                      formatter={(val: any, name: any) => {
-                        if (name === 'steps') return [String(val), 'Шаги'];
-                        if (name === 'active_users') return [String(val), 'Users'];
-                        if (name === 'completed') return [String(val), 'Завершили'];
-                        return [String(val), String(name)];
-                      }}
-                      labelFormatter={(_: any, payload: any) => {
-                        const d = payload?.[0]?.payload?.date;
-                        return d ? `Дата ${d}` : 'Дата';
-                      }}
-                    />
-
-                    {showSteps && (
-                      <Bar
-                        yAxisId="y"
-                        dataKey="steps"
-                        name="steps"
-                        fill="var(--accent)"
-                        fillOpacity={0.22}
-                        radius={[10, 10, 10, 10]}
-                      />
-                    )}
-
-                    {showUsers && (
-                      <Line
-                        yAxisId="y"
-                        type="monotone"
-                        dataKey="active_users"
-                        name="active_users"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    )}
-
-                    {showCompleted && (
-                      <Line
-                        yAxisId="y"
-                        type="monotone"
-                        dataKey="completed"
-                        name="completed"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
-                        dot={false}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-
-              {isLoading && (
-                <div className="psChartOverlay">
-                  <div className="psSpinner" />
-                  <div className="psMuted" style={{ fontWeight: 900 }}>Загрузка…</div>
-                </div>
-              )}
-
-              {isError && (
-                <div className="psChartOverlay">
-                  <div className="psMuted" style={{ fontWeight: 900 }}>
-                    Ошибка: {String((qTs.error as any)?.message || (qStats.error as any)?.message || (qSettings.error as any)?.message || 'UNKNOWN')}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Under tabs */}
-            <div className="psUnderTabs">
-              <div className="sg-tabs wheelUnderTabs__seg">
-                <button className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')} onClick={() => setTab('summary')}>
-                  Сводка
-                </button>
-                <button className={'sg-tab ' + (tab === 'autopilot' ? 'is-active' : '')} onClick={() => setTab('autopilot')}>
-                  Автопилот
-                </button>
-                <button className={'sg-tab ' + (tab === 'ops' ? 'is-active' : '')} onClick={() => setTab('ops')}>
-                  Операционка
-                </button>
-                <button className={'sg-tab ' + (tab === 'premium' ? 'is-active' : '')} onClick={() => setTab('premium')}>
-                  Премиум
-                </button>
-              </div>
-
-              {/* ===== TAB: SUMMARY ===== */}
-              {tab === 'summary' && (
-                <div className="psUnderPanel">
-                  <div className="psUnderHead">
-                    <div>
-                      <div className="wheelCardTitle">Сводка (ФАКТ)</div>
-                      <div className="wheelCardSub">
-                        Шаги: <b>style.collect</b>. Завершения: достигнута цель (total_styles). Награды: <b>passport_rewards</b>.
-                      </div>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const days = Math.max(1, toInt(period.days, 1));
-
-                    const steps = Math.max(0, toInt(fact.steps, 0));
-                    const users = Math.max(0, toInt(fact.users, 0));
-                    const completed = Math.max(0, toInt(fact.completed, 0));
-                    const issued = Math.max(0, toInt(fact.issued, 0));
-                    const redeemed = Math.max(0, toInt(fact.redeemed, 0));
-
-                    const pinBad = Math.max(0, toInt(fact.pin_invalid, 0));
-                    const pinUsed = Math.max(0, toInt(fact.pin_used, 0));
-
-                    const stepsPerDay = steps / days;
-                    const usersPerDay = users / days;
-                    const completedPerDay = completed / days;
-
-                    const completionRatePct = clampN(fact.completionRatePct, 0, 100);
-                    const redeemRatePct = clampN(fact.redeemRatePct, 0, 100);
-
-                    const completionBadge = completionTone;
-                    const redeemBadge = redeemTone;
-
-                    const recs: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string }> = [];
-
-                    if (!passportActive) {
-                      recs.push({
-                        tone: 'bad',
-                        title: 'Паспорт выключен',
-                        body: 'Сейчас пользователи не смогут собирать прогресс. Включи “Акция активна” в операционке.',
-                      });
-                    }
-
-                    if (totalStyles <= 0) {
-                      recs.push({
-                        tone: 'warn',
-                        title: 'Не задана цель (total_styles)',
-                        body: 'Чтобы корректно считать completion и сценарии “остался 1” — нужен total_styles. Добавим в settings/metadata.',
-                      });
-                    } else if (completionRatePct < 40) {
-                      recs.push({
-                        tone: 'warn',
-                        title: 'Низкий completion',
-                        body: 'Обычно лечится автопилотом: “остался 1 штамп → напоминание”, плюс буст/оффер и простая выдача.',
-                      });
-                    } else {
-                      recs.push({
-                        tone: 'good',
-                        title: 'Completion выглядит ок',
-                        body: 'Следи за выдачей наград и качеством PIN, чтобы не было разочарования на финале.',
-                      });
-                    }
-
-                    if (requirePin && (pinBad + pinUsed) > 0) {
-                      recs.push({
-                        tone: 'warn',
-                        title: 'Есть ошибки PIN',
-                        body: 'Если pin_invalid много — проблема в кассирах/UX. Добавь “инструкцию кассиру” и/или автопроверку.',
-                      });
-                    }
-
-                    if (redeemRatePct < 40 && completed > 0) {
-                      recs.push({
-                        tone: 'bad',
-                        title: 'Низкая выдача наград',
-                        body: 'Люди завершают, но не получают. Нужны напоминания от бота и максимально простой сценарий “показать QR кассиру”.',
-                      });
-                    }
-
-                    const recToneCls = (t: string) => (t ? `is-${t}` : '');
-
-                    return (
-                      <>
-                        <div className="psGrid2">
-                          <div className="sg-pill psCard">
-                            <div className="psCardHead">
-                              <div className="psCardTitle">Ключевые метрики</div>
-                              <span className={'psBadge ' + completionBadge.cls}>
-                                completion {completionBadge.text}
-                              </span>
-                            </div>
-
-                            <div className="psRows">
-                              <div className="psRow">
-                                <span className="psMuted">Шагов (collect)</span>
-                                <b>{steps}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Активных пользователей</span>
-                                <b>{users}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Завершили</span>
-                                <b>{completed}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Completion rate</span>
-                                <b>{completionRatePct}%</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Среднее / день</span>
-                                <b>
-                                  шаги {stepsPerDay.toFixed(1)} · users {usersPerDay.toFixed(1)} · done {completedPerDay.toFixed(1)}
-                                </b>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="sg-pill psCard">
-                            <div className="psCardHead">
-                              <div className="psCardTitle">Операционка</div>
-                              <span className={'psBadge ' + redeemBadge.cls}>
-                                выдача {redeemBadge.text}
-                              </span>
-                            </div>
-
-                            <div className="psRows">
-                              <div className="psRow">
-                                <span className="psMuted">Наград issued</span>
-                                <b>{issued}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Наград redeemed</span>
-                                <b>{redeemed}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Ожидают выдачи</span>
-                                <b>{Math.max(0, issued - redeemed)}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">PIN обязателен</span>
-                                <b>{requirePin ? 'да' : 'нет'}</b>
-                              </div>
-                              <div className="psRow">
-                                <span className="psMuted">Ошибки PIN (invalid / used)</span>
-                                <b>{pinBad} / {pinUsed}</b>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Top “problem styles” */}
-                        <div className="sg-pill psCard" style={{ marginTop: 12 }}>
-                          <div className="psCardHead">
-                            <div className="psCardTitle">Где чаще всего “застревают”</div>
-                            <span className="psBadge mid">топ по missing_share</span>
-                          </div>
-
-                          {styleItems.length ? (
-                            <div className="psTopList">
-                              {[...styleItems]
-                                .sort((a, b) => safeNum(b.missing_share_pct, 0) - safeNum(a.missing_share_pct, 0))
-                                .slice(0, 6)
-                                .map((s) => (
-                                  <div key={s.style_id} className="psTopRow">
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div className="psTopTitle" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {s.title || s.style_id}
-                                      </div>
-                                      <div className="psTopSub">
-                                        missing: <b>{clampN(s.missing_share_pct ?? 0, 0, 100)}%</b> · collects: <b>{toInt(s.collects, 0)}</b> · users: <b>{toInt(s.unique_users, 0)}</b>
-                                      </div>
-                                    </div>
-                                    <div style={{ width: 92, textAlign: 'right' }}>
-                                      <b>{clampN(s.missing_share_pct ?? 0, 0, 100)}%</b>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          ) : (
-                            <div className="psMuted" style={{ padding: '8px 2px' }}>
-                              Пока нет per-style статистики (passport/stats). Даже если данных нет — UI уже готов.
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Recommendations */}
-                        {recs.length ? (
-                          <div className="sg-pill psCard" style={{ marginTop: 12 }}>
-                            <div className="psCardHead">
-                              <div className="psCardTitle">Рекомендации</div>
-                              <span className="psBadge mid">по факту периода</span>
-                            </div>
-
-                            <div className="forecastRecsGrid" style={{ marginTop: 0 }}>
-                              {recs.slice(0, 4).map((r, i) => (
-                                <div key={i} className={'forecastRecCard ' + recToneCls(r.tone)}>
-                                  <div className="forecastRecTitle">{r.title}</div>
-                                  <div className="forecastRecBody">{r.body}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* ===== TAB: AUTOPILOT ===== */}
-              {tab === 'autopilot' && (
-                <div className="psUnderPanel">
-                  <div className="psUnderHead">
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                      <div>
-                        <div className="wheelCardTitle">Автопилот (бот-кампании)</div>
-                        <div className="wheelCardSub">
-                          Включаем авто-напоминания и дожим до приза. Сейчас UI-first (локально). Дальше привяжем к воркеру <b>/offers/*</b>.
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span className="psBadge mid">общий тумблер</span>
-                        <Switch checked={autopilotOn} onChange={setAutopilotOn} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="psGrid2">
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Сценарии</div>
-                        <span className={'psBadge ' + (autopilotOn ? 'ok' : 'bad')}>
-                          {autopilotOn ? 'вкл' : 'выкл'}
-                        </span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        {autopilot.map((b) => (
-                          <div key={b.id} className="psRow" style={{ alignItems: 'center' }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 900, lineHeight: 1.2 }}>{b.title}</div>
-                              <div className="psMiniHint" style={{ marginTop: 4 }}>{b.hint}</div>
-
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10, marginTop: 10, alignItems: 'end' }}>
-                                <div>
-                                  <div className="psMuted" style={{ fontSize: 12, marginBottom: 6 }}>Текст сообщения</div>
-                                  <Input
-                                    value={b.message_text}
-                                    onChange={(e: any) => patchAutopilot(b.id, { message_text: String(e.target.value || '') })}
-                                    placeholder="Текст…"
-                                  />
-                                </div>
-                                <div>
-                                  <div className="psMuted" style={{ fontSize: 12, marginBottom: 6 }}>Кнопка</div>
-                                  <Input
-                                    value={b.button_label}
-                                    onChange={(e: any) => patchAutopilot(b.id, { button_label: String(e.target.value || '') })}
-                                    placeholder="Например: Забрать приз"
-                                  />
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
-                                <span className="psMuted" style={{ fontSize: 12 }}>TTL (часы)</span>
-                                <Input
-                                  type="number"
-                                  value={String(b.ttl_hours)}
-                                  onChange={(e: any) => patchAutopilot(b.id, { ttl_hours: Math.max(1, toInt(e.target.value, 24)) })}
-                                  style={{ width: 110 }}
-                                />
-                                <span className="psMuted" style={{ fontSize: 12 }}>лимит / юзер</span>
-                                <Input
-                                  type="number"
-                                  value={String(b.limit_per_user)}
-                                  onChange={(e: any) => patchAutopilot(b.id, { limit_per_user: Math.max(0, toInt(e.target.value, 1)) })}
-                                  style={{ width: 110 }}
-                                />
-                              </div>
-
-                              {/* Простейший “прогноз охвата” (UI-first) */}
-                              <div className="psMiniHint" style={{ marginTop: 10 }}>
-                                Прогноз охвата (пока приближённо):{' '}
-                                <b>
-                                  {b.id === 'reward_waiting'
-                                    ? `${fact.pending} пользователей с “приз ждёт”`
-                                    : b.id === 'near_goal'
-                                    ? `~${Math.max(0, Math.round(fact.completed * 0.6))} пользователей близко к цели`
-                                    : b.id === 'dormant_7d'
-                                    ? `~${Math.max(0, Math.round(fact.users * 0.25))} “уснувших”`
-                                    : `зависит от сезона (премиум)`}
-                                </b>
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                              <Switch
-                                checked={b.enabled && autopilotOn}
-                                disabled={!autopilotOn}
-                                onChange={(v) => patchAutopilot(b.id, { enabled: v })}
-                              />
-                              <span className={'psBadge ' + ((b.enabled && autopilotOn) ? 'ok' : 'bad')}>
-                                {(b.enabled && autopilotOn) ? 'вкл' : 'выкл'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button type="button" className="sg-tab is-active" onClick={saveAutopilotMock} disabled={!appId}>
-                          Сохранить автопилот
-                        </button>
-                        {autoMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{autoMsg}</span> : null}
-                      </div>
-                    </div>
-
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Что это даёт мерчанту</div>
-                        <span className="psBadge mid">экономия времени</span>
-                      </div>
-
-                      <div className="psMuted" style={{ lineHeight: 1.45 }}>
-                        <ul style={{ margin: '8px 0 0 16px' }}>
-                          <li><b>Авто-дожим</b> до приза: меньше “брошенных” паспортов</li>
-                          <li><b>Авто-пинги</b> “приз ждёт”: меньше негативных ситуаций</li>
-                          <li><b>Не нужно вручную</b> писать рассылки и думать сегменты</li>
-                          <li>Дальше добавим: расписание, частоты, A/B тексты, статистика доставок</li>
-                        </ul>
-
-                        <div style={{ marginTop: 12 }} className="psMiniHint">
-                          Технически (воркер): cron → выбрать сегмент → tgSendMessage → записать “кампания отправлена” (лимиты) → в mini collect/complete учитывать.
-                        </div>
-
-                        <div style={{ marginTop: 12 }}>
-                          <Button disabled>Отправить кампанию вручную (soon)</Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== TAB: OPS ===== */}
-              {tab === 'ops' && (
-                <div className="psUnderPanel">
-                  <div className="psUnderHead">
-                    <div>
-                      <div className="wheelCardTitle">Операционка (без ручного труда)</div>
-                      <div className="wheelCardSub">
-                        Здесь всё, что снижает ошибки кассиров и “хвосты выдачи”. Тумблеры — live, не завязаны на publish.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="psGrid2">
-                    {/* Health */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Здоровье процесса</div>
-                        <span className={'psBadge ' + pendingTone.cls}>хвосты {pendingTone.text}</span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Ожидают выдачи</div>
-                            <div className="psMiniHint">issued - redeemed за период</div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontWeight: 900, fontSize: 18 }}>{Math.max(0, fact.pending)}</div>
-                          </div>
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Ошибки PIN</div>
-                            <div className="psMiniHint">invalid + used / steps</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                            <span className={'psBadge ' + pinHealthTone.cls}>{pinHealthTone.text} · {pinHealthTone.rate}%</span>
-                            <b>{fact.pinErrors}</b>
-                          </div>
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Акция активна</div>
-                            <div className="psMiniHint">если выкл — collect должен блокироваться</div>
-                          </div>
-                          <Switch checked={activeDraft} onChange={setActiveDraft} />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Требовать PIN</div>
-                            <div className="psMiniHint">если вкл — collect требует одноразовый PIN</div>
-                          </div>
-                          <Switch checked={pinDraft} onChange={setPinDraft} />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Показывать офферы/бусты</div>
-                            <div className="psMiniHint">мини-апп показывает предложения пользователю</div>
-                          </div>
-                          <Switch checked={offersDraft} onChange={setOffersDraft} />
-                        </div>
-
-                        <div style={{ marginTop: 2, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="sg-tab is-active"
-                            onClick={savePassportSettings}
-                            disabled={savingSettings || !appId}
-                          >
-                            {savingSettings ? 'Сохраняю…' : 'Сохранить тумблеры'}
-                          </button>
-                          {settingsMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{settingsMsg}</span> : null}
-                          <span className="psMuted" style={{ marginLeft: 'auto' }}>
-                            passport_key: <b>{String(settings.passport_key || 'default')}</b> · total_styles: <b>{totalStyles > 0 ? totalStyles : '—'}</b>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cashier instructions */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Инструкция кассиру</div>
-                        <span className="psBadge mid">1 клик</span>
-                      </div>
-
-                      <div className="psMuted" style={{ lineHeight: 1.35, marginBottom: 10 }}>
-                        Мерчант копирует и кидает в чат кассиров. Меньше <b>pin_invalid</b> и “что делать?”.
-                      </div>
-
-                      <textarea
-                        className="psTextArea"
-                        value={cashierText}
-                        onChange={(e) => setCashierText(String(e.target.value || ''))}
-                      />
-
-                      <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button type="button" className="sg-tab is-active" onClick={copyCashier}>
-                          Скопировать
-                        </button>
-                        {cashierCopyMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{cashierCopyMsg}</span> : null}
-                        <span className="psMuted" style={{ marginLeft: 'auto' }}>
-                          совет: добавь туда “где взять PIN” и “что делать при ошибке”
-                        </span>
-                      </div>
-
-                      <div className="psMiniHint" style={{ marginTop: 10 }}>
-                        Следующий шаг (воркер): вывести список кассиров + их активность (сколько confirm/decline) и подсказки по ошибкам.
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Future: “Склад стилей” */}
-                  <div className="sg-pill psCard" style={{ marginTop: 12 }}>
-                    <div className="psCardHead">
-                      <div className="psCardTitle">Витрина стилей (как “Склад”)</div>
-                      <span className="psBadge mid">скоро</span>
-                    </div>
-
-                    <div className="psMuted" style={{ lineHeight: 1.35 }}>
-                      Оперативное управление карточками штампов без конструктора:
-                      <ul style={{ margin: '8px 0 0 16px' }}>
-                        <li>активен / скрыт</li>
-                        <li>порядок (позже drag)</li>
-                        <li>featured (подсветить)</li>
-                        <li>подсказка кассиру по шагу</li>
-                      </ul>
-                      Технически: live-поля в <b>styles_dict</b> (или отдельная <b>styles_live</b>). Publish эти поля не трогает.
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== TAB: PREMIUM ===== */}
-              {tab === 'premium' && (
-                <div className="psUnderPanel">
-                  <div className="psUnderHead">
-                    <div>
-                      <div className="wheelCardTitle">Премиум-политики (сезоны / окна / сбросы / лимиты)</div>
-                      <div className="wheelCardSub">
-                        Это “киллер-фича”: настраиваем правила так, чтобы всё работало само. Сейчас UI-first (локально), потом привяжем к воркеру.
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Presets */}
-                  <div className="sg-pill psCard">
-                    <div className="psCardHead">
-                      <div className="psCardTitle">Режимы (пресеты)</div>
-                      <span className="psBadge mid">1 клик</span>
-                    </div>
-
-                    <div className="psInline2">
-                      <div>
-                        <div className="psMuted" style={{ marginBottom: 6 }}>Выбери режим</div>
-                        <select
-                          className="psSelect"
-                          value={policy.preset}
-                          onChange={(e) => setPolicy((prev) => applyPreset(prev, e.target.value as any))}
-                        >
-                          <option value="A_infinite">A · Бесконечный круг (стандарт)</option>
-                          <option value="B_season">B · Сезон 30 дней (премиум)</option>
-                          <option value="C_tier_windows">C · Окна на тиры (премиум)</option>
-                          <option value="D_marathon">D · Марафон (сезон + окна + дедлайн)</option>
-                        </select>
-                        <div className="psMiniHint" style={{ marginTop: 8 }}>
-                          Пресет выставляет понятные значения. Ниже — тонкая ручная докрутка.
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="psMuted" style={{ marginBottom: 6 }}>Статус</div>
-                        <div className="psPillRow" style={{ height: 38, borderRadius: 12 }}>
-                          <span style={{ fontWeight: 900 }}>Премиум</span>
-                          <span className="psBadge mid">UI-first</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="psGrid2" style={{ marginTop: 12 }}>
-                    {/* Season policy */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Season policy</div>
-                        <span className="psBadge mid">сезон</span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Режим</div>
-                            <div className="psMiniHint">infinite = бесконечно, season = сезон</div>
-                          </div>
-                          <select
-                            className="psSelect"
-                            style={{ maxWidth: 220 }}
-                            value={policy.season.mode}
-                            onChange={(e) => patchPolicy('season.mode', e.target.value)}
-                          >
-                            <option value="infinite">infinite</option>
-                            <option value="season">season</option>
-                          </select>
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Длина сезона (дней)</div>
-                            <div className="psMiniHint">например 30</div>
-                          </div>
-                          <Input
-                            type="number"
-                            value={String(policy.season.season_days)}
-                            onChange={(e: any) => patchPolicy('season.season_days', Math.max(1, toInt(e.target.value, 30)))}
-                            style={{ width: 140 }}
-                            disabled={policy.season.mode !== 'season'}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Грейс (дней)</div>
-                            <div className="psMiniHint">сколько дней после конца ещё можно забрать</div>
-                          </div>
-                          <Input
-                            type="number"
-                            value={String(policy.season.season_grace_days)}
-                            onChange={(e: any) => patchPolicy('season.season_grace_days', Math.max(0, toInt(e.target.value, 2)))}
-                            style={{ width: 140 }}
-                            disabled={policy.season.mode !== 'season'}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Якорь сезона</div>
-                            <div className="psMiniHint">если пусто — считаем от первого collect</div>
-                          </div>
-                          <Input
-                            type="date"
-                            value={String(policy.season.season_start_iso || '')}
-                            onChange={(e: any) => patchPolicy('season.season_start_iso', String(e.target.value || ''))}
-                            style={{ width: 180 }}
-                            disabled={policy.season.mode !== 'season'}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tier window policy */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Tier window policy</div>
-                        <span className="psBadge mid">окна</span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Режим</div>
-                            <div className="psMiniHint">none = без окон, rolling = окна по тиру</div>
-                          </div>
-                          <select
-                            className="psSelect"
-                            style={{ maxWidth: 220 }}
-                            value={policy.tier_window.mode}
-                            onChange={(e) => patchPolicy('tier_window.mode', e.target.value)}
-                          >
-                            <option value="none">none</option>
-                            <option value="rolling">rolling</option>
-                          </select>
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Окно на тир (дней)</div>
-                            <div className="psMiniHint">например 30: если не успел — что делать решает reset</div>
-                          </div>
-                          <Input
-                            type="number"
-                            value={String(policy.tier_window.tier_window_days)}
-                            onChange={(e: any) => patchPolicy('tier_window.tier_window_days', Math.max(1, toInt(e.target.value, 30)))}
-                            style={{ width: 140 }}
-                            disabled={policy.tier_window.mode !== 'rolling'}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Можно догонять</div>
-                            <div className="psMiniHint">если выкл — пропущенный тир сгорает</div>
-                          </div>
-                          <Switch
-                            checked={!!policy.tier_window.allow_catchup}
-                            disabled={policy.tier_window.mode !== 'rolling'}
-                            onChange={(v) => patchPolicy('tier_window.allow_catchup', v)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Reset policy */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Reset policy</div>
-                        <span className="psBadge mid">сбросы</span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>После выдачи приза (redeemed)</div>
-                            <div className="psMiniHint">что происходит с прогрессом</div>
-                          </div>
-                          <select
-                            className="psSelect"
-                            style={{ maxWidth: 260 }}
-                            value={policy.reset.on_reward_redeemed}
-                            onChange={(e) => patchPolicy('reset.on_reward_redeemed', e.target.value)}
-                          >
-                            <option value="none">none · ничего</option>
-                            <option value="next_tier">next_tier · следующий тир</option>
-                            <option value="new_cycle">new_cycle · новый круг</option>
-                          </select>
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Когда сезон закончился</div>
-                            <div className="psMiniHint">freeze = заморозить, reset_all = сбросить</div>
-                          </div>
-                          <select
-                            className="psSelect"
-                            style={{ maxWidth: 260 }}
-                            value={policy.reset.on_season_end}
-                            onChange={(e) => patchPolicy('reset.on_season_end', e.target.value)}
-                            disabled={policy.season.mode !== 'season'}
-                          >
-                            <option value="freeze">freeze</option>
-                            <option value="reset_all">reset_all</option>
-                          </select>
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Историю сохраняем</div>
-                            <div className="psMiniHint">для аналитики (обычно всегда да)</div>
-                          </div>
-                          <Switch checked={!!policy.reset.keep_history} onChange={(v) => patchPolicy('reset.keep_history', v)} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Limits */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Limits</div>
-                        <span className="psBadge mid">лимиты</span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Лимит collect в день (всего)</div>
-                            <div className="psMiniHint">0 = без лимита</div>
-                          </div>
-                          <Input
-                            type="number"
-                            value={String(policy.limits.max_collects_per_day)}
-                            onChange={(e: any) => patchPolicy('limits.max_collects_per_day', Math.max(0, toInt(e.target.value, 0)))}
-                            style={{ width: 140 }}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Лимит collect / юзер / день</div>
-                            <div className="psMiniHint">0 = без лимита</div>
-                          </div>
-                          <Input
-                            type="number"
-                            value={String(policy.limits.max_collects_per_user_per_day)}
-                            onChange={(e: any) => patchPolicy('limits.max_collects_per_user_per_day', Math.max(0, toInt(e.target.value, 0)))}
-                            style={{ width: 140 }}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Блокировать collect если акция выключена</div>
-                            <div className="psMiniHint">enforce в mini style.collect</div>
-                          </div>
-                          <Switch checked={!!policy.limits.block_when_inactive} onChange={(v) => patchPolicy('limits.block_when_inactive', v)} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Reward policy */}
-                    <div className="sg-pill psCard">
-                      <div className="psCardHead">
-                        <div className="psCardTitle">Reward policy</div>
-                        <span className="psBadge mid">призы</span>
-                      </div>
-
-                      <div className="psRows" style={{ gap: 10 }}>
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Выдавать приз на тир</div>
-                            <div className="psMiniHint">после закрытия тира создаём passport_rewards issued</div>
-                          </div>
-                          <Switch
-                            checked={!!policy.reward.issue_on_tier_complete}
-                            onChange={(v) => patchPolicy('reward.issue_on_tier_complete', v)}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Выдавать приз на полный паспорт</div>
-                            <div className="psMiniHint">если есть “финальный приз”</div>
-                          </div>
-                          <Switch
-                            checked={!!policy.reward.issue_on_full_complete}
-                            onChange={(v) => patchPolicy('reward.issue_on_full_complete', v)}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Истечение приза (дней)</div>
-                            <div className="psMiniHint">0 = не истекает</div>
-                          </div>
-                          <Input
-                            type="number"
-                            value={String(policy.reward.reward_expiry_days)}
-                            onChange={(e: any) => patchPolicy('reward.reward_expiry_days', Math.max(0, toInt(e.target.value, 0)))}
-                            style={{ width: 140 }}
-                          />
-                        </div>
-
-                        <div className="psPillRow">
-                          <div>
-                            <div style={{ fontWeight: 900 }}>Ротация призов</div>
-                            <div className="psMiniHint">позже: менять набор призов по времени</div>
-                          </div>
-                          <select
-                            className="psSelect"
-                            style={{ maxWidth: 220 }}
-                            value={policy.reward.rotation_mode}
-                            onChange={(e) => patchPolicy('reward.rotation_mode', e.target.value)}
-                          >
-                            <option value="none">none</option>
-                            <option value="daily">daily</option>
-                            <option value="weekly">weekly</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="sg-tab is-active"
-                      onClick={savePolicyMock}
-                      disabled={policySaving || !appId}
-                    >
-                      {policySaving ? 'Сохраняю…' : 'Сохранить политики'}
-                    </button>
-                    {policyMsg ? <span className="psMuted" style={{ fontWeight: 800 }}>{policyMsg}</span> : null}
-                    <span className="psMuted" style={{ marginLeft: 'auto' }}>
-                      подсказка: начни с пресета и не трогай лишнее — мерчанту важна простота
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* RIGHT */}
-        <div className="wheelRight">
-          {/* completion widget */}
-          <Card className="wheelCard" style={{ marginBottom: 12 }}>
-            <div className="wheelRedeemBar" style={{ marginTop: 0 }}>
-              <div className="wheelRedeemTop">
-                <div className="wheelRedeemName">Completion</div>
-                <div className={'wheelRedeemBadge ' + completionTone.cls}>
-                  {completionTone.text}
-                </div>
-              </div>
-
-              <div className="psBarTrack" aria-hidden="true">
-                <div className="psBarFill" style={{ width: `${clampN(fact.completionRatePct, 0, 100)}%` }} />
-              </div>
-
-              <div className="psRightMeta">
-                <span className="psMuted">users: <b>{fact.users}</b></span>
-                <span className="psMuted">done: <b>{fact.completed}</b></span>
-                <span className="psMuted">rate: <b>{clampN(fact.completionRatePct, 0, 100)}%</b></span>
-              </div>
-
-              <div className="psRightMeta" style={{ marginTop: 6 }}>
-                <span className="psMuted">issued: <b>{fact.issued}</b></span>
-                <span className="psMuted">redeemed: <b>{fact.redeemed}</b></span>
-                <span className="psMuted">pending: <b>{Math.max(0, fact.pending)}</b></span>
-              </div>
-            </div>
-          </Card>
-
-          {/* ops mini widget */}
-          <Card className="wheelCard" style={{ marginBottom: 12 }}>
-            <div className="wheelRedeemBar" style={{ marginTop: 0 }}>
-              <div className="wheelRedeemTop">
-                <div className="wheelRedeemName">Операционка</div>
-                <div className={'wheelRedeemBadge ' + pendingTone.cls}>
-                  {pendingTone.text}
-                </div>
-              </div>
-
-              <div className="psRightMeta" style={{ marginTop: 0 }}>
-                <span className="psMuted">ожидают выдачи: <b>{Math.max(0, fact.pending)}</b></span>
-                <span className="psMuted">ошибки PIN: <b>{fact.pinErrors}</b></span>
-              </div>
-
-              <div className="psMiniHint" style={{ marginTop: 8 }}>
-                Если pending растёт — включай автопилот “приз ждёт” + дай кассирам инструкцию.
+            </SgCardHeader>
+
+            <SgCardContent>
+              <div className="sgp-kv">
+                <div className="sgp-kv__row"><span>Шагов</span><b>{fact.steps}</b></div>
+                <div className="sgp-kv__row"><span>Users</span><b>{fact.users}</b></div>
+                <div className="sgp-kv__row"><span>Завершили</span><b>{fact.completed}</b></div>
+                <div className="sgp-kv__row"><span>Completion</span><b>{fact.completionRatePct}%</b></div>
+                <div className="sgp-kv__row"><span>Выдано / подтверждено</span><b>{fact.issued} / {fact.redeemed}</b></div>
+                <div className="sgp-kv__row"><span>Ожидают выдачи</span><b>{fact.pending}</b></div>
               </div>
 
               <div style={{ marginTop: 10 }}>
-                <button type="button" className="sg-tab is-active" onClick={() => setTab('ops')}>
-                  Открыть операционку
-                </button>
+                {!passportActive ? (
+                  <Hint tone="bad">Паспорт выключен. Пользователи не смогут собирать прогресс.</Hint>
+                ) : fact.users <= 0 ? (
+                  <Hint tone="warn">Нет данных за период или ещё не было активности.</Hint>
+                ) : completionTone === 'good' ? (
+                  <Hint tone="good">Completion высокий — пользователи доходят до финала.</Hint>
+                ) : completionTone === 'warn' ? (
+                  <Hint tone="warn">Можно улучшить completion: подключи бусты “остался 1” и “приз ждёт”.</Hint>
+                ) : (
+                  <Hint tone="bad">Низкий completion. Проверь цель, правила и коммуникации.</Hint>
+                )}
               </div>
+            </SgCardContent>
+          </SgCard>
+
+          <div style={{ height: 12 }} />
+
+          <SgTopListCard
+            title="Топ пользователей"
+            subtitle={`по ${topMetric === 'collects' ? 'шагам' : topMetric === 'completed' ? 'завершениям' : 'ожиданию приза'}`}
+            items={topUsers}
+            getId={(u: any) => String(u.tg_id || u.title || Math.random())}
+            getTitle={(u: any) => String(u.title || u.tg_id || 'user')}
+            metrics={[
+              {
+                key: 'collects',
+                label: 'шагам',
+                value: (u: any) => Number(u.collects) || 0,
+                sub: (u: any) => `done: ${Number(u.completed) || 0} · pending: ${Number(u.pending) || 0}`,
+              },
+              {
+                key: 'completed',
+                label: 'завершениям',
+                value: (u: any) => Number(u.completed) || 0,
+                sub: (u: any) => `steps: ${Number(u.collects) || 0} · pending: ${Number(u.pending) || 0}`,
+              },
+              {
+                key: 'pending',
+                label: 'ожиданию',
+                value: (u: any) => Number(u.pending) || 0,
+                sub: (u: any) => `steps: ${Number(u.collects) || 0} · done: ${Number(u.completed) || 0}`,
+              },
+            ]}
+            metricKey={topMetric}
+            onMetricKeyChange={(k) => setTopMetric(k as any)}
+            limit={7}
+          />
+
+          {!qTopUsers.isLoading && !topUsers.length ? (
+            <div style={{ marginTop: 10 }}>
+              <Hint tone="warn">
+                Топ пустой. Нужен эндпоинт <b>/passport/users/top</b> (или пока отдадим mock).
+              </Hint>
             </div>
-          </Card>
-
-          {/* top styles */}
-          <Card className="wheelCard wheelStickyTop">
-            <div className="wheelCardHead wheelTopHead">
-              <div className="wheelCardTitle">Топ стилей</div>
-
-              <div className="sg-tabs wheelMiniTabs">
-                <button
-                  type="button"
-                  className={'sg-tab ' + (topMetric === 'collects' ? 'is-active' : '')}
-                  onClick={() => setTopMetric('collects')}
-                >
-                  Собирают
-                </button>
-                <button
-                  type="button"
-                  className={'sg-tab ' + (topMetric === 'missing' ? 'is-active' : '')}
-                  onClick={() => setTopMetric('missing')}
-                >
-                  Провал
-                </button>
-              </div>
+          ) : null}
+        </div>
+      }
+    >
+      {/* ===== FACT CHART ===== */}
+      <SgSectionCard
+        title="Факт: шаги / users / завершения"
+        sub={<>{range.from} — {range.to}{totalStyles > 0 ? <> · цель: <b>{totalStyles}</b></> : null}</>}
+        right={
+          <div className="sgp-chartbar">
+            <div className="sgp-seg">
+              <SegBtn active={rewardBasis === 'issued'} onClick={() => setRewardBasis('issued')}>
+                rewards created
+              </SegBtn>
+              <SegBtn active={rewardBasis === 'redeemed'} onClick={() => setRewardBasis('redeemed')}>
+                rewards redeemed
+              </SegBtn>
             </div>
 
-            <div className="psTopList">
-              {topStyles.map((s) => (
-                <div key={s.style_id} className="psTopRow">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="psTopTitle" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {s.title || s.style_id}
-                    </div>
-                    <div className="psTopSub">
-                      collects: <b>{toInt(s.collects, 0)}</b> · users: <b>{toInt(s.unique_users, 0)}</b>
-                      {topMetric === 'missing' ? (
-                        <>
-                          {' '}· missing: <b>{clampN(s.missing_share_pct ?? 0, 0, 100)}%</b>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div style={{ width: 90, textAlign: 'right' }}>
-                    <b>
-                      {topMetric === 'collects'
-                        ? toInt(s.collects, 0)
-                        : `${clampN(s.missing_share_pct ?? 0, 0, 100)}%`}
-                    </b>
-                  </div>
-                </div>
-              ))}
-
-              {!topStyles.length && !qStats.isLoading && (
-                <div className="psMuted">Пока пусто</div>
-              )}
+            <div className="sgp-iconGroup">
+              <IconBtn active={showSteps} title="Шаги (steps)" onClick={() => setShowSteps((v) => !v)}>
+                S
+              </IconBtn>
+              <IconBtn active={showUsers} title="Активные пользователи" onClick={() => setShowUsers((v) => !v)}>
+                U
+              </IconBtn>
+              <IconBtn active={showCompleted} title="Завершили" onClick={() => setShowCompleted((v) => !v)}>
+                D
+              </IconBtn>
+              <IconBtn active={showRewards} title="Награды (issued/redeemed)" onClick={() => setShowRewards((v) => !v)}>
+                R
+              </IconBtn>
+              <IconBtn active={showErrors} title="Ошибки PIN (sum)" onClick={() => setShowErrors((v) => !v)}>
+                E
+              </IconBtn>
             </div>
+          </div>
+        }
+        contentStyle={{ padding: 12 }}
+      >
+        <ChartState
+          height={340}
+          isLoading={qTs.isLoading}
+          isError={qTs.isError}
+          errorText={String((qTs.error as any)?.message || 'UNKNOWN')}
+        >
+          <div style={{ width: '100%', height: 340 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 8, right: 18, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12 }}
+                  interval="preserveStartEnd"
+                  tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
+                />
+                <YAxis
+                  yAxisId="y"
+                  tick={{ fontSize: 12 }}
+                  width={54}
+                  tickFormatter={(v: any) => {
+                    const n = Number(v);
+                    if (!Number.isFinite(n)) return '';
+                    return String(Math.round(n));
+                  }}
+                />
+                <Tooltip
+                  formatter={(val: any, name: any) => {
+                    if (name === 'steps') return [String(val), 'Шаги'];
+                    if (name === 'users') return [String(val), 'Users'];
+                    if (name === 'completed') return [String(val), 'Завершили'];
+                    if (name === 'rewards') return [String(val), rewardBasis === 'redeemed' ? 'Rewards redeemed' : 'Rewards created'];
+                    if (name === 'pin_errors') return [String(val), 'Ошибки PIN'];
+                    return [String(val), String(name)];
+                  }}
+                  labelFormatter={(_: any, payload: any) => {
+                    const d = payload?.[0]?.payload?.date;
+                    return d ? `Дата ${d}` : 'Дата';
+                  }}
+                />
 
-            <div className="psMiniHint" style={{ marginTop: 10 }}>
-              “Провал” = на этом шаге чаще всего не доходят до финала. Дальше сделаем действия: подсветить / упростить / подсказка кассиру.
-            </div>
-          </Card>
+                {showSteps ? (
+                  <Bar
+                    yAxisId="y"
+                    dataKey="steps"
+                    name="steps"
+                    fill="var(--accent)"
+                    fillOpacity={0.18}
+                    radius={[10, 10, 10, 10]}
+                  />
+                ) : null}
+
+                {showUsers ? (
+                  <Line
+                    yAxisId="y"
+                    type="monotone"
+                    dataKey="users"
+                    name="users"
+                    stroke="var(--accent2)"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ) : null}
+
+                {showCompleted ? (
+                  <Line
+                    yAxisId="y"
+                    type="monotone"
+                    dataKey="completed"
+                    name="completed"
+                    stroke="var(--accent2)"
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    dot={false}
+                    opacity={0.95}
+                  />
+                ) : null}
+
+                {showRewards ? (
+                  <Line
+                    yAxisId="y"
+                    type="monotone"
+                    dataKey="rewards"
+                    name="rewards"
+                    stroke="var(--accent)"
+                    strokeWidth={2}
+                    dot={false}
+                    opacity={0.85}
+                  />
+                ) : null}
+
+                {showErrors ? (
+                  <Line
+                    yAxisId="y"
+                    type="monotone"
+                    dataKey="pin_errors"
+                    name="pin_errors"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    dot={false}
+                    opacity={0.55}
+                  />
+                ) : null}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartState>
+      </SgSectionCard>
+
+      {/* ===== TABS BAR BETWEEN CARDS ===== */}
+      <div className="sgp-wheelTabsBar">
+        <div className="sgp-seg">
+          <SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
+          <SegBtn active={opened === 'ranks'} onClick={() => openOnly('ranks')}>Ранги</SegBtn>
+          <SegBtn active={opened === 'boosts'} onClick={() => openOnly('boosts')}>Бусты</SegBtn>
+          <SegBtn active={opened === 'limits'} onClick={() => openOnly('limits')}>Лимиты</SegBtn>
         </div>
       </div>
-    </div>
+
+      {/* ===== ACC: SUMMARY ===== */}
+      <SgSectionCard
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>Сводка</span>
+            <HealthBadge tone={completionTone} title={`${fact.completionRatePct}%`} />
+            <HealthBadge tone={redeemTone} title={`redeem ${fact.redeemRatePct}%`} />
+          </div>
+        }
+        collapsible
+        open={opened === 'summary' && openSummary}
+        onToggleOpen={() => toggleOnly('summary')}
+      >
+        <div className="sgp-metrics">
+          <div className="sgp-metric"><div className="sgp-metric__k">ШАГОВ</div><div className="sgp-metric__v">{fact.steps}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">USERS</div><div className="sgp-metric__v">{fact.users}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">ЗАВЕРШИЛИ</div><div className="sgp-metric__v">{fact.completed}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">COMPLETION</div><div className="sgp-metric__v">{fact.completionRatePct}%</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">REWARDS ISSUED</div><div className="sgp-metric__v">{fact.issued}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">REWARDS REDEEMED</div><div className="sgp-metric__v">{fact.redeemed}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">PENDING</div><div className="sgp-metric__v">{fact.pending}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">PIN ERRORS</div><div className="sgp-metric__v">{fact.pinErrors}</div></div>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          {!passportActive ? (
+            <Hint tone="bad">Паспорт выключен: включи в “Лимиты → Операционные тумблеры”.</Hint>
+          ) : totalStyles <= 0 ? (
+            <Hint tone="warn">Не задана цель (total_styles). Completion будет грубым, а бусты “остался 1” — неточными.</Hint>
+          ) : completionTone === 'bad' ? (
+            <Hint tone="warn">Подключи бусты: “остался 1” + “приз ждёт”. И проверь простоту сценария у кассира.</Hint>
+          ) : (
+            <Hint tone="good">Ок. Дальше можно докрутить ранги и лимиты, чтобы всё работало само.</Hint>
+          )}
+        </div>
+      </SgSectionCard>
+
+      {/* ===== ACC: RANKS ===== */}
+      <SgSectionCard
+        title="Ранги"
+        sub="Настройки правил выдачи ранга по условиям (UI-first)"
+        collapsible
+        open={opened === 'ranks' && openRanks}
+        onToggleOpen={() => toggleOnly('ranks')}
+      >
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <SgButton variant="secondary" size="sm" onClick={addRankRule}>
+            + Добавить правило
+          </SgButton>
+          <span className="sgp-muted">
+            Сейчас это настройки. Позже подключим реальную систему рангов и расчёт.
+          </span>
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        {rankRules.map((r) => (
+          <SgCard key={r.id} style={{ marginTop: 10 }}>
+            <SgCardHeader
+              right={
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <SgToggle checked={r.enabled} onChange={(v) => patchRankRule(r.id, { enabled: v })} />
+                  <SgButton variant="ghost" size="sm" onClick={() => removeRankRule(r.id)}>
+                    Удалить
+                  </SgButton>
+                </div>
+              }
+            >
+              <div>
+                <SgCardTitle>{r.rank}</SgCardTitle>
+                <SgCardSub>{r.enabled ? 'включено' : 'выключено'}</SgCardSub>
+              </div>
+            </SgCardHeader>
+
+            <SgCardContent>
+              <SgFormRow label="Название ранга">
+                <SgInput value={r.rank} onChange={(e) => patchRankRule(r.id, { rank: (e.target as any).value })} />
+              </SgFormRow>
+
+              <SgFormRow label="Условие">
+                <SgSelect
+                  value={r.condition}
+                  onChange={(e) => patchRankRule(r.id, { condition: (e.target as any).value })}
+                >
+                  <option value="steps_total">steps_total (шагов за период)</option>
+                  <option value="completed_total">completed_total (завершений за период)</option>
+                  <option value="completion_rate">completion_rate (%)</option>
+                  <option value="custom">custom (позже)</option>
+                </SgSelect>
+              </SgFormRow>
+
+              <SgFormRow label="Порог" hint={r.condition === 'completion_rate' ? 'в процентах' : 'в штуках'}>
+                <SgInput
+                  value={String(r.threshold)}
+                  onChange={(e) => patchRankRule(r.id, { threshold: Math.max(0, toInt((e.target as any).value, 0)) })}
+                />
+              </SgFormRow>
+
+              <SgFormRow label="Комментарий (для мерчанта)">
+                <SgInput
+                  value={r.note || ''}
+                  onChange={(e) => patchRankRule(r.id, { note: String((e.target as any).value || '') })}
+                  placeholder="Например: даём Silver если закрыли 10 паспортов за период"
+                />
+              </SgFormRow>
+            </SgCardContent>
+          </SgCard>
+        ))}
+
+        <div style={{ height: 12 }} />
+
+        <SgActions
+          primaryLabel="Сохранить ранги"
+          onPrimary={saveRanks}
+          state={ranksSaveState}
+          errorText={ranksMsg.startsWith('Ошибка') ? ranksMsg : undefined}
+          left={<span className="sgp-muted">TODO: сохранить на бэкенд и включить расчёт рангов.</span>}
+        />
+      </SgSectionCard>
+
+      {/* ===== ACC: BOOSTS ===== */}
+      <SgSectionCard
+        title="Бусты"
+        sub="Автоматизация (UI-first, позже привязка к /offers/*)"
+        collapsible
+        open={opened === 'boosts' && openBoosts}
+        onToggleOpen={() => toggleOnly('boosts')}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="sgp-muted">Общий тумблер</span>
+            <SgToggle checked={boostsOn} onChange={setBoostsOn} />
+          </div>
+
+          <span className="sgp-muted">
+            Рекомендация: включи “приз ждёт” если растёт pending = {fact.pending}.
+          </span>
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        {boosts.map((b) => (
+          <SgCard key={b.id} style={{ marginTop: 10 }}>
+            <SgCardHeader
+              right={
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <SgToggle
+                    checked={!!(boostsOn && b.enabled)}
+                    onChange={(v) => patchBoost(b.id, { enabled: v })}
+                  />
+                  <HealthBadge tone={boostsOn && b.enabled ? 'good' : 'warn'} title={boostsOn && b.enabled ? 'ON' : 'OFF'} />
+                </div>
+              }
+            >
+              <div>
+                <SgCardTitle>{b.title}</SgCardTitle>
+                <SgCardSub>{b.hint}</SgCardSub>
+              </div>
+            </SgCardHeader>
+
+            <SgCardContent>
+              <SgFormRow label="Текст сообщения">
+                <SgInput
+                  value={b.message_text}
+                  onChange={(e) => patchBoost(b.id, { message_text: String((e.target as any).value || '') })}
+                />
+              </SgFormRow>
+
+              <SgFormRow label="Кнопка">
+                <SgInput
+                  value={b.button_label}
+                  onChange={(e) => patchBoost(b.id, { button_label: String((e.target as any).value || '') })}
+                />
+              </SgFormRow>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <SgFormRow label="TTL (часы)">
+                  <SgInput
+                    value={String(b.ttl_hours)}
+                    onChange={(e) => patchBoost(b.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })}
+                  />
+                </SgFormRow>
+
+                <SgFormRow label="Лимит / юзер">
+                  <SgInput
+                    value={String(b.limit_per_user)}
+                    onChange={(e) => patchBoost(b.id, { limit_per_user: Math.max(0, toInt((e.target as any).value, 1)) })}
+                  />
+                </SgFormRow>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <Hint tone="neutral">
+                  Пример оценки охвата (приближённо):{' '}
+                  <b>
+                    {b.id === 'reward_waiting'
+                      ? `${fact.pending} pending`
+                      : b.id === 'near_goal'
+                      ? `~${Math.max(0, Math.round(fact.completed * 0.6))} near-goal`
+                      : b.id === 'dormant_7d'
+                      ? `~${Math.max(0, Math.round(fact.users * 0.25))} dormant`
+                      : 'season зависит от политики'}
+                  </b>
+                </Hint>
+              </div>
+            </SgCardContent>
+          </SgCard>
+        ))}
+
+        <div style={{ height: 12 }} />
+
+        <SgActions
+          primaryLabel="Сохранить бусты"
+          onPrimary={saveBoosts}
+          state={boostsSaveState}
+          errorText={boostsMsg.startsWith('Ошибка') ? boostsMsg : undefined}
+          left={<span className="sgp-muted">TODO: привязать к воркеру/кампаниям.</span>}
+        />
+      </SgSectionCard>
+
+      {/* ===== ACC: LIMITS ===== */}
+      <SgSectionCard
+        title="Лимиты"
+        sub="Операционные тумблеры + лимиты collect (часть UI-first)"
+        collapsible
+        open={opened === 'limits' && openLimits}
+        onToggleOpen={() => toggleOnly('limits')}
+      >
+        <SgCard>
+          <SgCardHeader>
+            <div>
+              <SgCardTitle>Операционные тумблеры</SgCardTitle>
+              <SgCardSub>live-настройки (уже есть endpoint settings)</SgCardSub>
+            </div>
+          </SgCardHeader>
+
+          <SgCardContent>
+            <SgFormRow label="Акция активна" hint="Если выключено — collect должен блокироваться">
+              <SgToggle checked={activeDraft} onChange={setActiveDraft} />
+            </SgFormRow>
+
+            <SgFormRow label="Требовать PIN" hint="Если включено — collect требует одноразовый PIN">
+              <SgToggle checked={pinDraft} onChange={setPinDraft} />
+            </SgFormRow>
+
+            <SgFormRow label="Показывать офферы/бусты" hint="Мини-апп показывает предложения пользователю">
+              <SgToggle checked={offersDraft} onChange={setOffersDraft} />
+            </SgFormRow>
+
+            <div style={{ marginTop: 10 }}>
+              <Hint tone={passportActive ? 'neutral' : 'warn'}>
+                passport_key: <b>{String(settings.passport_key || 'default')}</b> · total_styles:{' '}
+                <b>{totalStyles > 0 ? totalStyles : '—'}</b>
+              </Hint>
+            </div>
+          </SgCardContent>
+        </SgCard>
+
+        <div style={{ height: 12 }} />
+
+        <SgCard>
+          <SgCardHeader>
+            <div>
+              <SgCardTitle>Лимиты collect</SgCardTitle>
+              <SgCardSub>UI-first: сохраним, когда появится endpoint</SgCardSub>
+            </div>
+          </SgCardHeader>
+
+          <SgCardContent>
+            <SgFormRow label="Лимит collect в день (всего)" hint="0 = без лимита">
+              <SgInput
+                value={maxCollectsPerDayDraft}
+                onChange={(e) => setMaxCollectsPerDayDraft(String((e.target as any).value || '0'))}
+                placeholder="0"
+              />
+            </SgFormRow>
+
+            <SgFormRow label="Лимит collect / юзер / день" hint="0 = без лимита">
+              <SgInput
+                value={maxCollectsPerUserPerDayDraft}
+                onChange={(e) => setMaxCollectsPerUserPerDayDraft(String((e.target as any).value || '0'))}
+                placeholder="0"
+              />
+            </SgFormRow>
+
+            <SgFormRow label="Блокировать collect если акция выключена">
+              <SgToggle checked={blockWhenInactiveDraft} onChange={setBlockWhenInactiveDraft} />
+            </SgFormRow>
+
+            <div style={{ marginTop: 10 }}>
+              <Hint tone="neutral">
+                Подсказка: если в дни пиков pending растёт, добавь лимит на collect/юзер и включи буст “приз ждёт”.
+              </Hint>
+            </div>
+          </SgCardContent>
+        </SgCard>
+
+        <div style={{ height: 12 }} />
+
+        <SgActions
+          primaryLabel="Сохранить лимиты"
+          onPrimary={saveLimits}
+          state={limitsSaveState}
+          errorText={limitsMsg.startsWith('Ошибка') ? limitsMsg : undefined}
+          left={<span className="sgp-muted">Settings сохраняем сразу, limits — TODO endpoint.</span>}
+        />
+      </SgSectionCard>
+
+      {isLoading ? <ShimmerLine /> : null}
+      {isError ? (
+        <div style={{ marginTop: 12 }}>
+          <Hint tone="bad">
+            Ошибка: {String((qSettings.error as any)?.message || (qTs.error as any)?.message || (qTopUsers.error as any)?.message || 'UNKNOWN')}
+          </Hint>
+        </div>
+      ) : null}
+    </SgPage>
   );
 }
