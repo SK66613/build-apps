@@ -23,22 +23,21 @@ export type BoostDraftRow = {
   enabled: boolean;
 
   trigger_type: BoostTriggerType;
-  // inactivity: "3" (days), unredeemed: "24" (hours), happy_hour: "18:00-20:00", link: "BOOST_X3"
   trigger_value: string;
 
   reward_type: BoostRewardType;
-  reward_value: string; // "2" (x2), "1" (1 spin), "20" (-20%), "100" (+100 coins)
-  ttl_hours: string; // "24"
+  reward_value: string;
+  ttl_hours: string;
 
-  cooldown_days: string; // "7"
-  max_per_week: string; // "1"
+  cooldown_days: string;
+  max_per_week: string;
 
   channel: BoostChannel;
 
   title: string;
   message: string;
 
-  promo_code: string; // "X3" (optional)
+  promo_code: string;
 };
 
 type BoostStats = {
@@ -52,32 +51,25 @@ type Props<T> = {
   title?: string;
   sub?: React.ReactNode;
 
-  // collapse of whole card
   open: boolean;
   onToggleOpen: () => void;
 
-  // list
   items: T[];
   getId: (row: T) => string;
   getName: (row: T) => string;
 
-  // short lines (summary in row columns)
   getTriggerLine: (row: T, draft: BoostDraftRow) => React.ReactNode;
   getRewardLine: (row: T, draft: BoostDraftRow) => React.ReactNode;
 
-  // draft source of truth (outside)
   draft: Record<string, BoostDraftRow>;
   patchDraft: (id: string, patch: Partial<BoostDraftRow>) => void;
 
-  // header pills
   stats: BoostStats;
 
-  // hint / footer
   saveMsg?: string;
   saveState: SgSaveState;
   onSave: () => void;
 
-  // optional
   isLoading?: boolean;
   footerLeft?: React.ReactNode;
 };
@@ -134,9 +126,9 @@ function normalizeToggleValue(v: any): boolean {
   return !!v;
 }
 
-/* ---------- small layout helpers ---------- */
+/* ---------- layout helpers ---------- */
 
-function Section(props: { title: string; hint?: React.ReactNode; children: React.ReactNode; right?: React.ReactNode }) {
+function Section(props: { title: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="sgp-hint tone-neutral" style={{ padding: 12 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -145,7 +137,6 @@ function Section(props: { title: string; hint?: React.ReactNode; children: React
             <div style={{ fontWeight: 700 }}>{props.title}</div>
             {props.hint ? <div className="sgp-muted">{props.hint}</div> : null}
           </div>
-          {props.right ? <div>{props.right}</div> : null}
         </div>
         <div>{props.children}</div>
       </div>
@@ -194,8 +185,10 @@ function SgButtonSave(props: { onClick: () => void; disabled?: boolean }) {
 
 /**
  * SgBoostCard
- * - settings open ONLY by enabled toggle
- * - row summary stays fixed (5 cols), settings appear under row (span full width)
+ * - summary row always fixed
+ * - settings appear as 2nd row spanning full width
+ * - enable toggle controls enabled state
+ * - extra button at end: show/hide settings (while enabled)
  */
 export function SgBoostCard<T>(props: Props<T>) {
   const {
@@ -224,7 +217,20 @@ export function SgBoostCard<T>(props: Props<T>) {
     footerLeft = <span className="sgp-muted">Меняются только правила бустов (триггер/награда/сообщение).</span>,
   } = props;
 
+  // manual show/hide settings (only when enabled)
+  const [showSettings, setShowSettings] = React.useState<Record<string, boolean>>({});
+
   const savingNow = String(saveState).toLowerCase().includes('sav');
+
+  function isExpanded(id: string, enabled: boolean) {
+    if (!enabled) return false;
+    if (showSettings[id] === undefined) return true; // default open when enabled
+    return !!showSettings[id];
+  }
+
+  function toggleSettings(id: string) {
+    setShowSettings((m) => ({ ...m, [id]: !(m[id] ?? true) }));
+  }
 
   return (
     <SgCard>
@@ -259,28 +265,27 @@ export function SgBoostCard<T>(props: Props<T>) {
       {open ? (
         <>
           <SgCardContent>
-            {/* Head */}
+            {/* Head: добавили последнюю пустую колонку под кнопку "свернуть/развернуть" */}
             <div className="sgp-stockHead">
               <div className="sgp-stockCol sgp-stockCol--name">Правило</div>
               <div className="sgp-stockCol">Вкл</div>
               <div className="sgp-stockCol">Триггер</div>
               <div className="sgp-stockCol">Награда</div>
               <div className="sgp-stockCol">Кулдаун</div>
+              <div className="sgp-stockCol" />
             </div>
 
             <div className="sgp-stockList">
               {items.map((row, i) => {
                 const id = getId(row) || String(i);
 
-                // merge defaults with existing draft
                 const base = defaultDraft();
                 const current = draft[id];
                 const d: BoostDraftRow = current ? { ...base, ...current } : base;
 
                 const enabled = !!d.enabled;
-                const expanded = enabled; // ✅ open only when enabled
+                const expanded = isExpanded(id, enabled);
 
-                // row highlight
                 const rowStyle: React.CSSProperties = enabled
                   ? {
                       borderLeft: '4px solid rgba(90, 220, 140, 0.9)',
@@ -298,10 +303,10 @@ export function SgBoostCard<T>(props: Props<T>) {
                     className={'sgp-stockRow tone-' + (enabled ? 'on' : 'off')}
                     style={{
                       ...rowStyle,
-
-                      // ✅ 2-row grid: first row summary columns, second row settings spans full width
                       display: 'grid',
-                      gridTemplateColumns: 'minmax(320px, 2fr) 90px 1fr 1fr 120px',
+
+                      // ✅ 6 колонок: последняя под кнопку раскрытия
+                      gridTemplateColumns: 'minmax(360px, 2.2fr) 110px 1fr 1fr 120px 44px',
                       columnGap: 12,
                       rowGap: 10,
                       alignItems: 'center',
@@ -309,9 +314,7 @@ export function SgBoostCard<T>(props: Props<T>) {
                       paddingBottom: 10,
                     }}
                   >
-                    {/* ===== SUMMARY (always fixed) ===== */}
-
-                    {/* Rule */}
+                    {/* ===== SUMMARY (fixed) ===== */}
                     <div className="sgp-stockCol sgp-stockCol--name" style={{ paddingLeft: 14, minWidth: 0 }}>
                       <div className="sgp-stockName">{getName(row) || id}</div>
                       <div className="sgp-stockSub">
@@ -320,46 +323,53 @@ export function SgBoostCard<T>(props: Props<T>) {
                       </div>
                     </div>
 
-                    {/* Toggle */}
                     <div className="sgp-stockCol">
                       <SgToggle
                         checked={enabled}
                         onChange={(v) => {
                           const nextEnabled = normalizeToggleValue(v);
 
-                          // ✅ if draft row doesn't exist — create it, otherwise patch
+                          // create row if missing
                           if (!draft[id]) patchDraft(id, { ...defaultDraft(), enabled: nextEnabled });
                           else patchDraft(id, { enabled: nextEnabled });
+
+                          // when enabling -> open settings by default
+                          if (nextEnabled) setShowSettings((m) => ({ ...m, [id]: true }));
                         }}
                       />
                     </div>
 
-                    {/* Trigger summary */}
                     <div className="sgp-stockCol">
                       <div className="sgp-muted">{getTriggerLine(row, d)}</div>
                     </div>
 
-                    {/* Reward summary */}
                     <div className="sgp-stockCol">
                       <div className="sgp-muted">{getRewardLine(row, d)}</div>
                     </div>
 
-                    {/* Cooldown summary */}
                     <div className="sgp-stockCol">
                       <div className="sgp-muted">{toIntStr(d.cooldown_days, '0')} дн</div>
                     </div>
 
-                    {/* ===== SETTINGS (under the row, full width) ===== */}
+                    {/* Button: show/hide settings (only when enabled) */}
+                    <div className="sgp-stockCol" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      {enabled ? (
+                        <IconBtn
+                          active={expanded}
+                          onClick={() => toggleSettings(id)}
+                          title={expanded ? 'Скрыть настройки' : 'Показать настройки'}
+                        >
+                          {expanded ? '▴' : '▾'}
+                        </IconBtn>
+                      ) : null}
+                    </div>
+
+                    {/* ===== SETTINGS row (full width) ===== */}
                     {expanded ? (
                       <div style={{ gridColumn: '1 / -1', paddingLeft: 14, paddingRight: 14 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          {/* Trigger */}
-                          <Section
-                            title="Триггер"
-                            hint="inactivity=3 · unredeemed=24 · happy_hour=18:00-20:00 · link=BOOST_X3"
-                            right={<SgButtonSave onClick={onSave} disabled={savingNow} />}
-                          >
-                            <Grid cols="minmax(220px, 1fr) minmax(200px, 1fr)">
+                          <Section title="Триггер" hint="inactivity=3 · unredeemed=24 · happy_hour=18:00-20:00 · link=BOOST_X3">
+                            <Grid cols="minmax(260px, 1fr) minmax(220px, 1fr)">
                               <Field label="Тип триггера">
                                 <SgSelect
                                   value={d.trigger_type}
@@ -385,9 +395,8 @@ export function SgBoostCard<T>(props: Props<T>) {
                             </Grid>
                           </Section>
 
-                          {/* Reward */}
                           <Section title="Награда" hint="multiplier=2 · free_spins=1 · discount=20% · coins=100">
-                            <Grid cols="minmax(220px, 1fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr)">
+                            <Grid cols="minmax(260px, 1fr) minmax(200px, 0.9fr) minmax(160px, 0.7fr)">
                               <Field label="Тип награды">
                                 <SgSelect
                                   value={d.reward_type}
@@ -420,9 +429,8 @@ export function SgBoostCard<T>(props: Props<T>) {
                             </Grid>
                           </Section>
 
-                          {/* Limits */}
                           <Section title="Ограничения">
-                            <Grid cols="minmax(180px, 1fr) minmax(180px, 1fr) minmax(220px, 1fr)">
+                            <Grid cols="minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(240px, 1fr)">
                               <Field label="Кулдаун (д)">
                                 <SgInput
                                   value={d.cooldown_days}
@@ -456,11 +464,11 @@ export function SgBoostCard<T>(props: Props<T>) {
                             </Grid>
                           </Section>
 
-                          {/* Message */}
-                          <Section title="Сообщение и превью" right={<SgButtonSave onClick={onSave} disabled={savingNow} />}>
-                            <Grid cols="minmax(260px, 1fr) minmax(260px, 1fr)" gap={12}>
+                          {/* здесь оставляем ОДНУ кнопку — внизу */}
+                          <Section title="Сообщение и превью">
+                            <Grid cols="minmax(320px, 1fr) minmax(320px, 1fr)" gap={12}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <Grid cols="minmax(200px, 1fr) minmax(160px, 0.8fr)">
+                                <Grid cols="minmax(220px, 1fr) minmax(160px, 0.7fr)">
                                   <Field label="Заголовок">
                                     <SgInput
                                       value={d.title}
@@ -485,6 +493,10 @@ export function SgBoostCard<T>(props: Props<T>) {
                                     placeholder="Текст сообщения"
                                   />
                                 </Field>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                  <SgButtonSave onClick={onSave} disabled={savingNow} />
+                                </div>
                               </div>
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
