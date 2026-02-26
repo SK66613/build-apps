@@ -1012,47 +1012,63 @@ export default function Sales() {
   open={opened === 'summary' && openSummary}
   onToggleOpen={() => toggleOnly('summary')}
 >
-  <div className="sgp-metrics">
-    <div className="sgp-metric">
-      <div className="sgp-metric__k">ВЫРУЧКА</div>
-      <div className="sgp-metric__v">{moneyFromCent(totals.rev, currency)}</div>
-      <div className="sgp-metric__s">
-        в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b>
-      </div>
-    </div>
-
-    <div className="sgp-metric">
-      <div className="sgp-metric__k">ЗАКАЗЫ</div>
-      <div className="sgp-metric__v">{totals.orders}</div>
-      <div className="sgp-metric__s">
-        ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b>
-      </div>
-    </div>
-
-    <div className="sgp-metric">
-      <div className="sgp-metric__k">ПОКУПАТЕЛИ</div>
-      <div className="sgp-metric__v">{totals.buyers}</div>
-      <div className="sgp-metric__s">
-        repeat: <b>{totals.repeatRatePct}%</b>
-      </div>
-    </div>
-
-    <div className="sgp-metric">
-      <div className="sgp-metric__k">КЭШБЭК</div>
-      <div className="sgp-metric__v">{totals.cashbackCoins} мон</div>
-      <div className="sgp-metric__s">
-        ≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b>
-      </div>
-    </div>
-
-    <div className="sgp-metric">
-      <div className="sgp-metric__k">NET</div>
-      <div className="sgp-metric__v">{moneyFromCent(totals.net, currency)}</div>
-      <div className="sgp-metric__s">
-        списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b>
-      </div>
-    </div>
-  </div>
+  <SgSectionSummary
+    columns={4}
+    dense
+    items={[
+      {
+        key: 'rev',
+        label: 'ВЫРУЧКА',
+        value: moneyFromCent(totals.rev, currency),
+        sub: (
+          <>
+            в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b>
+          </>
+        ),
+      },
+      {
+        key: 'orders',
+        label: 'ЗАКАЗЫ',
+        value: totals.orders,
+        sub: (
+          <>
+            ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b>
+          </>
+        ),
+      },
+      {
+        key: 'buyers',
+        label: 'ПОКУПАТЕЛИ',
+        value: totals.buyers,
+        sub: (
+          <>
+            repeat: <b>{totals.repeatRatePct}%</b>
+          </>
+        ),
+      },
+      {
+        key: 'cashback',
+        label: 'КЭШБЭК',
+        value: `${totals.cashbackCoins} мон`,
+        sub: (
+          <>
+            ≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b>
+          </>
+        ),
+      },
+      {
+        key: 'net',
+        label: 'NET',
+        value: moneyFromCent(totals.net, currency),
+        sub: (
+          <>
+            списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b>
+          </>
+        ),
+        tone: totals.net >= 0 ? 'good' : 'warn',
+      },
+    ]}
+  />
 
   {/* Rows summary (универсальный блок “строки”, стиль как твой старый sales sgRow) */}
   <div style={{ marginTop: 12 }}>
