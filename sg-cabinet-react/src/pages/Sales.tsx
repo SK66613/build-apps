@@ -40,6 +40,10 @@ import {
   Area,
 } from 'recharts';
 
+import SgRowsSummary from '../components/sgp/blocks/SgRowsSummary';
+
+import SgSectionSummary from '../components/sgp/blocks/SgSectionSummary';
+
 /**
  * SALES (QR)
  * - Один стиль/разметка/шрифты как “Сводка” в Passport (SgPage + SgSectionCard + HealthBadge + IconBtn).
@@ -997,42 +1001,82 @@ export default function Sales() {
       </div>
 
       {/* ===== ACC: SUMMARY ===== */}
-      <SgSectionCard
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span>Сводка</span>
-            <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
-          </div>
-        }
-        collapsible
-        open={opened === 'summary' && openSummary}
-        onToggleOpen={() => toggleOnly('summary')}
-      >
-        <div className="sgp-metrics">
-          <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(totals.rev, currency)}</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">ЗАКАЗЫ</div><div className="sgp-metric__v">{totals.orders}</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">СР. ЧЕК</div><div className="sgp-metric__v">{moneyFromCent(totals.avgCheck, currency)}</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">КЭШБЭК</div><div className="sgp-metric__v">{totals.cashbackCoins} мон</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">СПИСАНО</div><div className="sgp-metric__v">{totals.redeemCoins} мон</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">NET</div><div className="sgp-metric__v">{moneyFromCent(totals.net, currency)}</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">PENDING</div><div className="sgp-metric__v">{totals.pending}</div></div>
-          <div className="sgp-metric"><div className="sgp-metric__k">CANCEL</div><div className="sgp-metric__v">{totals.cancelRatePct}%</div></div>
-        </div>
+<SgSectionCard
+  title={
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span>Сводка</span>
+      <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
+    </div>
+  }
+  collapsible
+  open={opened === 'summary' && openSummary}
+  onToggleOpen={() => toggleOnly('summary')}
+>
+  <div className="sgp-metrics">
+    <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(totals.rev, currency)}</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">ЗАКАЗЫ</div><div className="sgp-metric__v">{totals.orders}</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">СР. ЧЕК</div><div className="sgp-metric__v">{moneyFromCent(totals.avgCheck, currency)}</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">КЭШБЭК</div><div className="sgp-metric__v">{totals.cashbackCoins} мон</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">СПИСАНО</div><div className="sgp-metric__v">{totals.redeemCoins} мон</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">NET</div><div className="sgp-metric__v">{moneyFromCent(totals.net, currency)}</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">PENDING</div><div className="sgp-metric__v">{totals.pending}</div></div>
+    <div className="sgp-metric"><div className="sgp-metric__k">CANCEL</div><div className="sgp-metric__v">{totals.cancelRatePct}%</div></div>
+  </div>
 
-        <div style={{ marginTop: 12 }}>
-          {!salesActive ? (
-            <Hint tone="bad">Продажи выключены. Включи в “Кассиру → Операционные тумблеры”.</Hint>
-          ) : totals.pending >= 8 ? (
-            <Hint tone="warn">
-              Много pending: <b>{totals.pending}</b>. Добавь мотивацию кассиру подтверждать + напоминания пользователю.
-            </Hint>
-          ) : totals.cancelRatePct >= 8 ? (
-            <Hint tone="warn">Отмены выше нормы: <b>{totals.cancelRatePct}%</b>. Проверь правила/UX у кассира.</Hint>
-          ) : (
-            <Hint tone="good">Ок. Дальше настрой кэшбэк по рангу и включи бусты на покупки.</Hint>
-          )}
-        </div>
-      </SgSectionCard>
+  {/* Rows summary (универсальный блок “строки”, стиль как твой старый sales sgRow) */}
+  <div style={{ marginTop: 12 }}>
+    <SgRowsSummary
+      columns={2}
+      dense
+      items={[
+        {
+          key: 'pending',
+          tone: !salesActive ? 'bad' : totals.pending >= 8 ? 'bad' : totals.pending > 0 ? 'warn' : 'good',
+          title: 'Зависшие подтверждения',
+          meta: 'Портит UX: клиент не видит результат',
+          value: totals.pending,
+          sub: totals.pending >= 8 ? 'критично' : totals.pending > 0 ? 'есть' : 'ок',
+          right: (
+            <HealthBadge
+              tone={!salesActive ? 'bad' : totals.pending >= 8 ? 'bad' : totals.pending > 0 ? 'warn' : 'good'}
+              title={!salesActive ? 'Продажи OFF' : 'pending за период'}
+              compact
+            />
+          ),
+        },
+        {
+          key: 'cancel',
+          tone: !salesActive ? 'bad' : totals.cancelRatePct >= 12 ? 'bad' : totals.cancelRatePct >= 8 ? 'warn' : 'good',
+          title: 'Процент отмен',
+          meta: 'Сигнал проблем в кассе/правилах',
+          value: `${totals.cancelRatePct}%`,
+          sub: totals.cancelRatePct >= 12 ? 'плохо' : totals.cancelRatePct >= 8 ? 'риск' : 'ок',
+          right: (
+            <HealthBadge
+              tone={!salesActive ? 'bad' : totals.cancelRatePct >= 12 ? 'bad' : totals.cancelRatePct >= 8 ? 'warn' : 'good'}
+              title={!salesActive ? 'Продажи OFF' : 'cancel_rate за период'}
+              compact
+            />
+          ),
+        },
+      ]}
+    />
+  </div>
+
+  <div style={{ marginTop: 12 }}>
+    {!salesActive ? (
+      <Hint tone="bad">Продажи выключены. Включи в “Кассиру → Операционные тумблеры”.</Hint>
+    ) : totals.pending >= 8 ? (
+      <Hint tone="warn">
+        Много pending: <b>{totals.pending}</b>. Добавь мотивацию кассиру подтверждать + напоминания пользователю.
+      </Hint>
+    ) : totals.cancelRatePct >= 8 ? (
+      <Hint tone="warn">Отмены выше нормы: <b>{totals.cancelRatePct}%</b>. Проверь правила/UX у кассира.</Hint>
+    ) : (
+      <Hint tone="good">Ок. Дальше настрой кэшбэк по рангу и включи бусты на покупки.</Hint>
+    )}
+  </div>
+</SgSectionCard>
 
       {/* ===== ACC: CASHBACK ===== */}
       <SgSectionCard
