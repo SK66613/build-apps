@@ -954,3 +954,72 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ================================
+   SALES / SUMMARY metric tiles — legacy look (1:1)
+   Put at VERY BOTTOM to override section (7)
+================================== */
+
+.sgp-metrics{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width:1100px){
+  .sgp-metrics{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.sgp-metric{
+  border-radius: 18px;
+  padding: 12px 12px;
+  background: rgba(255,255,255,.88);
+}
+
+/* 1st line: CAPS + tracking */
+.sgp-metric__k{
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .72;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.1;
+}
+
+/* 2nd line: big value */
+.sgp-metric__v{
+  margin-top: 6px;
+  font-weight: 950;
+  font-size: 22px;            /* под скрин */
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.12;
+}
+
+/* 3rd line: small hint */
+.sgp-metric__s{
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: .78;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.sgp-metric__s b{ font-weight: 950; }
