@@ -266,14 +266,24 @@ export function SgBoostCard<T>(props: Props<T>) {
         <>
           <SgCardContent>
             {/* Head: добавили последнюю пустую колонку под кнопку "свернуть/развернуть" */}
-            <div className="sgp-stockHead">
-              <div className="sgp-stockCol sgp-stockCol--name">Правило</div>
-              <div className="sgp-stockCol">Вкл</div>
-              <div className="sgp-stockCol">Триггер</div>
-              <div className="sgp-stockCol">Награда</div>
-              <div className="sgp-stockCol">Кулдаун</div>
-              <div className="sgp-stockCol" />
-            </div>
+<div
+  className="sgp-stockHead"
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'minmax(360px, 2.2fr) 110px 1fr 1fr 120px 44px',
+    columnGap: 12,
+    alignItems: 'center',
+  }}
+>
+  <div className="sgp-stockCol sgp-stockCol--name">Правило</div>
+  <div className="sgp-stockCol">Вкл</div>
+  <div className="sgp-stockCol">Триггер</div>
+  <div className="sgp-stockCol">Награда</div>
+  <div className="sgp-stockCol">Кулдаун</div>
+  <div className="sgp-stockCol" style={{ textAlign: 'right' }}>
+    Видимость
+  </div>
+</div>
 
             <div className="sgp-stockList">
               {items.map((row, i) => {
