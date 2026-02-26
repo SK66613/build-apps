@@ -23,22 +23,21 @@ export type BoostDraftRow = {
   enabled: boolean;
 
   trigger_type: BoostTriggerType;
-  // inactivity: "3" (days), unredeemed: "24" (hours), happy_hour: "18:00-20:00", link: "BOOST_X3"
   trigger_value: string;
 
   reward_type: BoostRewardType;
-  reward_value: string; // "2" (x2), "1" (1 spin), "20" (-20%), "100" (+100 coins)
-  ttl_hours: string; // "24"
+  reward_value: string;
+  ttl_hours: string;
 
-  cooldown_days: string; // "7"
-  max_per_week: string; // "1"
+  cooldown_days: string;
+  max_per_week: string;
 
   channel: BoostChannel;
 
   title: string;
   message: string;
 
-  promo_code: string; // "X3" (optional)
+  promo_code: string;
 };
 
 type BoostStats = {
@@ -52,32 +51,25 @@ type Props<T> = {
   title?: string;
   sub?: React.ReactNode;
 
-  // collapse of whole card
   open: boolean;
   onToggleOpen: () => void;
 
-  // list
   items: T[];
   getId: (row: T) => string;
   getName: (row: T) => string;
 
-  // short lines (summary in row columns)
   getTriggerLine: (row: T, draft: BoostDraftRow) => React.ReactNode;
   getRewardLine: (row: T, draft: BoostDraftRow) => React.ReactNode;
 
-  // draft source of truth (outside)
   draft: Record<string, BoostDraftRow>;
   patchDraft: (id: string, patch: Partial<BoostDraftRow>) => void;
 
-  // header pills
   stats: BoostStats;
 
-  // hint / footer
   saveMsg?: string;
   saveState: SgSaveState;
   onSave: () => void;
 
-  // optional
   isLoading?: boolean;
   footerLeft?: React.ReactNode;
 };
@@ -128,12 +120,52 @@ function defaultDraft(): BoostDraftRow {
   };
 }
 
+/* ---------- small layout helpers (no extra deps) ---------- */
+
+function Section(props: { title: string; hint?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="sgp-hint tone-neutral" style={{ padding: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ fontWeight: 700 }}>{props.title}</div>
+          {props.hint ? <div className="sgp-muted" style={{ textAlign: 'right' }}>{props.hint}</div> : null}
+        </div>
+        <div>{props.children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Grid(props: { cols: string; gap?: number; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: props.cols,
+        gap: props.gap ?? 8,
+        alignItems: 'start',
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+function Field(props: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      <div className="sgp-muted">{props.label}</div>
+      <div style={{ minWidth: 0 }}>{props.children}</div>
+      {props.hint ? <div className="sgp-muted">{props.hint}</div> : null}
+    </div>
+  );
+}
+
 /**
  * SgBoostCard
- * - UI component for boosts rules
- * - data/save stays outside (draft/patchDraft/onSave)
- * - settings panel opens automatically when enabled=true
- * - you can still expand/collapse manually via row +/- button
+ * - settings open ONLY when enabled=true
+ * - NO manual +/- expand button
+ * - settings panel structured into neat sections
  */
 export function SgBoostCard<T>(props: Props<T>) {
   const {
@@ -161,19 +193,6 @@ export function SgBoostCard<T>(props: Props<T>) {
     isLoading,
     footerLeft = <span className="sgp-muted">Меняются только правила бустов (триггер/награда/сообщение).</span>,
   } = props;
-
-  // manual expand state; auto-open uses enabled
-  const [rowOpen, setRowOpen] = React.useState<Record<string, boolean>>({});
-
-  function toggleRow(id: string) {
-    setRowOpen((m) => ({ ...m, [id]: !m[id] }));
-  }
-
-  function isRowOpen(id: string, enabled: boolean) {
-    // if manually set — use it; otherwise auto-open when enabled
-    if (rowOpen[id] !== undefined) return !!rowOpen[id];
-    return !!enabled;
-  }
 
   return (
     <SgCard>
@@ -208,7 +227,6 @@ export function SgBoostCard<T>(props: Props<T>) {
       {open ? (
         <>
           <SgCardContent>
-            {/* Head (reuse stock-like layout) */}
             <div className="sgp-stockHead">
               <div className="sgp-stockCol sgp-stockCol--name">Правило</div>
               <div className="sgp-stockCol">Вкл</div>
@@ -223,7 +241,7 @@ export function SgBoostCard<T>(props: Props<T>) {
                 const d: BoostDraftRow = draft[id] || defaultDraft();
 
                 const enabled = !!d.enabled;
-                const expanded = isRowOpen(id, enabled);
+                const expanded = enabled; // ✅ only toggle controls settings visibility
                 const tone = enabled ? 'on' : 'off';
 
                 return (
@@ -238,220 +256,180 @@ export function SgBoostCard<T>(props: Props<T>) {
                             {d.promo_code ? ` · промо: ${d.promo_code}` : ''}
                           </div>
                         </div>
-
-                        <IconBtn
-                          active={expanded}
-                          onClick={() => toggleRow(id)}
-                          title="Настроить"
-                        >
-                          {expanded ? '—' : '+'}
-                        </IconBtn>
                       </div>
 
                       {expanded ? (
                         <div style={{ marginTop: 10 }}>
-                          {/* aligned settings panel */}
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr',
-                              gap: 12,
-                              alignItems: 'start',
-                            }}
-                          >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {/* Trigger */}
-                            <div>
-                              <div className="sgp-muted" style={{ marginBottom: 6 }}>
-                                Триггер
-                              </div>
+                            <Section
+                              title="Триггер"
+                              hint={
+                                <span>
+                                  Примеры: inactivity=3 · unredeemed=24 · happy_hour=18:00-20:00 · link=BOOST_X3
+                                </span>
+                              }
+                            >
+                              <Grid cols="minmax(220px, 1fr) minmax(200px, 1fr)">
+                                <Field label="Тип триггера">
+                                  <SgSelect
+                                    value={d.trigger_type}
+                                    onChange={(e) =>
+                                      patchDraft(id, { trigger_type: String((e.target as any).value) as any })
+                                    }
+                                  >
+                                    <option value="inactivity">{triggerLabel('inactivity')}</option>
+                                    <option value="unredeemed">{triggerLabel('unredeemed')}</option>
+                                    <option value="happy_hour">{triggerLabel('happy_hour')}</option>
+                                    <option value="purchase">{triggerLabel('purchase')}</option>
+                                    <option value="link">{triggerLabel('link')}</option>
+                                  </SgSelect>
+                                </Field>
 
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'minmax(140px, 1fr) minmax(120px, 1fr)',
-                                  gap: 8,
-                                }}
-                              >
-                                <SgSelect
-                                  value={d.trigger_type}
-                                  onChange={(e) =>
-                                    patchDraft(id, { trigger_type: String((e.target as any).value) as any })
-                                  }
-                                >
-                                  <option value="inactivity">{triggerLabel('inactivity')}</option>
-                                  <option value="unredeemed">{triggerLabel('unredeemed')}</option>
-                                  <option value="happy_hour">{triggerLabel('happy_hour')}</option>
-                                  <option value="purchase">{triggerLabel('purchase')}</option>
-                                  <option value="link">{triggerLabel('link')}</option>
-                                </SgSelect>
-
-                                <SgInput
-                                  value={d.trigger_value}
-                                  onChange={(e) => patchDraft(id, { trigger_value: (e.target as any).value })}
-                                  placeholder="3 / 24 / 18:00-20:00 / BOOST_X3"
-                                />
-                              </div>
-
-                              <div className="sgp-muted" style={{ marginTop: 6 }}>
-                                Пример: inactivity=3; unredeemed=24; happy_hour=18:00-20:00; link=BOOST_X3
-                              </div>
-                            </div>
+                                <Field label="Значение">
+                                  <SgInput
+                                    value={d.trigger_value}
+                                    onChange={(e) => patchDraft(id, { trigger_value: (e.target as any).value })}
+                                    placeholder="3 / 24 / 18:00-20:00 / BOOST_X3"
+                                  />
+                                </Field>
+                              </Grid>
+                            </Section>
 
                             {/* Reward */}
-                            <div>
-                              <div className="sgp-muted" style={{ marginBottom: 6 }}>
-                                Награда
-                              </div>
+                            <Section
+                              title="Награда"
+                              hint={<span>multiplier=2 · free_spins=1 · discount=20% · coins=100</span>}
+                            >
+                              <Grid cols="minmax(220px, 1fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr)">
+                                <Field label="Тип награды">
+                                  <SgSelect
+                                    value={d.reward_type}
+                                    onChange={(e) =>
+                                      patchDraft(id, { reward_type: String((e.target as any).value) as any })
+                                    }
+                                  >
+                                    <option value="multiplier">{rewardLabel('multiplier')}</option>
+                                    <option value="free_spins">{rewardLabel('free_spins')}</option>
+                                    <option value="discount">{rewardLabel('discount')}</option>
+                                    <option value="coins">{rewardLabel('coins')}</option>
+                                  </SgSelect>
+                                </Field>
 
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'minmax(140px, 1fr) minmax(90px, 0.8fr) minmax(90px, 0.8fr)',
-                                  gap: 8,
-                                }}
-                              >
-                                <SgSelect
-                                  value={d.reward_type}
-                                  onChange={(e) =>
-                                    patchDraft(id, { reward_type: String((e.target as any).value) as any })
-                                  }
-                                >
-                                  <option value="multiplier">{rewardLabel('multiplier')}</option>
-                                  <option value="free_spins">{rewardLabel('free_spins')}</option>
-                                  <option value="discount">{rewardLabel('discount')}</option>
-                                  <option value="coins">{rewardLabel('coins')}</option>
-                                </SgSelect>
+                                <Field label="Значение">
+                                  <SgInput
+                                    value={d.reward_value}
+                                    onChange={(e) => patchDraft(id, { reward_value: (e.target as any).value })}
+                                    placeholder="2 / 1 / 20 / 100"
+                                  />
+                                </Field>
 
-                                <SgInput
-                                  value={d.reward_value}
-                                  onChange={(e) => patchDraft(id, { reward_value: (e.target as any).value })}
-                                  placeholder="2 / 1 / 20 / 100"
-                                />
-
-                                <SgInput
-                                  value={d.ttl_hours}
-                                  onChange={(e) => patchDraft(id, { ttl_hours: (e.target as any).value })}
-                                  placeholder="TTL (ч)"
-                                />
-                              </div>
-
-                              <div className="sgp-muted" style={{ marginTop: 6 }}>
-                                multiplier=2 (x2), free_spins=1, discount=20 (%), coins=100 (шт)
-                              </div>
-                            </div>
+                                <Field label="TTL (ч)">
+                                  <SgInput
+                                    value={d.ttl_hours}
+                                    onChange={(e) => patchDraft(id, { ttl_hours: (e.target as any).value })}
+                                    placeholder="24"
+                                  />
+                                </Field>
+                              </Grid>
+                            </Section>
 
                             {/* Limits */}
-                            <div>
-                              <div className="sgp-muted" style={{ marginBottom: 6 }}>
-                                Ограничения
-                              </div>
+                            <Section title="Ограничения">
+                              <Grid cols="minmax(180px, 1fr) minmax(180px, 1fr) minmax(220px, 1fr)">
+                                <Field label="Кулдаун (д)">
+                                  <SgInput
+                                    value={d.cooldown_days}
+                                    onChange={(e) => patchDraft(id, { cooldown_days: (e.target as any).value })}
+                                    placeholder="7"
+                                  />
+                                </Field>
 
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'minmax(90px, 1fr) minmax(90px, 1fr) minmax(120px, 1fr)',
-                                  gap: 8,
-                                }}
-                              >
-                                <SgInput
-                                  value={d.cooldown_days}
-                                  onChange={(e) => patchDraft(id, { cooldown_days: (e.target as any).value })}
-                                  placeholder="Кулдаун (д)"
-                                />
-                                <SgInput
-                                  value={d.max_per_week}
-                                  onChange={(e) => patchDraft(id, { max_per_week: (e.target as any).value })}
-                                  placeholder="Лимит/нед"
-                                />
-                                <SgSelect
-                                  value={d.channel}
-                                  onChange={(e) =>
-                                    patchDraft(id, { channel: String((e.target as any).value) as any })
-                                  }
-                                >
-                                  <option value="push">Push</option>
-                                  <option value="inapp">In-app</option>
-                                  <option value="telegram">Telegram</option>
-                                  <option value="sms">SMS</option>
-                                  <option value="email">Email</option>
-                                </SgSelect>
-                              </div>
-                            </div>
+                                <Field label="Лимит / нед">
+                                  <SgInput
+                                    value={d.max_per_week}
+                                    onChange={(e) => patchDraft(id, { max_per_week: (e.target as any).value })}
+                                    placeholder="1"
+                                  />
+                                </Field>
 
-                            {/* Message + preview */}
-                            <div>
-                              <div className="sgp-muted" style={{ marginBottom: 6 }}>
-                                Сообщение
-                              </div>
+                                <Field label="Канал">
+                                  <SgSelect
+                                    value={d.channel}
+                                    onChange={(e) =>
+                                      patchDraft(id, { channel: String((e.target as any).value) as any })
+                                    }
+                                  >
+                                    <option value="push">Push</option>
+                                    <option value="inapp">In-app</option>
+                                    <option value="telegram">Telegram</option>
+                                    <option value="sms">SMS</option>
+                                    <option value="email">Email</option>
+                                  </SgSelect>
+                                </Field>
+                              </Grid>
+                            </Section>
 
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'minmax(140px, 1fr) minmax(120px, 0.8fr)',
-                                  gap: 8,
-                                  marginBottom: 8,
-                                }}
-                              >
-                                <SgInput
-                                  value={d.title}
-                                  onChange={(e) => patchDraft(id, { title: (e.target as any).value })}
-                                  placeholder="Заголовок"
-                                />
-                                <SgInput
-                                  value={d.promo_code}
-                                  onChange={(e) => patchDraft(id, { promo_code: (e.target as any).value })}
-                                  placeholder="Промо (опц)"
-                                />
-                              </div>
+                            {/* Message */}
+                            <Section title="Сообщение и превью">
+                              <Grid cols="minmax(260px, 1fr) minmax(260px, 1fr)" gap={12}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                  <Grid cols="minmax(200px, 1fr) minmax(160px, 0.8fr)">
+                                    <Field label="Заголовок">
+                                      <SgInput
+                                        value={d.title}
+                                        onChange={(e) => patchDraft(id, { title: (e.target as any).value })}
+                                        placeholder="Заголовок"
+                                      />
+                                    </Field>
 
-                              <SgInput
-                                value={d.message}
-                                onChange={(e) => patchDraft(id, { message: (e.target as any).value })}
-                                placeholder="Текст сообщения"
-                              />
+                                    <Field label="Промо (опц.)">
+                                      <SgInput
+                                        value={d.promo_code}
+                                        onChange={(e) => patchDraft(id, { promo_code: (e.target as any).value })}
+                                        placeholder="X2"
+                                      />
+                                    </Field>
+                                  </Grid>
 
-                              <div style={{ marginTop: 10 }}>
-                                <div className="sgp-muted" style={{ marginBottom: 6 }}>
-                                  Превью
+                                  <Field label="Текст">
+                                    <SgInput
+                                      value={d.message}
+                                      onChange={(e) => patchDraft(id, { message: (e.target as any).value })}
+                                      placeholder="Текст сообщения"
+                                    />
+                                  </Field>
                                 </div>
-                                <div className="sgp-hint tone-neutral" style={{ whiteSpace: 'pre-wrap' as any }}>
-                                  <b>{d.title || 'Boost'}</b>
-                                  {'\n'}
-                                  {d.message || '—'}
-                                  {d.promo_code ? `\n\nПромо: ${d.promo_code}` : ''}
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  <div className="sgp-muted">Превью</div>
+                                  <div className="sgp-hint tone-neutral" style={{ whiteSpace: 'pre-wrap' as any }}>
+                                    <b>{d.title || 'Boost'}</b>
+                                    {'\n'}
+                                    {d.message || '—'}
+                                    {d.promo_code ? `\n\nПромо: ${d.promo_code}` : ''}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
+                              </Grid>
+                            </Section>
                           </div>
                         </div>
                       ) : null}
                     </div>
 
-                    {/* Enabled toggle (auto opens settings when turned on) */}
+                    {/* Enabled toggle (controls settings visibility) */}
                     <div className="sgp-stockCol">
-                      <SgToggle
-                        checked={enabled}
-                        onChange={(v) => {
-                          patchDraft(id, { enabled: v });
-
-                          // make settings appear immediately on enable (and hide on disable),
-                          // also override manual state so it works "instantly"
-                          setRowOpen((m) => ({ ...m, [id]: v }));
-                        }}
-                      />
+                      <SgToggle checked={enabled} onChange={(v) => patchDraft(id, { enabled: v })} />
                     </div>
 
-                    {/* Trigger summary */}
                     <div className="sgp-stockCol">
                       <div className="sgp-muted">{getTriggerLine(row, d)}</div>
                     </div>
 
-                    {/* Reward summary */}
                     <div className="sgp-stockCol">
                       <div className="sgp-muted">{getRewardLine(row, d)}</div>
                     </div>
 
-                    {/* Cooldown */}
                     <div className="sgp-stockCol">
                       <div className="sgp-muted">{toIntStr(d.cooldown_days, '0')} дн</div>
                     </div>
