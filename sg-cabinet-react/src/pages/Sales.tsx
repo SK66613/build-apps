@@ -36,10 +36,15 @@ import SgSectionSummary from '../components/sgp/blocks/SgSectionSummary';
 
 /**
  * SALES (QR)
- * - Один стиль/разметка/шрифты как “Сводка” в Passport (SgPage + SgSectionCard + HealthBadge + IconBtn).
+ * Приведено к реальным точкам аналитики:
+ * - settings:   GET/PUT /api/cabinet/apps/:appId/sales/settings
+ * - timeseries: GET     /api/cabinet/apps/:appId/sales/timeseries?from&to&basis
+ * - top users:  GET     /api/cabinet/apps/:appId/sales/users/top?from&to&metric
+ *
+ * UI:
+ * - Один стиль как “Сводка” в Passport
  * - Гармошки: Сводка / Кэшбэк / Бусты / Кассиру
  * - Топы: по пользователям
- * - Настройки (UI-first): кэшбэк по рангу/по продажам, мотивация покупок, кассиры + права (в разработке)
  */
 
 /** ========= Types ========= */
@@ -82,10 +87,10 @@ type CashierDraft = {
 
 type CashbackRuleByRank = {
   id: string;
-  rank: string; // Bronze/Silver/Gold...
-  cashback_pct: number; // 0..100
-  max_cashback_coins_per_day: number; // 0 = no limit
-  min_order_cents: number; // 0 = no minimum
+  rank: string;
+  cashback_pct: number;
+  max_cashback_coins_per_day: number;
+  min_order_cents: number;
   enabled: boolean;
 };
 
@@ -94,7 +99,7 @@ type CashbackRuleBySales = {
   title: string;
   condition: 'orders_ge' | 'revenue_ge' | 'buyers_ge';
   threshold: number;
-  bonus_cashback_pct: number; // adds to base (rank)
+  bonus_cashback_pct: number;
   ttl_hours: number;
   enabled: boolean;
 };
@@ -212,7 +217,7 @@ function SegBtn({
   );
 }
 
-/** ========= Mock fallback ========= */
+/** ========= Mock fallback (only when backend отсутствует/ошибка) ========= */
 function mkMock(range: { from: string; to: string }, settings: SalesSettings) {
   const dates = listDaysISO(range.from, range.to);
   const coinCents = Math.max(1, toInt(settings.coin_value_cents ?? 100, 100));
@@ -246,14 +251,36 @@ function mkMock(range: { from: string; to: string }, settings: SalesSettings) {
     };
   });
 
-  return { ok: true, days, settings };
+  return { ok: true, days, settings, note: 'mock fallback' };
+}
+
+function mkMockTopUsers(metric: 'revenue' | 'orders' | 'cashback' | 'redeem'): SalesTopUser[] {
+  const base: SalesTopUser[] = [
+    { tg_id: '1001', title: 'user_1001', revenue_cents: 320_000, orders: 6, cashback_coins: 180, redeem_coins: 90 },
+    { tg_id: '1002', title: 'user_1002', revenue_cents: 280_000, orders: 5, cashback_coins: 150, redeem_coins: 60 },
+    { tg_id: '1003', title: 'user_1003', revenue_cents: 210_000, orders: 4, cashback_coins: 120, redeem_coins: 30 },
+    { tg_id: '1004', title: 'user_1004', revenue_cents: 170_000, orders: 3, cashback_coins: 90, redeem_coins: 20 },
+    { tg_id: '1005', title: 'user_1005', revenue_cents: 140_000, orders: 3, cashback_coins: 80, redeem_coins: 10 },
+    { tg_id: '1006', title: 'user_1006', revenue_cents: 110_000, orders: 2, cashback_coins: 60, redeem_coins: 0 },
+    { tg_id: '1007', title: 'user_1007', revenue_cents: 90_000, orders: 2, cashback_coins: 40, redeem_coins: 0 },
+  ];
+
+  const key =
+    metric === 'orders'
+      ? 'orders'
+      : metric === 'cashback'
+        ? 'cashback_coins'
+        : metric === 'redeem'
+          ? 'redeem_coins'
+          : 'revenue_cents';
+
+  return base.sort((a, b) => Number((b as any)[key] || 0) - Number((a as any)[key] || 0));
 }
 
 /** ========= Page ========= */
 export default function Sales() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
-
   const t = sgpChartTheme();
 
   type OpenedKey = 'summary' | 'cashback' | 'boosts' | 'cashiers' | null;
@@ -284,7 +311,7 @@ export default function Sales() {
     openOnly(k);
   }
 
-  // ===== quick range (same as Passport) =====
+  // ===== quick range =====
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
   const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
@@ -310,17 +337,17 @@ export default function Sales() {
     if (kind === 'month') return applyRange(isoAddDays(anchor, -29), anchor);
   }
 
-  // ===== timeseries basis (backend-specific) =====
+  // ===== backend basis (optional) =====
   const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
 
-  // ===== money chart basis (issued vs redeemed cost) =====
+  // ===== money chart basis =====
   const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
 
-  // ===== chart toggles (MoneyChart style: like Wheel) =====
+  // ===== chart toggles =====
   const [showRevenue, setShowRevenue] = React.useState(true);
-  const [showCost, setShowCost] = React.useState(false); // payout/cost
-  const [showProfit, setShowProfit] = React.useState(true); // profit bars
-  const [showCum, setShowCum] = React.useState(false); // cum_profit
+  const [showCost, setShowCost] = React.useState(false);
+  const [showProfit, setShowProfit] = React.useState(true);
+  const [showCum, setShowCum] = React.useState(false);
 
   // ===== settings =====
   const qSettings = useQuery({
@@ -330,19 +357,21 @@ export default function Sales() {
     staleTime: 30_000,
   });
 
-  // ===== timeseries =====
+  // ===== timeseries (REAL endpoint) =====
   const qTs = useQuery({
     enabled: !!appId && !!range?.from && !!range?.to,
     queryKey: ['sales_ts', appId, range.from, range.to, basis],
     queryFn: async () => {
+      const settings = qSettings.data?.settings || {};
       try {
-        // later:
-        // return apiFetch(`/api/cabinet/apps/${appId}/sales/timeseries?${qs({ ...range, basis })}`)
-        const settings = qSettings.data?.settings || {};
-        return mkMock(range, settings);
+        // ожидаемый контракт:
+        // { ok:true, settings:{coin_value_cents,currency,...?}, days:[{date,revenue_cents,orders,buyers,cashback_issued_coins,redeem_confirmed_coins,cancels?,pending?}] }
+        return await apiFetch<{ ok: true; days: SalesTimeseriesDay[]; settings?: SalesSettings; note?: string }>(
+          `/api/cabinet/apps/${appId}/sales/timeseries?${qs({ from: range.from, to: range.to, basis })}`,
+        );
       } catch (e) {
-        const settings = qSettings.data?.settings || {};
-        return mkMock(range, settings);
+        // fallback чтобы кабинет не белел
+        return mkMock(range, settings) as any;
       }
     },
     staleTime: 10_000,
@@ -354,14 +383,20 @@ export default function Sales() {
   const qTopUsers = useQuery({
     enabled: !!appId && !!range?.from && !!range?.to,
     queryKey: ['sales_top_users', appId, range.from, range.to, topMetric],
-    queryFn: () =>
-      apiFetch<{ ok: true; items: SalesTopUser[] }>(
-        `/api/cabinet/apps/${appId}/sales/users/top?${qs({ ...range, metric: topMetric })}`,
-      ),
+    queryFn: async () => {
+      try {
+        return await apiFetch<{ ok: true; items: SalesTopUser[]; note?: string }>(
+          `/api/cabinet/apps/${appId}/sales/users/top?${qs({ from: range.from, to: range.to, metric: topMetric })}`,
+        );
+      } catch (e) {
+        // fallback (мок), чтобы блок не ломал страницу
+        return { ok: true, items: mkMockTopUsers(topMetric), note: 'mock fallback' };
+      }
+    },
     staleTime: 10_000,
   });
 
-  // ===== derived settings =====
+  // ===== derived settings (settings endpoint is source-of-truth; timeseries may also return settings) =====
   const settings: SalesSettings = qSettings.data?.settings || (qTs.data as any)?.settings || {};
   const currency = String(settings.currency || 'RUB').toUpperCase();
   const coinCents = Math.max(1, toInt(settings.coin_value_cents, 100));
@@ -372,7 +407,7 @@ export default function Sales() {
   // ===== series normalize by day =====
   const series = React.useMemo(() => {
     const map = new Map<string, SalesTimeseriesDay>();
-    for (const d of ((qTs.data as any)?.days || []) as SalesTimeseriesDay[]) if (d?.date) map.set(String(d.date), d);
+    for (const d of (((qTs.data as any)?.days || []) as SalesTimeseriesDay[])) if (d?.date) map.set(String(d.date), d);
 
     const dates = listDaysISO(range.from, range.to);
     return dates.map((iso) => {
@@ -395,7 +430,7 @@ export default function Sales() {
 
   const daysN = Math.max(1, series.length || 1);
 
-  // ===== totals (смысловые, чтобы отражало “картину”) =====
+  // ===== totals =====
   const totals = React.useMemo(() => {
     const rev = series.reduce((s, d) => s + safeNum(d.revenue_cents, 0), 0);
     const orders = series.reduce((s, d) => s + safeNum(d.orders, 0), 0);
@@ -425,7 +460,6 @@ export default function Sales() {
     const avgCheck = orders > 0 ? Math.round(rev / orders) : 0;
 
     return {
-      // raw
       rev,
       orders,
       buyersAvgPerDay,
@@ -445,18 +479,16 @@ export default function Sales() {
       cancels,
       pending,
 
-      // derived
       cancelRatePct: clampN(cancelRatePct, 0, 100),
       redeemRatePct: clampN(redeemRatePct, 0, 999),
       avgCheck,
 
-      // handy
       revPerDay: Math.round(rev / daysN),
       ordersPerDay: Math.round(orders / daysN),
     };
   }, [series, coinCents, daysN]);
 
-  // ===== MoneyChart data (как в Wheel) =====
+  // ===== MoneyChart data =====
   const moneySeries = React.useMemo(() => {
     let cum = 0;
 
@@ -470,8 +502,6 @@ export default function Sales() {
       const redeemedCost = Math.round(redeemedCoins * coinCents);
 
       const payout = costBasis === 'redeemed' ? redeemedCost : issuedCost;
-
-      // “прибыль” в смысле “выручка минус cost кэшбэка/скидок”
       const profit = revenue - payout;
 
       cum += profit;
@@ -526,7 +556,6 @@ export default function Sales() {
   function patchRankRule(id: string, patch: Partial<CashbackRuleByRank>) {
     setCashbackRulesByRank((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
-
   function patchSalesRule(id: string, patch: Partial<CashbackRuleBySales>) {
     setCashbackRulesBySales((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
@@ -825,6 +854,12 @@ export default function Sales() {
                   <Hint tone="good">Ок. Можно включать бусты и точнее настроить кэшбэк.</Hint>
                 )}
               </div>
+
+              {(qTs.data as any)?.note ? (
+                <div style={{ marginTop: 10 }}>
+                  <Hint tone="warn">Источник данных: {(qTs.data as any).note}</Hint>
+                </div>
+              ) : null}
             </SgCardContent>
           </SgCard>
 
@@ -878,15 +913,13 @@ export default function Sales() {
 
           {!qTopUsers.isLoading && !topUsers.length ? (
             <div style={{ marginTop: 10 }}>
-              <Hint tone="warn">
-                Топ пустой. Нужен эндпоинт <b>/sales/users/top</b> (пока можно отдавать mock).
-              </Hint>
+              <Hint tone="warn">Топ пустой. Проверь эндпоинт /sales/users/top.</Hint>
             </div>
           ) : null}
         </div>
       }
     >
-      {/* ===== FACT CHART (MoneyChart like Wheel) ===== */}
+      {/* ===== FACT CHART ===== */}
       <SgSectionCard
         title="Факт: выручка / cost / profit"
         sub={
@@ -896,7 +929,6 @@ export default function Sales() {
         }
         right={
           <div className="sgp-chartbar">
-            {/* backend basis (если тебе реально нужен) */}
             <div className="sgp-seg">
               <SegBtn active={basis === 'confirmed'} onClick={() => setBasis('confirmed')}>
                 при подтвержд.
@@ -906,7 +938,6 @@ export default function Sales() {
               </SegBtn>
             </div>
 
-            {/* money cost basis */}
             <div className="sgp-seg" style={{ marginLeft: 10 }}>
               <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
                 cost: issued
@@ -949,7 +980,7 @@ export default function Sales() {
         </ChartState>
       </SgSectionCard>
 
-      {/* ===== quick nav (same approach as Passport) ===== */}
+      {/* ===== quick nav ===== */}
       <div className="sgp-wheelTabsBar">
         <div className="sgp-seg">
           <SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
@@ -999,11 +1030,7 @@ export default function Sales() {
               key: 'buyers',
               label: 'ПОКУПАТЕЛИ',
               value: totals.buyersAvgPerDay,
-              sub: (
-                <>
-                  avg/day за период
-                </>
-              ),
+              sub: <>avg/day за период</>,
             },
             {
               key: 'cost',
@@ -1021,11 +1048,7 @@ export default function Sales() {
               key: 'profit',
               label: 'PROFIT (REV - COST)',
               value: moneyFromCent(profitShownCent, currency),
-              sub: (
-                <>
-                  {profitShownCent >= 0 ? 'плюс' : 'минус'} по выбранной базе cost
-                </>
-              ),
+              sub: <>{profitShownCent >= 0 ? 'плюс' : 'минус'} по выбранной базе cost</>,
               tone: profitShownCent >= 0 ? 'good' : 'warn',
             },
           ]}
