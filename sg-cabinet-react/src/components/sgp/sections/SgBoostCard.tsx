@@ -23,21 +23,22 @@ export type BoostDraftRow = {
   enabled: boolean;
 
   trigger_type: BoostTriggerType;
+  // inactivity: "3" (days), unredeemed: "24" (hours), happy_hour: "18:00-20:00", link: "BOOST_X3"
   trigger_value: string;
 
   reward_type: BoostRewardType;
-  reward_value: string;
-  ttl_hours: string;
+  reward_value: string; // "2" (x2), "1" (1 spin), "20" (-20%), "100" (+100 coins)
+  ttl_hours: string; // "24"
 
-  cooldown_days: string;
-  max_per_week: string;
+  cooldown_days: string; // "7"
+  max_per_week: string; // "1"
 
   channel: BoostChannel;
 
   title: string;
   message: string;
 
-  promo_code: string;
+  promo_code: string; // "X3" (optional)
 };
 
 type BoostStats = {
@@ -51,25 +52,32 @@ type Props<T> = {
   title?: string;
   sub?: React.ReactNode;
 
+  // collapse of whole card
   open: boolean;
   onToggleOpen: () => void;
 
+  // list
   items: T[];
   getId: (row: T) => string;
   getName: (row: T) => string;
 
+  // short lines (summary in row columns)
   getTriggerLine: (row: T, draft: BoostDraftRow) => React.ReactNode;
   getRewardLine: (row: T, draft: BoostDraftRow) => React.ReactNode;
 
+  // draft source of truth (outside)
   draft: Record<string, BoostDraftRow>;
   patchDraft: (id: string, patch: Partial<BoostDraftRow>) => void;
 
+  // header pills
   stats: BoostStats;
 
+  // hint / footer
   saveMsg?: string;
   saveState: SgSaveState;
   onSave: () => void;
 
+  // optional
   isLoading?: boolean;
   footerLeft?: React.ReactNode;
 };
@@ -120,15 +128,24 @@ function defaultDraft(): BoostDraftRow {
   };
 }
 
-/* ---------- small layout helpers (no extra deps) ---------- */
+function normalizeToggleValue(v: any): boolean {
+  if (typeof v === 'boolean') return v;
+  if (v && typeof v === 'object' && 'target' in v) return !!(v.target as any).checked;
+  return !!v;
+}
 
-function Section(props: { title: string; hint?: React.ReactNode; children: React.ReactNode }) {
+/* ---------- small layout helpers ---------- */
+
+function Section(props: { title: string; hint?: React.ReactNode; children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="sgp-hint tone-neutral" style={{ padding: 12 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ fontWeight: 700 }}>{props.title}</div>
-          {props.hint ? <div className="sgp-muted" style={{ textAlign: 'right' }}>{props.hint}</div> : null}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontWeight: 700 }}>{props.title}</div>
+            {props.hint ? <div className="sgp-muted">{props.hint}</div> : null}
+          </div>
+          {props.right ? <div>{props.right}</div> : null}
         </div>
         <div>{props.children}</div>
       </div>
@@ -161,11 +178,35 @@ function Field(props: { label: string; children: React.ReactNode; hint?: React.R
   );
 }
 
+function SaveInlineButton(props: { onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      disabled={props.disabled}
+      style={{
+        padding: '8px 12px',
+        borderRadius: 10,
+        border: '1px solid rgba(255,255,255,0.18)',
+        background: props.disabled ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)',
+        cursor: props.disabled ? 'not-allowed' : 'pointer',
+        opacity: props.disabled ? 0.6 : 1,
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+      }}
+      title={props.disabled ? 'Сейчас нельзя сохранить' : 'Сохранить бусты'}
+    >
+      Сохранить
+    </button>
+  );
+}
+
 /**
  * SgBoostCard
- * - settings open ONLY when enabled=true
- * - NO manual +/- expand button
- * - settings panel structured into neat sections
+ * - settings open ONLY by enabled toggle
+ * - no manual +/- button
+ * - row highlight enabled/disabled
+ * - inline "Save" inside settings
  */
 export function SgBoostCard<T>(props: Props<T>) {
   const {
@@ -193,6 +234,9 @@ export function SgBoostCard<T>(props: Props<T>) {
     isLoading,
     footerLeft = <span className="sgp-muted">Меняются только правила бустов (триггер/награда/сообщение).</span>,
   } = props;
+
+  // best-effort: disable inline save only during active saving
+  const savingNow = String(saveState).toLowerCase().includes('sav');
 
   return (
     <SgCard>
@@ -238,14 +282,29 @@ export function SgBoostCard<T>(props: Props<T>) {
             <div className="sgp-stockList">
               {items.map((row, i) => {
                 const id = getId(row) || String(i);
-                const d: BoostDraftRow = draft[id] || defaultDraft();
+
+                // IMPORTANT: if draft[id] is missing, we still render defaults
+                const base = defaultDraft();
+                const current = draft[id];
+                const d: BoostDraftRow = current ? { ...base, ...current } : base;
 
                 const enabled = !!d.enabled;
-                const expanded = enabled; // ✅ only toggle controls settings visibility
+                const expanded = enabled; // ✅ only toggle drives open/close
                 const tone = enabled ? 'on' : 'off';
 
+                const rowStyle: React.CSSProperties = enabled
+                  ? {
+                      borderLeft: '4px solid rgba(90, 220, 140, 0.9)',
+                      background: 'rgba(90, 220, 140, 0.06)',
+                    }
+                  : {
+                      borderLeft: '4px solid rgba(200, 200, 200, 0.35)',
+                      background: 'rgba(255,255,255,0.03)',
+                      opacity: 0.92,
+                    };
+
                 return (
-                  <div key={id} className={'sgp-stockRow tone-' + tone}>
+                  <div key={id} className={'sgp-stockRow tone-' + tone} style={rowStyle}>
                     {/* NAME + SETTINGS */}
                     <div className="sgp-stockCol sgp-stockCol--name" style={{ paddingLeft: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -261,14 +320,10 @@ export function SgBoostCard<T>(props: Props<T>) {
                       {expanded ? (
                         <div style={{ marginTop: 10 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {/* Trigger */}
                             <Section
                               title="Триггер"
-                              hint={
-                                <span>
-                                  Примеры: inactivity=3 · unredeemed=24 · happy_hour=18:00-20:00 · link=BOOST_X3
-                                </span>
-                              }
+                              hint="inactivity=3 · unredeemed=24 · happy_hour=18:00-20:00 · link=BOOST_X3"
+                              right={<SaveInlineButton onClick={onSave} disabled={savingNow} />}
                             >
                               <Grid cols="minmax(220px, 1fr) minmax(200px, 1fr)">
                                 <Field label="Тип триггера">
@@ -296,11 +351,7 @@ export function SgBoostCard<T>(props: Props<T>) {
                               </Grid>
                             </Section>
 
-                            {/* Reward */}
-                            <Section
-                              title="Награда"
-                              hint={<span>multiplier=2 · free_spins=1 · discount=20% · coins=100</span>}
-                            >
+                            <Section title="Награда" hint="multiplier=2 · free_spins=1 · discount=20% · coins=100">
                               <Grid cols="minmax(220px, 1fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr)">
                                 <Field label="Тип награды">
                                   <SgSelect
@@ -334,7 +385,6 @@ export function SgBoostCard<T>(props: Props<T>) {
                               </Grid>
                             </Section>
 
-                            {/* Limits */}
                             <Section title="Ограничения">
                               <Grid cols="minmax(180px, 1fr) minmax(180px, 1fr) minmax(220px, 1fr)">
                                 <Field label="Кулдаун (д)">
@@ -370,7 +420,6 @@ export function SgBoostCard<T>(props: Props<T>) {
                               </Grid>
                             </Section>
 
-                            {/* Message */}
                             <Section title="Сообщение и превью">
                               <Grid cols="minmax(260px, 1fr) minmax(260px, 1fr)" gap={12}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -399,6 +448,11 @@ export function SgBoostCard<T>(props: Props<T>) {
                                       placeholder="Текст сообщения"
                                     />
                                   </Field>
+
+                                  {/* second save at bottom for convenience */}
+                                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <SaveInlineButton onClick={onSave} disabled={savingNow} />
+                                  </div>
                                 </div>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -417,9 +471,21 @@ export function SgBoostCard<T>(props: Props<T>) {
                       ) : null}
                     </div>
 
-                    {/* Enabled toggle (controls settings visibility) */}
+                    {/* Enabled toggle (also materializes row in draft if missing) */}
                     <div className="sgp-stockCol">
-                      <SgToggle checked={enabled} onChange={(v) => patchDraft(id, { enabled: v })} />
+                      <SgToggle
+                        checked={enabled}
+                        onChange={(v) => {
+                          const nextEnabled = normalizeToggleValue(v);
+
+                          // 🔥 Fix: if row does not exist in draft, create it first
+                          if (!draft[id]) {
+                            patchDraft(id, { ...defaultDraft(), enabled: nextEnabled });
+                          } else {
+                            patchDraft(id, { enabled: nextEnabled });
+                          }
+                        }}
+                      />
                     </div>
 
                     <div className="sgp-stockCol">
