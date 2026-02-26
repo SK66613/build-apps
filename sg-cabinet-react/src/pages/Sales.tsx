@@ -1000,7 +1000,7 @@ export default function Sales() {
         </div>
       </div>
 
-      {/* ===== ACC: SUMMARY ===== */}
+    {/* ===== ACC: SUMMARY ===== */}
 <SgSectionCard
   title={
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1013,14 +1013,45 @@ export default function Sales() {
   onToggleOpen={() => toggleOnly('summary')}
 >
   <div className="sgp-metrics">
-    <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(totals.rev, currency)}</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">ЗАКАЗЫ</div><div className="sgp-metric__v">{totals.orders}</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">СР. ЧЕК</div><div className="sgp-metric__v">{moneyFromCent(totals.avgCheck, currency)}</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">КЭШБЭК</div><div className="sgp-metric__v">{totals.cashbackCoins} мон</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">СПИСАНО</div><div className="sgp-metric__v">{totals.redeemCoins} мон</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">NET</div><div className="sgp-metric__v">{moneyFromCent(totals.net, currency)}</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">PENDING</div><div className="sgp-metric__v">{totals.pending}</div></div>
-    <div className="sgp-metric"><div className="sgp-metric__k">CANCEL</div><div className="sgp-metric__v">{totals.cancelRatePct}%</div></div>
+    <div className="sgp-metric">
+      <div className="sgp-metric__k">ВЫРУЧКА</div>
+      <div className="sgp-metric__v">{moneyFromCent(totals.rev, currency)}</div>
+      <div className="sgp-metric__s">
+        в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b>
+      </div>
+    </div>
+
+    <div className="sgp-metric">
+      <div className="sgp-metric__k">ЗАКАЗЫ</div>
+      <div className="sgp-metric__v">{totals.orders}</div>
+      <div className="sgp-metric__s">
+        ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b>
+      </div>
+    </div>
+
+    <div className="sgp-metric">
+      <div className="sgp-metric__k">ПОКУПАТЕЛИ</div>
+      <div className="sgp-metric__v">{totals.buyers}</div>
+      <div className="sgp-metric__s">
+        repeat: <b>{totals.repeatRatePct}%</b>
+      </div>
+    </div>
+
+    <div className="sgp-metric">
+      <div className="sgp-metric__k">КЭШБЭК</div>
+      <div className="sgp-metric__v">{totals.cashbackCoins} мон</div>
+      <div className="sgp-metric__s">
+        ≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b>
+      </div>
+    </div>
+
+    <div className="sgp-metric">
+      <div className="sgp-metric__k">NET</div>
+      <div className="sgp-metric__v">{moneyFromCent(totals.net, currency)}</div>
+      <div className="sgp-metric__s">
+        списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b>
+      </div>
+    </div>
   </div>
 
   {/* Rows summary (универсальный блок “строки”, стиль как твой старый sales sgRow) */}
@@ -1061,20 +1092,6 @@ export default function Sales() {
         },
       ]}
     />
-  </div>
-
-  <div style={{ marginTop: 12 }}>
-    {!salesActive ? (
-      <Hint tone="bad">Продажи выключены. Включи в “Кассиру → Операционные тумблеры”.</Hint>
-    ) : totals.pending >= 8 ? (
-      <Hint tone="warn">
-        Много pending: <b>{totals.pending}</b>. Добавь мотивацию кассиру подтверждать + напоминания пользователю.
-      </Hint>
-    ) : totals.cancelRatePct >= 8 ? (
-      <Hint tone="warn">Отмены выше нормы: <b>{totals.cancelRatePct}%</b>. Проверь правила/UX у кассира.</Hint>
-    ) : (
-      <Hint tone="good">Ок. Дальше настрой кэшбэк по рангу и включи бусты на покупки.</Hint>
-    )}
   </div>
 </SgSectionCard>
 
