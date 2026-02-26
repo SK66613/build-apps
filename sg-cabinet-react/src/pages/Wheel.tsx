@@ -516,6 +516,42 @@ function toggleOnly(k: Exclude<OpenedKey, null>) {
     }
   }
 
+
+// ===== BOOST draft =====
+const [boostDraft, setBoostDraft] = React.useState<Record<string, any>>({});
+const [savingBoost, setSavingBoost] = React.useState(false);
+const [boostMsg, setBoostMsg] = React.useState<string>('');
+
+// как у stock: патч с "заполнением по умолчанию"
+function patchBoostDraft(id: string, patch: any) {
+  setBoostDraft((d) => ({
+    ...d,
+    [id]: {
+      ...(d[id] ?? {}),
+      ...patch,
+    },
+  }));
+}
+
+async function saveBoost() {
+  setBoostMsg('');
+  setSavingBoost(true);
+  try {
+    // TODO: сюда потом API
+    // await apiFetch(`/api/cabinet/apps/${appId}/wheel/boosts`, { method:'PUT', ... })
+    setBoostMsg('Сохранено');
+  } catch (e: any) {
+    setBoostMsg('Ошибка: ' + String(e?.message || e));
+  } finally {
+    setSavingBoost(false);
+  }
+}
+
+const boostSaveState: SgSaveState =
+  savingBoost ? 'saving' : (boostMsg === 'Сохранено' ? 'saved' : (boostMsg.startsWith('Ошибка') ? 'error' : 'idle'));
+
+  
+
   // ===== inventory counters =====
   const inventory = React.useMemo(() => {
     const tracked = items.filter((p) => isTracked(p));
@@ -913,7 +949,6 @@ onToggleOpen={() => toggleOnly('summary')}
   open={opened === 'boost' && openBoost}
   onToggleOpen={() => toggleOnly('boost')}
 
-  // Пока мок-список (потом заменим на API)
   items={[
     { id: 'b1', name: 'Не крутил 3 дня — x2 монеты' },
     { id: 'b2', name: 'Не крутил 7 дней — 1 бесплатный спин' },
@@ -924,18 +959,22 @@ onToggleOpen={() => toggleOnly('summary')}
   getId={(x: any) => x.id}
   getName={(x: any) => x.name}
 
-  // Эти две строки — как показываем “Триггер/Награда” в таблице (можно упростить/изменить)
   getTriggerLine={(row: any, d: any) => `${d.trigger_type}: ${d.trigger_value}`}
   getRewardLine={(row: any, d: any) => `${d.reward_type}: ${d.reward_value} (TTL ${d.ttl_hours}ч)`}
 
-  // draft/patch/save — пока заглушки (чтобы UI уже жил)
-  draft={{}}
-  patchDraft={() => {}}
+  draft={boostDraft}
+  patchDraft={patchBoostDraft}
 
-  stats={{ activeCount: 0, pausedCount: 0, fired7d: 0, errors7d: 0 }}
-  saveMsg=""
-  saveState="idle"
-  onSave={() => {}}
+  stats={{
+    activeCount: Object.values(boostDraft).filter((x: any) => !!x?.enabled).length,
+    pausedCount: Object.values(boostDraft).filter((x: any) => x && x.enabled === false).length,
+    fired7d: 0,
+    errors7d: 0,
+  }}
+
+  saveMsg={boostMsg}
+  saveState={boostSaveState}
+  onSave={saveBoost}
 />
 
 
