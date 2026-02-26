@@ -25,23 +25,13 @@ import { ShimmerLine } from '../components/sgp/ShimmerLine';
 import { IconBtn } from '../components/sgp/IconBtn';
 
 import { ChartState } from '../components/sgp/charts/ChartState';
+import { sgpChartTheme } from '../components/sgp/charts/theme';
+import { SgMoneyChart } from '../components/sgp/charts/SgMoneyChart';
+
 import { SgSectionCard } from '../components/sgp/blocks/SgSectionCard';
 import { SgTopListCard } from '../components/sgp/sections/SgTopListCard';
 
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Area,
-} from 'recharts';
-
 import SgRowsSummary from '../components/sgp/blocks/SgRowsSummary';
-
 import SgSectionSummary from '../components/sgp/blocks/SgSectionSummary';
 
 /**
@@ -192,16 +182,6 @@ function moneyFromCent(cent: number | null | undefined, currency = 'RUB') {
   return `${(v / 100).toFixed(2)} ${sym}`;
 }
 
-function niceMoneyTick(vCents: number) {
-  const v = Number(vCents);
-  if (!Number.isFinite(v)) return '';
-  const x = Math.round(v / 100);
-  const ax = Math.abs(x);
-  if (ax >= 1_000_000) return `${(x / 1_000_000).toFixed(1)}M`;
-  if (ax >= 10_000) return `${(x / 1000).toFixed(0)}k`;
-  return String(x);
-}
-
 function safeNum(v: any, d = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : d;
@@ -274,6 +254,8 @@ export default function Sales() {
   const { appId, range, setRange }: any = useAppState();
   const qc = useQueryClient();
 
+  const t = sgpChartTheme();
+
   type OpenedKey = 'summary' | 'cashback' | 'boosts' | 'cashiers' | null;
 
   const [opened, setOpened] = React.useState<OpenedKey>('summary');
@@ -328,14 +310,17 @@ export default function Sales() {
     if (kind === 'month') return applyRange(isoAddDays(anchor, -29), anchor);
   }
 
-  // ===== overlay chart controls =====
+  // ===== timeseries basis (backend-specific) =====
   const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
 
+  // ===== money chart basis (issued vs redeemed cost) =====
+  const [costBasis, setCostBasis] = React.useState<'issued' | 'redeemed'>('issued');
+
+  // ===== chart toggles (MoneyChart style: like Wheel) =====
   const [showRevenue, setShowRevenue] = React.useState(true);
-  const [showOrders, setShowOrders] = React.useState(true);
-  const [showCashback, setShowCashback] = React.useState(false);
-  const [showRedeem, setShowRedeem] = React.useState(false);
-  const [showNet, setShowNet] = React.useState(true);
+  const [showCost, setShowCost] = React.useState(false); // payout/cost
+  const [showProfit, setShowProfit] = React.useState(true); // profit bars
+  const [showCum, setShowCum] = React.useState(false); // cum_profit
 
   // ===== settings =====
   const qSettings = useQuery({
@@ -394,7 +379,6 @@ export default function Sales() {
       const r = map.get(iso);
       const cashbackCoins = safeNum(r?.cashback_issued_coins, 0);
       const redeemCoins = safeNum(r?.redeem_confirmed_coins, 0);
-      const netCents = Math.round(redeemCoins * coinCents - cashbackCoins * coinCents);
 
       return {
         date: iso,
@@ -405,49 +389,104 @@ export default function Sales() {
         redeem_confirmed_coins: redeemCoins,
         cancels: safeNum(r?.cancels, 0),
         pending: safeNum(r?.pending, 0),
-        net_cents: netCents,
       };
     });
-  }, [qTs.data, range.from, range.to, coinCents]);
+  }, [qTs.data, range.from, range.to]);
 
-  // ===== totals =====
+  const daysN = Math.max(1, series.length || 1);
+
+  // ===== totals (смысловые, чтобы отражало “картину”) =====
   const totals = React.useMemo(() => {
     const rev = series.reduce((s, d) => s + safeNum(d.revenue_cents, 0), 0);
     const orders = series.reduce((s, d) => s + safeNum(d.orders, 0), 0);
-    const buyersAvg = series.length
-      ? Math.round(series.reduce((s, d) => s + safeNum(d.buyers, 0), 0) / series.length)
-      : 0;
 
-    const cashbackCoins = series.reduce((s, d) => s + safeNum(d.cashback_issued_coins, 0), 0);
-    const redeemCoins = series.reduce((s, d) => s + safeNum(d.redeem_confirmed_coins, 0), 0);
+    const buyersSum = series.reduce((s, d) => s + safeNum(d.buyers, 0), 0);
+    const buyersAvgPerDay = series.length ? Math.round(buyersSum / series.length) : 0;
 
-    const cashbackCent = Math.round(cashbackCoins * coinCents);
-    const redeemCent = Math.round(redeemCoins * coinCents);
-    const net = redeemCent - cashbackCent;
+    const cashbackCoinsIssued = series.reduce((s, d) => s + safeNum(d.cashback_issued_coins, 0), 0);
+    const redeemCoinsConfirmed = series.reduce((s, d) => s + safeNum(d.redeem_confirmed_coins, 0), 0);
+
+    const cashbackCentIssued = Math.round(cashbackCoinsIssued * coinCents);
+    const redeemCentConfirmed = Math.round(redeemCoinsConfirmed * coinCents);
+
+    // cost/profit — “денежная картинка”
+    const costIssuedCent = cashbackCentIssued;
+    const costRedeemedCent = redeemCentConfirmed;
+
+    const profitIssuedCent = rev - costIssuedCent;
+    const profitRedeemedCent = rev - costRedeemedCent;
 
     const cancels = series.reduce((s, d) => s + safeNum(d.cancels, 0), 0);
     const pending = series.reduce((s, d) => s + safeNum(d.pending, 0), 0);
 
     const cancelRatePct = orders > 0 ? Math.round((cancels / orders) * 100) : 0;
-    const redeemRatePct = cashbackCoins > 0 ? Math.round((redeemCoins / cashbackCoins) * 100) : 0;
+    const redeemRatePct = cashbackCoinsIssued > 0 ? Math.round((redeemCoinsConfirmed / cashbackCoinsIssued) * 100) : 0;
+
     const avgCheck = orders > 0 ? Math.round(rev / orders) : 0;
 
     return {
+      // raw
       rev,
       orders,
-      buyersAvg,
-      cashbackCoins,
-      redeemCoins,
-      cashbackCent,
-      redeemCent,
-      net,
+      buyersAvgPerDay,
+
+      cashbackCoinsIssued,
+      redeemCoinsConfirmed,
+
+      cashbackCentIssued,
+      redeemCentConfirmed,
+
+      costIssuedCent,
+      costRedeemedCent,
+
+      profitIssuedCent,
+      profitRedeemedCent,
+
       cancels,
       pending,
+
+      // derived
       cancelRatePct: clampN(cancelRatePct, 0, 100),
-      redeemRatePct: clampN(redeemRatePct, 0, 100),
+      redeemRatePct: clampN(redeemRatePct, 0, 999),
       avgCheck,
+
+      // handy
+      revPerDay: Math.round(rev / daysN),
+      ordersPerDay: Math.round(orders / daysN),
     };
-  }, [series, coinCents]);
+  }, [series, coinCents, daysN]);
+
+  // ===== MoneyChart data (как в Wheel) =====
+  const moneySeries = React.useMemo(() => {
+    let cum = 0;
+
+    const rows = series.map((d) => {
+      const revenue = Number(d.revenue_cents) || 0;
+
+      const issuedCoins = Number(d.cashback_issued_coins) || 0;
+      const redeemedCoins = Number(d.redeem_confirmed_coins) || 0;
+
+      const issuedCost = Math.round(issuedCoins * coinCents);
+      const redeemedCost = Math.round(redeemedCoins * coinCents);
+
+      const payout = costBasis === 'redeemed' ? redeemedCost : issuedCost;
+
+      // “прибыль” в смысле “выручка минус cost кэшбэка/скидок”
+      const profit = revenue - payout;
+
+      cum += profit;
+
+      return {
+        date: d.date,
+        revenue,
+        payout,
+        profit,
+        cum_profit: cum,
+      };
+    });
+
+    return { series: rows };
+  }, [series, coinCents, costBasis]);
 
   // ===== health =====
   const healthTone: 'good' | 'warn' | 'bad' = React.useMemo(() => {
@@ -524,7 +563,6 @@ export default function Sales() {
     setSavingCashback(true);
     try {
       // TODO: PUT /api/cabinet/apps/:id/sales/cashback/settings
-      // await apiFetch(`/api/cabinet/apps/${appId}/sales/cashback/settings`, { method:'PUT', ... })
       setCashbackMsg('Сохранено');
     } catch (e: any) {
       setCashbackMsg('Ошибка: ' + String(e?.message || e));
@@ -536,7 +574,7 @@ export default function Sales() {
   const cashbackSaveState: SgSaveState =
     savingCashback ? 'saving' : cashbackMsg === 'Сохранено' ? 'saved' : cashbackMsg.startsWith('Ошибка') ? 'error' : 'idle';
 
-  // ===== boosts (motivation for purchases) =====
+  // ===== boosts =====
   const [boostsOn, setBoostsOn] = React.useState(true);
   const [boosts, setBoosts] = React.useState<BoostRow[]>([
     {
@@ -605,7 +643,7 @@ export default function Sales() {
   const boostsSaveState: SgSaveState =
     savingBoosts ? 'saving' : boostsMsg === 'Сохранено' ? 'saved' : boostsMsg.startsWith('Ошибка') ? 'error' : 'idle';
 
-  // ===== cashiers (3 stable + optional) =====
+  // ===== cashiers =====
   const [cashiers, setCashiers] = React.useState<CashierDraft[]>([
     { id: 'c1', label: 'Кассир #1', tg_id: '', role: 'cashier', active: true },
     { id: 'c2', label: 'Кассир #2', tg_id: '', role: 'cashier', active: true },
@@ -622,7 +660,6 @@ export default function Sales() {
   }
 
   function removeCashier(id: string) {
-    // первые 3 не удаляем
     if (id === 'c1' || id === 'c2' || id === 'c3') return;
     setCashiers((p) => p.filter((c) => c.id !== id));
   }
@@ -636,7 +673,6 @@ export default function Sales() {
     setSavingCashiers(true);
     try {
       // TODO: PUT /api/cabinet/apps/:id/sales/cashiers
-      // await apiFetch(`/api/cabinet/apps/${appId}/sales/cashiers`, { method:'PUT', ... })
       setCashiersMsg('Сохранено');
       await qc.invalidateQueries({ queryKey: ['sales_settings', appId] });
     } catch (e: any) {
@@ -696,6 +732,10 @@ export default function Sales() {
 
   const summaryBadgeTone: 'good' | 'warn' | 'bad' = !salesActive ? 'bad' : healthTone;
 
+  // ===== KPIs for summary blocks =====
+  const profitShownCent = costBasis === 'redeemed' ? totals.profitRedeemedCent : totals.profitIssuedCent;
+  const costShownCent = costBasis === 'redeemed' ? totals.costRedeemedCent : totals.costIssuedCent;
+
   return (
     <SgPage
       className="sgp-sales"
@@ -747,9 +787,7 @@ export default function Sales() {
       aside={
         <div className="sgp-aside">
           <SgCard>
-            <SgCardHeader
-              right={<HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />}
-            >
+            <SgCardHeader right={<HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />}>
               <div>
                 <SgCardTitle>Состояние продаж</SgCardTitle>
                 <SgCardSub>за выбранный период</SgCardSub>
@@ -760,10 +798,18 @@ export default function Sales() {
               <div className="sgp-kv">
                 <div className="sgp-kv__row"><span>Выручка</span><b>{moneyFromCent(totals.rev, currency)}</b></div>
                 <div className="sgp-kv__row"><span>Заказы</span><b>{totals.orders}</b></div>
-                <div className="sgp-kv__row"><span>Покупатели (avg/day)</span><b>{totals.buyersAvg}</b></div>
-                <div className="sgp-kv__row"><span>Кэшбэк (issued)</span><b>{totals.cashbackCoins} мон</b></div>
-                <div className="sgp-kv__row"><span>Списано (confirmed)</span><b>{totals.redeemCoins} мон</b></div>
-                <div className="sgp-kv__row"><span>Net</span><b>{moneyFromCent(totals.net, currency)}</b></div>
+                <div className="sgp-kv__row"><span>Покупатели (avg/day)</span><b>{totals.buyersAvgPerDay}</b></div>
+
+                <div className="sgp-kv__row">
+                  <span>Cost ({costBasis === 'redeemed' ? 'redeemed' : 'issued'})</span>
+                  <b>{moneyFromCent(costShownCent, currency)}</b>
+                </div>
+
+                <div className="sgp-kv__row">
+                  <span>Profit (rev - cost)</span>
+                  <b>{moneyFromCent(profitShownCent, currency)}</b>
+                </div>
+
                 <div className="sgp-kv__row"><span>Pending</span><b>{totals.pending}</b></div>
                 <div className="sgp-kv__row"><span>Cancel</span><b>{totals.cancelRatePct}%</b></div>
               </div>
@@ -840,9 +886,9 @@ export default function Sales() {
         </div>
       }
     >
-      {/* ===== FACT CHART ===== */}
+      {/* ===== FACT CHART (MoneyChart like Wheel) ===== */}
       <SgSectionCard
-        title="Факт: выручка / заказы / net"
+        title="Факт: выручка / cost / profit"
         sub={
           <>
             {range.from} — {range.to} · 1 монета = <b>{moneyFromCent(coinCents, currency)}</b>
@@ -850,6 +896,7 @@ export default function Sales() {
         }
         right={
           <div className="sgp-chartbar">
+            {/* backend basis (если тебе реально нужен) */}
             <div className="sgp-seg">
               <SegBtn active={basis === 'confirmed'} onClick={() => setBasis('confirmed')}>
                 при подтвержд.
@@ -859,12 +906,21 @@ export default function Sales() {
               </SegBtn>
             </div>
 
-            <div className="sgp-iconGroup">
-              <IconBtn active={showRevenue} title="Выручка (день)" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
-              <IconBtn active={showOrders} title="Заказы (день)" onClick={() => setShowOrders((v) => !v)}>O</IconBtn>
-              <IconBtn active={showNet} title="Net (день)" onClick={() => setShowNet((v) => !v)}>N</IconBtn>
-              <IconBtn active={showCashback} title="Кэшбэк issued (coins)" onClick={() => setShowCashback((v) => !v)}>C</IconBtn>
-              <IconBtn active={showRedeem} title="Redeem confirmed (coins)" onClick={() => setShowRedeem((v) => !v)}>D</IconBtn>
+            {/* money cost basis */}
+            <div className="sgp-seg" style={{ marginLeft: 10 }}>
+              <SegBtn active={costBasis === 'issued'} onClick={() => setCostBasis('issued')}>
+                cost: issued
+              </SegBtn>
+              <SegBtn active={costBasis === 'redeemed'} onClick={() => setCostBasis('redeemed')}>
+                cost: redeemed
+              </SegBtn>
+            </div>
+
+            <div className="sgp-iconGroup" style={{ marginLeft: 10 }}>
+              <IconBtn active={showRevenue} title="Выручка" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
+              <IconBtn active={showCost} title="Cost (кэшбэк/скидка)" onClick={() => setShowCost((v) => !v)}>C</IconBtn>
+              <IconBtn active={showProfit} title="Profit (rev - cost)" onClick={() => setShowProfit((v) => !v)}>P</IconBtn>
+              <IconBtn active={showCum} title="Кумулятив profit" onClick={() => setShowCum((v) => !v)}>Σ</IconBtn>
             </div>
 
             <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
@@ -878,115 +934,18 @@ export default function Sales() {
           isError={qTs.isError}
           errorText={String((qTs.error as any)?.message || 'UNKNOWN')}
         >
-          <div style={{ width: '100%', height: 340 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={series} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 12 }}
-                  interval="preserveStartEnd"
-                  tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
-                />
-
-                <YAxis
-                  yAxisId="money"
-                  tick={{ fontSize: 12 }}
-                  width={54}
-                  tickFormatter={(v: any) => niceMoneyTick(Number(v))}
-                />
-                <YAxis
-                  yAxisId="count"
-                  orientation="right"
-                  width={10}
-                  tick={false}
-                  axisLine={false}
-                  tickLine={false}
-                />
-
-                <Tooltip
-                  formatter={(val: any, name: any) => {
-                    if (name === 'revenue_cents') return [moneyFromCent(val, currency), 'Выручка/день'];
-                    if (name === 'net_cents') return [moneyFromCent(val, currency), 'Net/день'];
-                    if (name === 'orders') return [String(val), 'Заказы/день'];
-                    if (name === 'cashback_issued_coins') return [String(val), 'Кэшбэк issued (мон)'];
-                    if (name === 'redeem_confirmed_coins') return [String(val), 'Redeem confirmed (мон)'];
-                    return [String(val), String(name)];
-                  }}
-                  labelFormatter={(_: any, payload: any) => {
-                    const d = payload?.[0]?.payload?.date;
-                    return d ? `Дата ${d}` : 'Дата';
-                  }}
-                />
-
-                {showRevenue ? (
-                  <Area
-                    yAxisId="money"
-                    type="monotone"
-                    dataKey="revenue_cents"
-                    name="revenue_cents"
-                    stroke="var(--accent2)"
-                    fill="var(--accent)"
-                    fillOpacity={0.12}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ) : null}
-
-                {showNet ? (
-                  <Line
-                    yAxisId="money"
-                    type="monotone"
-                    dataKey="net_cents"
-                    name="net_cents"
-                    stroke="var(--accent2)"
-                    strokeWidth={2}
-                    strokeDasharray="6 4"
-                    dot={false}
-                    opacity={0.95}
-                  />
-                ) : null}
-
-                {showOrders ? (
-                  <Bar
-                    yAxisId="count"
-                    dataKey="orders"
-                    name="orders"
-                    fill="var(--accent)"
-                    fillOpacity={0.18}
-                    radius={[10, 10, 10, 10]}
-                    barSize={14}
-                  />
-                ) : null}
-
-                {showCashback ? (
-                  <Line
-                    yAxisId="count"
-                    type="monotone"
-                    dataKey="cashback_issued_coins"
-                    name="cashback_issued_coins"
-                    stroke="var(--accent)"
-                    strokeWidth={2}
-                    dot={false}
-                    opacity={0.85}
-                  />
-                ) : null}
-
-                {showRedeem ? (
-                  <Line
-                    yAxisId="count"
-                    type="monotone"
-                    dataKey="redeem_confirmed_coins"
-                    name="redeem_confirmed_coins"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    dot={false}
-                    opacity={0.55}
-                  />
-                ) : null}
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+          <SgMoneyChart
+            data={moneySeries.series}
+            currency={currency}
+            theme={t}
+            height={340}
+            showRevenue={showRevenue}
+            showPayout={showCost}
+            showProfitBars={showProfit}
+            showCum={showCum}
+            fmtTick={(iso) => fmtDDMM(iso)}
+            moneyFmt={(cent, cur) => moneyFromCent(cent, cur)}
+          />
         </ChartState>
       </SgSectionCard>
 
@@ -1000,116 +959,117 @@ export default function Sales() {
         </div>
       </div>
 
-    {/* ===== ACC: SUMMARY ===== */}
-<SgSectionCard
-  title={
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span>Сводка</span>
-      <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
-    </div>
-  }
-  collapsible
-  open={opened === 'summary' && openSummary}
-  onToggleOpen={() => toggleOnly('summary')}
->
-  <SgSectionSummary
-    columns={4}
-    dense
-    items={[
-      {
-        key: 'rev',
-        label: 'ВЫРУЧКА',
-        value: moneyFromCent(totals.rev, currency),
-        sub: (
-          <>
-            в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b>
-          </>
-        ),
-      },
-      {
-        key: 'orders',
-        label: 'ЗАКАЗЫ',
-        value: totals.orders,
-        sub: (
-          <>
-            ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b>
-          </>
-        ),
-      },
-      {
-        key: 'buyers',
-        label: 'ПОКУПАТЕЛИ',
-        value: totals.buyers,
-        sub: (
-          <>
-            repeat: <b>{totals.repeatRatePct}%</b>
-          </>
-        ),
-      },
-      {
-        key: 'cashback',
-        label: 'КЭШБЭК',
-        value: `${totals.cashbackCoins} мон`,
-        sub: (
-          <>
-            ≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b>
-          </>
-        ),
-      },
-      {
-        key: 'net',
-        label: 'NET',
-        value: moneyFromCent(totals.net, currency),
-        sub: (
-          <>
-            списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b>
-          </>
-        ),
-        tone: totals.net >= 0 ? 'good' : 'warn',
-      },
-    ]}
-  />
+      {/* ===== ACC: SUMMARY ===== */}
+      <SgSectionCard
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>Сводка</span>
+            <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
+          </div>
+        }
+        collapsible
+        open={opened === 'summary' && openSummary}
+        onToggleOpen={() => toggleOnly('summary')}
+      >
+        <SgSectionSummary
+          columns={4}
+          dense
+          items={[
+            {
+              key: 'rev',
+              label: 'ВЫРУЧКА',
+              value: moneyFromCent(totals.rev, currency),
+              sub: (
+                <>
+                  в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b>
+                </>
+              ),
+            },
+            {
+              key: 'orders',
+              label: 'ЗАКАЗЫ',
+              value: totals.orders,
+              sub: (
+                <>
+                  в день: <b>{totals.ordersPerDay}</b> · ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b>
+                </>
+              ),
+            },
+            {
+              key: 'buyers',
+              label: 'ПОКУПАТЕЛИ',
+              value: totals.buyersAvgPerDay,
+              sub: (
+                <>
+                  avg/day за период
+                </>
+              ),
+            },
+            {
+              key: 'cost',
+              label: `COST (${costBasis === 'redeemed' ? 'REDEEMED' : 'ISSUED'})`,
+              value: moneyFromCent(costShownCent, currency),
+              sub: (
+                <>
+                  {costBasis === 'redeemed'
+                    ? <>списано: <b>{totals.redeemCoinsConfirmed} мон</b></>
+                    : <>начислено: <b>{totals.cashbackCoinsIssued} мон</b></>}
+                </>
+              ),
+            },
+            {
+              key: 'profit',
+              label: 'PROFIT (REV - COST)',
+              value: moneyFromCent(profitShownCent, currency),
+              sub: (
+                <>
+                  {profitShownCent >= 0 ? 'плюс' : 'минус'} по выбранной базе cost
+                </>
+              ),
+              tone: profitShownCent >= 0 ? 'good' : 'warn',
+            },
+          ]}
+        />
 
-  {/* Rows summary (универсальный блок “строки”, стиль как твой старый sales sgRow) */}
-  <div style={{ marginTop: 12 }}>
-    <SgRowsSummary
-      columns={2}
-      dense
-      items={[
-        {
-          key: 'pending',
-          tone: !salesActive ? 'bad' : totals.pending >= 8 ? 'bad' : totals.pending > 0 ? 'warn' : 'good',
-          title: 'Зависшие подтверждения',
-          meta: 'Портит UX: клиент не видит результат',
-          value: totals.pending,
-          sub: totals.pending >= 8 ? 'критично' : totals.pending > 0 ? 'есть' : 'ок',
-          right: (
-            <HealthBadge
-              tone={!salesActive ? 'bad' : totals.pending >= 8 ? 'bad' : totals.pending > 0 ? 'warn' : 'good'}
-              title={!salesActive ? 'Продажи OFF' : 'pending за период'}
-              compact
-            />
-          ),
-        },
-        {
-          key: 'cancel',
-          tone: !salesActive ? 'bad' : totals.cancelRatePct >= 12 ? 'bad' : totals.cancelRatePct >= 8 ? 'warn' : 'good',
-          title: 'Процент отмен',
-          meta: 'Сигнал проблем в кассе/правилах',
-          value: `${totals.cancelRatePct}%`,
-          sub: totals.cancelRatePct >= 12 ? 'плохо' : totals.cancelRatePct >= 8 ? 'риск' : 'ок',
-          right: (
-            <HealthBadge
-              tone={!salesActive ? 'bad' : totals.cancelRatePct >= 12 ? 'bad' : totals.cancelRatePct >= 8 ? 'warn' : 'good'}
-              title={!salesActive ? 'Продажи OFF' : 'cancel_rate за период'}
-              compact
-            />
-          ),
-        },
-      ]}
-    />
-  </div>
-</SgSectionCard>
+        <div style={{ marginTop: 12 }}>
+          <SgRowsSummary
+            columns={2}
+            dense
+            items={[
+              {
+                key: 'pending',
+                tone: !salesActive ? 'bad' : totals.pending >= 8 ? 'bad' : totals.pending > 0 ? 'warn' : 'good',
+                title: 'Зависшие подтверждения',
+                meta: 'Портит UX: клиент не видит результат',
+                value: totals.pending,
+                sub: totals.pending >= 8 ? 'критично' : totals.pending > 0 ? 'есть' : 'ок',
+                right: (
+                  <HealthBadge
+                    tone={!salesActive ? 'bad' : totals.pending >= 8 ? 'bad' : totals.pending > 0 ? 'warn' : 'good'}
+                    title={!salesActive ? 'Продажи OFF' : 'pending за период'}
+                    compact
+                  />
+                ),
+              },
+              {
+                key: 'cancel',
+                tone: !salesActive ? 'bad' : totals.cancelRatePct >= 12 ? 'bad' : totals.cancelRatePct >= 8 ? 'warn' : 'good',
+                title: 'Процент отмен',
+                meta: 'Сигнал проблем в кассе/правилах',
+                value: `${totals.cancelRatePct}%`,
+                sub: totals.cancelRatePct >= 12 ? 'плохо' : totals.cancelRatePct >= 8 ? 'риск' : 'ок',
+                right: (
+                  <HealthBadge
+                    tone={!salesActive ? 'bad' : totals.cancelRatePct >= 12 ? 'bad' : totals.cancelRatePct >= 8 ? 'warn' : 'good'}
+                    title={!salesActive ? 'Продажи OFF' : 'cancel_rate за период'}
+                    compact
+                  />
+                ),
+              },
+            ]}
+          />
+        </div>
+      </SgSectionCard>
 
       {/* ===== ACC: CASHBACK ===== */}
       <SgSectionCard
@@ -1124,9 +1084,7 @@ export default function Sales() {
             <span className="sgp-muted">Общий тумблер</span>
             <SgToggle checked={cashbackOn} onChange={setCashbackOn} />
           </div>
-          <Hint tone="neutral">
-            Идея: базовый % по рангу + временный бонус по поведению (orders/revenue/buyers).
-          </Hint>
+          <Hint tone="neutral">Идея: базовый % по рангу + временный бонус по поведению (orders/revenue/buyers).</Hint>
         </div>
 
         <div style={{ height: 10 }} />
@@ -1166,10 +1124,7 @@ export default function Sales() {
 
                 <SgCardContent>
                   <SgFormRow label="Ранг">
-                    <SgInput
-                      value={r.rank}
-                      onChange={(e) => patchRankRule(r.id, { rank: String((e.target as any).value || '') })}
-                    />
+                    <SgInput value={r.rank} onChange={(e) => patchRankRule(r.id, { rank: String((e.target as any).value || '') })} />
                   </SgFormRow>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1185,7 +1140,10 @@ export default function Sales() {
                         value={String(Math.max(0, toInt(r.min_order_cents, 0)) / 100)}
                         onChange={(e) =>
                           patchRankRule(r.id, {
-                            min_order_cents: Math.max(0, Math.round(Number(String((e.target as any).value || '0').replace(',', '.')) * 100)),
+                            min_order_cents: Math.max(
+                              0,
+                              Math.round(Number(String((e.target as any).value || '0').replace(',', '.')) * 100),
+                            ),
                           })
                         }
                       />
@@ -1195,18 +1153,14 @@ export default function Sales() {
                   <SgFormRow label="Лимит монет/день" hint="0 = без лимита">
                     <SgInput
                       value={String(r.max_cashback_coins_per_day)}
-                      onChange={(e) =>
-                        patchRankRule(r.id, { max_cashback_coins_per_day: Math.max(0, toInt((e.target as any).value, 0)) })
-                      }
+                      onChange={(e) => patchRankRule(r.id, { max_cashback_coins_per_day: Math.max(0, toInt((e.target as any).value, 0)) })}
                     />
                   </SgFormRow>
                 </SgCardContent>
               </SgCard>
             ))}
 
-            {!cashbackRulesByRank.length ? (
-              <Hint tone="warn">Нет правил по рангу — добавь хотя бы базовый %.</Hint>
-            ) : null}
+            {!cashbackRulesByRank.length ? <Hint tone="warn">Нет правил по рангу — добавь хотя бы базовый %.</Hint> : null}
           </SgCardContent>
         </SgCard>
 
@@ -1247,32 +1201,20 @@ export default function Sales() {
 
                 <SgCardContent>
                   <SgFormRow label="Название">
-                    <SgInput
-                      value={r.title}
-                      onChange={(e) => patchSalesRule(r.id, { title: String((e.target as any).value || '') })}
-                    />
+                    <SgInput value={r.title} onChange={(e) => patchSalesRule(r.id, { title: String((e.target as any).value || '') })} />
                   </SgFormRow>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <SgFormRow label="Условие">
-                      <SgSelect
-                        value={r.condition}
-                        onChange={(e) => patchSalesRule(r.id, { condition: (e.target as any).value })}
-                      >
+                      <SgSelect value={r.condition} onChange={(e) => patchSalesRule(r.id, { condition: (e.target as any).value })}>
                         <option value="orders_ge">orders ≥</option>
                         <option value="revenue_ge">revenue ≥</option>
                         <option value="buyers_ge">buyers ≥</option>
                       </SgSelect>
                     </SgFormRow>
 
-                    <SgFormRow
-                      label="Порог"
-                      hint={r.condition === 'revenue_ge' ? `в ${currencyLabel(currency)} (целое)` : 'в штуках'}
-                    >
-                      <SgInput
-                        value={String(r.threshold)}
-                        onChange={(e) => patchSalesRule(r.id, { threshold: Math.max(0, toInt((e.target as any).value, 0)) })}
-                      />
+                    <SgFormRow label="Порог" hint={r.condition === 'revenue_ge' ? `в ${currencyLabel(currency)} (целое)` : 'в штуках'}>
+                      <SgInput value={String(r.threshold)} onChange={(e) => patchSalesRule(r.id, { threshold: Math.max(0, toInt((e.target as any).value, 0)) })} />
                     </SgFormRow>
                   </div>
 
@@ -1280,26 +1222,19 @@ export default function Sales() {
                     <SgFormRow label="Bonus cashback %" hint="добавляется к рангу">
                       <SgInput
                         value={String(r.bonus_cashback_pct)}
-                        onChange={(e) =>
-                          patchSalesRule(r.id, { bonus_cashback_pct: clampN((e.target as any).value, 0, 100) })
-                        }
+                        onChange={(e) => patchSalesRule(r.id, { bonus_cashback_pct: clampN((e.target as any).value, 0, 100) })}
                       />
                     </SgFormRow>
 
                     <SgFormRow label="TTL (часы)">
-                      <SgInput
-                        value={String(r.ttl_hours)}
-                        onChange={(e) => patchSalesRule(r.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })}
-                      />
+                      <SgInput value={String(r.ttl_hours)} onChange={(e) => patchSalesRule(r.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })} />
                     </SgFormRow>
                   </div>
                 </SgCardContent>
               </SgCard>
             ))}
 
-            {!cashbackRulesBySales.length ? (
-              <Hint tone="neutral">Можно добавить правило “orders ≥ 10” и дать +2% на 72 часа.</Hint>
-            ) : null}
+            {!cashbackRulesBySales.length ? <Hint tone="neutral">Можно добавить правило “orders ≥ 10” и дать +2% на 72 часа.</Hint> : null}
           </SgCardContent>
         </SgCard>
 
@@ -1328,9 +1263,7 @@ export default function Sales() {
             <SgToggle checked={boostsOn} onChange={setBoostsOn} />
           </div>
 
-          <Hint tone="neutral">
-            Если списания низкие, включай “накопились монеты”. Если заказов мало — “первую покупку”.
-          </Hint>
+          <Hint tone="neutral">Если списания низкие, включай “накопились монеты”. Если заказов мало — “первую покупку”.</Hint>
         </div>
 
         <div style={{ height: 10 }} />
@@ -1353,39 +1286,26 @@ export default function Sales() {
 
             <SgCardContent>
               <SgFormRow label="Текст сообщения">
-                <SgInput
-                  value={b.message_text}
-                  onChange={(e) => patchBoost(b.id, { message_text: String((e.target as any).value || '') })}
-                />
+                <SgInput value={b.message_text} onChange={(e) => patchBoost(b.id, { message_text: String((e.target as any).value || '') })} />
               </SgFormRow>
 
               <SgFormRow label="Кнопка">
-                <SgInput
-                  value={b.button_label}
-                  onChange={(e) => patchBoost(b.id, { button_label: String((e.target as any).value || '') })}
-                />
+                <SgInput value={b.button_label} onChange={(e) => patchBoost(b.id, { button_label: String((e.target as any).value || '') })} />
               </SgFormRow>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <SgFormRow label="TTL (часы)">
-                  <SgInput
-                    value={String(b.ttl_hours)}
-                    onChange={(e) => patchBoost(b.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })}
-                  />
+                  <SgInput value={String(b.ttl_hours)} onChange={(e) => patchBoost(b.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })} />
                 </SgFormRow>
 
                 <SgFormRow label="Лимит / юзер">
-                  <SgInput
-                    value={String(b.limit_per_user)}
-                    onChange={(e) => patchBoost(b.id, { limit_per_user: Math.max(0, toInt((e.target as any).value, 1)) })}
-                  />
+                  <SgInput value={String(b.limit_per_user)} onChange={(e) => patchBoost(b.id, { limit_per_user: Math.max(0, toInt((e.target as any).value, 1)) })} />
                 </SgFormRow>
               </div>
 
               <div style={{ marginTop: 10 }}>
                 <Hint tone="neutral">
-                  Подсказка: если <b>redeem</b> низкий относительно <b>cashback</b> ({totals.redeemRatePct}%),
-                  усиливай сценарий “потратить монеты”.
+                  Подсказка: redeem/issued = <b>{totals.redeemRatePct}%</b>. Если низко — усиливай “потратить монеты”.
                 </Hint>
               </div>
             </SgCardContent>
@@ -1485,11 +1405,7 @@ export default function Sales() {
 
                   <SgCardContent>
                     <SgFormRow label="Лейбл">
-                      <SgInput
-                        value={c.label}
-                        onChange={(e) => patchCashier(c.id, { label: String((e.target as any).value || '') })}
-                        disabled={locked}
-                      />
+                      <SgInput value={c.label} onChange={(e) => patchCashier(c.id, { label: String((e.target as any).value || '') })} disabled={locked} />
                     </SgFormRow>
 
                     <SgFormRow label="tg_id кассира" hint="позже можно будет искать по контактам/юзеру">
@@ -1535,7 +1451,13 @@ export default function Sales() {
       {isError ? (
         <div style={{ marginTop: 12 }}>
           <Hint tone="bad">
-            Ошибка: {String((qSettings.error as any)?.message || (qTs.error as any)?.message || (qTopUsers.error as any)?.message || 'UNKNOWN')}
+            Ошибка:{' '}
+            {String(
+              (qSettings.error as any)?.message ||
+              (qTs.error as any)?.message ||
+              (qTopUsers.error as any)?.message ||
+              'UNKNOWN'
+            )}
           </Hint>
         </div>
       ) : null}
