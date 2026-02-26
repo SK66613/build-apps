@@ -1,89 +1,123 @@
 // src/pages/Sales.tsx
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAppState } from '../app/appState';
-import { Card, Input } from '../components/ui';
+
+import { SgPage } from '../components/sgp/layout/SgPage';
+import { SgFormRow } from '../components/sgp/ui/SgFormRow';
+import { SgActions, type SgSaveState } from '../components/sgp/ui/SgActions';
+
+import {
+  SgCard,
+  SgCardHeader,
+  SgCardTitle,
+  SgCardSub,
+  SgCardContent,
+} from '../components/sgp/ui/SgCard';
+
+import { SgButton } from '../components/sgp/ui/SgButton';
+import { SgInput, SgSelect } from '../components/sgp/ui/SgInput';
+import { SgToggle } from '../components/sgp/ui/SgToggle';
+
+import { HealthBadge } from '../components/sgp/HealthBadge';
+import { ShimmerLine } from '../components/sgp/ShimmerLine';
+import { IconBtn } from '../components/sgp/IconBtn';
+
+import { ChartState } from '../components/sgp/charts/ChartState';
+import { SgSectionCard } from '../components/sgp/blocks/SgSectionCard';
+import { SgTopListCard } from '../components/sgp/sections/SgTopListCard';
+
 import {
   ResponsiveContainer,
   ComposedChart,
-  Area,
   Bar,
   Line,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
+  Area,
 } from 'recharts';
 
 /**
- * SALES — “one-to-one” по ощущению с Wheel:
- * - мягкие карточки/бордеры/hover как в “Складе”
- * - график: Area + Line(штрих) + Bar(цилиндры) + overlay controls
- * - без “лишних” осей/кумулятивов (только дневные значения)
- *
- * DEV: сейчас данные mock, потом просто заменить queryFn на реальные роуты воркера.
+ * SALES (QR)
+ * - Один стиль/разметка/шрифты как “Сводка” в Passport (SgPage + SgSectionCard + HealthBadge + IconBtn).
+ * - Гармошки: Сводка / Кэшбэк / Бусты / Кассиру
+ * - Топы: по пользователям
+ * - Настройки (UI-first): кэшбэк по рангу/по продажам, мотивация покупок, кассиры + права (в разработке)
  */
 
-type SalesRange = { from: string; to: string };
-
+/** ========= Types ========= */
 type SalesSettings = {
-  coin_value_cents?: number;
   currency?: string; // RUB|USD|EUR
-  cashback_pct?: number;
+  coin_value_cents?: number; // 1 coin = X cents
+  sales_active?: number; // 0|1
+  require_cashier_confirm?: number; // 0|1
 };
 
-type SalesKPI = {
-  revenue_cents: number;
-  orders: number;
-  buyers: number;
-  repeat_rate: number; // 0..1
-  cashback_issued_coins: number;
-  redeem_confirmed_coins: number;
-
-  pending_confirms?: number;
-  cancel_rate?: number; // 0..1
-};
-
-type SalesDay = {
+type SalesTimeseriesDay = {
   date: string; // YYYY-MM-DD
   revenue_cents: number;
   orders: number;
   buyers: number;
-  cashback_coins: number;
-  redeem_coins: number;
-  net_cents: number; // redeem(₽) - cashback(₽)
+  cashback_issued_coins: number;
+  redeem_confirmed_coins: number;
+
+  cancels?: number;
+  pending?: number;
 };
 
-type SalesFunnel = {
-  scanned: number;
-  recorded: number;
-  cashback_confirmed: number;
-  redeem_confirmed: number;
-  pin_issued: number;
-  pin_used: number;
-  median_confirm_minutes?: number;
+type SalesTopUser = {
+  tg_id: string;
+  title?: string;
+  revenue_cents?: number;
+  orders?: number;
+  cashback_coins?: number;
+  redeem_coins?: number;
 };
 
-type CashierRow = {
-  cashier_label: string;
-  orders: number;
-  revenue_cents: number;
-  confirm_rate: number; // 0..1
-  cancel_rate: number; // 0..1
-  median_confirm_minutes: number;
-  alerts?: string[];
+type CashierRole = 'cashier' | 'senior' | 'auditor';
+type CashierDraft = {
+  id: string;
+  label: string;
+  tg_id: string;
+  role: CashierRole;
+  active: boolean;
 };
 
-type CustomerRow = {
-  customer_label: string;
-  orders: number;
-  revenue_cents: number;
-  ltv_cents: number;
-  last_seen: string;
-  segment: 'new' | 'repeat' | 'saver' | 'spender';
+type CashbackRuleByRank = {
+  id: string;
+  rank: string; // Bronze/Silver/Gold...
+  cashback_pct: number; // 0..100
+  max_cashback_coins_per_day: number; // 0 = no limit
+  min_order_cents: number; // 0 = no minimum
+  enabled: boolean;
 };
 
+type CashbackRuleBySales = {
+  id: string;
+  title: string;
+  condition: 'orders_ge' | 'revenue_ge' | 'buyers_ge';
+  threshold: number;
+  bonus_cashback_pct: number; // adds to base (rank)
+  ttl_hours: number;
+  enabled: boolean;
+};
+
+type BoostId = 'first_purchase' | 'coins_waiting' | 'big_check' | 'weekend';
+type BoostRow = {
+  id: BoostId;
+  title: string;
+  enabled: boolean;
+  ttl_hours: number;
+  limit_per_user: number;
+  button_label: string;
+  message_text: string;
+  hint: string;
+};
+
+/** ========= Helpers ========= */
 function qs(obj: Record<string, string | number | undefined | null>) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(obj)) {
@@ -96,6 +130,12 @@ function toInt(v: any, d = 0) {
   const n = Number(v);
   if (!Number.isFinite(n)) return d;
   return Math.trunc(n);
+}
+
+function clampN(n: any, min: number, max: number) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return min;
+  return Math.max(min, Math.min(max, x));
 }
 
 function isoAddDays(iso: string, deltaDays: number) {
@@ -111,24 +151,11 @@ function isoAddDays(iso: string, deltaDays: number) {
   }
 }
 
-function daysBetweenISO(fromISO: string, toISO: string) {
-  try {
-    const a = new Date(fromISO + 'T00:00:00Z').getTime();
-    const b = new Date(toISO + 'T00:00:00Z').getTime();
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return 1;
-    const diff = Math.abs(b - a);
-    const days = Math.floor(diff / (24 * 3600 * 1000)) + 1;
-    return Math.max(1, days);
-  } catch (_) {
-    return 1;
-  }
-}
-
 function listDaysISO(fromISO: string, toISO: string) {
   const out: string[] = [];
   if (!fromISO || !toISO) return out;
   let cur = fromISO;
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 500; i++) {
     out.push(cur);
     if (cur === toISO) break;
     cur = isoAddDays(cur, 1);
@@ -161,315 +188,120 @@ function moneyFromCent(cent: number | null | undefined, currency = 'RUB') {
   return `${(v / 100).toFixed(2)} ${sym}`;
 }
 
-function fmtPct(x: number | null | undefined, d = '—') {
-  if (x === null || x === undefined || !Number.isFinite(Number(x))) return d;
-  return `${(Number(x) * 100).toFixed(1)}%`;
-}
-
 function niceMoneyTick(vCents: number) {
   const v = Number(vCents);
   if (!Number.isFinite(v)) return '';
-  const x = Math.round(v / 100); // rub
+  const x = Math.round(v / 100);
   const ax = Math.abs(x);
   if (ax >= 1_000_000) return `${(x / 1_000_000).toFixed(1)}M`;
   if (ax >= 10_000) return `${(x / 1000).toFixed(0)}k`;
   return String(x);
 }
 
-/* ===== Premium UI helpers ===== */
-
-type HealthTone = 'good' | 'warn' | 'bad';
-type AlertItem = { key: string; title: string; sev: 'warn' | 'bad' };
-
-function toneFromAlerts(alerts: AlertItem[]): HealthTone {
-  const hasBad = alerts.some((a) => a.sev === 'bad');
-  if (hasBad) return 'bad';
-  const hasWarn = alerts.length > 0;
-  if (hasWarn) return 'warn';
-  return 'good';
+function safeNum(v: any, d = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
 }
 
-function joinAlertTitles(alerts: AlertItem[], max = 3) {
-  if (!alerts.length) return 'Всё хорошо — критичных отклонений нет.';
-  const list = alerts.slice(0, max).map((a) => a.title);
-  const tail = alerts.length > max ? ` (+${alerts.length - max})` : '';
-  return list.join(' / ') + tail;
+type HintTone = 'neutral' | 'good' | 'warn' | 'bad';
+function Hint({ tone = 'neutral', children }: { tone?: HintTone; children: React.ReactNode }) {
+  return <div className={`sgp-hint tone-${tone}`}>{children}</div>;
 }
 
-function HealthBadge({
-  tone,
-  title,
-  compact,
-}: {
-  tone: HealthTone;
-  title: string;
-  compact?: boolean;
-}) {
-  const cls =
-    'sgHealthBadge ' +
-    (tone === 'bad' ? 'is-bad' : tone === 'warn' ? 'is-warn' : 'is-good') +
-    (compact ? ' is-compact' : '');
-  const icon = tone === 'bad' ? '!' : tone === 'warn' ? '!' : '✓';
-  const label = tone === 'bad' ? 'alert' : tone === 'warn' ? 'warn' : 'ok';
-
-  return (
-    <button type="button" className={cls} title={title} aria-label={title}>
-      <span className="sgHealthBadge__icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="sgHealthBadge__txt">{label}</span>
-    </button>
-  );
-}
-
-function Tip({
-  text,
-  side = 'top',
-  dev,
-}: {
-  text: string;
-  side?: 'top' | 'bottom';
-  dev?: boolean;
-}) {
-  return (
-    <span
-      className={'sgTip ' + (dev ? 'is-dev' : '') + ' is-' + side}
-      data-tip={text}
-      aria-hidden="true"
-    />
-  );
-}
-
-function ShimmerLine({ w }: { w?: number }) {
-  const width = Math.max(18, Math.min(100, Number.isFinite(Number(w)) ? Number(w) : 72));
-  return (
-    <div className="sgShimmerLine" style={{ width: `${width}%` }}>
-      <div className="sgShimmerLine__shine" />
-    </div>
-  );
-}
-
-function IconBtn({
-  title,
+function SegBtn({
   active,
   onClick,
   children,
 }: {
-  title: string;
-  active?: boolean;
+  active: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      className={'sgIconBtn ' + (active ? 'is-active' : '')}
+      className={(active ? 'sgp-seg__btn is-active ' : 'sgp-seg__btn ') + 'sgp-press'}
       onClick={onClick}
-      title={title}
-      aria-pressed={!!active}
     >
       {children}
     </button>
   );
 }
 
-/* ===== Mock data (fallback) ===== */
-
-function mkMock(range: SalesRange, settings: SalesSettings) {
+/** ========= Mock fallback ========= */
+function mkMock(range: { from: string; to: string }, settings: SalesSettings) {
   const dates = listDaysISO(range.from, range.to);
   const coinCents = Math.max(1, toInt(settings.coin_value_cents ?? 100, 100));
-  let buyersBase = 40;
 
-  const days: SalesDay[] = dates.map((d, i) => {
+  let buyersBase = 38;
+  const days: SalesTimeseriesDay[] = dates.map((d, i) => {
     const wave = Math.sin(i / 3.2) * 0.25 + 0.85;
     const orders = Math.max(8, Math.round((18 + (i % 5) * 3) * wave));
-    buyersBase = Math.max(18, buyersBase + (i % 2 === 0 ? 1 : -1));
+    buyersBase = Math.max(16, buyersBase + (i % 2 === 0 ? 1 : -1));
     const buyers = Math.max(10, Math.round(buyersBase * wave));
-    const avg = 52000 + Math.round(14000 * Math.sin(i / 2.8)); // cents
+
+    const avg = 52000 + Math.round(14000 * Math.sin(i / 2.8));
     const revenue = Math.max(0, orders * avg);
-    const cashbackCoins = Math.round((revenue / 100) * 0.06);
-    const redeemCoins = Math.round((revenue / 100) * 0.045);
-    const net = Math.round(redeemCoins * coinCents - cashbackCoins * coinCents);
+
+    const cashbackIssuedCoins = Math.round((revenue / 100) * 0.06);
+    const redeemConfirmedCoins = Math.round((revenue / 100) * 0.045);
+
+    const cancels = Math.max(0, Math.round(orders * (0.04 + 0.02 * (i % 3 === 0 ? 1 : 0))));
+    const pending = Math.max(0, Math.round(2 + (i % 4)));
+
+    void coinCents;
     return {
       date: d,
       revenue_cents: revenue,
       orders,
       buyers,
-      cashback_coins: cashbackCoins,
-      redeem_coins: redeemCoins,
-      net_cents: net,
+      cashback_issued_coins: cashbackIssuedCoins,
+      redeem_confirmed_coins: redeemConfirmedCoins,
+      cancels,
+      pending,
     };
   });
 
-  const kpi: SalesKPI = {
-    revenue_cents: days.reduce((s, x) => s + x.revenue_cents, 0),
-    orders: days.reduce((s, x) => s + x.orders, 0),
-    buyers: Math.max(
-      1,
-      Math.round(days.reduce((s, x) => s + x.buyers, 0) / Math.max(1, days.length)),
-    ),
-    repeat_rate: 0.36 + Math.sin(days.length / 4) * 0.05,
-    cashback_issued_coins: days.reduce((s, x) => s + x.cashback_coins, 0),
-    redeem_confirmed_coins: days.reduce((s, x) => s + x.redeem_coins, 0),
-    pending_confirms: Math.round(3 + (days.length % 4)),
-    cancel_rate: 0.06 + Math.sin(days.length / 3) * 0.01,
-  };
-
-  const funnel: SalesFunnel = {
-    scanned: Math.round(kpi.orders * 1.35),
-    recorded: kpi.orders,
-    cashback_confirmed: Math.round(kpi.orders * 0.92),
-    redeem_confirmed: Math.round(kpi.orders * 0.58),
-    pin_issued: Math.round(kpi.orders * 0.48),
-    pin_used: Math.round(kpi.orders * 0.32),
-    median_confirm_minutes: 3.6,
-  };
-
-  const cashiers: CashierRow[] = [
-    {
-      cashier_label: 'Кассир #1',
-      orders: Math.round(kpi.orders * 0.46),
-      revenue_cents: Math.round(kpi.revenue_cents * 0.49),
-      confirm_rate: 0.93,
-      cancel_rate: 0.05,
-      median_confirm_minutes: 2.4,
-    },
-    {
-      cashier_label: 'Кассир #2',
-      orders: Math.round(kpi.orders * 0.33),
-      revenue_cents: Math.round(kpi.revenue_cents * 0.31),
-      confirm_rate: 0.88,
-      cancel_rate: 0.09,
-      median_confirm_minutes: 4.2,
-      alerts: ['Высокие отмены'],
-    },
-    {
-      cashier_label: 'Кассир #3',
-      orders: Math.round(kpi.orders * 0.21),
-      revenue_cents: Math.round(kpi.revenue_cents * 0.20),
-      confirm_rate: 0.90,
-      cancel_rate: 0.06,
-      median_confirm_minutes: 3.1,
-    },
-  ];
-
-  const customers: CustomerRow[] = [
-    {
-      customer_label: 'Покупатель A',
-      orders: 7,
-      revenue_cents: 410000,
-      ltv_cents: 690000,
-      last_seen: dates[dates.length - 1],
-      segment: 'repeat',
-    },
-    {
-      customer_label: 'Покупатель B',
-      orders: 1,
-      revenue_cents: 58000,
-      ltv_cents: 58000,
-      last_seen: dates[Math.max(0, dates.length - 2)],
-      segment: 'new',
-    },
-    {
-      customer_label: 'Покупатель C',
-      orders: 5,
-      revenue_cents: 260000,
-      ltv_cents: 510000,
-      last_seen: dates[Math.max(0, dates.length - 3)],
-      segment: 'spender',
-    },
-    {
-      customer_label: 'Покупатель D',
-      orders: 4,
-      revenue_cents: 210000,
-      ltv_cents: 420000,
-      last_seen: dates[Math.max(0, dates.length - 6)],
-      segment: 'saver',
-    },
-  ];
-
-  return { kpi, days, funnel, cashiers, customers, settings };
+  return { ok: true, days, settings };
 }
 
-/* ===== Collapsible ===== */
-
-function Collapsible({
-  title,
-  sub,
-  right,
-  open,
-  onToggle,
-  children,
-  healthTone,
-  healthTitle,
-}: {
-  title: string;
-  sub?: string;
-  right?: React.ReactNode;
-  open: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-  healthTone?: HealthTone;
-  healthTitle?: string;
-}) {
-  const toneCls =
-    healthTone === 'bad'
-      ? ' is-bad'
-      : healthTone === 'warn'
-        ? ' is-warn'
-        : healthTone === 'good'
-          ? ' is-good'
-          : '';
-  return (
-    <div className={'sgColl ' + (open ? 'is-open' : 'is-closed') + toneCls}>
-      <button type="button" className="sgColl__head" onClick={onToggle}>
-        <div className="sgColl__left">
-          <div className="sgColl__title">
-            {title}
-            <span className="sgColl__chev" aria-hidden="true" />
-          </div>
-          {sub ? <div className="sgColl__sub">{sub}</div> : null}
-        </div>
-        <div className="sgColl__right">
-          {right}
-          {healthTone ? (
-            <HealthBadge tone={healthTone} title={healthTitle || ''} compact />
-          ) : null}
-        </div>
-      </button>
-      <div className="sgColl__body">{children}</div>
-    </div>
-  );
-}
-
-/* ===== Page ===== */
-
+/** ========= Page ========= */
 export default function Sales() {
   const { appId, range, setRange }: any = useAppState();
+  const qc = useQueryClient();
 
-  const [tab, setTab] = React.useState<'summary' | 'funnel' | 'cashiers' | 'customers' | 'live'>(
-    'summary',
-  );
+  type OpenedKey = 'summary' | 'cashback' | 'boosts' | 'cashiers' | null;
 
+  const [opened, setOpened] = React.useState<OpenedKey>('summary');
+  const [openSummary, setOpenSummary] = React.useState(true);
+  const [openCashback, setOpenCashback] = React.useState(true);
+  const [openBoosts, setOpenBoosts] = React.useState(true);
+  const [openCashiers, setOpenCashiers] = React.useState(true);
+
+  function openOnly(k: Exclude<OpenedKey, null>) {
+    setOpened(k);
+    setOpenSummary(k === 'summary');
+    setOpenCashback(k === 'cashback');
+    setOpenBoosts(k === 'boosts');
+    setOpenCashiers(k === 'cashiers');
+  }
+
+  function toggleOnly(k: Exclude<OpenedKey, null>) {
+    if (opened === k) {
+      setOpened(null);
+      setOpenSummary(false);
+      setOpenCashback(false);
+      setOpenBoosts(false);
+      setOpenCashiers(false);
+      return;
+    }
+    openOnly(k);
+  }
+
+  // ===== quick range (same as Passport) =====
   const [quick, setQuick] = React.useState<'day' | 'week' | 'month' | 'custom'>('custom');
   const [customFrom, setCustomFrom] = React.useState<string>(range?.from || '');
   const [customTo, setCustomTo] = React.useState<string>(range?.to || '');
-
-  const [openKpi, setOpenKpi] = React.useState(true);
-  const [openInsights, setOpenInsights] = React.useState(true);
-  const [openTop, setOpenTop] = React.useState(true);
-
-  // как в wheel: confirmed/issued
-  const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
-
-  // overlay кнопки “как в колесе” (3 штуки)
-  const [showBars, setShowBars] = React.useState(true); // “цилиндры”
-  const [showNet, setShowNet] = React.useState(true); // “П” (profit/net)
-  const [showArea, setShowArea] = React.useState(true); // “заливка”
-
-  // settings draft (UI only)
-  const [currencyDraft, setCurrencyDraft] = React.useState('RUB');
-  const [coinValueDraft, setCoinValueDraft] = React.useState('1.00');
 
   React.useEffect(() => {
     setCustomFrom(range?.from || '');
@@ -492,1552 +324,1144 @@ export default function Sales() {
     if (kind === 'month') return applyRange(isoAddDays(anchor, -29), anchor);
   }
 
-  const settings: SalesSettings = React.useMemo(() => {
-    const units = Number(String(coinValueDraft).replace(',', '.'));
-    const cents = Math.floor((Number.isFinite(units) ? units : 1) * 100);
-    return {
-      coin_value_cents: Math.max(1, cents),
-      currency: String(currencyDraft || 'RUB').toUpperCase(),
-      cashback_pct: 5,
-    };
-  }, [coinValueDraft, currencyDraft]);
+  // ===== overlay chart controls =====
+  const [basis, setBasis] = React.useState<'confirmed' | 'issued'>('confirmed');
 
-  const qAll = useQuery({
+  const [showRevenue, setShowRevenue] = React.useState(true);
+  const [showOrders, setShowOrders] = React.useState(true);
+  const [showCashback, setShowCashback] = React.useState(false);
+  const [showRedeem, setShowRedeem] = React.useState(false);
+  const [showNet, setShowNet] = React.useState(true);
+
+  // ===== settings =====
+  const qSettings = useQuery({
+    enabled: !!appId,
+    queryKey: ['sales_settings', appId],
+    queryFn: () => apiFetch<{ ok: true; settings: SalesSettings }>(`/api/cabinet/apps/${appId}/sales/settings`),
+    staleTime: 30_000,
+  });
+
+  // ===== timeseries =====
+  const qTs = useQuery({
     enabled: !!appId && !!range?.from && !!range?.to,
-    queryKey: [
-      'sales_mock',
-      appId,
-      range?.from,
-      range?.to,
-      settings.currency,
-      settings.coin_value_cents,
-      basis,
-    ],
+    queryKey: ['sales_ts', appId, range.from, range.to, basis],
     queryFn: async () => {
-      // позже:
-      // const kpi = await apiFetch(`/api/cabinet/apps/${appId}/sales/kpi?${qs(range)}`);
-      // const ts  = await apiFetch(`/api/cabinet/apps/${appId}/sales/timeseries?${qs(range)}`);
-      // ...
-      // basis учитывать на бэке
-      return mkMock(range as SalesRange, settings);
+      try {
+        // later:
+        // return apiFetch(`/api/cabinet/apps/${appId}/sales/timeseries?${qs({ ...range, basis })}`)
+        const settings = qSettings.data?.settings || {};
+        return mkMock(range, settings);
+      } catch (e) {
+        const settings = qSettings.data?.settings || {};
+        return mkMock(range, settings);
+      }
     },
     staleTime: 10_000,
   });
 
-  const isLoading = qAll.isLoading;
-  const isError = qAll.isError;
+  // ===== top users =====
+  const [topMetric, setTopMetric] = React.useState<'revenue' | 'orders' | 'cashback' | 'redeem'>('revenue');
 
-  const data = qAll.data;
-  const currency = String(data?.settings?.currency || settings.currency || 'RUB').toUpperCase();
-  const coinCents = Math.max(1, toInt(data?.settings?.coin_value_cents ?? settings.coin_value_cents ?? 100, 100));
+  const qTopUsers = useQuery({
+    enabled: !!appId && !!range?.from && !!range?.to,
+    queryKey: ['sales_top_users', appId, range.from, range.to, topMetric],
+    queryFn: () =>
+      apiFetch<{ ok: true; items: SalesTopUser[] }>(
+        `/api/cabinet/apps/${appId}/sales/users/top?${qs({ ...range, metric: topMetric })}`,
+      ),
+    staleTime: 10_000,
+  });
 
-  const kpi = data?.kpi;
-  const days = data?.days || [];
-  const funnel = data?.funnel;
-  const cashiers = data?.cashiers || [];
-  const customers = data?.customers || [];
+  // ===== derived settings =====
+  const settings: SalesSettings = qSettings.data?.settings || (qTs.data as any)?.settings || {};
+  const currency = String(settings.currency || 'RUB').toUpperCase();
+  const coinCents = Math.max(1, toInt(settings.coin_value_cents, 100));
 
+  const salesActive = !!toInt(settings.sales_active, 1);
+  const requireCashierConfirm = !!toInt(settings.require_cashier_confirm, 1);
+
+  // ===== series normalize by day =====
+  const series = React.useMemo(() => {
+    const map = new Map<string, SalesTimeseriesDay>();
+    for (const d of ((qTs.data as any)?.days || []) as SalesTimeseriesDay[]) if (d?.date) map.set(String(d.date), d);
+
+    const dates = listDaysISO(range.from, range.to);
+    return dates.map((iso) => {
+      const r = map.get(iso);
+      const cashbackCoins = safeNum(r?.cashback_issued_coins, 0);
+      const redeemCoins = safeNum(r?.redeem_confirmed_coins, 0);
+      const netCents = Math.round(redeemCoins * coinCents - cashbackCoins * coinCents);
+
+      return {
+        date: iso,
+        revenue_cents: safeNum(r?.revenue_cents, 0),
+        orders: safeNum(r?.orders, 0),
+        buyers: safeNum(r?.buyers, 0),
+        cashback_issued_coins: cashbackCoins,
+        redeem_confirmed_coins: redeemCoins,
+        cancels: safeNum(r?.cancels, 0),
+        pending: safeNum(r?.pending, 0),
+        net_cents: netCents,
+      };
+    });
+  }, [qTs.data, range.from, range.to, coinCents]);
+
+  // ===== totals =====
   const totals = React.useMemo(() => {
-    const rev = Number(kpi?.revenue_cents || 0);
-    const orders = Number(kpi?.orders || 0);
-    const buyers = Number(kpi?.buyers || 0);
-    const repeat = Number(kpi?.repeat_rate || 0);
+    const rev = series.reduce((s, d) => s + safeNum(d.revenue_cents, 0), 0);
+    const orders = series.reduce((s, d) => s + safeNum(d.orders, 0), 0);
+    const buyersAvg = series.length
+      ? Math.round(series.reduce((s, d) => s + safeNum(d.buyers, 0), 0) / series.length)
+      : 0;
 
-    const cashbackCoins = Number(kpi?.cashback_issued_coins || 0);
-    const redeemCoins = Number(kpi?.redeem_confirmed_coins || 0);
+    const cashbackCoins = series.reduce((s, d) => s + safeNum(d.cashback_issued_coins, 0), 0);
+    const redeemCoins = series.reduce((s, d) => s + safeNum(d.redeem_confirmed_coins, 0), 0);
 
     const cashbackCent = Math.round(cashbackCoins * coinCents);
     const redeemCent = Math.round(redeemCoins * coinCents);
     const net = redeemCent - cashbackCent;
 
+    const cancels = series.reduce((s, d) => s + safeNum(d.cancels, 0), 0);
+    const pending = series.reduce((s, d) => s + safeNum(d.pending, 0), 0);
+
+    const cancelRatePct = orders > 0 ? Math.round((cancels / orders) * 100) : 0;
+    const redeemRatePct = cashbackCoins > 0 ? Math.round((redeemCoins / cashbackCoins) * 100) : 0;
     const avgCheck = orders > 0 ? Math.round(rev / orders) : 0;
-
-    const pending = Number(kpi?.pending_confirms || 0);
-    const cancelRate = Number(kpi?.cancel_rate || 0);
-
-    const daysCount = daysBetweenISO(range?.from, range?.to);
-    const revPerDay = daysCount > 0 ? Math.round(rev / daysCount) : 0;
 
     return {
       rev,
       orders,
-      buyers,
-      repeat,
+      buyersAvg,
       cashbackCoins,
       redeemCoins,
       cashbackCent,
       redeemCent,
       net,
-      avgCheck,
+      cancels,
       pending,
-      cancelRate,
-      daysCount,
-      revPerDay,
+      cancelRatePct: clampN(cancelRatePct, 0, 100),
+      redeemRatePct: clampN(redeemRatePct, 0, 100),
+      avgCheck,
     };
-  }, [kpi, coinCents, range?.from, range?.to]);
+  }, [series, coinCents]);
 
-  const alerts: AlertItem[] = React.useMemo(() => {
-    const out: AlertItem[] = [];
-    if (totals.pending >= 8) out.push({ key: 'pending', title: 'Много неподтверждённых операций', sev: 'bad' });
-    else if (totals.pending >= 4) out.push({ key: 'pending', title: 'Есть неподтверждённые операции', sev: 'warn' });
+  // ===== health =====
+  const healthTone: 'good' | 'warn' | 'bad' = React.useMemo(() => {
+    if (!salesActive) return 'bad';
+    if (totals.pending >= 20) return 'bad';
+    if (totals.cancelRatePct >= 12) return 'bad';
+    if (totals.pending >= 8) return 'warn';
+    if (totals.cancelRatePct >= 8) return 'warn';
+    return 'good';
+  }, [salesActive, totals.pending, totals.cancelRatePct]);
 
-    if (totals.cancelRate >= 0.12) out.push({ key: 'cancel', title: 'Высокий процент отмен', sev: 'bad' });
-    else if (totals.cancelRate >= 0.08) out.push({ key: 'cancel', title: 'Отмены выше нормы', sev: 'warn' });
+  const healthTitle = React.useMemo(() => {
+    if (!salesActive) return 'Продажи выключены';
+    const bits: string[] = [];
+    if (totals.pending >= 8) bits.push(`pending: ${totals.pending}`);
+    if (totals.cancelRatePct >= 8) bits.push(`cancel: ${totals.cancelRatePct}%`);
+    if (!bits.length) return 'Всё ок';
+    return bits.join(' · ');
+  }, [salesActive, totals.pending, totals.cancelRatePct]);
 
-    if (totals.repeat < 0.22 && totals.orders > 20)
-      out.push({ key: 'repeat', title: 'Низкая повторяемость', sev: 'warn' });
+  // ===== right side top users =====
+  const topUsers: SalesTopUser[] = (qTopUsers.data?.items || []).slice(0, 7);
 
-    return out;
-  }, [totals.pending, totals.cancelRate, totals.repeat, totals.orders]);
+  // ===== cashback settings (UI-first) =====
+  const [cashbackOn, setCashbackOn] = React.useState(true);
+  const [cashbackRulesByRank, setCashbackRulesByRank] = React.useState<CashbackRuleByRank[]>([
+    { id: 'cr1', rank: 'Bronze', cashback_pct: 3, max_cashback_coins_per_day: 0, min_order_cents: 0, enabled: true },
+    { id: 'cr2', rank: 'Silver', cashback_pct: 5, max_cashback_coins_per_day: 0, min_order_cents: 0, enabled: true },
+    { id: 'cr3', rank: 'Gold', cashback_pct: 7, max_cashback_coins_per_day: 0, min_order_cents: 0, enabled: true },
+  ]);
 
-  const healthTone: HealthTone = React.useMemo(() => toneFromAlerts(alerts), [alerts]);
-  const healthTitle = React.useMemo(() => joinAlertTitles(alerts, 4), [alerts]);
+  const [cashbackRulesBySales, setCashbackRulesBySales] = React.useState<CashbackRuleBySales[]>([
+    { id: 'cs1', title: '10 заказов за период', condition: 'orders_ge', threshold: 10, bonus_cashback_pct: 2, ttl_hours: 72, enabled: true },
+    { id: 'cs2', title: 'Выручка ≥ 10k', condition: 'revenue_ge', threshold: 10_000, bonus_cashback_pct: 1, ttl_hours: 48, enabled: false },
+  ]);
 
-  const insights = React.useMemo(() => {
-    const out: Array<{ tone: 'good' | 'warn' | 'bad'; title: string; body: string; dev?: string }> = [];
+  function patchRankRule(id: string, patch: Partial<CashbackRuleByRank>) {
+    setCashbackRulesByRank((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
 
-    out.push({
-      tone: totals.net >= 0 ? 'good' : 'warn',
-      title: totals.net >= 0 ? 'Net эффект положительный' : 'Net эффект отрицательный',
-      body:
-        totals.net >= 0
-          ? `Списание покрывает кэшбэк: ${moneyFromCent(totals.net, currency)} за период.`
-          : `Кэшбэк “тяжелее” списаний: ${moneyFromCent(totals.net, currency)}. Подумай о промо на списание / правилах.`,
-      dev: 'DEV: net = redeem_confirmed_coins*coin_value - cashback_issued_coins*coin_value',
-    });
+  function patchSalesRule(id: string, patch: Partial<CashbackRuleBySales>) {
+    setCashbackRulesBySales((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
 
-    if (totals.pending > 0) {
-      out.push({
-        tone: totals.pending >= 6 ? 'bad' : 'warn',
-        title: 'Есть зависшие подтверждения',
-        body: `Сейчас зависло: ~${totals.pending}. Это бьёт по доверию (клиент не видит результат).`,
-        dev: 'DEV: нужно sales_events + авто-напоминания кассиру',
-      });
+  function addRankRule() {
+    const id = 'cr' + Math.random().toString(16).slice(2, 8);
+    setCashbackRulesByRank((p) => [
+      ...p,
+      { id, rank: 'New', cashback_pct: 0, max_cashback_coins_per_day: 0, min_order_cents: 0, enabled: false },
+    ]);
+  }
+
+  function addSalesRule() {
+    const id = 'cs' + Math.random().toString(16).slice(2, 8);
+    setCashbackRulesBySales((p) => [
+      ...p,
+      { id, title: 'Новый триггер', condition: 'orders_ge', threshold: 0, bonus_cashback_pct: 0, ttl_hours: 24, enabled: false },
+    ]);
+  }
+
+  function removeRankRule(id: string) {
+    setCashbackRulesByRank((p) => p.filter((x) => x.id !== id));
+  }
+  function removeSalesRule(id: string) {
+    setCashbackRulesBySales((p) => p.filter((x) => x.id !== id));
+  }
+
+  const [savingCashback, setSavingCashback] = React.useState(false);
+  const [cashbackMsg, setCashbackMsg] = React.useState('');
+
+  async function saveCashback() {
+    if (!appId) return;
+    setCashbackMsg('');
+    setSavingCashback(true);
+    try {
+      // TODO: PUT /api/cabinet/apps/:id/sales/cashback/settings
+      // await apiFetch(`/api/cabinet/apps/${appId}/sales/cashback/settings`, { method:'PUT', ... })
+      setCashbackMsg('Сохранено');
+    } catch (e: any) {
+      setCashbackMsg('Ошибка: ' + String(e?.message || e));
+    } finally {
+      setSavingCashback(false);
     }
+  }
 
-    out.push({
-      tone: totals.repeat >= 0.35 ? 'good' : 'warn',
-      title: totals.repeat >= 0.35 ? 'Повторяемость норм' : 'Повторяемость можно поднять',
-      body:
-        totals.repeat >= 0.35
-          ? `Repeat rate: ${fmtPct(totals.repeat)}. Можно аккуратно повышать списания без потери маржи.`
-          : `Repeat rate: ${fmtPct(totals.repeat)}. Дай “сладкий” повод вернуться: авто-пуш “у вас накопилось N монет”.`,
-      dev: 'DEV: repeat_rate считать по customer_tg_id',
-    });
+  const cashbackSaveState: SgSaveState =
+    savingCashback ? 'saving' : cashbackMsg === 'Сохранено' ? 'saved' : cashbackMsg.startsWith('Ошибка') ? 'error' : 'idle';
 
-    return out.slice(0, 4);
-  }, [totals.net, totals.pending, totals.repeat, currency]);
+  // ===== boosts (motivation for purchases) =====
+  const [boostsOn, setBoostsOn] = React.useState(true);
+  const [boosts, setBoosts] = React.useState<BoostRow[]>([
+    {
+      id: 'first_purchase',
+      title: 'Первую покупку — усилить',
+      enabled: true,
+      ttl_hours: 72,
+      limit_per_user: 1,
+      button_label: 'Сделать покупку',
+      message_text: 'Первая покупка — повышенный кэшбэк ✨ Успей в ближайшие 72 часа.',
+      hint: 'Сегмент: нет покупок в истории (new).',
+    },
+    {
+      id: 'coins_waiting',
+      title: 'Накопились монеты — попросить потратить',
+      enabled: true,
+      ttl_hours: 72,
+      limit_per_user: 3,
+      button_label: 'Потратить монеты',
+      message_text: 'У тебя накопились монеты 💰 Загляни — можно выгодно списать.',
+      hint: 'Сегмент: баланс монет ≥ N, но redeem давно не было.',
+    },
+    {
+      id: 'big_check',
+      title: 'Большой чек — дополнительный бонус',
+      enabled: false,
+      ttl_hours: 24,
+      limit_per_user: 1,
+      button_label: 'Получить бонус',
+      message_text: 'Сегодня большой чек — бонусный кэшбэк 🎁 Действует 24 часа.',
+      hint: 'Сегмент: чек ≥ N (или LTV).',
+    },
+    {
+      id: 'weekend',
+      title: 'Выходные — лёгкий буст',
+      enabled: false,
+      ttl_hours: 48,
+      limit_per_user: 2,
+      button_label: 'Зайти в выходные',
+      message_text: 'В выходные — приятный бонус к кэшбэку 🌿 Загляни!',
+      hint: 'Сегмент: общая кампания по расписанию.',
+    },
+  ]);
 
-  const topCashiers = [...cashiers]
-    .sort((a, b) => (b.revenue_cents || 0) - (a.revenue_cents || 0))
-    .slice(0, 6);
+  function patchBoost(id: BoostId, patch: Partial<BoostRow>) {
+    setBoosts((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  }
 
-  const topCustomers = [...customers]
-    .sort((a, b) => (b.ltv_cents || 0) - (a.ltv_cents || 0))
-    .slice(0, 6);
+  const [savingBoosts, setSavingBoosts] = React.useState(false);
+  const [boostsMsg, setBoostsMsg] = React.useState('');
 
-  // чтобы Tooltip и серия “orders” не ломали “денежный” форматтер
-  const chartData = React.useMemo(() => {
-    return (days || []).map((d: SalesDay) => ({
-      ...d,
-      // orders bars на отдельной оси, но tooltip покажем красиво
-      orders_count: d.orders,
-    }));
-  }, [days]);
+  async function saveBoosts() {
+    if (!appId) return;
+    setBoostsMsg('');
+    setSavingBoosts(true);
+    try {
+      // TODO: PUT /api/cabinet/apps/:id/sales/boosts
+      setBoostsMsg('Сохранено');
+    } catch (e: any) {
+      setBoostsMsg('Ошибка: ' + String(e?.message || e));
+    } finally {
+      setSavingBoosts(false);
+    }
+  }
 
-  const cardToneCls =
-    healthTone === 'bad' ? 'is-health-bad' : healthTone === 'warn' ? 'is-health-warn' : 'is-health-good';
+  const boostsSaveState: SgSaveState =
+    savingBoosts ? 'saving' : boostsMsg === 'Сохранено' ? 'saved' : boostsMsg.startsWith('Ошибка') ? 'error' : 'idle';
+
+  // ===== cashiers (3 stable + optional) =====
+  const [cashiers, setCashiers] = React.useState<CashierDraft[]>([
+    { id: 'c1', label: 'Кассир #1', tg_id: '', role: 'cashier', active: true },
+    { id: 'c2', label: 'Кассир #2', tg_id: '', role: 'cashier', active: true },
+    { id: 'c3', label: 'Кассир #3', tg_id: '', role: 'cashier', active: true },
+  ]);
+
+  function patchCashier(id: string, patch: Partial<CashierDraft>) {
+    setCashiers((p) => p.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  }
+
+  function addCashier() {
+    const id = 'c' + Math.random().toString(16).slice(2, 8);
+    setCashiers((p) => [...p, { id, label: 'Кассир (доп.)', tg_id: '', role: 'cashier', active: true }]);
+  }
+
+  function removeCashier(id: string) {
+    // первые 3 не удаляем
+    if (id === 'c1' || id === 'c2' || id === 'c3') return;
+    setCashiers((p) => p.filter((c) => c.id !== id));
+  }
+
+  const [savingCashiers, setSavingCashiers] = React.useState(false);
+  const [cashiersMsg, setCashiersMsg] = React.useState('');
+
+  async function saveCashiers() {
+    if (!appId) return;
+    setCashiersMsg('');
+    setSavingCashiers(true);
+    try {
+      // TODO: PUT /api/cabinet/apps/:id/sales/cashiers
+      // await apiFetch(`/api/cabinet/apps/${appId}/sales/cashiers`, { method:'PUT', ... })
+      setCashiersMsg('Сохранено');
+      await qc.invalidateQueries({ queryKey: ['sales_settings', appId] });
+    } catch (e: any) {
+      setCashiersMsg('Ошибка: ' + String(e?.message || e));
+    } finally {
+      setSavingCashiers(false);
+    }
+  }
+
+  const cashiersSaveState: SgSaveState =
+    savingCashiers ? 'saving' : cashiersMsg === 'Сохранено' ? 'saved' : cashiersMsg.startsWith('Ошибка') ? 'error' : 'idle';
+
+  // ===== live toggles (settings) =====
+  const [salesActiveDraft, setSalesActiveDraft] = React.useState(salesActive);
+  const [confirmDraft, setConfirmDraft] = React.useState(requireCashierConfirm);
+
+  React.useEffect(() => {
+    setSalesActiveDraft(salesActive);
+    setConfirmDraft(requireCashierConfirm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salesActive, requireCashierConfirm]);
+
+  const [savingOps, setSavingOps] = React.useState(false);
+  const [opsMsg, setOpsMsg] = React.useState('');
+
+  async function saveOps() {
+    if (!appId) return;
+    setOpsMsg('');
+    setSavingOps(true);
+    try {
+      await apiFetch(`/api/cabinet/apps/${appId}/sales/settings`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            sales_active: salesActiveDraft ? 1 : 0,
+            require_cashier_confirm: confirmDraft ? 1 : 0,
+          },
+        }),
+      });
+      setOpsMsg('Сохранено');
+      await qc.invalidateQueries({ queryKey: ['sales_settings', appId] });
+      await qc.invalidateQueries({ queryKey: ['sales_ts', appId] });
+    } catch (e: any) {
+      setOpsMsg('Ошибка: ' + String(e?.message || e));
+    } finally {
+      setSavingOps(false);
+    }
+  }
+
+  const opsSaveState: SgSaveState =
+    savingOps ? 'saving' : opsMsg === 'Сохранено' ? 'saved' : opsMsg.startsWith('Ошибка') ? 'error' : 'idle';
+
+  // ===== state =====
+  const isLoading = qSettings.isLoading || qTs.isLoading || qTopUsers.isLoading;
+  const isError = qSettings.isError || qTs.isError || qTopUsers.isError;
+
+  const summaryBadgeTone: 'good' | 'warn' | 'bad' = !salesActive ? 'bad' : healthTone;
 
   return (
-    <div className="sg-page salesPage">
-      <style>{`
-:root{
-  --sg-r-xl: 22px;
-  --sg-r-lg: 18px;
-  --sg-r-md: 14px;
-  --sg-r-sm: 12px;
-
-  --sg-bd: rgba(15,23,42,.10);
-  --sg-bd2: rgba(15,23,42,.08);
-
-  --sg-card: rgba(255,255,255,.88);
-  --sg-card2: rgba(255,255,255,.96);
-  --sg-soft: rgba(15,23,42,.03);
-
-  --sg-shadow: 0 10px 26px rgba(15,23,42,.06);
-  --sg-shadow2: 0 16px 40px rgba(15,23,42,.10);
-  --sg-in: inset 0 1px 0 rgba(255,255,255,.70);
-
-  --sg-warnTint: rgba(245,158,11,.08);
-  --sg-warnBd: rgba(245,158,11,.18);
-
-  --sg-dangerTint: rgba(239,68,68,.08);
-  --sg-dangerBd: rgba(239,68,68,.18);
-
-  --sg-goodTint: rgba(34,197,94,.08);
-  --sg-goodBd: rgba(34,197,94,.18);
-
-  --sg-glow: 0 0 0 1px rgba(15,23,42,.10), 0 18px 42px rgba(15,23,42,.10);
-}
-
-.salesPage .wheelHead{ display:flex; gap:14px; align-items:flex-start; }
-.salesPage .sg-h1{ margin:0; }
-.salesPage .sg-sub{ opacity:.78; margin-top:6px; }
-
-.salesQuickWrap{
-  display:flex; align-items:center; gap:0; flex-wrap:nowrap;
-  height:46px; box-sizing:border-box;
-  border:1px solid rgba(15,23,42,.12);
-  border-radius:16px;
-  background:rgba(255,255,255,.84);
-  overflow:hidden;
-  box-shadow: var(--sg-in);
-}
-.salesQuickTabs{ border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; }
-.salesQuickRange{
-  display:flex; align-items:center; gap:8px;
-  height:100%; padding:0 12px; border:0; background:transparent; position:relative;
-}
-.salesQuickRange::before{
-  content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
-  height:26px; width:1px; background:rgba(15,23,42,.10);
-}
-.salesQuickLbl{ font-weight:900; opacity:.75; font-size:12px; }
-.salesQuickDate{
-  width:150px;
-  height:34px;
-  padding:0 12px;
-  box-sizing:border-box;
-  border-radius:12px;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.96);
-  font:inherit;
-  font-weight:900;
-  font-size:13px;
-  font-family:inherit !important;
-  font-variant-numeric:tabular-nums;
-  appearance:none; -webkit-appearance:none;
-}
-.salesApplyBtn{
-  height:34px; line-height:34px;
-  padding:0 14px; margin-left:6px;
-  border-radius:12px;
-  box-sizing:border-box;
-  font:inherit; font-weight:900; font-size:13px;
-  white-space:nowrap;
-}
-.salesApplyBtn:disabled{ opacity:.55; cursor:not-allowed; }
-
-@media (max-width:1100px){
-  .salesQuickWrap{ flex-wrap:wrap; height:auto; padding:6px; gap:10px; }
-  .salesQuickRange{ width:100%; height:auto; padding:6px 8px; }
-  .salesQuickRange::before{ display:none; }
-}
-
-.salesGrid{
-  display:grid;
-  grid-template-columns: 1.65fr 1fr;
-  gap:12px;
-  margin-top:12px;
-}
-@media (max-width: 1100px){
-  .salesGrid{ grid-template-columns:1fr; }
-}
-
-.salesCard{
-  border:1px solid var(--sg-bd2) !important;
-  border-radius: var(--sg-r-xl) !important;
-  background: var(--sg-card) !important;
-  box-shadow: var(--sg-in) !important;
-  overflow: hidden;
-}
-
-/* Health tint on cards */
-.salesCard.is-health-good{ border-color: var(--sg-goodBd) !important; background: linear-gradient(0deg, var(--sg-goodTint), rgba(255,255,255,.90)) !important; }
-.salesCard.is-health-warn{ border-color: var(--sg-warnBd) !important; background: linear-gradient(0deg, var(--sg-warnTint), rgba(255,255,255,.90)) !important; }
-.salesCard.is-health-bad{ border-color: var(--sg-dangerBd) !important; background: linear-gradient(0deg, var(--sg-dangerTint), rgba(255,255,255,.90)) !important; }
-
-.salesCard--lift{
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
-}
-.salesCard--lift:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--sg-glow), var(--sg-in) !important;
-  border-color: rgba(15,23,42,.12) !important;
-  background: var(--sg-card2) !important;
-}
-
-.salesCardHead{
-  display:flex; align-items:flex-start; justify-content:space-between;
-  gap:12px;
-  padding:14px 14px 10px 14px;
-  border-bottom:1px solid rgba(15,23,42,.08);
-}
-.salesTitle{ font-weight:900; }
-.salesSub{ margin-top:4px; opacity:.78; font-size:13px; }
-
-.salesChartWrap{
-  position:relative;
-  width:100%;
-  height: 340px;
-}
-@media (max-width: 1100px){
-  .salesChartWrap{ height: 320px; }
-}
-
-/* overlay controls */
-.salesChartTopControls{
-  position:absolute;
-  top: 10px;
-  right: 12px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  z-index:5;
-  pointer-events:auto;
-}
-.salesSeg{
-  display:inline-flex;
-  gap:6px;
-  padding:4px;
-  border-radius:16px;
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.78);
-  box-shadow: var(--sg-in);
-}
-.salesSegBtn{
-  height:32px;
-  padding:0 12px;
-  border-radius:12px;
-  border:1px solid transparent;
-  background:transparent;
-  cursor:pointer;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.9;
-}
-.salesSegBtn:hover{ opacity:1; }
-.salesSegBtn.is-active{
-  background:rgba(15,23,42,.04);
-  border-color:rgba(15,23,42,.10);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in);
-  opacity:1;
-}
-
-.salesIconGroup{
-  display:inline-flex;
-  gap:6px;
-  padding:4px;
-  border-radius:16px;
-  border:1px solid rgba(15,23,42,.08);
-  background:rgba(255,255,255,.78);
-  box-shadow: var(--sg-in);
-}
-.sgIconBtn{
-  width:34px;
-  height:34px;
-  border-radius:12px;
-  border:1px solid transparent;
-  background:transparent;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:none;
-  opacity:.92;
-}
-.sgIconBtn:hover{ opacity:1; }
-.sgIconBtn.is-active{
-  background:rgba(15,23,42,.04);
-  border-color:rgba(15,23,42,.10);
-  box-shadow:0 12px 22px rgba(15,23,42,.06), var(--sg-in);
-  opacity:1;
-}
-.sgIconBtn svg{ width:16px; height:16px; opacity:.78; }
-.sgIconBtn.is-active svg{ opacity:.92; }
-
-.salesChartOverlay{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  flex-direction:column; gap:10px;
-  pointer-events:none;
-}
-.salesSpinner{
-  width:26px; height:26px; border-radius:999px;
-  border:3px solid rgba(15,23,42,.18);
-  border-top-color: rgba(15,23,42,.58);
-  animation: salesSpin .8s linear infinite;
-}
-@keyframes salesSpin{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
-
-.salesUnderTabs{ padding:12px 14px 0 14px; }
-.salesUnderPanel{
-  margin:10px 14px 14px 14px;
-  border:1px solid var(--sg-bd);
-  border-radius: var(--sg-r-xl);
-  background: rgba(255,255,255,.86);
-  box-shadow: var(--sg-shadow), var(--sg-in);
-  padding:14px;
-}
-
-/* Tiles */
-.salesTiles{
-  display:grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap:10px;
-}
-@media (max-width: 1100px){
-  .salesTiles{ grid-template-columns: repeat(2, 1fr); }
-}
-.salesTile{
-  position:relative;
-  border:1px solid rgba(15,23,42,.08);
-  background: rgba(255,255,255,.88);
-  border-radius: var(--sg-r-lg);
-  padding:12px 12px;
-  box-shadow: var(--sg-in);
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
-  text-align:left;
-}
-.salesTile:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--sg-shadow2), var(--sg-in);
-  border-color: rgba(15,23,42,.12);
-  background: rgba(255,255,255,.96);
-}
-.salesTileLbl{
-  font-weight:900;
-  font-size:12px;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  opacity:.72;
-  display:flex; align-items:center; gap:8px;
-}
-.salesTileVal{
-  margin-top:6px;
-  font-weight:950;
-  font-size:20px;
-  letter-spacing:-.02em;
-}
-.salesTileSub{
-  margin-top:6px;
-  font-size:12px;
-  opacity:.78;
-}
-
-/* Rows */
-.sgRow{
-  position:relative;
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px 10px;
-  border-radius: var(--sg-r-md);
-  border:1px solid rgba(15,23,42,.07);
-  background: rgba(255,255,255,.80);
-  box-shadow: var(--sg-in);
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
-}
-.sgRow:hover{
-  transform: translateY(-1px);
-  box-shadow: var(--sg-shadow), var(--sg-in);
-  border-color: rgba(15,23,42,.12);
-  background: var(--sg-warnTint);
-}
-.sgRow.is-warn{
-  border-color: var(--sg-warnBd) !important;
-  background: linear-gradient(0deg, var(--sg-warnTint), rgba(255,255,255,.86)) !important;
-}
-.sgRow.is-bad{
-  border-color: var(--sg-dangerBd) !important;
-  background: linear-gradient(0deg, var(--sg-dangerTint), rgba(255,255,255,.86)) !important;
-}
-.sgRow.is-good{
-  border-color: var(--sg-goodBd) !important;
-  background: linear-gradient(0deg, var(--sg-goodTint), rgba(255,255,255,.86)) !important;
-}
-
-.sgRowLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-.sgRowTitle{ font-weight:900; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.sgRowMeta{ margin-top:2px; font-size:12px; opacity:.75; }
-.sgRowRight{ text-align:right; display:flex; flex-direction:column; gap:2px; }
-.sgRowVal{ font-weight:950; }
-.sgRowSub{ font-size:12px; opacity:.72; font-weight:800; }
-
-/* shimmer */
-.sgShimmerLine{
-  position:relative;
-  height:10px;
-  border-radius:999px;
-  background: rgba(15,23,42,.06);
-  overflow:hidden;
-}
-.sgShimmerLine__shine{
-  position:absolute;
-  inset:-40% -60% -40% -60%;
-  background: linear-gradient(90deg,
-    rgba(255,255,255,0) 0%,
-    rgba(255,255,255,.55) 45%,
-    rgba(255,255,255,0) 80%);
-  transform: translateX(-35%);
-  animation: sgShimmer 1.5s ease-in-out infinite;
-  opacity:.8;
-}
-@keyframes sgShimmer{
-  0%{ transform: translateX(-35%); }
-  100%{ transform: translateX(35%); }
-}
-
-/* tooltips */
-.sgTip{
-  position:relative;
-  display:inline-flex;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  border:1px solid rgba(15,23,42,.12);
-  background:rgba(255,255,255,.92);
-  opacity:.86;
-  flex:0 0 auto;
-}
-.sgTip::before{
-  content:"?";
-  margin:auto;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.72;
-}
-.sgTip.is-dev::before{ content:"DEV"; font-size:9px; letter-spacing:.04em; }
-.sgTip:hover{ opacity:1; }
-.sgTip::after{
-  content:attr(data-tip);
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  padding:8px 10px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.14);
-  background:rgba(255,255,255,.98);
-  box-shadow: 0 18px 40px rgba(15,23,42,.14);
-  font-weight:900;
-  font-size:12px;
-  white-space:nowrap;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .12s ease;
-  z-index:9999;
-}
-.sgTip.is-top::after{ bottom: calc(100% + 10px); }
-.sgTip.is-bottom::after{ top: calc(100% + 10px); }
-.sgTip:hover::after{ opacity:1; }
-
-/* Collapsible */
-.sgColl{
-  border:1px solid rgba(15,23,42,.08);
-  border-radius: var(--sg-r-xl);
-  background: rgba(255,255,255,.90);
-  box-shadow: var(--sg-in);
-  overflow:hidden;
-}
-.sgColl.is-good{ border-color: var(--sg-goodBd); }
-.sgColl.is-warn{ border-color: var(--sg-warnBd); }
-.sgColl.is-bad{ border-color: var(--sg-dangerBd); }
-
-.sgColl.is-good .sgColl__head{ background: linear-gradient(90deg, var(--sg-goodTint), transparent 44%); }
-.sgColl.is-warn .sgColl__head{ background: linear-gradient(90deg, var(--sg-warnTint), transparent 44%); }
-.sgColl.is-bad .sgColl__head{ background: linear-gradient(90deg, var(--sg-dangerTint), transparent 44%); }
-
-.sgColl__head{
-  width:100%;
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 12px;
-  cursor:pointer;
-  border:0;
-  background:transparent;
-  text-align:left;
-}
-.sgColl__title{
-  font-weight:1000;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.sgColl__sub{ margin-top:3px; font-size:12px; opacity:.78; }
-.sgColl__right{ display:flex; gap:10px; align-items:center; }
-.sgColl__chev{
-  width:10px; height:10px;
-  border-right:2px solid rgba(15,23,42,.45);
-  border-bottom:2px solid rgba(15,23,42,.45);
-  transform: rotate(45deg);
-  transition: transform .16s ease;
-  opacity:.85;
-}
-.sgColl.is-open .sgColl__chev{ transform: rotate(225deg); }
-.sgColl__body{
-  max-height: 0px;
-  overflow:hidden;
-  transition: max-height .22s ease;
-  padding: 0 12px;
-}
-.sgColl.is-open .sgColl__body{
-  max-height: 1200px;
-  padding: 0 12px 12px 12px;
-}
-
-/* Health badge (yellow/red/green, with tooltip) */
-.sgHealthBadge{
-  height:32px;
-  padding:0 10px 0 8px;
-  border-radius:14px;
-  border:1px solid rgba(15,23,42,.10);
-  background: rgba(255,255,255,.78);
-  box-shadow: var(--sg-in);
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  cursor:default;
-  user-select:none;
-  font-weight:1000;
-  font-size:12px;
-  opacity:.96;
-}
-.sgHealthBadge.is-compact{
-  height:28px;
-  padding:0 8px 0 6px;
-  border-radius:13px;
-  font-size:11px;
-}
-.sgHealthBadge__icon{
-  width:18px; height:18px;
-  border-radius:999px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:1100;
-  line-height:1;
-}
-.sgHealthBadge__txt{ opacity:.86; text-transform:uppercase; letter-spacing:.08em; }
-
-.sgHealthBadge.is-good{
-  border-color: var(--sg-goodBd);
-  background: rgba(255,255,255,.86);
-}
-.sgHealthBadge.is-good .sgHealthBadge__icon{
-  border:1px solid var(--sg-goodBd);
-  background: var(--sg-goodTint);
-  color: rgba(22,163,74,.95);
-}
-
-.sgHealthBadge.is-warn{
-  border-color: var(--sg-warnBd);
-  background: rgba(255,255,255,.86);
-}
-.sgHealthBadge.is-warn .sgHealthBadge__icon{
-  border:1px solid var(--sg-warnBd);
-  background: var(--sg-warnTint);
-  color: rgba(245,158,11,.95);
-}
-
-.sgHealthBadge.is-bad{
-  border-color: var(--sg-dangerBd);
-  background: rgba(255,255,255,.86);
-}
-.sgHealthBadge.is-bad .sgHealthBadge__icon{
-  border:1px solid var(--sg-dangerBd);
-  background: var(--sg-dangerTint);
-  color: rgba(239,68,68,.95);
-}
-
-/* Right sticky */
-.salesRightSticky{ position: sticky; top: 10px; }
-      `}</style>
-
-      {/* ===== HEAD ===== */}
-      <div className="wheelHead">
-        <div>
-          <h1 className="sg-h1">Продажи (QR)</h1>
-          <div className="sg-sub">График/карточки — один стиль с Wheel. Сейчас данные — mock, потом подключим воркер.</div>
-        </div>
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div className="salesQuickWrap">
-            <div className="sg-tabs wheelMiniTabs salesQuickTabs">
-              <button type="button" className={'sg-tab ' + (quick === 'day' ? 'is-active' : '')} onClick={() => pickQuick('day')}>День</button>
-              <button type="button" className={'sg-tab ' + (quick === 'week' ? 'is-active' : '')} onClick={() => pickQuick('week')}>Неделя</button>
-              <button type="button" className={'sg-tab ' + (quick === 'month' ? 'is-active' : '')} onClick={() => pickQuick('month')}>Месяц</button>
-              <button type="button" className={'sg-tab ' + (quick === 'custom' ? 'is-active' : '')} onClick={() => pickQuick('custom')}>Свой период</button>
+    <SgPage
+      className="sgp-sales"
+      title="Продажи (QR)"
+      subtitle={
+        <span>
+          Факт по <b>sales</b> + начисление/списание монет. Управление: <b>кэшбэк</b>, <b>бусты</b>, <b>кассиры</b>.
+        </span>
+      }
+      actions={
+        <div className="sgp-rangebar">
+          <div className="sgp-rangebar__row">
+            <div className="sgp-seg">
+              <SegBtn active={quick === 'day'} onClick={() => pickQuick('day')}>День</SegBtn>
+              <SegBtn active={quick === 'week'} onClick={() => pickQuick('week')}>Неделя</SegBtn>
+              <SegBtn active={quick === 'month'} onClick={() => pickQuick('month')}>Месяц</SegBtn>
+              <SegBtn active={quick === 'custom'} onClick={() => pickQuick('custom')}>Свой</SegBtn>
             </div>
 
-            {quick === 'custom' && (
-              <div className="salesQuickRange">
-                <span className="salesQuickLbl">от</span>
-                <Input type="date" value={customFrom} onChange={(e: any) => setCustomFrom(e.target.value)} className="salesQuickDate" />
-                <span className="salesQuickLbl">до</span>
-                <Input type="date" value={customTo} onChange={(e: any) => setCustomTo(e.target.value)} className="salesQuickDate" />
-                <button
-                  type="button"
-                  className="sg-tab is-active salesApplyBtn"
+            <div className={quick === 'custom' ? 'sgp-rangebar__customWrap is-open' : 'sgp-rangebar__customWrap'}>
+              <div className="sgp-rangebar__custom">
+                <span className="sgp-muted">от</span>
+                <input
+                  type="date"
+                  className="sgp-input sgp-date sgp-press"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                />
+                <span className="sgp-muted">до</span>
+                <input
+                  type="date"
+                  className="sgp-input sgp-date sgp-press"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                />
+                <SgButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => applyRange(customFrom, customTo)}
                   disabled={!customFrom || !customTo}
                 >
                   Применить
-                </button>
+                </SgButton>
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* ===== GRID ===== */}
-      <div className="salesGrid">
-        {/* LEFT */}
-        <div className="salesLeft">
-          <Card className={`salesCard salesCard--lift ${cardToneCls}`}>
-            <div className="salesCardHead">
+      }
+      aside={
+        <div className="sgp-aside">
+          <SgCard>
+            <SgCardHeader
+              right={<HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />}
+            >
               <div>
-                <div className="salesTitle">
-                  Факт: выручка / net эффект
-                  <span style={{ marginLeft: 10 }}>
-                    <Tip dev text="DEV: сюда потом подтянем /sales/timeseries. Сейчас mock." />
-                  </span>
-                </div>
-                <div className="salesSub">{range?.from} — {range?.to}</div>
+                <SgCardTitle>Состояние продаж</SgCardTitle>
+                <SgCardSub>за выбранный период</SgCardSub>
               </div>
-            </div>
+            </SgCardHeader>
 
-            <div className="salesChartWrap">
-              {/* top overlay controls */}
-              <div className="salesChartTopControls">
-                <div className="salesSeg" role="tablist" aria-label="basis">
-                  <button
-                    type="button"
-                    className={'salesSegBtn ' + (basis === 'confirmed' ? 'is-active' : '')}
-                    onClick={() => setBasis('confirmed')}
-                    title="Net по подтверждённым операциям"
-                  >
-                    при подтвержд.
-                  </button>
-                  <button
-                    type="button"
-                    className={'salesSegBtn ' + (basis === 'issued' ? 'is-active' : '')}
-                    onClick={() => setBasis('issued')}
-                    title="Net по выданным (issued) — позже на бэке"
-                  >
-                    при выдаче
-                  </button>
-                </div>
-
-                <div className="salesIconGroup" aria-label="chart overlays">
-                  <IconBtn title="Цилиндры (заказы)" active={showBars} onClick={() => setShowBars(v => !v)}>
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <rect x="6" y="7" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
-                      <path d="M8 15h8" stroke="currentColor" strokeWidth="2" opacity=".6" />
-                    </svg>
-                  </IconBtn>
-
-                  <IconBtn title="Заливка (выручка)" active={showArea} onClick={() => setShowArea(v => !v)}>
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <path d="M5 16c3-6 6 2 9-4s5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M5 18h14" stroke="currentColor" strokeWidth="2" opacity=".45" />
-                    </svg>
-                  </IconBtn>
-
-                  <IconBtn title="П — Net (profit)" active={showNet} onClick={() => setShowNet(v => !v)}>
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <path d="M7 18V7h10v11" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                      <path d="M9 10h6" stroke="currentColor" strokeWidth="2" opacity=".6" />
-                    </svg>
-                  </IconBtn>
-                </div>
-
-                {/* ✅ Health button with tooltip (exactly what you asked: yellow/red with "!"; green if ok) */}
-                <HealthBadge tone={healthTone} title={healthTitle} />
+            <SgCardContent>
+              <div className="sgp-kv">
+                <div className="sgp-kv__row"><span>Выручка</span><b>{moneyFromCent(totals.rev, currency)}</b></div>
+                <div className="sgp-kv__row"><span>Заказы</span><b>{totals.orders}</b></div>
+                <div className="sgp-kv__row"><span>Покупатели (avg/day)</span><b>{totals.buyersAvg}</b></div>
+                <div className="sgp-kv__row"><span>Кэшбэк (issued)</span><b>{totals.cashbackCoins} мон</b></div>
+                <div className="sgp-kv__row"><span>Списано (confirmed)</span><b>{totals.redeemCoins} мон</b></div>
+                <div className="sgp-kv__row"><span>Net</span><b>{moneyFromCent(totals.net, currency)}</b></div>
+                <div className="sgp-kv__row"><span>Pending</span><b>{totals.pending}</b></div>
+                <div className="sgp-kv__row"><span>Cancel</span><b>{totals.cancelRatePct}%</b></div>
               </div>
 
-              {!isLoading && !isError && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 34, right: 18, left: 6, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.22} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      interval="preserveStartEnd"
-                      tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
-                    />
-
-                    <YAxis
-                      yAxisId="money"
-                      tick={{ fontSize: 12 }}
-                      width={54}
-                      tickFormatter={(v: any) => niceMoneyTick(Number(v))}
-                    />
-
-                    <YAxis
-                      yAxisId="orders"
-                      orientation="right"
-                      width={10}
-                      tick={false}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-
-                    <Tooltip
-                      formatter={(val: any, name: any) => {
-                        if (name === 'revenue_cents') return [moneyFromCent(val, currency), 'Выручка/день'];
-                        if (name === 'net_cents') return [moneyFromCent(val, currency), 'Net/день'];
-                        if (name === 'orders_count') return [val, 'Заказы/день'];
-                        return [val, name];
-                      }}
-                      labelFormatter={(_: any, payload: any) => {
-                        const d = payload?.[0]?.payload?.date;
-                        return d ? `Дата ${d}` : 'Дата';
-                      }}
-                    />
-
-                    {showArea && (
-                      <Area
-                        yAxisId="money"
-                        type="monotone"
-                        dataKey="revenue_cents"
-                        name="revenue_cents"
-                        stroke="var(--accent2)"
-                        fill="var(--accent)"
-                        fillOpacity={0.12}
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 4 }}
-                      />
-                    )}
-
-                    {showNet && (
-                      <Line
-                        yAxisId="money"
-                        type="monotone"
-                        dataKey="net_cents"
-                        name="net_cents"
-                        stroke="var(--accent2)"
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
-                        dot={false}
-                      />
-                    )}
-
-                    {showBars && (
-                      <Bar
-                        yAxisId="orders"
-                        dataKey="orders_count"
-                        name="orders_count"
-                        fill="var(--accent)"
-                        fillOpacity={0.18}
-                        radius={[12, 12, 12, 12]}
-                        barSize={14}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-
-              {isLoading && (
-                <div className="salesChartOverlay">
-                  <div className="salesSpinner" />
-                  <div style={{ fontWeight: 900, opacity: 0.75 }}>Загрузка…</div>
-                </div>
-              )}
-
-              {isError && (
-                <div className="salesChartOverlay">
-                  <div style={{ fontWeight: 900, opacity: 0.85 }}>
-                    Ошибка: {String((qAll.error as any)?.message || 'UNKNOWN')}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* UNDER TABS */}
-            <div className="salesUnderTabs">
-              <div className="sg-tabs wheelUnderTabs__seg">
-                <button className={'sg-tab ' + (tab === 'summary' ? 'is-active' : '')} onClick={() => setTab('summary')}>Сводка</button>
-                <button className={'sg-tab ' + (tab === 'funnel' ? 'is-active' : '')} onClick={() => setTab('funnel')}>Воронка</button>
-                <button className={'sg-tab ' + (tab === 'cashiers' ? 'is-active' : '')} onClick={() => setTab('cashiers')}>Кассиры</button>
-                <button className={'sg-tab ' + (tab === 'customers' ? 'is-active' : '')} onClick={() => setTab('customers')}>Клиенты</button>
-                <button className={'sg-tab ' + (tab === 'live' ? 'is-active' : '')} onClick={() => setTab('live')}>Live</button>
-              </div>
-            </div>
-
-            {/* TAB: SUMMARY */}
-            {tab === 'summary' && (
-              <div className="salesUnderPanel">
-                <div className="salesTiles">
-                  <div className="salesTile">
-                    <div className="salesTileLbl">Выручка <Tip text="Сумма чеков за период" /></div>
-                    <div className="salesTileVal">{isLoading ? '—' : moneyFromCent(totals.rev, currency)}</div>
-                    <div className="salesTileSub">
-                      {isLoading ? <ShimmerLine w={66} /> : <>в день: <b>{moneyFromCent(totals.revPerDay, currency)}</b></>}
-                    </div>
-                  </div>
-
-                  <div className="salesTile">
-                    <div className="salesTileLbl">Заказы <Tip text="Количество продаж (recorded)" /></div>
-                    <div className="salesTileVal">{isLoading ? '—' : totals.orders}</div>
-                    <div className="salesTileSub">
-                      {isLoading ? <ShimmerLine w={58} /> : <>ср. чек: <b>{moneyFromCent(totals.avgCheck, currency)}</b></>}
-                    </div>
-                  </div>
-
-                  <div className="salesTile">
-                    <div className="salesTileLbl">Покупатели <Tip text="Уникальные клиенты (приближ.)" /></div>
-                    <div className="salesTileVal">{isLoading ? '—' : totals.buyers}</div>
-                    <div className="salesTileSub">
-                      {isLoading ? <ShimmerLine w={52} /> : <>repeat: <b>{fmtPct(totals.repeat)}</b></>}
-                    </div>
-                  </div>
-
-                  <div className="salesTile">
-                    <div className="salesTileLbl">Кэшбэк <Tip text="Начислено монет (issued)" /></div>
-                    <div className="salesTileVal">{isLoading ? '—' : `${totals.cashbackCoins.toLocaleString('ru-RU')} мон`}</div>
-                    <div className="salesTileSub">{isLoading ? <ShimmerLine w={64} /> : <>≈ <b>{moneyFromCent(totals.cashbackCent, currency)}</b></>}</div>
-                  </div>
-
-                  <div className="salesTile">
-                    <div className="salesTileLbl">Net <Tip text="Списание(₽) − Кэшбэк(₽)" /></div>
-                    <div className="salesTileVal">{isLoading ? '—' : moneyFromCent(totals.net, currency)}</div>
-                    <div className="salesTileSub">{isLoading ? <ShimmerLine w={60} /> : <>списано: <b>{moneyFromCent(totals.redeemCent, currency)}</b></>}</div>
-                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                      <HealthBadge tone={healthTone} title={healthTitle} compact />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div className={'sgRow ' + (totals.pending >= 6 ? 'is-bad' : totals.pending > 0 ? 'is-warn' : 'is-good')}>
-                    <div className="sgRowLeft">
-                      <div>
-                        <div className="sgRowTitle">Зависшие подтверждения</div>
-                        <div className="sgRowMeta">
-                          <span className="sg-muted">Портит UX: клиент не видит результат</span>
-                          <span style={{ marginLeft: 8 }}>
-                            <Tip dev text="DEV: pending = sales where status=pending OR ledger not confirmed by timeout" />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="sgRowRight">
-                      <div className="sgRowVal">{isLoading ? '—' : totals.pending}</div>
-                      <div className="sgRowSub">{isLoading ? ' ' : (totals.pending >= 6 ? 'критично' : totals.pending > 0 ? 'есть' : 'ок')}</div>
-                    </div>
-                  </div>
-
-                  <div className={'sgRow ' + (totals.cancelRate >= 0.12 ? 'is-bad' : totals.cancelRate >= 0.08 ? 'is-warn' : 'is-good')}>
-                    <div className="sgRowLeft">
-                      <div>
-                        <div className="sgRowTitle">Процент отмен</div>
-                        <div className="sgRowMeta">
-                          <span className="sg-muted">Сигнал проблем в кассе/правилах</span>
-                          <span style={{ marginLeft: 8 }}>
-                            <Tip dev text="DEV: cancel_rate = cancels / recorded за период" />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="sgRowRight">
-                      <div className="sgRowVal">{isLoading ? '—' : fmtPct(totals.cancelRate)}</div>
-                      <div className="sgRowSub">{isLoading ? ' ' : (totals.cancelRate >= 0.12 ? 'плохо' : totals.cancelRate >= 0.08 ? 'риск' : 'ок')}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: FUNNEL */}
-            {tab === 'funnel' && (
-              <div className="salesUnderPanel">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {isLoading ? (
-                    <>
-                      <div className="sgRow">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">Воронка</div>
-                            <div className="sgRowMeta"><ShimmerLine w={84} /></div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">—</div>
-                          <div className="sgRowSub">—</div>
-                        </div>
-                      </div>
-                      <div className="sgRow">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">Время подтверждения</div>
-                            <div className="sgRowMeta"><ShimmerLine w={72} /></div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">—</div>
-                          <div className="sgRowSub">—</div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="sgRow">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">Скан → Запись → Подтверждения</div>
-                            <div className="sgRowMeta">
-                              <span className="sg-muted">Слабое место = где больше всего падает</span>
-                              <span style={{ marginLeft: 8 }}>
-                                <Tip dev text="DEV: funnel из sales_events + статусов (pending/confirmed/canceled)" />
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{funnel?.scanned} → {funnel?.recorded}</div>
-                          <div className="sgRowSub">{funnel?.cashback_confirmed} confirmed</div>
-                        </div>
-                      </div>
-
-                      <div className="sgRow">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">PIN: выдано → использовано</div>
-                            <div className="sgRowMeta">
-                              <span className="sg-muted">Показывает “дожим” до награды</span>
-                              <span style={{ marginLeft: 8 }}>
-                                <Tip dev text="DEV: pin_issued/pin_used из pins_pool (issued_at/used_at)" />
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{funnel?.pin_issued} → {funnel?.pin_used}</div>
-                          <div className="sgRowSub">
-                            conv: {fmtPct(funnel && funnel.pin_issued ? (funnel.pin_used / funnel.pin_issued) : 0)}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {!isLoading && (
-                  <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className={'sgRow ' + ((funnel?.median_confirm_minutes ?? 0) > 6 ? 'is-warn' : 'is-good')}>
-                      <div className="sgRowLeft">
-                        <div>
-                          <div className="sgRowTitle">Подтверждение (median)</div>
-                          <div className="sgRowMeta">
-                            <span className="sg-muted">От “записали” до “confirmed”</span>
-                            <span style={{ marginLeft: 8 }}>
-                              <Tip dev text="DEV: median(created_at→confirmed_at) по sales" />
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">{(funnel?.median_confirm_minutes ?? 0).toFixed(1)} мин</div>
-                        <div className="sgRowSub">{(funnel?.median_confirm_minutes ?? 0) > 5 ? 'медленно' : 'ок'}</div>
-                      </div>
-                    </div>
-
-                    <div className="sgRow">
-                      <div className="sgRowLeft">
-                        <div>
-                          <div className="sgRowTitle">Списание (подтверждено)</div>
-                          <div className="sgRowMeta">
-                            <span className="sg-muted">Если низко — люди не тратят монеты</span>
-                            <span style={{ marginLeft: 8 }}>
-                              <Tip dev text="DEV: redeem_confirmed из ledger events / sales.redeem_status" />
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">{funnel?.redeem_confirmed}</div>
-                        <div className="sgRowSub">
-                          rate: {fmtPct(funnel && funnel.recorded ? (funnel.redeem_confirmed / funnel.recorded) : 0)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div style={{ marginTop: 10 }}>
+                {!salesActive ? (
+                  <Hint tone="bad">Продажи выключены. Скан/запись/начисления будут блокироваться.</Hint>
+                ) : healthTone === 'bad' ? (
+                  <Hint tone="bad">Есть критичные сигналы: {healthTitle}.</Hint>
+                ) : healthTone === 'warn' ? (
+                  <Hint tone="warn">Есть отклонения: {healthTitle}. Проверь кассиров/подтверждения.</Hint>
+                ) : (
+                  <Hint tone="good">Ок. Можно включать бусты и точнее настроить кэшбэк.</Hint>
                 )}
               </div>
-            )}
+            </SgCardContent>
+          </SgCard>
 
-            {/* TAB: CASHIERS */}
-            {tab === 'cashiers' && (
-              <div className="salesUnderPanel">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ fontWeight: 1000 }}>
-                    Кассиры <span style={{ marginLeft: 8 }}><Tip dev text="DEV: /sales/cashiers агрегация по cashier_tg_id" /></span>
-                  </div>
-                  <div className="sg-muted">hover подсветка как “Склад”</div>
-                </div>
+          <div style={{ height: 12 }} />
 
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(isLoading ? Array.from({ length: 4 }).map((_, i) => (
-                    <div className="sgRow" key={i}>
-                      <div className="sgRowLeft">
-                        <div style={{ width: '100%' }}>
-                          <div className="sgRowTitle"><ShimmerLine w={42} /></div>
-                          <div className="sgRowMeta"><ShimmerLine w={86} /></div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">—</div>
-                        <div className="sgRowSub">—</div>
-                      </div>
-                    </div>
-                  )) : topCashiers.map((c) => {
-                    const tone: HealthTone =
-                      c.cancel_rate >= 0.12 || c.confirm_rate <= 0.86
-                        ? 'bad'
-                        : c.cancel_rate >= 0.08 || c.confirm_rate <= 0.90
-                          ? 'warn'
-                          : 'good';
+          <SgTopListCard
+            title="Топ пользователей"
+            subtitle={
+              topMetric === 'revenue'
+                ? 'по выручке'
+                : topMetric === 'orders'
+                  ? 'по заказам'
+                  : topMetric === 'cashback'
+                    ? 'по кэшбэку'
+                    : 'по списаниям'
+            }
+            items={topUsers}
+            getId={(u: any) => String(u.tg_id || u.title || Math.random())}
+            getTitle={(u: any) => String(u.title || u.tg_id || 'user')}
+            metrics={[
+              {
+                key: 'revenue',
+                label: 'выручке',
+                value: (u: any) => Number(u.revenue_cents) || 0,
+                fmt: (v: any) => moneyFromCent(Number(v) || 0, currency),
+                sub: (u: any) => `orders: ${Number(u.orders) || 0} · cb: ${Number(u.cashback_coins) || 0} · rd: ${Number(u.redeem_coins) || 0}`,
+              },
+              {
+                key: 'orders',
+                label: 'заказам',
+                value: (u: any) => Number(u.orders) || 0,
+                sub: (u: any) => `rev: ${moneyFromCent(Number(u.revenue_cents) || 0, currency)}`,
+              },
+              {
+                key: 'cashback',
+                label: 'кэшбэку',
+                value: (u: any) => Number(u.cashback_coins) || 0,
+                sub: (u: any) => `redeem: ${Number(u.redeem_coins) || 0} · rev: ${moneyFromCent(Number(u.revenue_cents) || 0, currency)}`,
+              },
+              {
+                key: 'redeem',
+                label: 'списаниям',
+                value: (u: any) => Number(u.redeem_coins) || 0,
+                sub: (u: any) => `cashback: ${Number(u.cashback_coins) || 0}`,
+              },
+            ]}
+            metricKey={topMetric}
+            onMetricKeyChange={(k) => setTopMetric(k as any)}
+            limit={7}
+          />
 
-                    const tip = c.alerts?.length
-                      ? c.alerts.join(' / ')
-                      : tone === 'bad'
-                        ? 'Риск: проверь отмены/подтверждения'
-                        : tone === 'warn'
-                          ? 'Есть отклонения — стоит проверить'
-                          : 'Всё норм по метрикам';
-
-                    return (
-                      <div className={'sgRow ' + (tone === 'bad' ? 'is-bad' : tone === 'warn' ? 'is-warn' : 'is-good')} key={c.cashier_label}>
-                        <div className="sgRowLeft">
-                          <div style={{ minWidth: 0 }}>
-                            <div className="sgRowTitle">
-                              {c.cashier_label}
-                              <span style={{ marginLeft: 10 }}>
-                                <HealthBadge tone={tone} title={tip} compact />
-                              </span>
-                            </div>
-                            <div className="sgRowMeta">
-                              выручка: <b>{moneyFromCent(c.revenue_cents, currency)}</b>
-                              <span className="sg-muted"> · </span>
-                              заказы: <b>{c.orders}</b>
-                              <span className="sg-muted"> · </span>
-                              confirm: <b>{fmtPct(c.confirm_rate)}</b>
-                              <span className="sg-muted"> · </span>
-                              cancel: <b>{fmtPct(c.cancel_rate)}</b>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{c.median_confirm_minutes.toFixed(1)} мин</div>
-                          <div className="sgRowSub">{tone === 'bad' ? 'риск' : tone === 'warn' ? 'внимание' : 'норма'}</div>
-                        </div>
-                      </div>
-                    );
-                  }))}
-                </div>
-              </div>
-            )}
-
-            {/* TAB: CUSTOMERS */}
-            {tab === 'customers' && (
-              <div className="salesUnderPanel">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ fontWeight: 1000 }}>
-                    Клиенты <span style={{ marginLeft: 8 }}><Tip dev text="DEV: /sales/customers список + сегменты по поведению" /></span>
-                  </div>
-                  <div className="sg-muted">сегменты: new / repeat / saver / spender</div>
-                </div>
-
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(isLoading ? Array.from({ length: 4 }).map((_, i) => (
-                    <div className="sgRow" key={i}>
-                      <div className="sgRowLeft">
-                        <div style={{ width: '100%' }}>
-                          <div className="sgRowTitle"><ShimmerLine w={46} /></div>
-                          <div className="sgRowMeta"><ShimmerLine w={80} /></div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">—</div>
-                        <div className="sgRowSub">—</div>
-                      </div>
-                    </div>
-                  )) : topCustomers.map((c) => {
-                    const tone: HealthTone =
-                      c.segment === 'saver' ? 'warn' : c.segment === 'spender' ? 'good' : 'good';
-
-                    const alert = c.segment === 'saver'
-                      ? 'Накопил и не тратит — пуши на списание'
-                      : c.segment === 'spender'
-                        ? 'Часто тратит — VIP'
-                        : c.segment === 'repeat'
-                          ? 'Повторный клиент'
-                          : 'Новый клиент';
-
-                    return (
-                      <div className={'sgRow ' + (tone === 'warn' ? 'is-warn' : 'is-good')} key={c.customer_label}>
-                        <div className="sgRowLeft">
-                          <div style={{ minWidth: 0 }}>
-                            <div className="sgRowTitle">
-                              {c.customer_label}
-                              <span style={{ marginLeft: 10 }}>
-                                <HealthBadge tone={tone} title={alert} compact />
-                              </span>
-                            </div>
-                            <div className="sgRowMeta">
-                              LTV: <b>{moneyFromCent(c.ltv_cents, currency)}</b>
-                              <span className="sg-muted"> · </span>
-                              заказов: <b>{c.orders}</b>
-                              <span className="sg-muted"> · </span>
-                              last: <b>{c.last_seen}</b>
-                              <span className="sg-muted"> · </span>
-                              сегмент: <b>{c.segment}</b>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{moneyFromCent(c.revenue_cents, currency)}</div>
-                          <div className="sgRowSub">за период</div>
-                        </div>
-                      </div>
-                    );
-                  }))}
-                </div>
-              </div>
-            )}
-
-            {/* TAB: LIVE */}
-            {tab === 'live' && (
-              <div className="salesUnderPanel">
-                <div style={{ fontWeight: 1000 }}>
-                  Live лента <span style={{ marginLeft: 8 }}><Tip dev text="DEV: /sales/live последние N событий (sales_events)" /></span>
-                </div>
-
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(isLoading ? Array.from({ length: 5 }).map((_, i) => (
-                    <div className="sgRow" key={i}>
-                      <div className="sgRowLeft">
-                        <div style={{ width: '100%' }}>
-                          <div className="sgRowTitle"><ShimmerLine w={70} /></div>
-                          <div className="sgRowMeta"><ShimmerLine w={92} /></div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">—</div>
-                        <div className="sgRowSub">—</div>
-                      </div>
-                    </div>
-                  )) : (
-                    <>
-                      <div className="sgRow is-good">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">sale_recorded</div>
-                            <div className="sgRowMeta">
-                              Покупка 520 ₽ · cashback +31 мон · кассир #2 · 12:44
-                              <span style={{ marginLeft: 8 }}><Tip text="Подсказка: hover-only" /></span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">ok</div>
-                          <div className="sgRowSub">event</div>
-                        </div>
-                      </div>
-
-                      <div className="sgRow is-good">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">redeem_confirmed</div>
-                            <div className="sgRowMeta">Списано 120 мон · net +12 ₽ · кассир #1 · 12:40</div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">vip</div>
-                          <div className="sgRowSub">segment</div>
-                        </div>
-                      </div>
-
-                      <div className="sgRow is-warn">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">cashback_pending</div>
-                            <div className="sgRowMeta">Ждёт подтверждения · кассир #2 · 12:33</div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">risk</div>
-                          <div className="sgRowSub">alert</div>
-                        </div>
-                      </div>
-                    </>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
+          {!qTopUsers.isLoading && !topUsers.length ? (
+            <div style={{ marginTop: 10 }}>
+              <Hint tone="warn">
+                Топ пустой. Нужен эндпоинт <b>/sales/users/top</b> (пока можно отдавать mock).
+              </Hint>
+            </div>
+          ) : null}
         </div>
+      }
+    >
+      {/* ===== FACT CHART ===== */}
+      <SgSectionCard
+        title="Факт: выручка / заказы / net"
+        sub={
+          <>
+            {range.from} — {range.to} · 1 монета = <b>{moneyFromCent(coinCents, currency)}</b>
+          </>
+        }
+        right={
+          <div className="sgp-chartbar">
+            <div className="sgp-seg">
+              <SegBtn active={basis === 'confirmed'} onClick={() => setBasis('confirmed')}>
+                при подтвержд.
+              </SegBtn>
+              <SegBtn active={basis === 'issued'} onClick={() => setBasis('issued')}>
+                при выдаче
+              </SegBtn>
+            </div>
 
-        {/* RIGHT */}
-        <div className="salesRight">
-          <div className="salesRightSticky">
-            {/* Summary PRO */}
-            <Card className={`salesCard salesCard--lift ${cardToneCls}`} style={{ marginBottom: 12 }}>
-              <div className="salesCardHead">
-                <div>
-                  <div className="salesTitle">
-                    Summary PRO
-                    <span style={{ marginLeft: 10 }}><Tip text="Подсказки при наведении. Нажимай секции — сворачиваются." /></span>
-                  </div>
-                  <div className="salesSub">Сигналы качества + рекомендации</div>
-                </div>
-                <HealthBadge tone={healthTone} title={healthTitle} />
-              </div>
+            <div className="sgp-iconGroup">
+              <IconBtn active={showRevenue} title="Выручка (день)" onClick={() => setShowRevenue((v) => !v)}>R</IconBtn>
+              <IconBtn active={showOrders} title="Заказы (день)" onClick={() => setShowOrders((v) => !v)}>O</IconBtn>
+              <IconBtn active={showNet} title="Net (день)" onClick={() => setShowNet((v) => !v)}>N</IconBtn>
+              <IconBtn active={showCashback} title="Кэшбэк issued (coins)" onClick={() => setShowCashback((v) => !v)}>C</IconBtn>
+              <IconBtn active={showRedeem} title="Redeem confirmed (coins)" onClick={() => setShowRedeem((v) => !v)}>D</IconBtn>
+            </div>
 
-              <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <Collapsible
-                  title="Ключевые сигналы"
-                  sub="что нужно починить в первую очередь"
-                  open={openKpi}
-                  onToggle={() => setOpenKpi(v => !v)}
-                  healthTone={healthTone}
-                  healthTitle={healthTitle}
-                  right={<span className="sg-muted" style={{ fontWeight: 900 }}>{alerts.length ? `${alerts.length} алерт(а)` : 'нет алертов'}</span>}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div className={'sgRow ' + (alerts.length ? (healthTone === 'bad' ? 'is-bad' : 'is-warn') : 'is-good')}>
-                      <div className="sgRowLeft">
-                        <div>
-                          <div className="sgRowTitle">Список алертов</div>
-                          <div className="sgRowMeta">
-                            <span className="sg-muted">Мягкая подсветка (без кислотности)</span>
-                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: алерты считать на бэке и отдавать массивом" /></span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">{alerts.length}</div>
-                        <div className="sgRowSub">{alerts.length ? 'внимание' : 'ok'}</div>
-                      </div>
-                    </div>
-
-                    {alerts.length ? alerts.slice(0, 4).map((a) => (
-                      <div className={'sgRow ' + (a.sev === 'bad' ? 'is-bad' : 'is-warn')} key={a.key}>
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">
-                              {a.title}
-                              <span style={{ marginLeft: 10 }}>
-                                <HealthBadge tone={a.sev === 'bad' ? 'bad' : 'warn'} title={a.title} compact />
-                              </span>
-                            </div>
-                            <div className="sgRowMeta">
-                              sev: <b>{a.sev}</b>
-                              <span style={{ marginLeft: 8 }}><Tip text="Подсказка: наведи на ! (справа)" /></span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{a.sev === 'bad' ? '!' : '·'}</div>
-                          <div className="sgRowSub">{a.sev}</div>
-                        </div>
-                      </div>
-                    )) : (
-                      <div className="sgRow is-good">
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">Всё спокойно</div>
-                            <div className="sgRowMeta">Пока нет критичных отклонений</div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">ok</div>
-                          <div className="sgRowSub">clean</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </Collapsible>
-
-                <Collapsible
-                  title="Инсайты"
-                  sub="умные подсказки (с привязкой к метрикам)"
-                  open={openInsights}
-                  onToggle={() => setOpenInsights(v => !v)}
-                  healthTone={healthTone === 'bad' ? 'warn' : 'good'} // инсайты не должны “кричать” красным
-                  healthTitle={healthTone === 'bad' ? 'Есть проблемы: исправь алерты — инсайты станут точнее.' : 'Ок'}
-                  right={<span className="sg-muted" style={{ fontWeight: 900 }}>4 cards</span>}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                    {isLoading ? (
-                      <>
-                        <div className="sgRow"><div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={54} /></div><div className="sgRowMeta"><ShimmerLine w={92} /></div></div></div></div>
-                        <div className="sgRow"><div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={62} /></div><div className="sgRowMeta"><ShimmerLine w={88} /></div></div></div></div>
-                      </>
-                    ) : insights.map((x, i) => (
-                      <div className={'sgRow ' + (x.tone === 'bad' ? 'is-bad' : x.tone === 'warn' ? 'is-warn' : 'is-good')} key={i}>
-                        <div className="sgRowLeft">
-                          <div style={{ minWidth: 0 }}>
-                            <div className="sgRowTitle">
-                              {x.title}
-                              <span style={{ marginLeft: 10 }}><Tip text={x.body} /></span>
-                              {x.dev ? <span style={{ marginLeft: 8 }}><Tip dev text={x.dev} /></span> : null}
-                            </div>
-                            <div className="sgRowMeta">{x.body}</div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{x.tone}</div>
-                          <div className="sgRowSub">insight</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Collapsible>
-
-                <Collapsible
-                  title="Топ списки"
-                  sub="кто приносит деньги / кто косячит"
-                  open={openTop}
-                  onToggle={() => setOpenTop(v => !v)}
-                  healthTone="good"
-                  healthTitle="Ок"
-                  right={<span className="sg-muted" style={{ fontWeight: 900 }}>Top 6</span>}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                    <div className="sgRow">
-                      <div className="sgRowLeft">
-                        <div>
-                          <div className="sgRowTitle">Топ кассиров по выручке</div>
-                          <div className="sgRowMeta">
-                            <span className="sg-muted">Сравни confirm/cancel и медиану времени</span>
-                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: sort by revenue_cents desc" /></span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">{topCashiers.length}</div>
-                        <div className="sgRowSub">rows</div>
-                      </div>
-                    </div>
-
-                    {isLoading ? (
-                      <div className="sgRow">
-                        <div className="sgRowLeft"><div style={{ width: '100%' }}><div className="sgRowTitle"><ShimmerLine w={44} /></div><div className="sgRowMeta"><ShimmerLine w={90} /></div></div></div>
-                        <div className="sgRowRight"><div className="sgRowVal">—</div><div className="sgRowSub">—</div></div>
-                      </div>
-                    ) : (
-                      topCashiers.slice(0, 3).map((c) => (
-                        <div className="sgRow" key={'topc_' + c.cashier_label}>
-                          <div className="sgRowLeft">
-                            <div>
-                              <div className="sgRowTitle">{c.cashier_label}</div>
-                              <div className="sgRowMeta">
-                                confirm <b>{fmtPct(c.confirm_rate)}</b> · cancel <b>{fmtPct(c.cancel_rate)}</b> · median <b>{c.median_confirm_minutes.toFixed(1)}m</b>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="sgRowRight">
-                            <div className="sgRowVal">{moneyFromCent(c.revenue_cents, currency)}</div>
-                            <div className="sgRowSub">revenue</div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-
-                    <div className="sgRow">
-                      <div className="sgRowLeft">
-                        <div>
-                          <div className="sgRowTitle">Топ клиентов по LTV</div>
-                          <div className="sgRowMeta">
-                            <span className="sg-muted">Отсюда делаем VIP/retention сценарии</span>
-                            <span style={{ marginLeft: 8 }}><Tip dev text="DEV: segment rules (saver/spender) позже" /></span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="sgRowRight">
-                        <div className="sgRowVal">{topCustomers.length}</div>
-                        <div className="sgRowSub">rows</div>
-                      </div>
-                    </div>
-
-                    {!isLoading && topCustomers.slice(0, 3).map((c) => (
-                      <div className="sgRow" key={'topu_' + c.customer_label}>
-                        <div className="sgRowLeft">
-                          <div>
-                            <div className="sgRowTitle">{c.customer_label}</div>
-                            <div className="sgRowMeta">
-                              сегмент <b>{c.segment}</b> · заказов <b>{c.orders}</b> · last <b>{c.last_seen}</b>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="sgRowRight">
-                          <div className="sgRowVal">{moneyFromCent(c.ltv_cents, currency)}</div>
-                          <div className="sgRowSub">LTV</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Collapsible>
-              </div>
-            </Card>
-
-            {/* Settings block (UI-only) */}
-            <Card className="salesCard salesCard--lift">
-              <div className="salesCardHead">
-                <div>
-                  <div className="salesTitle">
-                    Стоимость монеты (UI)
-                    <span style={{ marginLeft: 10 }}><Tip dev text="DEV: потом /settings (coin_value_cents + currency)" /></span>
-                  </div>
-                  <div className="salesSub">Нужно для пересчёта монет → деньги</div>
-                </div>
-              </div>
-
-              <div style={{ padding: 12 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12, alignItems: 'end' }}>
-                  <div>
-                    <div className="sg-muted" style={{ marginBottom: 6 }}>
-                      1 монета = (в {currencyLabel(currencyDraft)})
-                    </div>
-                    <Input value={coinValueDraft} onChange={(e: any) => setCoinValueDraft(e.target.value)} placeholder="1.00" />
-                    <div className="sg-muted" style={{ marginTop: 6 }}>
-                      = {moneyFromCent(coinCents, currencyDraft)} / монета
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="sg-muted" style={{ marginBottom: 6 }}>Валюта</div>
-                    <select
-                      value={currencyDraft}
-                      onChange={(e: any) => setCurrencyDraft(String(e.target.value || 'RUB').toUpperCase())}
-                      className="sg-input"
-                      style={{ height: 38, width: '100%' }}
-                    >
-                      <option value="RUB">RUB (₽)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <button type="button" className="sg-tab is-active" disabled>
-                    Сохранить (позже)
-                  </button>
-                  <span className="sg-muted">DEV: позже сделаем PUT /settings и invalidate queries</span>
-                </div>
-              </div>
-            </Card>
+            <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
           </div>
+        }
+        contentStyle={{ padding: 12 }}
+      >
+        <ChartState
+          height={340}
+          isLoading={qTs.isLoading}
+          isError={qTs.isError}
+          errorText={String((qTs.error as any)?.message || 'UNKNOWN')}
+        >
+          <div style={{ width: '100%', height: 340 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={series} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12 }}
+                  interval="preserveStartEnd"
+                  tickFormatter={(v: any) => fmtDDMM(String(v || ''))}
+                />
+
+                <YAxis
+                  yAxisId="money"
+                  tick={{ fontSize: 12 }}
+                  width={54}
+                  tickFormatter={(v: any) => niceMoneyTick(Number(v))}
+                />
+                <YAxis
+                  yAxisId="count"
+                  orientation="right"
+                  width={10}
+                  tick={false}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <Tooltip
+                  formatter={(val: any, name: any) => {
+                    if (name === 'revenue_cents') return [moneyFromCent(val, currency), 'Выручка/день'];
+                    if (name === 'net_cents') return [moneyFromCent(val, currency), 'Net/день'];
+                    if (name === 'orders') return [String(val), 'Заказы/день'];
+                    if (name === 'cashback_issued_coins') return [String(val), 'Кэшбэк issued (мон)'];
+                    if (name === 'redeem_confirmed_coins') return [String(val), 'Redeem confirmed (мон)'];
+                    return [String(val), String(name)];
+                  }}
+                  labelFormatter={(_: any, payload: any) => {
+                    const d = payload?.[0]?.payload?.date;
+                    return d ? `Дата ${d}` : 'Дата';
+                  }}
+                />
+
+                {showRevenue ? (
+                  <Area
+                    yAxisId="money"
+                    type="monotone"
+                    dataKey="revenue_cents"
+                    name="revenue_cents"
+                    stroke="var(--accent2)"
+                    fill="var(--accent)"
+                    fillOpacity={0.12}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ) : null}
+
+                {showNet ? (
+                  <Line
+                    yAxisId="money"
+                    type="monotone"
+                    dataKey="net_cents"
+                    name="net_cents"
+                    stroke="var(--accent2)"
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    dot={false}
+                    opacity={0.95}
+                  />
+                ) : null}
+
+                {showOrders ? (
+                  <Bar
+                    yAxisId="count"
+                    dataKey="orders"
+                    name="orders"
+                    fill="var(--accent)"
+                    fillOpacity={0.18}
+                    radius={[10, 10, 10, 10]}
+                    barSize={14}
+                  />
+                ) : null}
+
+                {showCashback ? (
+                  <Line
+                    yAxisId="count"
+                    type="monotone"
+                    dataKey="cashback_issued_coins"
+                    name="cashback_issued_coins"
+                    stroke="var(--accent)"
+                    strokeWidth={2}
+                    dot={false}
+                    opacity={0.85}
+                  />
+                ) : null}
+
+                {showRedeem ? (
+                  <Line
+                    yAxisId="count"
+                    type="monotone"
+                    dataKey="redeem_confirmed_coins"
+                    name="redeem_confirmed_coins"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    dot={false}
+                    opacity={0.55}
+                  />
+                ) : null}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartState>
+      </SgSectionCard>
+
+      {/* ===== quick nav (same approach as Passport) ===== */}
+      <div className="sgp-wheelTabsBar">
+        <div className="sgp-seg">
+          <SegBtn active={opened === 'summary'} onClick={() => openOnly('summary')}>Сводка</SegBtn>
+          <SegBtn active={opened === 'cashback'} onClick={() => openOnly('cashback')}>Кэшбэк</SegBtn>
+          <SegBtn active={opened === 'boosts'} onClick={() => openOnly('boosts')}>Бусты</SegBtn>
+          <SegBtn active={opened === 'cashiers'} onClick={() => openOnly('cashiers')}>Кассиру</SegBtn>
         </div>
       </div>
-    </div>
+
+      {/* ===== ACC: SUMMARY ===== */}
+      <SgSectionCard
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>Сводка</span>
+            <HealthBadge tone={summaryBadgeTone} title={salesActive ? healthTitle : 'OFF'} />
+          </div>
+        }
+        collapsible
+        open={opened === 'summary' && openSummary}
+        onToggleOpen={() => toggleOnly('summary')}
+      >
+        <div className="sgp-metrics">
+          <div className="sgp-metric"><div className="sgp-metric__k">ВЫРУЧКА</div><div className="sgp-metric__v">{moneyFromCent(totals.rev, currency)}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">ЗАКАЗЫ</div><div className="sgp-metric__v">{totals.orders}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">СР. ЧЕК</div><div className="sgp-metric__v">{moneyFromCent(totals.avgCheck, currency)}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">КЭШБЭК</div><div className="sgp-metric__v">{totals.cashbackCoins} мон</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">СПИСАНО</div><div className="sgp-metric__v">{totals.redeemCoins} мон</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">NET</div><div className="sgp-metric__v">{moneyFromCent(totals.net, currency)}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">PENDING</div><div className="sgp-metric__v">{totals.pending}</div></div>
+          <div className="sgp-metric"><div className="sgp-metric__k">CANCEL</div><div className="sgp-metric__v">{totals.cancelRatePct}%</div></div>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          {!salesActive ? (
+            <Hint tone="bad">Продажи выключены. Включи в “Кассиру → Операционные тумблеры”.</Hint>
+          ) : totals.pending >= 8 ? (
+            <Hint tone="warn">
+              Много pending: <b>{totals.pending}</b>. Добавь мотивацию кассиру подтверждать + напоминания пользователю.
+            </Hint>
+          ) : totals.cancelRatePct >= 8 ? (
+            <Hint tone="warn">Отмены выше нормы: <b>{totals.cancelRatePct}%</b>. Проверь правила/UX у кассира.</Hint>
+          ) : (
+            <Hint tone="good">Ок. Дальше настрой кэшбэк по рангу и включи бусты на покупки.</Hint>
+          )}
+        </div>
+      </SgSectionCard>
+
+      {/* ===== ACC: CASHBACK ===== */}
+      <SgSectionCard
+        title="Кэшбэк"
+        sub="Настройки кэшбэка по рангу и по продажам (UI-first)"
+        collapsible
+        open={opened === 'cashback' && openCashback}
+        onToggleOpen={() => toggleOnly('cashback')}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="sgp-muted">Общий тумблер</span>
+            <SgToggle checked={cashbackOn} onChange={setCashbackOn} />
+          </div>
+          <Hint tone="neutral">
+            Идея: базовый % по рангу + временный бонус по поведению (orders/revenue/buyers).
+          </Hint>
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        <SgCard>
+          <SgCardHeader
+            right={
+              <SgButton variant="secondary" size="sm" onClick={addRankRule}>
+                + Ранг-правило
+              </SgButton>
+            }
+          >
+            <div>
+              <SgCardTitle>По рангу</SgCardTitle>
+              <SgCardSub>Зависит от ранга пользователя (будет связка с системой рангов)</SgCardSub>
+            </div>
+          </SgCardHeader>
+
+          <SgCardContent>
+            {cashbackRulesByRank.map((r) => (
+              <SgCard key={r.id} style={{ marginTop: 10 }}>
+                <SgCardHeader
+                  right={
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <SgToggle checked={r.enabled} onChange={(v) => patchRankRule(r.id, { enabled: v })} />
+                      <SgButton variant="ghost" size="sm" onClick={() => removeRankRule(r.id)}>
+                        Удалить
+                      </SgButton>
+                    </div>
+                  }
+                >
+                  <div>
+                    <SgCardTitle>{r.rank}</SgCardTitle>
+                    <SgCardSub>{r.enabled ? 'включено' : 'выключено'}</SgCardSub>
+                  </div>
+                </SgCardHeader>
+
+                <SgCardContent>
+                  <SgFormRow label="Ранг">
+                    <SgInput
+                      value={r.rank}
+                      onChange={(e) => patchRankRule(r.id, { rank: String((e.target as any).value || '') })}
+                    />
+                  </SgFormRow>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <SgFormRow label="Cashback %" hint="0..100">
+                      <SgInput
+                        value={String(r.cashback_pct)}
+                        onChange={(e) => patchRankRule(r.id, { cashback_pct: clampN((e.target as any).value, 0, 100) })}
+                      />
+                    </SgFormRow>
+
+                    <SgFormRow label="Min чек" hint={`0 = без минимума (${currencyLabel(currency)})`}>
+                      <SgInput
+                        value={String(Math.max(0, toInt(r.min_order_cents, 0)) / 100)}
+                        onChange={(e) =>
+                          patchRankRule(r.id, {
+                            min_order_cents: Math.max(0, Math.round(Number(String((e.target as any).value || '0').replace(',', '.')) * 100)),
+                          })
+                        }
+                      />
+                    </SgFormRow>
+                  </div>
+
+                  <SgFormRow label="Лимит монет/день" hint="0 = без лимита">
+                    <SgInput
+                      value={String(r.max_cashback_coins_per_day)}
+                      onChange={(e) =>
+                        patchRankRule(r.id, { max_cashback_coins_per_day: Math.max(0, toInt((e.target as any).value, 0)) })
+                      }
+                    />
+                  </SgFormRow>
+                </SgCardContent>
+              </SgCard>
+            ))}
+
+            {!cashbackRulesByRank.length ? (
+              <Hint tone="warn">Нет правил по рангу — добавь хотя бы базовый %.</Hint>
+            ) : null}
+          </SgCardContent>
+        </SgCard>
+
+        <div style={{ height: 12 }} />
+
+        <SgCard>
+          <SgCardHeader
+            right={
+              <SgButton variant="secondary" size="sm" onClick={addSalesRule}>
+                + Sales-правило
+              </SgButton>
+            }
+          >
+            <div>
+              <SgCardTitle>По продажам</SgCardTitle>
+              <SgCardSub>Временные бонусы “за период” (можно превратить в кампании)</SgCardSub>
+            </div>
+          </SgCardHeader>
+
+          <SgCardContent>
+            {cashbackRulesBySales.map((r) => (
+              <SgCard key={r.id} style={{ marginTop: 10 }}>
+                <SgCardHeader
+                  right={
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <SgToggle checked={r.enabled} onChange={(v) => patchSalesRule(r.id, { enabled: v })} />
+                      <SgButton variant="ghost" size="sm" onClick={() => removeSalesRule(r.id)}>
+                        Удалить
+                      </SgButton>
+                    </div>
+                  }
+                >
+                  <div>
+                    <SgCardTitle>{r.title}</SgCardTitle>
+                    <SgCardSub>{r.enabled ? 'включено' : 'выключено'}</SgCardSub>
+                  </div>
+                </SgCardHeader>
+
+                <SgCardContent>
+                  <SgFormRow label="Название">
+                    <SgInput
+                      value={r.title}
+                      onChange={(e) => patchSalesRule(r.id, { title: String((e.target as any).value || '') })}
+                    />
+                  </SgFormRow>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <SgFormRow label="Условие">
+                      <SgSelect
+                        value={r.condition}
+                        onChange={(e) => patchSalesRule(r.id, { condition: (e.target as any).value })}
+                      >
+                        <option value="orders_ge">orders ≥</option>
+                        <option value="revenue_ge">revenue ≥</option>
+                        <option value="buyers_ge">buyers ≥</option>
+                      </SgSelect>
+                    </SgFormRow>
+
+                    <SgFormRow
+                      label="Порог"
+                      hint={r.condition === 'revenue_ge' ? `в ${currencyLabel(currency)} (целое)` : 'в штуках'}
+                    >
+                      <SgInput
+                        value={String(r.threshold)}
+                        onChange={(e) => patchSalesRule(r.id, { threshold: Math.max(0, toInt((e.target as any).value, 0)) })}
+                      />
+                    </SgFormRow>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <SgFormRow label="Bonus cashback %" hint="добавляется к рангу">
+                      <SgInput
+                        value={String(r.bonus_cashback_pct)}
+                        onChange={(e) =>
+                          patchSalesRule(r.id, { bonus_cashback_pct: clampN((e.target as any).value, 0, 100) })
+                        }
+                      />
+                    </SgFormRow>
+
+                    <SgFormRow label="TTL (часы)">
+                      <SgInput
+                        value={String(r.ttl_hours)}
+                        onChange={(e) => patchSalesRule(r.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })}
+                      />
+                    </SgFormRow>
+                  </div>
+                </SgCardContent>
+              </SgCard>
+            ))}
+
+            {!cashbackRulesBySales.length ? (
+              <Hint tone="neutral">Можно добавить правило “orders ≥ 10” и дать +2% на 72 часа.</Hint>
+            ) : null}
+          </SgCardContent>
+        </SgCard>
+
+        <div style={{ height: 12 }} />
+
+        <SgActions
+          primaryLabel="Сохранить кэшбэк"
+          onPrimary={saveCashback}
+          state={cashbackSaveState}
+          errorText={cashbackMsg.startsWith('Ошибка') ? cashbackMsg : undefined}
+          left={<span className="sgp-muted">TODO: backend endpoint + расчёт выдачи кэшбэка.</span>}
+        />
+      </SgSectionCard>
+
+      {/* ===== ACC: BOOSTS ===== */}
+      <SgSectionCard
+        title="Бусты"
+        sub="Мотивация покупать (UI-first, позже привязка к кампаниям)"
+        collapsible
+        open={opened === 'boosts' && openBoosts}
+        onToggleOpen={() => toggleOnly('boosts')}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="sgp-muted">Общий тумблер</span>
+            <SgToggle checked={boostsOn} onChange={setBoostsOn} />
+          </div>
+
+          <Hint tone="neutral">
+            Если списания низкие, включай “накопились монеты”. Если заказов мало — “первую покупку”.
+          </Hint>
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        {boosts.map((b) => (
+          <SgCard key={b.id} style={{ marginTop: 10 }}>
+            <SgCardHeader
+              right={
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <SgToggle checked={!!(boostsOn && b.enabled)} onChange={(v) => patchBoost(b.id, { enabled: v })} />
+                  <HealthBadge tone={boostsOn && b.enabled ? 'good' : 'warn'} title={boostsOn && b.enabled ? 'ON' : 'OFF'} />
+                </div>
+              }
+            >
+              <div>
+                <SgCardTitle>{b.title}</SgCardTitle>
+                <SgCardSub>{b.hint}</SgCardSub>
+              </div>
+            </SgCardHeader>
+
+            <SgCardContent>
+              <SgFormRow label="Текст сообщения">
+                <SgInput
+                  value={b.message_text}
+                  onChange={(e) => patchBoost(b.id, { message_text: String((e.target as any).value || '') })}
+                />
+              </SgFormRow>
+
+              <SgFormRow label="Кнопка">
+                <SgInput
+                  value={b.button_label}
+                  onChange={(e) => patchBoost(b.id, { button_label: String((e.target as any).value || '') })}
+                />
+              </SgFormRow>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <SgFormRow label="TTL (часы)">
+                  <SgInput
+                    value={String(b.ttl_hours)}
+                    onChange={(e) => patchBoost(b.id, { ttl_hours: Math.max(1, toInt((e.target as any).value, 24)) })}
+                  />
+                </SgFormRow>
+
+                <SgFormRow label="Лимит / юзер">
+                  <SgInput
+                    value={String(b.limit_per_user)}
+                    onChange={(e) => patchBoost(b.id, { limit_per_user: Math.max(0, toInt((e.target as any).value, 1)) })}
+                  />
+                </SgFormRow>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <Hint tone="neutral">
+                  Подсказка: если <b>redeem</b> низкий относительно <b>cashback</b> ({totals.redeemRatePct}%),
+                  усиливай сценарий “потратить монеты”.
+                </Hint>
+              </div>
+            </SgCardContent>
+          </SgCard>
+        ))}
+
+        <div style={{ height: 12 }} />
+
+        <SgActions
+          primaryLabel="Сохранить бусты"
+          onPrimary={saveBoosts}
+          state={boostsSaveState}
+          errorText={boostsMsg.startsWith('Ошибка') ? boostsMsg : undefined}
+          left={<span className="sgp-muted">TODO: привязать к воркеру/кампаниям.</span>}
+        />
+      </SgSectionCard>
+
+      {/* ===== ACC: CASHIERS ===== */}
+      <SgSectionCard
+        title="Кассиру"
+        sub="Добавление кассиров и права (в разработке)"
+        collapsible
+        open={opened === 'cashiers' && openCashiers}
+        onToggleOpen={() => toggleOnly('cashiers')}
+      >
+        <SgCard>
+          <SgCardHeader>
+            <div>
+              <SgCardTitle>Операционные тумблеры</SgCardTitle>
+              <SgCardSub>live-настройки (settings)</SgCardSub>
+            </div>
+          </SgCardHeader>
+
+          <SgCardContent>
+            <SgFormRow label="Продажи активны" hint="Если выключено — запись продаж/кэшбэк блокируются">
+              <SgToggle checked={salesActiveDraft} onChange={setSalesActiveDraft} />
+            </SgFormRow>
+
+            <SgFormRow label="Требовать подтверждение кассиром" hint="Если включено — начисление/списание подтверждается">
+              <SgToggle checked={confirmDraft} onChange={setConfirmDraft} />
+            </SgFormRow>
+
+            <div style={{ marginTop: 10 }}>
+              <Hint tone="neutral">
+                Валюта: <b>{currency}</b> · 1 монета: <b>{moneyFromCent(coinCents, currency)}</b>
+              </Hint>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <SgActions
+                primaryLabel="Сохранить тумблеры"
+                onPrimary={saveOps}
+                state={opsSaveState}
+                errorText={opsMsg.startsWith('Ошибка') ? opsMsg : undefined}
+                left={<span className="sgp-muted">Сохраняем сразу, влияет на работу кассы.</span>}
+              />
+            </div>
+          </SgCardContent>
+        </SgCard>
+
+        <div style={{ height: 12 }} />
+
+        <SgCard>
+          <SgCardHeader
+            right={
+              <SgButton variant="secondary" size="sm" onClick={addCashier}>
+                + Добавить кассира
+              </SgButton>
+            }
+          >
+            <div>
+              <SgCardTitle>Кассиры</SgCardTitle>
+              <SgCardSub>Первые 3 — обязательные. Остальные добавляй по кнопке.</SgCardSub>
+            </div>
+          </SgCardHeader>
+
+          <SgCardContent>
+            {cashiers.map((c, idx) => {
+              const locked = idx < 3;
+              return (
+                <SgCard key={c.id} style={{ marginTop: 10 }}>
+                  <SgCardHeader
+                    right={
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <SgToggle checked={c.active} onChange={(v) => patchCashier(c.id, { active: v })} />
+                        <SgButton variant="ghost" size="sm" onClick={() => removeCashier(c.id)} disabled={locked}>
+                          Удалить
+                        </SgButton>
+                      </div>
+                    }
+                  >
+                    <div>
+                      <SgCardTitle>{locked ? `Кассир #${idx + 1}` : c.label}</SgCardTitle>
+                      <SgCardSub>{c.active ? 'активен' : 'выключен'} · права: {c.role}</SgCardSub>
+                    </div>
+                  </SgCardHeader>
+
+                  <SgCardContent>
+                    <SgFormRow label="Лейбл">
+                      <SgInput
+                        value={c.label}
+                        onChange={(e) => patchCashier(c.id, { label: String((e.target as any).value || '') })}
+                        disabled={locked}
+                      />
+                    </SgFormRow>
+
+                    <SgFormRow label="tg_id кассира" hint="позже можно будет искать по контактам/юзеру">
+                      <SgInput
+                        value={c.tg_id}
+                        onChange={(e) => patchCashier(c.id, { tg_id: String((e.target as any).value || '') })}
+                        placeholder="например: 123456789"
+                      />
+                    </SgFormRow>
+
+                    <SgFormRow label="Права (в разработке)" hint="пока просто фиксируем в настройках">
+                      <SgSelect value={c.role} onChange={(e) => patchCashier(c.id, { role: (e.target as any).value })}>
+                        <option value="cashier">cashier (обычный)</option>
+                        <option value="senior">senior (старший)</option>
+                        <option value="auditor">auditor (просмотр)</option>
+                      </SgSelect>
+                    </SgFormRow>
+                  </SgCardContent>
+                </SgCard>
+              );
+            })}
+
+            <div style={{ marginTop: 10 }}>
+              <Hint tone="neutral">
+                В разработке: “права” (кто может отменять/подтверждать/видеть ленту), и связка с реальными пользователями.
+              </Hint>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <SgActions
+                primaryLabel="Сохранить кассиров"
+                onPrimary={saveCashiers}
+                state={cashiersSaveState}
+                errorText={cashiersMsg.startsWith('Ошибка') ? cashiersMsg : undefined}
+                left={<span className="sgp-muted">TODO: endpoint /sales/cashiers.</span>}
+              />
+            </div>
+          </SgCardContent>
+        </SgCard>
+      </SgSectionCard>
+
+      {isLoading ? <ShimmerLine /> : null}
+      {isError ? (
+        <div style={{ marginTop: 12 }}>
+          <Hint tone="bad">
+            Ошибка: {String((qSettings.error as any)?.message || (qTs.error as any)?.message || (qTopUsers.error as any)?.message || 'UNKNOWN')}
+          </Hint>
+        </div>
+      ) : null}
+    </SgPage>
   );
 }
