@@ -7,6 +7,7 @@ const PALETTE = [
   { key: 'calendar_booking_one', title: 'Calendar' },
   { key: 'game_flappy_one', title: 'Flappy' },
   { key: 'shop_stars_product_one', title: 'Stars' },
+  { key: 'sales_qr_one', title: 'QR Cod' },
   
 ];
 
